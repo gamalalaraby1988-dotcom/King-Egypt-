@@ -88,9 +88,9 @@ func _check_all() -> void:
 				continue
 			var reward_id := "achievement_%s" % achievement_id
 			# حتى لو فشل حفظ ملف الإنجازات، يمنع إيصال المحفظة صرف الجائزة مرة أخرى.
-			var reward_saved := mission_manager.has_reward_receipt(reward_id)
+			var reward_saved: bool = bool(mission_manager.has_reward_receipt(reward_id))
 			if not reward_saved:
-				reward_saved = mission_manager.grant_reward_once(reward_id, int(item["money"]), 0, int(item["chips"]))
+				reward_saved = bool(mission_manager.grant_reward_once(reward_id, int(item["money"]), 0, int(item["chips"])))
 			if not reward_saved:
 				continue
 			unlocked[achievement_id] = Time.get_datetime_string_from_system()
