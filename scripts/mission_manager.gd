@@ -710,7 +710,7 @@ func open_building(building: Node3D) -> void:
 	if str(data.get("activities", "")).strip_edges() != "":
 		description_label.text += "\nالأنشطة: " + str(data["activities"])
 	reward_label.text = "المكافأة: %d جنيه | %d رقائق | %d خبرة" % [data["money"], data["chips"], data["xp"]]
-	var key := building.building_id
+	var key: String = str(building.get("building_id"))
 	if completed_missions.has(key):
 		status_label.text = "أنجزت هذه المهمة بالفعل في هذه الجلسة."
 		accept_button.disabled = true
@@ -962,7 +962,7 @@ func _accept_mission() -> void:
 	landmark_navigation_active = false
 	navigation_arrival_remaining = 0.0
 	var data: Dictionary = active_mission.get_mission_data()
-	var key := active_mission.building_id
+	var key: String = str(active_mission.get("building_id"))
 	if completed_missions.has(key) or player_level < int(data["level"]):
 		return
 	active_target = active_mission.global_position + data["target_offset"]
@@ -1099,7 +1099,7 @@ func _build_landmark_route(destination: Vector3, landmark_key: String) -> void:
 	var start := player.global_position
 	var start_node := _nearest_city_road_node(start)
 	landmark_route_points.append(Vector3(start.x, 0.0, start.z))
-	landmark_route_points.append(start_node)
+	landmark_route_points.append(Vector3(start_node.x, 0.0, start_node.y))
 	if landmark_key == "animal_camp":
 		# نصل أولًا إلى مدخل طريق المخيم، ثم نتبع مقاطعه المنشأة في المشهد.
 		var camp_entry := Vector2(24.0, 0.0)
