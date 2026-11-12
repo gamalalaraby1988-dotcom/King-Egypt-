@@ -10,7 +10,7 @@ func _ready() -> void:
 	outline_size = 10
 	modulate = Color(1.0, 0.91, 0.68)
 	billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	shadow_casting_setting = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	CityLanguage.language_changed.connect(_refresh_text)
 	_refresh_text()
 
