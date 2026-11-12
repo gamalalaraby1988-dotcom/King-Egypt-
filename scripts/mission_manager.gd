@@ -644,10 +644,13 @@ func _rent_selected_animal() -> void:
 		return
 	var index := clampi(animal_selector.selected, 0, animals.size() - 1)
 	var animal_name := str(animals[index])
+	if not player.start_animal_ride(animal_name):
+		status_label.text = "تعذر بدء الركوب؛ لم يتم خصم المال. حاول مرة أخرى."
+		return
 	if not spend_money_once(active_rental_transaction_id, price):
+		player.end_animal_ride()
 		status_label.text = "تعذر حفظ أجرة الركوب؛ لم يتم خصم المال. حاول مرة أخرى."
 		return
-	player.start_animal_ride(animal_name)
 	stats_label.text = "المستوى %d  |  الخبرة %d  |  المال %d  |  الرقائق %d" % [player_level, xp, money, chips]
 	status_label.text = "دفعت %d جنيه وبدأت ركوب %s. اضغط زر تفاعل للنزول." % [price, animal_name]
 	description_label.text = "يمكنك التجول بالحيوان في المخيم والمدينة."
