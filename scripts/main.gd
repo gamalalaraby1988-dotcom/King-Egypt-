@@ -649,8 +649,8 @@ func _create_service_staff(display_name: String, role: String, dialogue: String,
 	var staff := Node3D.new()
 	staff.name = "Staff_" + str(display_name.hash())
 	staff.set_script(load("res://scripts/service_npc.gd"))
-	staff.set("character_name", display_name
-	staff.set("role_title", role
+	staff.set("character_name", display_name)
+	staff.set("role_title", role)
 	staff.interaction_text = dialogue
 	staff.position = pos
 	add_child(staff)
