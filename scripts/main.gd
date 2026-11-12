@@ -488,7 +488,7 @@ func _create_mobile_hud() -> void:
 	touch_hud.name = "TouchControls"
 	touch_hud.set_script(hud_script)
 	layer.add_child(touch_hud)
-	touch_hud.player = get_node_or_null("Player")
+	touch_hud.set("player", get_node_or_null("Player"))
 
 	var hud_layer := CanvasLayer.new()
 	hud_layer.name = "CityActionHUD"
@@ -501,7 +501,7 @@ func _create_interactive_buildings() -> void:
 	manager.name = "MissionManager"
 	manager.set_script(load("res://scripts/mission_manager.gd"))
 	add_child(manager)
-	manager.player = get_node_or_null("Player")
+	manager.set("player", get_node_or_null("Player"))
 	var daily := Node.new()
 	daily.name = "DailyActivities"
 	daily.set_script(load("res://scripts/daily_activities.gd"))
