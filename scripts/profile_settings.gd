@@ -131,7 +131,7 @@ func _save_settings() -> void:
 	config.set_value("settings", "volume", int(volume_slider.value))
 	config.set_value("settings", "quality", quality_select.selected)
 	var language_modes := ["auto", "ar", "en"]
-	var selected_language := language_modes[clampi(language_select.selected, 0, 2)]
+	var selected_language: String = language_modes[clampi(language_select.selected, 0, 2)]
 	config.set_value("settings", "language", selected_language)
 	var error := config.save(SAVE_PATH)
 	CityLanguage.set_language(selected_language)
