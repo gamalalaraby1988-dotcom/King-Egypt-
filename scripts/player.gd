@@ -1,0 +1,144 @@
+extends CharacterBody3D
+## حركة خفيفة: مشي وجري وجلوس، مع دعم تحكم اللمس والكاميرا.
+
+@export var walk_speed: float = 4.0
+@export var run_speed: float = 6.2
+@export var acceleration: float = 18.0
+@export var gravity: float = 20.0
+@export var turn_speed: float = 10.0
+
+var mobile_move: Vector2 = Vector2.ZERO
+var mobile_sprint: bool = false
+var sitting := false
+var _sit_key_was_down := false
+var animal_riding := false
+var ride_visual: Node3D = null
+@onready var camera_pivot: Node3D = $CameraPivot
+
+func _ready() -> void:
+	add_to_group("player")
+
+func _physics_process(delta: float) -> void:
+	var sit_key_down := Input.is_key_pressed(KEY_C)
+	if sit_key_down and not _sit_key_was_down:
+		toggle_sit()
+	_sit_key_was_down = sit_key_down
+	if sitting:
+		velocity.x = move_toward(velocity.x, 0.0, acceleration * delta)
+		velocity.z = move_toward(velocity.z, 0.0, acceleration * delta)
+		if not is_on_floor():
+			velocity.y -= gravity * delta
+		else:
+			velocity.y = 0.0
+		move_and_slide()
+		_update_avatar_animation("sit", 0.0)
+		return
+
+	var input_vector := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
+	if mobile_move.length() > 0.08:
+		input_vector = mobile_move
+	var direction := Vector3(input_vector.x, 0.0, input_vector.y)
+	if direction.length() > 1.0:
+		direction = direction.normalized()
+
+	var basis := camera_pivot.global_transform.basis
+	var forward := -basis.z
+	var right := basis.x
+	forward.y = 0.0
+	right.y = 0.0
+	forward = forward.normalized()
+	right = right.normalized()
+	var world_direction := (right * direction.x + forward * -direction.z).normalized()
+	var running := Input.is_action_pressed("sprint") or mobile_sprint
+	var target_speed := (8.0 if running else 6.0) if animal_riding else (run_speed if running else walk_speed)
+	var target_velocity := world_direction * target_speed
+	velocity.x = move_toward(velocity.x, target_velocity.x, acceleration * delta)
+	velocity.z = move_toward(velocity.z, target_velocity.z, acceleration * delta)
+
+	if not is_on_floor():
+		velocity.y -= gravity * delta
+	else:
+		velocity.y = 0.0
+	if world_direction.length() > 0.1:
+		var target_angle := atan2(world_direction.x, world_direction.z)
+		rotation.y = lerp_angle(rotation.y, target_angle, turn_speed * delta)
+	move_and_slide()
+	var planar_speed := Vector2(velocity.x, velocity.z).length()
+	var motion_state := "idle"
+	if planar_speed > 0.25:
+		motion_state = "run" if running else "walk"
+	_update_avatar_animation(motion_state, planar_speed)
+
+func is_riding_animal() -> bool:
+	return animal_riding
+
+func start_animal_ride(animal_name: String) -> bool:
+	# لا تبدأ ركوبًا ثانيًا فوق الركوب الحالي؛ يجب النزول أولًا.
+	if animal_riding or animal_name.strip_edges().is_empty():
+		return false
+	sitting = false
+	animal_riding = true
+	var avatar := get_node_or_null("AvatarVisual") as Node3D
+	if avatar:
+		avatar.position.y = 1.05
+		if avatar.has_method("set_motion_state"):
+			avatar.set_motion_state("sit", 0.0)
+	ride_visual = Node3D.new()
+	ride_visual.name = "TemporaryRideAnimal"
+	add_child(ride_visual)
+	var body := MeshInstance3D.new()
+	var body_mesh := CapsuleMesh.new()
+	body_mesh.radius = 0.48
+	body_mesh.height = 1.9
+	body.mesh = body_mesh
+	body.rotation.z = PI / 2.0
+	body.position = Vector3(0, 0.25, 0.18)
+	var fur := StandardMaterial3D.new()
+	fur.albedo_color = Color(0.54, 0.34, 0.20)
+	body.material_override = fur
+	ride_visual.add_child(body)
+	var head := MeshInstance3D.new()
+	var head_mesh := SphereMesh.new()
+	head_mesh.radius = 0.34
+	head_mesh.height = 0.68
+	head.mesh = head_mesh
+	head.position = Vector3(0, 0.58, -0.68)
+	head.material_override = fur
+	ride_visual.add_child(head)
+	var label := Label3D.new()
+	label.text = animal_name
+	label.position = Vector3(0, 1.45, 0)
+	label.font_size = 28
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	ride_visual.add_child(label)
+
+func end_animal_ride() -> void:
+	animal_riding = false
+	if is_instance_valid(ride_visual):
+		ride_visual.queue_free()
+	ride_visual = null
+	var avatar := get_node_or_null("AvatarVisual") as Node3D
+	if avatar:
+		avatar.position.y = 0.0
+		if avatar.has_method("set_motion_state"):
+			avatar.set_motion_state("idle", 0.0)
+
+func toggle_sit() -> void:
+	# الجلوس غير متاح أثناء ركوب الحيوان حتى لا تتعارض حالتا الحركة.
+	if animal_riding:
+		return
+	sitting = not sitting
+	if sitting:
+		mobile_move = Vector2.ZERO
+		mobile_sprint = false
+
+func _update_avatar_animation(state: String, speed: float) -> void:
+	var avatar := get_node_or_null("AvatarVisual")
+	if avatar != null and avatar.has_method("set_motion_state"):
+		avatar.set_motion_state(state, speed)
+
+func set_mobile_move(value: Vector2) -> void:
+	mobile_move = value
+
+func set_mobile_sprint(value: bool) -> void:
+	mobile_sprint = value

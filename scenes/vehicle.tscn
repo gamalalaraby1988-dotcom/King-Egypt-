@@ -1,0 +1,57 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/vehicle_controller.gd" id="1_vehicle"]
+[ext_resource type="Script" path="res://scripts/vehicle_hud.gd" id="2_vehicle_hud"]
+
+[sub_resource type="BoxShape3D" id="BoxShape_vehicle"]
+size = Vector3(2.0, 1.0, 4.0)
+
+[sub_resource type="BoxMesh" id="BoxMesh_vehicle"]
+size = Vector3(2.0, 1.0, 4.0)
+
+[sub_resource type="StandardMaterial3D" id="VehiclePaint"]
+albedo_color = Color(0.68, 0.08, 0.07, 1)
+metallic = 0.35
+roughness = 0.32
+
+[node name="Vehicle" type="CharacterBody3D"]
+script = ExtResource("1_vehicle")
+floor_snap_length = 0.2
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+position = Vector3(0, 0.65, 0)
+shape = SubResource("BoxShape_vehicle")
+
+[node name="Body" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.65, 0)
+mesh = SubResource("BoxMesh_vehicle")
+material_override = SubResource("VehiclePaint")
+
+[node name="Cabin" type="MeshInstance3D" parent="."]
+position = Vector3(0, 1.35, -0.25)
+mesh = SubResource("BoxMesh_vehicle")
+scale = Vector3(0.72, 0.65, 0.52)
+material_override = SubResource("VehiclePaint")
+
+[node name="VehicleHUDLayer" type="CanvasLayer" parent="."]
+layer = 10
+
+[node name="VehicleHUD" type="Control" parent="VehicleHUDLayer"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("2_vehicle_hud")
+
+[node name="VehicleCameraPivot" type="Node3D" parent="."]
+position = Vector3(0, 2.6, 0.5)
+rotation = Vector3(-0.24, 0, 0)
+
+[node name="SpringArm3D" type="SpringArm3D" parent="VehicleCameraPivot"]
+spring_length = 8.5
+collision_mask = 1
+
+[node name="VehicleCamera" type="Camera3D" parent="VehicleCameraPivot/SpringArm3D"]
+current = false
