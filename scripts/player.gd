@@ -111,6 +111,7 @@ func start_animal_ride(animal_name: String) -> bool:
 	label.font_size = 28
 	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	ride_visual.add_child(label)
+	return true
 
 func end_animal_ride() -> void:
 	animal_riding = false
