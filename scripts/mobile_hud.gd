@@ -62,7 +62,7 @@ func _draw() -> void:
 	draw_arc(joystick_center, _joystick_draw_radius, 0.0, TAU, 48, Color(1, 1, 1, 0.58), 3.0 * minf(1.0, _joystick_draw_radius / 72.0))
 	draw_circle(joystick_center + joystick_vector * _joystick_draw_radius, maxf(17.0, 26.0 * _joystick_draw_radius / 72.0), Color(0.91, 0.75, 0.38, 0.90))
 	_draw_button(sprint_center, _sprint_draw_radius, "RUN", sprint_active)
-	var sitting_now := is_instance_valid(player) and player.get("sitting") == true
+	var sitting_now: bool = is_instance_valid(player) and bool(player.get("sitting"))
 	_draw_button(sit_center, _sit_draw_radius, "SIT", sitting_now)
 
 func _draw_button(center: Vector2, radius: float, caption: String, active: bool) -> void:
