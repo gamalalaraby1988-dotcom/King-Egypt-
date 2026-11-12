@@ -979,7 +979,7 @@ func _complete_active_mission() -> void:
 	if not mission_running or not is_instance_valid(active_mission):
 		return
 	var data: Dictionary = active_mission.get_mission_data()
-	var key := active_mission.building_id
+	var key: String = str(active_mission.get("building_id"))
 	var saved := complete_activity_once(key, "mission", int(data["money"]), int(data["xp"]), int(data["chips"]))
 	if not saved:
 		mission_running = false
