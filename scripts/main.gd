@@ -520,7 +520,7 @@ func _create_interactive_buildings() -> void:
 	var profile_ui := Node.new()
 	profile_ui.name = "ProfileSettings"
 	profile_ui.set_script(load("res://scripts/profile_settings.gd"))
-	profile_ui.mission_manager = manager
+	profile_ui.set("mission_manager", manager)
 	profile_ui.player = get_node_or_null("Player")
 	add_child(profile_ui)
 
