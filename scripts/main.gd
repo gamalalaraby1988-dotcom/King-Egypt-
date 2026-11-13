@@ -552,9 +552,9 @@ func _create_interactive_buildings() -> void:
 	_add_functional_building(manager, "المتجر", "مهمة شراء احتياجات", "تعرّف على المتجر واستلم قائمة احتياجات تجريبية من البوابة.", Vector3(16, 0, 16), Color(0.20, 0.48, 0.30), 150, 0, 1)
 	_add_functional_building(manager, "المطعم", "مهمة توصيل وجبة", "استلم طلب توصيل تجريبي من المطعم. ستصبح أهداف التوصيل الفعلية جزءًا من مرحلة لاحقة.", Vector3(-16, 0, 16), Color(0.65, 0.30, 0.18), 220, 2, 1)
 	_add_functional_building(manager, "مركز التوظيف", "مهمة التسجيل في وظيفة", "تعرّف على الوظائف المتاحة وشروط الالتحاق بها.", Vector3(16, 0, -16), Color(0.22, 0.34, 0.62), 300, 5, 1)
-	_create_job_board("وظيفة التوصيل", "توصيل طلب إلى نقطة الاستلام المحددة في المدينة.", Vector3(24, 0, 0), Vector3(0, 0, 14), 180, 0, 30, "courier_delivery")
-	_create_job_board("مرشد المدينة", "اذهب إلى نقطة المعلم السياحي وساعد الزائرين على اكتشاف المدينة.", Vector3(-24, 0, 0), Vector3(0, 0, -14), 220, 1, 40, "city_guide")
-	_create_job_board("عامل صيانة", "توجّه إلى موقع الصيانة المحدد وأكمل جولة الفحص الميدانية.", Vector3(0, 0, 24), Vector3(14, 0, 0), 250, 0, 45, "city_maintenance")
+	_create_job_board("وظيفة التوصيل", "توصيل طلب إلى نقطة الاستلام المحددة في المدينة.", Vector3(24, 0, 4.5), Vector3(0, 0, 9.5), 180, 0, 30, "courier_delivery")
+	_create_job_board("مرشد المدينة", "اذهب إلى نقطة المعلم السياحي وساعد الزائرين على اكتشاف المدينة.", Vector3(-24, 0, 4.5), Vector3(0, 0, -18.5), 220, 1, 40, "city_guide")
+	_create_job_board("عامل صيانة", "توجّه إلى موقع الصيانة المحدد وأكمل جولة الفحص الميدانية.", Vector3(4.5, 0, 24), Vector3(9.5, 0, 0), 250, 0, 45, "city_maintenance", PI / 2.0)
 	_create_service_staff("صاحب المتجر", "صاحب محل", "أهلًا بك! يمكنني مساعدتك في احتياجاتك ومشترياتك من المتجر.", Vector3(16, 0, 21))
 	_create_service_staff("موظف المطعم", "موظف", "مرحبًا! أستقبل طلبات المطعم وأساعدك في أنشطة التوصيل.", Vector3(-16, 0, 21))
 	_create_service_staff("موظف مركز التوظيف", "موظف", "أهلًا بك! يمكنك مراجعة الوظائف المتاحة وشروطها هنا.", Vector3(16, 0, -11))
@@ -586,11 +586,12 @@ func _add_functional_building(manager: Node, title: String, mission: String, des
 	manager.register_building(building)
 
 
-func _create_job_board(title: String, description: String, pos: Vector3, target_offset: Vector3, reward: int, chips_reward: int, xp_reward: int, job_id: String) -> void:
+func _create_job_board(title: String, description: String, pos: Vector3, target_offset: Vector3, reward: int, chips_reward: int, xp_reward: int, job_id: String, yaw: float = 0.0) -> void:
 	var board := Node3D.new()
 	board.name = "JobBoard_" + job_id
 	board.set_script(load("res://scripts/job_interaction.gd"))
 	board.position = pos
+	board.rotation.y = yaw
 	board.job_id = job_id
 	board.job_title = title
 	board.job_description = description
