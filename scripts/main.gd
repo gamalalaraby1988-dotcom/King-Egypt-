@@ -612,13 +612,15 @@ func _create_job_board(title: String, description: String, pos: Vector3, target_
 func _create_city_signage() -> void:
 	# Signposts reuse primitive meshes and point to known prototype destinations.
 	_create_direction_signpost("Signpost_Central", Vector3(0, 0, 8), "restaurant", "shop")
-	_create_direction_signpost("Signpost_Employment", Vector3(24, 0, -8), "employment", "city_center")
-	_create_direction_signpost("Signpost_Camp", Vector3(30, 0, 38), "city_center", "animal_camp")
+	# Move roadside signs off the road centerline and turn their faces toward the road.
+	_create_direction_signpost("Signpost_Employment", Vector3(29, 0, -8), "employment", "city_center", PI / 2.0)
+	_create_direction_signpost("Signpost_Camp", Vector3(30, 0, 38), "city_center", "animal_camp", PI / 2.0)
 
-func _create_direction_signpost(sign_name: String, pos: Vector3, left_key: String, right_key: String) -> void:
+func _create_direction_signpost(sign_name: String, pos: Vector3, left_key: String, right_key: String, yaw: float = 0.0) -> void:
 	var sign_root := Node3D.new()
 	sign_root.name = sign_name
 	sign_root.position = pos
+	sign_root.rotation.y = yaw
 	add_child(sign_root)
 	_create_box(sign_root, "StonePost", Vector3(0.35, 2.7, 0.35), Vector3(0, 1.35, 0), Color(0.66, 0.52, 0.32), false)
 	_create_box(sign_root, "DarkBoard", Vector3(6.2, 1.15, 0.22), Vector3(0, 2.65, 0), Color(0.08, 0.22, 0.23), false)
