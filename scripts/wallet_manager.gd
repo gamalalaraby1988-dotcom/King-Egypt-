@@ -88,12 +88,10 @@ func _refresh_legacy_balances() -> bool:
 	# الحقلان القديمان يجب أن يطابقا المحفظة تمامًا؛ لا تتم مزامنتهما باختيار أحدهما.
 	var config := ConfigFile.new()
 	if config.load(PROFILE_PATH) != OK:
-		if FileAccess.file_exists(PROFILE_PATH):
-			integrity_blocked = true
-			initialized = false
-			push_error("Wallet: profile file cannot be read; economic operations are blocked.")
-			return false
-		return true
+		integrity_blocked = true
+		initialized = false
+		push_error("Wallet: profile file is missing or unreadable; economic operations are blocked.")
+		return false
 	for currency in ["money", "chips"]:
 		var value: Variant = config.get_value("profile", currency, null)
 		if not _valid_amount(value) or int(value) != int(balances[currency]):
