@@ -17,6 +17,7 @@ var economy_snapshot: Dictionary = {}
 var _http: HTTPRequest
 var _request_in_flight := false
 var _session_generation := 0
+var _pending_logout_token := ""
 
 func _ready() -> void:
 	_http = HTTPRequest.new()
@@ -139,9 +140,20 @@ func fetch_economy_snapshot() -> bool:
 func sign_out() -> void:
 	var token_to_revoke := access_token
 	_clear_session()
-	# لا تبدأ طلبًا ثانيًا على HTTPRequest نفسه. مسح الجلسة محليًا يتم فورًا.
-	if not token_to_revoke.is_empty() and not _request_in_flight:
-		await _send_json(HTTPClient.METHOD_POST, "/auth/v1/logout", {}, token_to_revoke)
+	# امسح الجلسة محليًا فورًا، ثم نفّذ الإبطال بعد انتهاء طلب HTTP الجاري.
+	if token_to_revoke.is_empty():
+		return
+	if _request_in_flight:
+		_pending_logout_token = token_to_revoke
+		return
+	await _send_json(HTTPClient.METHOD_POST, "/auth/v1/logout", {}, token_to_revoke)
+
+func _flush_pending_logout() -> void:
+	if _pending_logout_token.is_empty() or _request_in_flight:
+		return
+	var token_to_revoke := _pending_logout_token
+	_pending_logout_token = ""
+	await _send_json(HTTPClient.METHOD_POST, "/auth/v1/logout", {}, token_to_revoke)
 
 func _clear_session() -> void:
 	_session_generation += 1
@@ -173,10 +185,13 @@ func _send_json(method: int, path: String, payload: Dictionary, bearer: String) 
 	var response_body := (response[3] as PackedByteArray).get_string_from_utf8()
 	var parsed: Variant = JSON.parse_string(response_body)
 	if transport_result != HTTPRequest.RESULT_SUCCESS:
+		await _flush_pending_logout()
 		return {"ok": false, "message": "فشل الاتصال بالخادم (%s)." % str(transport_result)}
 	if status_code < 200 or status_code >= 300:
 		var message := "رفض الخادم الطلب (HTTP %s)." % str(status_code)
 		if parsed is Dictionary:
 			message = str(parsed.get("msg", parsed.get("message", parsed.get("error_description", message))))
+		await _flush_pending_logout()
 		return {"ok": false, "message": message}
+	await _flush_pending_logout()
 	return {"ok": true, "data": parsed}
