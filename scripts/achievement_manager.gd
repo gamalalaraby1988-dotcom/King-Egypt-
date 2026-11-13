@@ -108,9 +108,8 @@ func _save_state() -> void:
 	cfg.set_value("achievements", "walked_meters", walked_meters)
 	cfg.set_value("achievements", "totals", totals)
 	cfg.set_value("achievements", "unlocked", unlocked)
-	var error := cfg.save(SAVE_PATH)
-	if error != OK:
-		push_warning("تعذر حفظ الإنجازات: %s" % error)
+	if not WalletManager.save_profile_metadata(cfg):
+		push_warning("تعذر حفظ الإنجازات عبر الحفظ الذري لملف اللاعب.")
 	else:
 		last_saved_walk_meters = walked_meters
 
