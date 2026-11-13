@@ -32,6 +32,9 @@ func _notification(what: int) -> void:
 
 func _process(_delta: float) -> void:
 	if not visible:
+		# لا تسمح ببقاء أي أمر قيادة عالق إذا أُخفيت الواجهة أثناء لمس أحد الأزرار.
+		if drive_touch != -1 or brake_touch != -1 or steering_touch != -1 or reverse_active or absf(steering_value) > 0.001:
+			_clear_controls()
 		return
 	if is_instance_valid(vehicle):
 		vehicle.call("set_drive", drive_touch != -1)
