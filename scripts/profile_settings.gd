@@ -209,7 +209,25 @@ func _refresh_info() -> void:
 	if not is_instance_valid(mission_manager):
 		info_label.text = "بيانات اللاعب غير متاحة."
 		return
-	info_label.text = "المستوى: %d\nالخبرة: %d\nالمال: %d\nالرقائق: %d\nالجواهر: %d" % [
-		mission_manager.player_level, mission_manager.xp,
-		mission_manager.money, mission_manager.chips, WalletManager.get_balance("gems")
+	var balances: Dictionary = WalletManager.get_balances()
+	var lines: Array[String] = [
+		"المستوى: %d" % mission_manager.player_level,
+		"الخبرة: %d" % mission_manager.xp,
+		"المال: %d" % int(balances.get("money", mission_manager.money)),
+		"الرقائق: %d" % int(balances.get("chips", mission_manager.chips)),
+		"الجواهر: %d" % int(balances.get("gems", 0)),
+		"",
+		"آخر حركات المحفظة:"
 	]
+	for entry in WalletManager.get_recent_transactions(5):
+		if str(entry.get("kind", "")) == "migration":
+			lines.append("تم ترحيل الأرصدة القديمة دون تغيير.")
+			continue
+		var currency := str(entry.get("currency", ""))
+		var currency_name := {"money": "مال", "chips": "رقائق", "gems": "جواهر"}.get(currency, currency)
+		var change := int(entry.get("balance_after", 0)) - int(entry.get("balance_before", 0))
+		var sign := "+" if change >= 0 else ""
+		lines.append("%s %s%d — %s" % [currency_name, sign, change, str(entry.get("reason", "عملية محفظة"))])
+	if lines.size() == 7:
+		lines.append("لا توجد حركات مسجلة بعد.")
+	info_label.text = "\n".join(lines)
