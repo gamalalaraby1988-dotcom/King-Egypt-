@@ -508,6 +508,16 @@ func _process(_delta: float) -> void:
 		status_label.text = "الوظيفة: توجّه إلى نقطة العمل. المتبقي: %.1f متر" % job_distance
 		if job_distance <= 2.2:
 			_complete_active_job()
+	if mission_running and (not is_instance_valid(active_mission) or active_mission.is_queued_for_deletion()):
+		# لا تترك اللاعب عالقًا في مهمة إذا أزيل المبنى أثناء تنفيذها.
+		mission_running = false
+		active_mission = null
+		target_marker.visible = false
+		status_label.text = "تعذر إكمال المهمة لأن موقعها لم يعد متاحًا. لم تُصرف مكافأة."
+		description_label.text = "افتح مبنى متاحًا لبدء مهمة أخرى."
+		reward_label.text = "لم تُحتسب المهمة ولم تُصرف مكافأة."
+		accept_button.disabled = false
+		panel.visible = true
 	if mission_running:
 		var distance_to_target := Vector2(player.global_position.x, player.global_position.z).distance_to(Vector2(active_target.x, active_target.z))
 		status_label.text = "الهدف: اذهب إلى علامة المهمة. المسافة المتبقية: %.1f متر" % distance_to_target
@@ -989,7 +999,7 @@ func _complete_active_job() -> void:
 	panel.visible = true
 
 func _accept_mission() -> void:
-	if not is_instance_valid(active_mission) or mission_running or job_running:
+	if not is_instance_valid(active_mission) or active_mission.is_queued_for_deletion() or mission_running or job_running:
 		return
 	landmark_navigation_active = false
 	navigation_arrival_remaining = 0.0
