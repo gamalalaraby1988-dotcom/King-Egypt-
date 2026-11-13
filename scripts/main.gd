@@ -30,6 +30,7 @@ func _ready() -> void:
 	if key_light:
 		key_light.add_to_group("quality_shadow_light")
 	_create_interactive_buildings()
+	_create_city_action_hud()
 	_create_camp()
 	_create_city_map()
 	_create_interior_transition_ui()
@@ -578,6 +579,19 @@ func _create_mobile_hud() -> void:
 	layer.add_child(touch_hud)
 	touch_hud.set("player", get_node_or_null("Player"))
 
+func _create_city_action_hud() -> void:
+	# واجهة المدينة تُنشأ مرة واحدة عند بدء المشهد، ولا ترتبط بركوب المركبة.
+	if is_instance_valid(get_node_or_null("CityActionHUD")):
+		return
+	var hud_script := load("res://scripts/city_hud.gd") as Script
+	if hud_script == null:
+		push_error("تعذر تحميل واجهة المدينة.")
+		return
+	var hud_layer := CanvasLayer.new()
+	hud_layer.name = "CityActionHUD"
+	hud_layer.set_script(hud_script)
+	add_child(hud_layer)
+
 func _set_mobile_hud_active(active: bool) -> void:
 	var touch_hud := get_node_or_null("MobileHUD/TouchControls") as Control
 	if not is_instance_valid(touch_hud):
@@ -585,11 +599,6 @@ func _set_mobile_hud_active(active: bool) -> void:
 	if touch_hud.has_method("_clear_touch_state"):
 		touch_hud.call("_clear_touch_state")
 	touch_hud.visible = active
-
-	var hud_layer := CanvasLayer.new()
-	hud_layer.name = "CityActionHUD"
-	hud_layer.set_script(load("res://scripts/city_hud.gd"))
-	add_child(hud_layer)
 
 
 func _create_interactive_buildings() -> void:
