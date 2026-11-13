@@ -61,10 +61,23 @@ func initialize_wallet() -> bool:
 func get_balance(currency: String) -> int:
 	if not initialized or not CURRENCIES.has(currency):
 		return 0
+	_refresh_legacy_balances()
 	return int(balances[currency])
 
 func get_balances() -> Dictionary:
+	if initialized:
+		_refresh_legacy_balances()
 	return balances.duplicate(true)
+
+func _refresh_legacy_balances() -> void:
+	# المال والرقائق ما زالا يُحدّثان عبر أنظمة اللعبة القديمة؛ اقرأ آخر قيمهما المحفوظة.
+	var config := ConfigFile.new()
+	if config.load(PROFILE_PATH) != OK:
+		return
+	for currency in ["money", "chips"]:
+		var value: Variant = config.get_value("profile", currency, balances[currency])
+		if _valid_amount(value):
+			balances[currency] = int(value)
 
 func has_transaction(transaction_id: String) -> bool:
 	return receipts.has(transaction_id)
@@ -80,6 +93,10 @@ func _transact(transaction_id: String, currency: String, amount: int, kind: Stri
 		return false
 	if amount <= 0 or amount > MAX_BALANCE or receipts.has(transaction_id):
 		return false
+	var config := ConfigFile.new()
+	if config.load(PROFILE_PATH) != OK:
+		return false
+	_refresh_legacy_balances()
 	var current := int(balances[currency])
 	if kind == "debit" and current < amount:
 		return false
@@ -87,9 +104,6 @@ func _transact(transaction_id: String, currency: String, amount: int, kind: Stri
 	if next_value < 0 or next_value > MAX_BALANCE:
 		return false
 
-	var config := ConfigFile.new()
-	if config.load(PROFILE_PATH) != OK:
-		return false
 	var next_balances := balances.duplicate(true)
 	next_balances[currency] = next_value
 	var next_receipts := receipts.duplicate(true)
@@ -106,6 +120,8 @@ func _transact(transaction_id: String, currency: String, amount: int, kind: Stri
 		"reason": reason.substr(0, 120),
 		"timestamp": timestamp
 	})
+	if currency == "money" or currency == "chips":
+		config.set_value("profile", currency, next_value)
 	config.set_value("wallet", "schema_version", SCHEMA_VERSION)
 	config.set_value("wallet", "balances", next_balances)
 	config.set_value("wallet", "receipts", next_receipts)
