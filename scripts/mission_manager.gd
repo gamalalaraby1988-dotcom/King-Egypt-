@@ -310,38 +310,18 @@ func complete_activity_once(activity_id: String, activity_kind: String, money_am
 
 
 func spend_money_once(transaction_id: String, amount: int) -> bool:
-	# للمدفوعات التي لا يجوز تنفيذها مرتين بسبب النقر المتكرر أو إعادة المحاولة.
-	if transaction_id.is_empty() or amount < 0 or money < amount:
+	# تأجير الخدمات المدفوعة يستخدم إيصال المحفظة نفسه لمنع الخصم المكرر.
+	if transaction_id.strip_edges().is_empty() or amount <= 0 or amount > MAX_CURRENCY_BALANCE:
 		return false
 	var receipt_id := "spend_%s" % transaction_id
-	if reward_receipts.has(receipt_id):
+	if reward_receipts.has(receipt_id) or WalletManager.has_transaction(receipt_id):
 		return false
 	var next_receipts := reward_receipts.duplicate(true)
-	next_receipts[receipt_id] = Time.get_datetime_string_from_system()
-	var next_money := money - amount
-	var config := ConfigFile.new()
-	var load_error := config.load(SAVE_PATH)
-	if load_error != OK and FileAccess.file_exists(SAVE_PATH):
-		push_warning("ملف اللاعب غير قابل للقراءة؛ أُوقفت عملية الدفع.")
+	next_receipts[receipt_id] = Time.get_datetime_string_from_system(true)
+	var updates := {"reward_receipts": next_receipts}
+	if not WalletManager.purchase_once(receipt_id, "money", amount, "Paid in-game service: " + transaction_id, updates):
 		return false
-	config.set_value("profile", "player_level", player_level)
-	config.set_value("profile", "xp", xp)
-	config.set_value("profile", "money", next_money)
-	config.set_value("profile", "chips", chips)
-	config.set_value("profile", "completed_missions", completed_missions)
-	config.set_value("profile", "completed_jobs", completed_jobs)
-	config.set_value("profile", "reward_receipts", next_receipts)
-	config.set_value("profile", "owned_outfits", owned_outfits)
-	config.set_value("profile", "achievement_totals", achievement_totals)
-	config.set_value("profile", "achievement_events", achievement_events)
-	config.set_value("profile", "achievement_stats_initialized", achievement_stats_initialized)
-	config.set_value("profile", "daily_task_progress", daily_task_progress)
-	config.set_value("profile", "daily_task_events", daily_task_events)
-	var save_success := WalletManager.save_profile_update(config, next_money, chips)
-	if not save_success:
-		push_warning("تعذر حفظ عملية الدفع %s مع سجل المحفظة." % transaction_id)
-		return false
-	money = next_money
+	money = WalletManager.get_balance("money")
 	reward_receipts = next_receipts
 	return true
 
@@ -356,44 +336,24 @@ func get_owned_outfits() -> Array:
 	return owned_outfits.duplicate()
 
 func purchase_outfit(outfit_id: String) -> bool:
-	# السعر المرجعي داخل مدير اللاعب؛ لا يقبل سعرًا يمرره واجهة العميل.
-	# هذا يمنع اختلاف سعر الواجهة عن قائمة الأسعار المعتمدة داخل المصدر.
-	if not OUTFIT_PRICES.has(outfit_id):
+	# واجهة الشراء لا ترسل السعر؛ المرجع الوحيد هو جدول الأسعار داخل اللعبة.
+	if not OUTFIT_PRICES.has(outfit_id) or owned_outfits.has(outfit_id):
 		return false
 	var price: int = int(OUTFIT_PRICES[outfit_id])
-	if owned_outfits.has(outfit_id) or money < price:
-		return false
 	var next_owned := owned_outfits.duplicate()
 	next_owned.append(outfit_id)
-	var next_money := money - price
 	var receipt_id := "purchase_outfit_%s" % outfit_id
+	if reward_receipts.has(receipt_id) or WalletManager.has_transaction(receipt_id):
+		return false
 	var next_receipts := reward_receipts.duplicate(true)
-	if next_receipts.has(receipt_id):
+	next_receipts[receipt_id] = Time.get_datetime_string_from_system(true)
+	var updates := {
+		"owned_outfits": next_owned,
+		"reward_receipts": next_receipts
+	}
+	if not WalletManager.purchase_once(receipt_id, "money", price, "Purchase outfit: " + outfit_id, updates):
 		return false
-	next_receipts[receipt_id] = Time.get_datetime_string_from_system()
-	var config := ConfigFile.new()
-	var load_error := config.load(SAVE_PATH)
-	if load_error != OK and FileAccess.file_exists(SAVE_PATH):
-		push_warning("ملف اللاعب موجود لكنه غير قابل للقراءة؛ أُوقف الشراء لحماية البيانات.")
-		return false
-	config.set_value("profile", "player_level", player_level)
-	config.set_value("profile", "xp", xp)
-	config.set_value("profile", "money", next_money)
-	config.set_value("profile", "chips", chips)
-	config.set_value("profile", "completed_missions", completed_missions)
-	config.set_value("profile", "completed_jobs", completed_jobs)
-	config.set_value("profile", "reward_receipts", next_receipts)
-	config.set_value("profile", "owned_outfits", next_owned)
-	config.set_value("profile", "achievement_totals", achievement_totals)
-	config.set_value("profile", "achievement_events", achievement_events)
-	config.set_value("profile", "achievement_stats_initialized", achievement_stats_initialized)
-	config.set_value("profile", "daily_task_progress", daily_task_progress)
-	config.set_value("profile", "daily_task_events", daily_task_events)
-	var save_success := WalletManager.save_profile_update(config, next_money, chips)
-	if not save_success:
-		push_warning("تعذر حفظ شراء الإطلالة %s مع سجل المحفظة." % outfit_id)
-		return false
-	money = next_money
+	money = WalletManager.get_balance("money")
 	owned_outfits = next_owned
 	reward_receipts = next_receipts
 	return true
