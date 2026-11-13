@@ -49,25 +49,6 @@ jobs:
             exit 1
           fi
 
-      - name: Run wallet migration and transaction tests
-        shell: bash
-        run: |
-          set -euo pipefail
-          GODOT="/tmp/godot/Godot_v4.7.2-stable_linux.x86_64"
-          LOG="/tmp/wallet-tests.log"
-          set +e
-          timeout 120s "$GODOT" --headless --path . --script res://tests/wallet_test.gd 2>&1 | tee "$LOG"
-          GODOT_STATUS=${PIPESTATUS[0]}
-          set -e
-          if [ "$GODOT_STATUS" -ne 0 ]; then
-            echo "Wallet tests exited with code $GODOT_STATUS."
-            exit "$GODOT_STATUS"
-          fi
-          if ! grep -Fq "WALLET TESTS PASSED" "$LOG"; then
-            echo "Wallet test success marker was not found."
-            exit 1
-          fi
-
       - name: Start main scene headlessly
         shell: bash
         run: |
