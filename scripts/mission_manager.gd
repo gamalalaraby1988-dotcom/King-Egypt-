@@ -1130,12 +1130,12 @@ const CITY_ROAD_COORDS := [-72.0, -24.0, 0.0, 24.0, 72.0]
 # نقاط الوقوف عند أبواب المباني ولوحات الوظائف، لا عند مركز كتلة المبنى.
 # المواقع متوافقة مع إحداثيات الإنشاء الحالية في main.gd.
 const CITY_LANDMARK_ENTRANCES := {
-	"shop": Vector3(16.0, 0.0, 21.0),
-	"restaurant": Vector3(-16.0, 0.0, 21.0),
-	"employment": Vector3(16.0, 0.0, -11.0),
-	"delivery": Vector3(24.0, 0.0, 2.5),
-	"city_guide": Vector3(-24.0, 0.0, 2.5),
-	"maintenance": Vector3(0.0, 0.0, 26.5),
+	"shop": Vector3(16.0, 0.0, 19.56),
+	"restaurant": Vector3(-16.0, 0.0, 19.56),
+	"employment": Vector3(16.0, 0.0, -12.44),
+	"delivery": Vector3(24.0, 0.0, 4.5),
+	"city_guide": Vector3(-24.0, 0.0, 4.5),
+	"maintenance": Vector3(4.5, 0.0, 24.0),
 	"animal_camp": Vector3(60.0, 0.0, 68.0)
 }
 
