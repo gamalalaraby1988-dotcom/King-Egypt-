@@ -410,12 +410,12 @@ func _create_interior_staff(root: Node3D, building_title: String) -> void:
 	root.add_child(staff)
 
 func return_from_building_interior() -> void:
-	if interior_transition_busy or not is_instance_valid(interior_player):
+	if interior_transition_busy or not is_instance_valid(interior_root):
 		return
 	interior_transition_busy = true
 	_show_interior_loading(false, "interior_return_loading")
 	await get_tree().create_timer(0.45).timeout
-	# إذا اختفت الشخصية أثناء التحميل، أعد العالم ونظّف الانتقال بدل ترك المدينة مخفية.
+	# استعادة المدينة لا تعتمد على بقاء مرجع اللاعب؛ يجب ألا تبقى مخفية عند حذفه.
 	if not is_inside_tree():
 		return
 	if is_instance_valid(interior_player) and not interior_player.is_queued_for_deletion():
