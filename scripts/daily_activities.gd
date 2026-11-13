@@ -154,10 +154,10 @@ func _save_state() -> bool:
 	cfg.set_value("daily", "progress", progress)
 	cfg.set_value("daily", "claimed", claimed)
 	cfg.set_value("daily", "walked_meters", walked_meters)
-	var error := cfg.save(SAVE_PATH)
-	if error != OK:
-		push_warning("تعذر حفظ الأنشطة اليومية: %s" % error)
-	return error == OK
+	var saved := WalletManager.save_profile_metadata(cfg)
+	if not saved:
+		push_warning("تعذر حفظ الأنشطة اليومية عبر الحفظ الذري لملف اللاعب.")
+	return saved
 
 func _build_ui() -> void:
 	var layer := CanvasLayer.new()
