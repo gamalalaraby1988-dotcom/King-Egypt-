@@ -215,6 +215,11 @@ func _select_hairstyle(hairstyle_id: String) -> void:
 
 func _save_selection() -> void:
 	var config := ConfigFile.new()
+	var load_error := config.load(SAVE_PATH)
+	if load_error != OK and FileAccess.file_exists(SAVE_PATH):
+		if is_instance_valid(status_label):
+			status_label.text = "ملف الخزانة موجود لكنه غير قابل للقراءة؛ أُوقفت الكتابة لحماية الاختيارات السابقة."
+		return
 	config.set_value("wardrobe", "outfit_id", selected_outfit)
 	config.set_value("wardrobe", "hairstyle_id", selected_hairstyle)
 	var result := config.save(SAVE_PATH)
