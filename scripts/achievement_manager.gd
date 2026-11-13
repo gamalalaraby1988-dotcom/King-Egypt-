@@ -101,6 +101,10 @@ func _check_all() -> void:
 
 func _save_state() -> void:
 	var cfg := ConfigFile.new()
+	var load_error := cfg.load(SAVE_PATH)
+	if load_error != OK and FileAccess.file_exists(SAVE_PATH):
+		push_warning("ملف الإنجازات موجود لكنه غير قابل للقراءة؛ أُوقفت الكتابة لحماية التقدم السابق.")
+		return
 	cfg.set_value("achievements", "walked_meters", walked_meters)
 	cfg.set_value("achievements", "totals", totals)
 	cfg.set_value("achievements", "unlocked", unlocked)
