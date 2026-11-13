@@ -1,6 +1,17 @@
--- Read the canonical display name from the authenticated account.
--- Only SELECT is granted on player_profiles; name changes remain rate-limited
--- through public.change_my_test_display_name(text).
+-- Create the test-only profile table before any migration reads or grants on it.
+-- Name changes remain restricted to the authenticated server-side RPC.
+create table if not exists game_test.player_profiles (
+  test_account_id uuid primary key
+    references game_test.wallets(test_account_id) on delete restrict,
+  display_name text,
+  last_name_change_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint player_profiles_display_name_length
+    check (display_name is null or char_length(display_name) between 1 and 24)
+);
+
+alter table game_test.player_profiles enable row level security;
 
 grant select on table game_test.player_profiles to authenticated;
 
