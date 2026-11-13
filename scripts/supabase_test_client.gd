@@ -63,6 +63,9 @@ func sign_in_with_password(email: String, password: String) -> bool:
 	return true
 
 func refresh_session() -> bool:
+	if _request_in_flight:
+		request_failed.emit("هناك طلب اتصال جارٍ؛ أعد المحاولة بعد انتهائه.")
+		return false
 	if refresh_token.is_empty():
 		request_failed.emit("لا توجد جلسة قابلة للتجديد؛ سجّل الدخول مجددًا.")
 		return false
@@ -95,12 +98,16 @@ func fetch_economy_snapshot() -> bool:
 	if not is_authenticated():
 		request_failed.emit("يجب تسجيل الدخول أولًا.")
 		return false
+	var request_token := access_token
 	var result := await _send_json(
 		HTTPClient.METHOD_POST,
 		"/rest/v1/rpc/get_my_test_economy_snapshot",
 		{},
-		access_token
+		request_token
 	)
+	# قد يضغط المستخدم على تسجيل الخروج أثناء انتظار الشبكة؛ لا تُعد لقطة بعد إنهاء الجلسة.
+	if not is_authenticated() or access_token != request_token:
+		return false
 	if not bool(result.get("ok", false)):
 		request_failed.emit(str(result.get("message", "تعذرت قراءة رصيد الاختبار.")))
 		return false
@@ -113,9 +120,11 @@ func fetch_economy_snapshot() -> bool:
 	return true
 
 func sign_out() -> void:
-	if not access_token.is_empty():
-		await _send_json(HTTPClient.METHOD_POST, "/auth/v1/logout", {}, access_token)
+	var token_to_revoke := access_token
 	_clear_session()
+	# لا تبدأ طلبًا ثانيًا على HTTPRequest نفسه. مسح الجلسة محليًا يتم فورًا.
+	if not token_to_revoke.is_empty() and not _request_in_flight:
+		await _send_json(HTTPClient.METHOD_POST, "/auth/v1/logout", {}, token_to_revoke)
 
 func _clear_session() -> void:
 	access_token = ""
