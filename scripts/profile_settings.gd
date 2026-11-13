@@ -17,7 +17,16 @@ var root_control: Control
 func _ready() -> void:
 	_build_ui()
 	_load_settings()
+	SupabaseTestClient.auth_changed.connect(_on_test_auth_changed)
 	_apply_settings()
+
+func _on_test_auth_changed(_is_authenticated: bool, _user_id: String) -> void:
+	var config := ConfigFile.new()
+	if config.load(SAVE_PATH) != OK and FileAccess.file_exists(SAVE_PATH):
+		name_input.editable = false
+		name_change_status.text = "تعذر قراءة ملف اللاعب؛ تغيير الاسم موقوف لحماية البيانات."
+		return
+	_update_name_change_status(config)
 
 func _build_ui() -> void:
 	var layer := CanvasLayer.new()
