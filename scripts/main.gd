@@ -337,18 +337,33 @@ func _hide_interior_loading() -> void:
 
 func enter_building_interior(building: Node3D, actor: Node3D) -> void:
 	var body := actor as CharacterBody3D
-	if interior_transition_busy or not is_instance_valid(building) or not is_instance_valid(body):
+	if interior_transition_busy or is_instance_valid(interior_root) or vehicle_occupied:
+		return
+	if not is_instance_valid(building) or building.is_queued_for_deletion() or not is_instance_valid(body) or body.is_queued_for_deletion():
 		return
 	var building_data: Dictionary = building.get_mission_data() if building.has_method("get_mission_data") else {}
 	if not bool(building_data.get("requires_interior", false)):
 		return
+	# نظام المدينة الرئيسي هو المصدر الوحيد لحالة الانتقال؛ امنع الانتقال من وضعية غير آمنة.
+	if bool(body.get("sitting")) or bool(body.get("animal_riding")):
+		return
+	var manager := get_node_or_null("MissionManager")
+	if is_instance_valid(manager) and (bool(manager.get("mission_running")) or bool(manager.get("job_running"))):
+		return
+	var radius_value: Variant = building.get("interaction_radius")
+	var allowed_distance := float(radius_value) if radius_value != null else 4.5
+	if body.global_position.distance_to(building.global_position) > clampf(allowed_distance, 0.5, 4.8) + 0.65:
+		return
 	interior_transition_busy = true
 	interior_player = body
 	interior_return_transform = body.global_transform
+	body.set_physics_process(false)
 	_show_interior_loading(false)
 	await get_tree().create_timer(0.65).timeout
-	# قد يُحذف المبنى أو اللاعب أثناء شاشة التحميل؛ لا تتابع الانتقال بمراجع منتهية.
+	# أعد التحقق بعد التحميل؛ لا تنقل لاعبًا أو مبنى حُذف أثناء الانتظار.
 	if not is_inside_tree() or not is_instance_valid(building) or building.is_queued_for_deletion() or not is_instance_valid(body) or body.is_queued_for_deletion():
+		if is_instance_valid(body):
+			body.set_physics_process(true)
 		interior_transition_busy = false
 		interior_player = null
 		_hide_interior_loading()
@@ -358,6 +373,7 @@ func enter_building_interior(building: Node3D, actor: Node3D) -> void:
 	body.global_position = INTERIOR_WORLD_POSITION + Vector3(0, 1.05, 2.8)
 	body.velocity = Vector3.ZERO
 	body.rotation.y = PI
+	body.set_physics_process(true)
 	interior_transition_busy = false
 	_show_interior_loading(true)
 
@@ -470,15 +486,19 @@ func return_from_building_interior() -> void:
 	if interior_transition_busy or not is_instance_valid(interior_root):
 		return
 	interior_transition_busy = true
+	var body := interior_player
+	if is_instance_valid(body) and not body.is_queued_for_deletion():
+		body.set_physics_process(false)
 	_show_interior_loading(false, "interior_return_loading")
 	await get_tree().create_timer(0.45).timeout
-	# استعادة المدينة لا تعتمد على بقاء مرجع اللاعب؛ يجب ألا تبقى مخفية عند حذفه.
 	if not is_inside_tree():
 		return
-	if is_instance_valid(interior_player) and not interior_player.is_queued_for_deletion():
-		interior_player.global_transform = interior_return_transform
-		interior_player.velocity = Vector3.ZERO
+	# استعد المدينة حتى لو تعذر استعادة اللاعب؛ لا تترك العالم مخفيًا أو الانتقال مقفولًا.
 	_set_city_world_hidden(false)
+	if is_instance_valid(body) and not body.is_queued_for_deletion():
+		body.global_transform = interior_return_transform
+		body.velocity = Vector3.ZERO
+		body.set_physics_process(true)
 	if is_instance_valid(interior_root):
 		interior_root.queue_free()
 	interior_root = null
