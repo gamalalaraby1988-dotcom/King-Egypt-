@@ -208,25 +208,33 @@ func _refresh_info() -> void:
 	if not is_instance_valid(mission_manager):
 		info_label.text = "بيانات اللاعب غير متاحة."
 		return
-	var balances: Dictionary = WalletManager.get_balances()
+	var wallet_available := WalletManager.initialized and not WalletManager.integrity_blocked
 	var lines: Array[String] = [
 		"المستوى: %d" % mission_manager.player_level,
-		"الخبرة: %d" % mission_manager.xp,
-		"المال: %d" % int(balances.get("money", mission_manager.money)),
-		"الرقائق: %d" % int(balances.get("chips", mission_manager.chips)),
-		"الجواهر: %d" % int(balances.get("gems", 0)),
-		"",
-		"آخر حركات المحفظة:"
+		"الخبرة: %d" % mission_manager.xp
 	]
-	for entry in WalletManager.get_recent_transactions(5):
-		if str(entry.get("kind", "")) == "migration":
-			lines.append("تم ترحيل الأرصدة القديمة دون تغيير.")
-			continue
-		var currency := str(entry.get("currency", ""))
-		var currency_name: String = str({"money": "مال", "chips": "رقائق", "gems": "جواهر"}.get(currency, currency))
-		var change := int(entry.get("balance_after", 0)) - int(entry.get("balance_before", 0))
-		var sign: String = "+" if change >= 0 else ""
-		lines.append("%s %s%d — %s" % [currency_name, sign, change, str(entry.get("reason", "عملية محفظة"))])
-	if lines.size() == 7:
-		lines.append("لا توجد حركات مسجلة بعد.")
+	if wallet_available:
+		var balances: Dictionary = WalletManager.get_balances()
+		lines.append("المال: %d" % int(balances.get("money", 0)))
+		lines.append("الرقائق: %d" % int(balances.get("chips", 0)))
+		lines.append("الجواهر: %d" % int(balances.get("gems", 0)))
+		lines.append("")
+		lines.append("آخر حركات المحفظة:")
+		for entry in WalletManager.get_recent_transactions(5):
+			if str(entry.get("kind", "")) == "migration":
+				lines.append("تم ترحيل الأرصدة القديمة دون تغيير.")
+				continue
+			var currency := str(entry.get("currency", ""))
+			var currency_name: String = str({"money": "مال", "chips": "رقائق", "gems": "جواهر"}.get(currency, currency))
+			var change := int(entry.get("balance_after", 0)) - int(entry.get("balance_before", 0))
+			var sign: String = "+" if change >= 0 else ""
+			lines.append("%s %s%d — %s" % [currency_name, sign, change, str(entry.get("reason", "عملية محفظة"))])
+		if lines.size() == 7:
+			lines.append("لا توجد حركات مسجلة بعد.")
+	else:
+		lines.append("المال: موقوف للمراجعة")
+		lines.append("الرقائق: موقوفة للمراجعة")
+		lines.append("الجواهر: موقوفة للمراجعة")
+		lines.append("")
+		lines.append("سجل المحفظة موقوف حتى مراجعة سلامة ملف الحفظ.")
 	info_label.text = "\n".join(lines)
