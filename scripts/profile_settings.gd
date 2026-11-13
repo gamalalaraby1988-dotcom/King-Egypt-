@@ -151,9 +151,10 @@ func _save_settings() -> void:
 	var today := Time.get_date_string_from_system()
 	var last_change_value: Variant = config.get_value("profile", "player_name_change_date", "")
 	var last_change_date := str(last_change_value) if last_change_value is String else ""
+	var name_change_blocked := false
 	if name_changed and last_change_date == today:
 		name_input.text = old_name
-		info_label.text = "يمكن تغيير اسم اللاعب مرة واحدة فقط في اليوم. حاول مرة أخرى غدًا؛ تم حفظ بقية الإعدادات دون تغيير الاسم."
+		name_change_blocked = true
 		requested_name = old_name
 		name_changed = false
 	config.set_value("profile", "player_name", requested_name)
@@ -171,6 +172,8 @@ func _save_settings() -> void:
 	CityLanguage.set_language(selected_language)
 	_apply_settings()
 	_refresh_info()
+	if name_change_blocked:
+		info_label.text += "\nيمكن تغيير اسم اللاعب مرة واحدة فقط في اليوم. حاول مرة أخرى غدًا؛ تم حفظ بقية الإعدادات دون تغيير الاسم."
 	info_label.text += "\nتم حفظ الإعدادات محليًا."
 	_update_name_change_status(config)
 
