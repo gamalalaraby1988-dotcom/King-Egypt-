@@ -12,6 +12,7 @@ var balances: Dictionary = {"money": 0, "chips": 0, "gems": 0}
 var receipts: Dictionary = {}
 var ledger: Array = []
 var initialized := false
+var integrity_blocked := false
 
 func _ready() -> void:
 	initialize_wallet()
@@ -30,15 +31,26 @@ func initialize_wallet() -> bool:
 
 	if stored_version == SCHEMA_VERSION and stored_balances is Dictionary:
 		for currency in CURRENCIES:
-			var value: Variant = stored_balances.get(currency, 0)
+			var value: Variant = stored_balances.get(currency, null)
 			if not _valid_amount(value):
 				push_error("Wallet: invalid saved balance; wallet initialization stopped.")
 				return false
 			balances[currency] = int(value)
+		# لا تختَر بين profile وwallet عند التعارض؛ أوقف التهيئة للمراجعة.
+		for currency in ["money", "chips"]:
+			var legacy_value: Variant = config.get_value("profile", currency, null)
+			if not _valid_amount(legacy_value) or int(legacy_value) != int(balances[currency]):
+				push_error("Wallet: profile/%s conflicts with wallet balance; initialization stopped for manual review." % currency)
+				return false
 		receipts = stored_receipts if stored_receipts is Dictionary else {}
 		ledger = stored_ledger if stored_ledger is Array else []
 		initialized = true
 		return true
+
+	# لا تعِد تفسير مخطط محفظة موجود أو إصدار غير معروف على أنه ملف قديم.
+	if stored_version != 0 or stored_balances != null:
+		push_error("Wallet: unsupported or incomplete wallet schema; migration stopped to protect saved data.")
+		return false
 
 	# One-time migration: carry forward existing money/chips exactly; gems start at zero.
 	var legacy_money: Variant = config.get_value("profile", "money", 0) if err == OK else 0
@@ -59,29 +71,43 @@ func initialize_wallet() -> bool:
 	return _persist_wallet(config)
 
 func get_balance(currency: String) -> int:
-	if not initialized or not CURRENCIES.has(currency):
+	if not initialized or integrity_blocked or not CURRENCIES.has(currency):
 		return 0
-	_refresh_legacy_balances()
+	if not _refresh_legacy_balances():
+		return 0
 	return int(balances[currency])
 
 func get_balances() -> Dictionary:
-	if initialized:
-		_refresh_legacy_balances()
+	if not initialized or integrity_blocked:
+		return {}
+	if not _refresh_legacy_balances():
+		return {}
 	return balances.duplicate(true)
 
-func _refresh_legacy_balances() -> void:
-	# المال والرقائق ما زالا يُحدّثان عبر أنظمة اللعبة القديمة؛ اقرأ آخر قيمهما المحفوظة.
+func _refresh_legacy_balances() -> bool:
+	# الحقلان القديمان يجب أن يطابقا المحفظة تمامًا؛ لا تتم مزامنتهما باختيار أحدهما.
 	var config := ConfigFile.new()
 	if config.load(PROFILE_PATH) != OK:
-		return
+		if FileAccess.file_exists(PROFILE_PATH):
+			integrity_blocked = true
+			initialized = false
+			push_error("Wallet: profile file cannot be read; economic operations are blocked.")
+			return false
+		return true
 	for currency in ["money", "chips"]:
-		var value: Variant = config.get_value("profile", currency, balances[currency])
-		if _valid_amount(value):
-			balances[currency] = int(value)
+		var value: Variant = config.get_value("profile", currency, null)
+		if not _valid_amount(value) or int(value) != int(balances[currency]):
+			integrity_blocked = true
+			initialized = false
+			push_error("Wallet: profile/%s differs from wallet; economic operations are blocked for manual review." % currency)
+			return false
+	return true
 
 func save_profile_update(config: ConfigFile, money_value: int, chips_value: int) -> bool:
 	# حفظ بيانات اللاعب وتغيير أرصدته وسجل المحفظة في الملف الذري نفسه.
-	if not initialized or not _valid_amount(money_value) or not _valid_amount(chips_value):
+	if not initialized or integrity_blocked or not _valid_amount(money_value) or not _valid_amount(chips_value):
+		return false
+	if not _refresh_legacy_balances():
 		return false
 	var next_balances := balances.duplicate(true)
 	var next_ledger := ledger.duplicate(true)
@@ -126,7 +152,9 @@ func has_transaction(transaction_id: String) -> bool:
 
 func purchase_once(transaction_id: String, currency: String, amount: int, reason: String, profile_updates: Dictionary = {}) -> bool:
 	# يطبق الخصم وتحديث الملكية/الإيصال في الملف نفسه؛ لا توجد ملكية دون خصم ناجح.
-	if not initialized or transaction_id.strip_edges().is_empty() or not CURRENCIES.has(currency):
+	if not initialized or integrity_blocked or transaction_id.strip_edges().is_empty() or not CURRENCIES.has(currency):
+		return false
+	if not _refresh_legacy_balances():
 		return false
 	if amount < 0 or amount > MAX_BALANCE or receipts.has(transaction_id):
 		return false
@@ -176,7 +204,9 @@ func debit(transaction_id: String, currency: String, amount: int, reason: String
 	return _transact(transaction_id, currency, amount, "debit", reason)
 
 func _transact(transaction_id: String, currency: String, amount: int, kind: String, reason: String) -> bool:
-	if not initialized or transaction_id.strip_edges().is_empty() or not CURRENCIES.has(currency):
+	if not initialized or integrity_blocked or transaction_id.strip_edges().is_empty() or not CURRENCIES.has(currency):
+		return false
+	if not _refresh_legacy_balances():
 		return false
 	if amount <= 0 or amount > MAX_BALANCE or receipts.has(transaction_id):
 		return false
