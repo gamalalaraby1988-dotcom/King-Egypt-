@@ -427,10 +427,10 @@ func _load_profile() -> void:
 		push_warning("تعذر قراءة ملف اللاعب؛ تم إيقاف الترحيل لتجنب فقدان البيانات.")
 		return
 	if error == OK:
-		player_level = maxi(1, int(config.get_value("profile", "player_level", 1)))
-		xp = maxi(0, int(config.get_value("profile", "xp", 0)))
-		money = maxi(0, int(config.get_value("profile", "money", 0)))
-		chips = maxi(0, int(config.get_value("profile", "chips", 0)))
+		player_level = _safe_profile_int(config.get_value("profile", "player_level", 1), 1, 1)
+		xp = _safe_profile_int(config.get_value("profile", "xp", 0), 0)
+		money = _safe_profile_int(config.get_value("profile", "money", 0), 0)
+		chips = _safe_profile_int(config.get_value("profile", "chips", 0), 0)
 		var saved_missions: Variant = config.get_value("profile", "completed_missions", {})
 		var saved_jobs: Variant = config.get_value("profile", "completed_jobs", {})
 		var saved_receipts: Variant = config.get_value("profile", "reward_receipts", {})
@@ -441,7 +441,10 @@ func _load_profile() -> void:
 		completed_missions = saved_missions if saved_missions is Dictionary else {}
 		completed_jobs = saved_jobs if saved_jobs is Dictionary else {}
 		reward_receipts = saved_receipts if saved_receipts is Dictionary else {}
-		achievement_totals = saved_totals if saved_totals is Dictionary else {"jobs": 0, "missions": 0, "daily_claims": 0}
+		achievement_totals = {"jobs": 0, "missions": 0, "daily_claims": 0}
+		if saved_totals is Dictionary:
+			for stat_key in ["jobs", "missions", "daily_claims"]:
+				achievement_totals[stat_key] = _safe_profile_int(saved_totals.get(stat_key, 0), 0)
 		achievement_events = saved_achievement_events if saved_achievement_events is Dictionary else {}
 		daily_task_progress = {}
 		if saved_daily_progress is Dictionary:
@@ -469,6 +472,11 @@ func _load_profile() -> void:
 			owned_outfits = ["default"]
 		# اكتب البنية الموحدة حتى للحساب الجديد، أو بعد ترحيل ملف قديم.
 		_save_profile()
+
+func _safe_profile_int(value: Variant, fallback: int, minimum: int = 0) -> int:
+	if not (value is int or value is float) or not is_finite(float(value)):
+		return fallback
+	return clampi(int(value), minimum, 2000000000)
 
 func _sanitize_owned_outfits(items: Array) -> Array:
 	var result: Array = ["default"]
