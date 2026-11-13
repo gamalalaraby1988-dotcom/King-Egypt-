@@ -166,6 +166,7 @@ func _toggle_vehicle_use() -> void:
 		return
 	if player.get("animal_riding") == true or player.get("sitting") == true:
 		return
+	_set_mobile_hud_active(false)
 	vehicle_occupied = true
 	_player_saved_collision_layer = player.collision_layer
 	_player_saved_collision_mask = player.collision_mask
@@ -218,6 +219,7 @@ func _recover_vehicle_occupancy() -> void:
 		if is_instance_valid(player_camera):
 			player_camera.current = true
 	vehicle_occupied = false
+	_set_mobile_hud_active(is_instance_valid(player))
 	if is_instance_valid(vehicle_interaction_button):
 		vehicle_interaction_button.visible = false
 		vehicle_interaction_button.text = "ركوب السيارة" if CityLanguage.get_language() == "ar" else "Enter vehicle"
@@ -255,6 +257,7 @@ func _exit_player_vehicle() -> void:
 	city_vehicle.call("set_steering", 0.0)
 	city_vehicle.set_physics_process(false)
 	vehicle_occupied = false
+	_set_mobile_hud_active(true)
 	if is_instance_valid(vehicle_interaction_button):
 		vehicle_interaction_button.text = "ركوب السيارة" if CityLanguage.get_language() == "ar" else "Enter vehicle"
 		vehicle_interaction_button.visible = player.global_position.distance_to(city_vehicle.global_position) <= 5.0
@@ -547,6 +550,14 @@ func _create_mobile_hud() -> void:
 	touch_hud.set_script(hud_script)
 	layer.add_child(touch_hud)
 	touch_hud.set("player", get_node_or_null("Player"))
+
+func _set_mobile_hud_active(active: bool) -> void:
+	var touch_hud := get_node_or_null("MobileHUD/TouchControls") as Control
+	if not is_instance_valid(touch_hud):
+		return
+	if touch_hud.has_method("_clear_touch_state"):
+		touch_hud.call("_clear_touch_state")
+	touch_hud.visible = active
 
 	var hud_layer := CanvasLayer.new()
 	hud_layer.name = "CityActionHUD"
