@@ -347,6 +347,9 @@ func get_daily_task_progress(day_id: String, task_id: String) -> int:
 	var day_progress: Dictionary = daily_task_progress.get(day_id, {})
 	return int(day_progress.get(task_id, 0))
 
+func get_outfit_price(outfit_id: String) -> int:
+	return int(OUTFIT_PRICES.get(outfit_id, -1))
+
 func get_owned_outfits() -> Array:
 	return owned_outfits.duplicate()
 
