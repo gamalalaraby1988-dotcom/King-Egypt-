@@ -32,6 +32,7 @@ var player_level: int = 1
 var xp: int = 0
 var money: int = 0
 var chips: int = 0
+var gems: int = 0
 var reward_receipts: Dictionary = {}
 var achievement_totals: Dictionary = {"jobs": 0, "missions": 0, "daily_claims": 0}
 var achievement_events: Dictionary = {}
@@ -79,6 +80,8 @@ var active_rental_transaction_id: String = ""
 var _key_was_down := false
 
 const SAVE_PATH := "user://kings_city_profile.cfg"
+const WALLET_BACKUP_PATH := "user://kings_city_profile.pre_wallet_v1.cfg"
+const WALLET_SCHEMA_VERSION := 1
 
 func _ready() -> void:
 	_build_ui()
@@ -132,6 +135,8 @@ func grant_reward_once(reward_id: String, money_amount: int = 0, xp_amount: int 
 	config.set_value("profile", "xp", next_xp)
 	config.set_value("profile", "money", next_money)
 	config.set_value("profile", "chips", next_chips)
+	config.set_value("profile", "gems", gems)
+	config.set_value("profile", "wallet_schema_version", WALLET_SCHEMA_VERSION)
 	config.set_value("profile", "completed_missions", completed_missions)
 	config.set_value("profile", "completed_jobs", completed_jobs)
 	config.set_value("profile", "reward_receipts", next_receipts)
@@ -172,6 +177,8 @@ func record_achievement_event_once(event_id: String, stat_key: String) -> bool:
 	config.set_value("profile", "xp", xp)
 	config.set_value("profile", "money", money)
 	config.set_value("profile", "chips", chips)
+	config.set_value("profile", "gems", gems)
+	config.set_value("profile", "wallet_schema_version", WALLET_SCHEMA_VERSION)
 	config.set_value("profile", "completed_missions", completed_missions)
 	config.set_value("profile", "completed_jobs", completed_jobs)
 	config.set_value("profile", "reward_receipts", reward_receipts)
@@ -203,6 +210,8 @@ func initialize_achievement_totals_if_missing(legacy_totals: Dictionary) -> bool
 	config.set_value("profile", "xp", xp)
 	config.set_value("profile", "money", money)
 	config.set_value("profile", "chips", chips)
+	config.set_value("profile", "gems", gems)
+	config.set_value("profile", "wallet_schema_version", WALLET_SCHEMA_VERSION)
 	config.set_value("profile", "completed_missions", completed_missions)
 	config.set_value("profile", "completed_jobs", completed_jobs)
 	config.set_value("profile", "reward_receipts", reward_receipts)
@@ -280,6 +289,8 @@ func complete_activity_once(activity_id: String, activity_kind: String, money_am
 	config.set_value("profile", "xp", next_xp)
 	config.set_value("profile", "money", next_money)
 	config.set_value("profile", "chips", next_chips)
+	config.set_value("profile", "gems", gems)
+	config.set_value("profile", "wallet_schema_version", WALLET_SCHEMA_VERSION)
 	config.set_value("profile", "completed_missions", next_completed_missions)
 	config.set_value("profile", "completed_jobs", next_completed_jobs)
 	config.set_value("profile", "reward_receipts", next_receipts)
@@ -326,6 +337,8 @@ func spend_money_once(transaction_id: String, amount: int) -> bool:
 	config.set_value("profile", "xp", xp)
 	config.set_value("profile", "money", next_money)
 	config.set_value("profile", "chips", chips)
+	config.set_value("profile", "gems", gems)
+	config.set_value("profile", "wallet_schema_version", WALLET_SCHEMA_VERSION)
 	config.set_value("profile", "completed_missions", completed_missions)
 	config.set_value("profile", "completed_jobs", completed_jobs)
 	config.set_value("profile", "reward_receipts", next_receipts)
@@ -378,6 +391,8 @@ func purchase_outfit(outfit_id: String) -> bool:
 	config.set_value("profile", "xp", xp)
 	config.set_value("profile", "money", next_money)
 	config.set_value("profile", "chips", chips)
+	config.set_value("profile", "gems", gems)
+	config.set_value("profile", "wallet_schema_version", WALLET_SCHEMA_VERSION)
 	config.set_value("profile", "completed_missions", completed_missions)
 	config.set_value("profile", "completed_jobs", completed_jobs)
 	config.set_value("profile", "reward_receipts", next_receipts)
@@ -406,6 +421,8 @@ func _save_profile() -> bool:
 	config.set_value("profile", "xp", xp)
 	config.set_value("profile", "money", money)
 	config.set_value("profile", "chips", chips)
+	config.set_value("profile", "gems", gems)
+	config.set_value("profile", "wallet_schema_version", WALLET_SCHEMA_VERSION)
 	config.set_value("profile", "completed_missions", completed_missions)
 	config.set_value("profile", "completed_jobs", completed_jobs)
 	config.set_value("profile", "reward_receipts", reward_receipts)
@@ -431,6 +448,7 @@ func _load_profile() -> void:
 		xp = _safe_profile_int(config.get_value("profile", "xp", 0), 0)
 		money = _safe_profile_int(config.get_value("profile", "money", 0), 0)
 		chips = _safe_profile_int(config.get_value("profile", "chips", 0), 0)
+		gems = _safe_profile_int(config.get_value("profile", "gems", 0), 0)
 		var saved_missions: Variant = config.get_value("profile", "completed_missions", {})
 		var saved_jobs: Variant = config.get_value("profile", "completed_jobs", {})
 		var saved_receipts: Variant = config.get_value("profile", "reward_receipts", {})
@@ -460,6 +478,7 @@ func _load_profile() -> void:
 		daily_task_events = saved_daily_events if saved_daily_events is Dictionary else {}
 		achievement_stats_initialized = bool(config.get_value("profile", "achievement_stats_initialized", false))
 	var saved_owned = config.get_value("profile", "owned_outfits", null) if error == OK else null
+	var needs_profile_save := false
 	if saved_owned is Array:
 		owned_outfits = _sanitize_owned_outfits(saved_owned)
 	else:
@@ -470,8 +489,21 @@ func _load_profile() -> void:
 			owned_outfits = _sanitize_owned_outfits(legacy_owned if legacy_owned is Array else ["default"])
 		else:
 			owned_outfits = ["default"]
-		# اكتب البنية الموحدة حتى للحساب الجديد، أو بعد ترحيل ملف قديم.
-		_save_profile()
+		needs_profile_save = true
+
+	# ترحيل محافظ متوافق: لا نغير money أو chips، ونبدأ gems بصفر فقط عند غياب المفتاح.
+	var wallet_schema := int(config.get_value("profile", "wallet_schema_version", 0)) if error == OK else 0
+	var wallet_needs_migration := error == OK and (not config.has_section_key("profile", "gems") or wallet_schema < WALLET_SCHEMA_VERSION)
+	if wallet_needs_migration and FileAccess.file_exists(SAVE_PATH) and not FileAccess.file_exists(WALLET_BACKUP_PATH):
+		var backup_error := DirAccess.copy_absolute(ProjectSettings.globalize_path(SAVE_PATH), ProjectSettings.globalize_path(WALLET_BACKUP_PATH))
+		if backup_error != OK:
+			push_warning("تعذر إنشاء نسخة احتياطية قبل ترحيل المحفظة؛ تم إيقاف الترحيل دون تعديل الملف الأصلي.")
+			return
+	if wallet_needs_migration:
+		needs_profile_save = true
+	if needs_profile_save:
+		if not _save_profile():
+			push_warning("تعذر حفظ ترحيل المحفظة؛ بقي ملف الحفظ الأصلي دون استبدال.")
 
 func _safe_profile_int(value: Variant, fallback: int, minimum: int = 0) -> int:
 	if not (value is int or value is float) or not is_finite(float(value)):
@@ -513,7 +545,7 @@ func _process(_delta: float) -> void:
 		interact()
 	_key_was_down = interaction_key_down
 
-	stats_label.text = "المستوى %d  |  الخبرة %d  |  المال %d  |  الرقائق %d" % [player_level, xp, money, chips]
+	stats_label.text = "المستوى %d  |  الخبرة %d  |  المال %d  |  الرقائق %d  |  الجواهر %d" % [player_level, xp, money, chips, gems]
 	if job_running:
 		var job_distance := Vector2(player.global_position.x, player.global_position.z).distance_to(Vector2(active_job_target.x, active_job_target.z))
 		status_label.text = "الوظيفة: توجّه إلى نقطة العمل. المتبقي: %.1f متر" % job_distance
