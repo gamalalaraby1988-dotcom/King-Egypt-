@@ -519,7 +519,7 @@ func _process(_delta: float) -> void:
 		interact()
 	_key_was_down = interaction_key_down
 
-	stats_label.text = "المستوى %d  |  الخبرة %d  |  المال %d  |  الرقائق %d" % [player_level, xp, money, chips]
+	stats_label.text = "المستوى %d  |  الخبرة %d  |  المال %d  |  الرقائق %d  |  الجواهر %d" % [player_level, xp, money, chips, WalletManager.get_balance("gems")]
 	if job_running:
 		var job_distance := Vector2(player.global_position.x, player.global_position.z).distance_to(Vector2(active_job_target.x, active_job_target.z))
 		status_label.text = "الوظيفة: توجّه إلى نقطة العمل. المتبقي: %.1f متر" % job_distance
