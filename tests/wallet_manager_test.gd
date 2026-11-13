@@ -12,7 +12,7 @@ func _run_wallet_tests() -> void:
 		return
 
 	var transaction_id := "ci_wallet_test_%s" % str(Time.get_ticks_usec())
-	var before := wallet.get_balance("gems")
+	var before: int = wallet.get_balance("gems")
 	if not wallet.credit(transaction_id, "gems", 25, "CI test credit"):
 		push_error("Wallet credit failed.")
 		quit(1)
