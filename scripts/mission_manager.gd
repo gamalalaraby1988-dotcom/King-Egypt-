@@ -107,6 +107,8 @@ func _notification(what: int) -> void:
 
 func grant_reward_once(reward_id: String, money_amount: int = 0, xp_amount: int = 0, chips_amount: int = 0) -> bool:
 	# يسجل الإيصال والمحفظة في ملف واحد؛ تكرار نفس المعرف لا يصرف المكافأة مجددًا.
+	if not _refresh_wallet_cache():
+		return false
 	if reward_id.is_empty() or money_amount < 0 or xp_amount < 0 or chips_amount < 0 or money + money_amount > MAX_CURRENCY_BALANCE or chips + chips_amount > MAX_CURRENCY_BALANCE or reward_receipts.has(reward_id):
 		return false
 	var next_money := money + money_amount
@@ -222,6 +224,8 @@ func has_reward_receipt(reward_id: String) -> bool:
 
 func complete_activity_once(activity_id: String, activity_kind: String, money_amount: int = 0, xp_amount: int = 0, chips_amount: int = 0) -> bool:
 	# حفظ إكمال النشاط وإيصال المكافأة والمحفظة في ملف واحد يمنع إعادة الصرف بعد إعادة التشغيل.
+	if not _refresh_wallet_cache():
+		return false
 	if activity_id.is_empty() or money_amount < 0 or xp_amount < 0 or chips_amount < 0 or money + money_amount > MAX_CURRENCY_BALANCE or chips + chips_amount > MAX_CURRENCY_BALANCE:
 		return false
 	var completion_key := activity_id
@@ -305,6 +309,8 @@ func complete_activity_once(activity_id: String, activity_kind: String, money_am
 
 func spend_money_once(transaction_id: String, amount: int) -> bool:
 	# تأجير الخدمات المدفوعة يستخدم إيصال المحفظة نفسه لمنع الخصم المكرر.
+	if not _refresh_wallet_cache():
+		return false
 	if transaction_id.strip_edges().is_empty() or amount <= 0 or amount > MAX_CURRENCY_BALANCE:
 		return false
 	var receipt_id := "spend_%s" % transaction_id
@@ -331,6 +337,8 @@ func get_owned_outfits() -> Array:
 
 func purchase_outfit(outfit_id: String) -> bool:
 	# واجهة الشراء لا ترسل السعر؛ المرجع الوحيد هو جدول الأسعار داخل اللعبة.
+	if not _refresh_wallet_cache():
+		return false
 	if not OUTFIT_PRICES.has(outfit_id) or owned_outfits.has(outfit_id):
 		return false
 	var price: int = int(OUTFIT_PRICES[outfit_id])
@@ -353,6 +361,9 @@ func purchase_outfit(outfit_id: String) -> bool:
 	return true
 
 func _save_profile() -> bool:
+	if not _refresh_wallet_cache():
+		push_warning("تخطي حفظ تقدم اللاعب لأن المحفظة موقوفة للمراجعة.")
+		return false
 	var config := ConfigFile.new()
 	var load_error := config.load(SAVE_PATH)
 	if load_error != OK and FileAccess.file_exists(SAVE_PATH):
@@ -449,6 +460,20 @@ func _sanitize_owned_outfits(items: Array) -> Array:
 func register_building(building: Node3D) -> void:
 	buildings.append(building)
 
+func _refresh_wallet_cache() -> bool:
+	# المال والرقائق نسخ عرض مؤقتة فقط؛ المحفظة هي المرجع المحلي الوحيد.
+	var snapshot: Dictionary = WalletManager.get_balances()
+	if snapshot.is_empty() or not WalletManager.initialized or WalletManager.integrity_blocked:
+		return false
+	money = int(snapshot.get("money", 0))
+	chips = int(snapshot.get("chips", 0))
+	return true
+
+func _wallet_balance_text() -> String:
+	if not _refresh_wallet_cache():
+		return "موقوف للمراجعة"
+	return "%d جنيه، %d رقائق" % [money, chips]
+
 func _process(_delta: float) -> void:
 	if navigation_arrival_remaining > 0.0:
 		navigation_arrival_remaining = maxf(navigation_arrival_remaining - _delta, 0.0)
@@ -473,7 +498,10 @@ func _process(_delta: float) -> void:
 		interact()
 	_key_was_down = interaction_key_down
 
-	stats_label.text = "المستوى %d  |  الخبرة %d  |  المال %d  |  الرقائق %d  |  الجواهر %d" % [player_level, xp, money, chips, WalletManager.get_balance("gems")]
+	var wallet_summary := "المال والرقائق موقوفان للمراجعة"
+	if _refresh_wallet_cache():
+		wallet_summary = "المال %d  |  الرقائق %d  |  الجواهر %d" % [money, chips, WalletManager.get_balance("gems")]
+	stats_label.text = "المستوى %d  |  الخبرة %d  |  %s" % [player_level, xp, wallet_summary]
 	if job_running:
 		var job_distance := Vector2(player.global_position.x, player.global_position.z).distance_to(Vector2(active_job_target.x, active_job_target.z))
 		status_label.text = "الوظيفة: توجّه إلى نقطة العمل. المتبقي: %.1f متر" % job_distance
@@ -625,6 +653,9 @@ func open_animal_rental(staff: Node3D) -> void:
 	if is_instance_valid(player) and player.has_method("is_riding_animal") and player.is_riding_animal():
 		status_label.text = "أنت تركب حيوانًا بالفعل. انزل أولًا قبل استئجار حيوان آخر."
 		accept_button.disabled = true
+	elif not _refresh_wallet_cache():
+		status_label.text = "المحفظة موقوفة للمراجعة؛ لا يمكن تنفيذ التأجير الآن."
+		accept_button.disabled = true
 	elif money < price:
 		status_label.text = "رصيدك لا يكفي. رصيدك الحالي: %d جنيه." % money
 		accept_button.disabled = true
@@ -647,6 +678,10 @@ func _rent_selected_animal() -> void:
 		return
 	var data: Dictionary = selected_animal_staff.get_animal_rental_data()
 	var price := int(data.get("price", 25))
+	if not _refresh_wallet_cache():
+		status_label.text = "المحفظة موقوفة للمراجعة؛ لم يبدأ الركوب ولم يُخصم شيء."
+		accept_button.disabled = true
+		return
 	if money < price:
 		status_label.text = "لا يوجد مال كافٍ لدفع أجرة الركوب."
 		accept_button.disabled = true
@@ -856,7 +891,7 @@ func _complete_active_job() -> void:
 	job_running = false
 	target_marker.visible = false
 	status_label.text = "أتممت الوظيفة واستلمت أجرك!"
-	description_label.text = "رصيدك الحالي: %d جنيه، %d رقائق، المستوى %d." % [money, chips, player_level]
+	description_label.text = "رصيدك الحالي: %s، المستوى %d." % [_wallet_balance_text(), player_level]
 	reward_label.text = "تم حفظ إكمال الوظيفة ومكافأتها."
 	accept_button.disabled = true
 	panel.visible = true
