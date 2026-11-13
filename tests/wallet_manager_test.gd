@@ -143,6 +143,28 @@ func _run_wallet_tests() -> void:
 		quit(1)
 		return
 
+	var language_service := root.get_node_or_null("CityLanguage")
+	if language_service == null:
+		push_error("CityLanguage autoload was not found.")
+		quit(1)
+		return
+	var language_profile_before := ConfigFile.new()
+	if language_profile_before.load("user://kings_city_profile.cfg") != OK:
+		push_error("Could not load profile before testing in-memory language changes.")
+		quit(1)
+		return
+	var saved_language_before: String = str(language_profile_before.get_value("settings", "language", "auto"))
+	var current_language_mode: String = str(language_service.language_mode)
+	var alternate_language := "en" if current_language_mode != "en" else "ar"
+	language_service.set_language(alternate_language)
+	var language_profile_after := ConfigFile.new()
+	if language_profile_after.load("user://kings_city_profile.cfg") != OK or str(language_profile_after.get_value("settings", "language", "auto")) != saved_language_before:
+		push_error("CityLanguage changed the profile file outside atomic profile settings persistence.")
+		language_service.set_language(current_language_mode)
+		quit(1)
+		return
+	language_service.set_language(current_language_mode)
+
 	var mission_script: Script = load("res://scripts/mission_manager.gd")
 	var mission_manager = mission_script.new()
 	mission_manager.money = -10
