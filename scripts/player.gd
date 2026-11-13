@@ -23,6 +23,12 @@ func _physics_process(delta: float) -> void:
 	if sit_key_down and not _sit_key_was_down:
 		toggle_sit()
 	_sit_key_was_down = sit_key_down
+	var input_vector := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
+	if mobile_move.length() > 0.08:
+		input_vector = mobile_move
+	# أي إدخال حركة ينهي الجلوس فورًا، سواء من لوحة المفاتيح أو عصا الهاتف.
+	if sitting and input_vector.length() > 0.08:
+		sitting = false
 	if sitting:
 		velocity.x = move_toward(velocity.x, 0.0, acceleration * delta)
 		velocity.z = move_toward(velocity.z, 0.0, acceleration * delta)
@@ -33,10 +39,6 @@ func _physics_process(delta: float) -> void:
 		move_and_slide()
 		_update_avatar_animation("sit", 0.0)
 		return
-
-	var input_vector := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
-	if mobile_move.length() > 0.08:
-		input_vector = mobile_move
 	var direction := Vector3(input_vector.x, 0.0, input_vector.y)
 	if direction.length() > 1.0:
 		direction = direction.normalized()
