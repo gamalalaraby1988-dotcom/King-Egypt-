@@ -75,6 +75,18 @@ func _ready() -> void:
 	_build_group_chat_popup()
 	_refresh_wallet()
 
+
+func _exit_tree() -> void:
+	# العلامات مضافة إلى المشهد الرئيسي، لذا يجب تنظيفها عند إزالة واجهة المدينة.
+	for marker_value in group_member_markers.values():
+		if is_instance_valid(marker_value):
+			marker_value.queue_free()
+	group_member_markers.clear()
+	if is_instance_valid(main_scene):
+		var meeting_marker := main_scene.get_node_or_null("GroupMeetingMarker")
+		if is_instance_valid(meeting_marker):
+			meeting_marker.queue_free()
+
 func _process(_delta: float) -> void:
 	if not is_instance_valid(mission_manager) and is_instance_valid(main_scene):
 		mission_manager = main_scene.get_node_or_null("MissionManager")
@@ -468,8 +480,9 @@ func _is_local_group_leader() -> bool:
 
 
 func _request_group_invite(player_id: String) -> void:
-	if player_id.is_empty():
-		player_action_status.text = "رمز اللاعب غير متاح."
+	player_id = player_id.strip_edges()
+	if player_id.is_empty() or player_id.length() > 64 or player_id == "local_leader":
+		player_action_status.text = "رمز اللاعب غير صالح."
 		return
 	if group_members.size() >= GROUP_MAX_MEMBERS:
 		player_action_status.text = "المجموعة مكتملة؛ الحد الأقصى أربعة لاعبين."
@@ -484,11 +497,15 @@ func _request_group_invite(player_id: String) -> void:
 
 
 func resolve_group_invitation(player_id: String, accepted: bool, display_name: String = "لاعب") -> void:
-	if not pending_group_invites.has(player_id):
+	player_id = player_id.strip_edges()
+	if player_id.is_empty() or player_id.length() > 64 or not pending_group_invites.has(player_id):
 		return
 	pending_group_invites.erase(player_id)
 	if accepted and group_members.size() < GROUP_MAX_MEMBERS and not _group_contains(player_id):
-		group_members.append({"player_id":player_id, "display_name":display_name, "is_leader":false})
+		var clean_name := display_name.strip_edges().substr(0, 24)
+		if clean_name.is_empty():
+			clean_name = "لاعب"
+		group_members.append({"player_id":player_id, "display_name":clean_name, "is_leader":false})
 	_refresh_group_popup()
 
 
@@ -503,9 +520,31 @@ func _remove_group_member(player_id: String) -> void:
 	for i in range(group_members.size() - 1, 0, -1):
 		if str(group_members[i].get("player_id", "")) == player_id:
 			group_members.remove_at(i)
+			_remove_group_member_marker(player_id)
 			group_member_removed.emit(player_id)
 			break
+	if group_members.size() <= 1:
+		_clear_group_meeting_marker()
+		group_meeting_position = Vector3.ZERO
+		if group_follow_enabled:
+			group_follow_enabled = false
+			group_follow_mode_requested.emit(false)
 	_refresh_group_popup()
+
+
+func _remove_group_member_marker(player_id: String) -> void:
+	var marker_value: Variant = group_member_markers.get(player_id, null)
+	if is_instance_valid(marker_value):
+		marker_value.queue_free()
+	group_member_markers.erase(player_id)
+
+
+func _clear_group_meeting_marker() -> void:
+	if not is_instance_valid(main_scene):
+		return
+	var marker := main_scene.get_node_or_null("GroupMeetingMarker")
+	if is_instance_valid(marker):
+		marker.queue_free()
 
 
 func _toggle_group_follow_mode() -> void:
@@ -583,10 +622,7 @@ func receive_group_member_positions(member_positions: Array) -> void:
 		marker.global_position = world_position + Vector3(0, 0.4, 0)
 	for old_id in group_member_markers.keys():
 		if not active_ids.has(str(old_id)):
-			var old_marker: Node3D = group_member_markers[old_id]
-			if is_instance_valid(old_marker):
-				old_marker.queue_free()
-			group_member_markers.erase(old_id)
+			_remove_group_member_marker(str(old_id))
 
 
 func receive_group_move_order(target_position: Vector3) -> void:
@@ -631,9 +667,7 @@ func receive_group_meeting_point(position: Vector3, leader_name: String = "قا�
 func _show_group_meeting_marker(position: Vector3) -> void:
 	if not position.is_finite() or not is_instance_valid(main_scene):
 		return
-	var old_marker := main_scene.get_node_or_null("GroupMeetingMarker")
-	if is_instance_valid(old_marker):
-		old_marker.queue_free()
+	_clear_group_meeting_marker()
 	var marker := Node3D.new()
 	marker.name = "GroupMeetingMarker"
 	marker.position = Vector3(position.x, 0.15, position.z)
