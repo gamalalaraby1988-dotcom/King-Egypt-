@@ -699,7 +699,7 @@ func _rent_selected_animal() -> void:
 		player.end_animal_ride()
 		status_label.text = "تعذر حفظ أجرة الركوب؛ لم يتم خصم المال. حاول مرة أخرى."
 		return
-	stats_label.text = "المستوى %d  |  الخبرة %d  |  المال %d  |  الرقائق %d" % [player_level, xp, money, chips]
+	stats_label.text = "المستوى %d  |  الخبرة %d  |  %s" % [player_level, xp, _wallet_balance_text()]
 	status_label.text = "دفعت %d جنيه وبدأت ركوب %s. اضغط زر تفاعل للنزول." % [price, animal_name]
 	description_label.text = "يمكنك التجول بالحيوان في المخيم والمدينة."
 	reward_label.text = "تم خصم أجرة الركوب من رصيدك."
@@ -935,7 +935,7 @@ func _complete_active_mission() -> void:
 	mission_running = false
 	target_marker.visible = false
 	status_label.text = "اكتملت المهمة! تم حفظ المكافأة."
-	description_label.text = "رصيدك الحالي: %d جنيه، %d رقائق، المستوى %d." % [money, chips, player_level]
+	description_label.text = "رصيدك الحالي: %s، المستوى %d." % [_wallet_balance_text(), player_level]
 	reward_label.text = "تم حفظ إكمال المهمة ومكافآتها."
 	accept_button.disabled = true
 	panel.visible = true
