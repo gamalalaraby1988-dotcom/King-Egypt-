@@ -78,7 +78,9 @@ func _ready() -> void:
 	_build_group_popup()
 	_build_group_chat_popup()
 	_refresh_wallet()
-	_build_test_account_panel()
+	# أدوات اتصال Supabase مرتبطة بحساب الاختبار؛ لا تظهر في نسخ الإنتاج.
+	if OS.is_debug_build():
+		_build_test_account_panel()
 
 
 func _exit_tree() -> void:
