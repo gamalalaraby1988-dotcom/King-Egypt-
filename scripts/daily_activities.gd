@@ -139,6 +139,10 @@ func _load_state() -> void:
 
 func _save_state() -> bool:
 	var cfg := ConfigFile.new()
+	var load_error := cfg.load(SAVE_PATH)
+	if load_error != OK and FileAccess.file_exists(SAVE_PATH):
+		push_warning("ملف الأنشطة اليومية موجود لكنه غير قابل للقراءة؛ أُوقفت الكتابة لحماية التقدم السابق.")
+		return false
 	cfg.set_value("daily", "day", day_key)
 	cfg.set_value("daily", "progress", progress)
 	cfg.set_value("daily", "claimed", claimed)
