@@ -318,14 +318,19 @@ func _build_player_interaction_popup() -> void:
 
 func open_player_interaction(player_data: Dictionary) -> void:
 	# البيانات المتوقعة: player_id, display_name, level, account_age, avatar_text.
-	selected_player_id = str(player_data.get("player_id", ""))
+	selected_player_id = str(player_data.get("player_id", "")).strip_edges()
+	if selected_player_id.is_empty() or selected_player_id.length() > 64 or selected_player_id == "local_leader":
+		selected_player_id = ""
 	selected_player_is_friend = bool(player_data.get("is_friend", false))
 	player_primary_action_button.text = "إضافة للمجموعة" if selected_player_is_friend else "إضافة صديق"
-	player_name_label.text = str(player_data.get("display_name", "لاعب"))
-	player_level_label.text = "المستوى %s" % str(player_data.get("level", "—"))
-	player_status_label.text = str(player_data.get("account_age", ""))
-	player_avatar_label.text = str(player_data.get("avatar_text", "👤"))
-	player_action_status.text = ""
+	var clean_name := str(player_data.get("display_name", "لاعب")).strip_edges().substr(0, 24)
+	player_name_label.text = clean_name if not clean_name.is_empty() else "لاعب"
+	var clean_level := str(player_data.get("level", "—")).substr(0, 12)
+	player_level_label.text = "المستوى %s" % clean_level
+	player_status_label.text = str(player_data.get("account_age", "")).strip_edges().substr(0, 40)
+	var clean_avatar := str(player_data.get("avatar_text", "👤")).substr(0, 8)
+	player_avatar_label.text = clean_avatar if not clean_avatar.is_empty() else "👤"
+	player_action_status.text = "بيانات اللاعب غير صالحة؛ تعذر تنفيذ التفاعل." if selected_player_id.is_empty() else ""
 	player_popup.visible = true
 
 
@@ -334,8 +339,12 @@ func close_player_interaction() -> void:
 		player_popup.visible = false
 
 
+func _has_selected_player() -> bool:
+	return not selected_player_id.is_empty() and selected_player_id.length() <= 64 and selected_player_id != "local_leader"
+
+
 func _on_player_primary_action() -> void:
-	if selected_player_id.is_empty():
+	if not _has_selected_player():
 		player_action_status.text = "تعذر تنفيذ الطلب: رمز اللاعب غير متاح."
 		return
 	if selected_player_is_friend:
@@ -346,7 +355,7 @@ func _on_player_primary_action() -> void:
 
 
 func _on_player_gift_party() -> void:
-	if selected_player_id.is_empty():
+	if not _has_selected_player():
 		player_action_status.text = "تعذر تجهيز الإهداء: رمز اللاعب غير متاح."
 		return
 	party_gift_requested.emit(selected_player_id)
@@ -354,7 +363,7 @@ func _on_player_gift_party() -> void:
 
 
 func _on_player_report() -> void:
-	if selected_player_id.is_empty():
+	if not _has_selected_player():
 		player_action_status.text = "تعذر تجهيز البلاغ: رمز اللاعب غير متاح."
 		return
 	player_report_requested.emit(selected_player_id)
