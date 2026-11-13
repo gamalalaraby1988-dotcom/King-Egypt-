@@ -80,7 +80,7 @@ func _refresh_offers() -> void:
 		var label := Label.new()
 		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		var item_id: String = offer.id
-		var price: int = int(offer.price)
+		var price: int = mission_manager.get_outfit_price(item_id) if is_instance_valid(mission_manager) and mission_manager.has_method("get_outfit_price") else int(offer.price)
 		if owned.has(item_id):
 			label.text = "%s — مملوكة" % offer.name
 		else:
@@ -100,11 +100,10 @@ func _buy(item_id: String) -> void:
 		status_label.text = "هذا المنتج مملوك بالفعل."
 		_refresh_offers()
 		return
-	var offer_price := 0
-	for offer in OFFERS:
-		if str(offer.id) == item_id:
-			offer_price = int(offer.price)
-			break
+	var offer_price := int(mission_manager.get_outfit_price(item_id)) if mission_manager.has_method("get_outfit_price") else -1
+	if offer_price < 0:
+		status_label.text = "هذا المنتج غير متاح للشراء."
+		return
 	if int(mission_manager.money) < offer_price:
 		status_label.text = "رصيدك لا يكفي لشراء هذا المنتج."
 		return
