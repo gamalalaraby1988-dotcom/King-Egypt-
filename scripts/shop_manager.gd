@@ -89,10 +89,10 @@ func _refresh_offers() -> void:
 		var buy := Button.new()
 		buy.text = "تم الشراء" if owned.has(item_id) else "شراء"
 		buy.disabled = owned.has(item_id)
-		buy.pressed.connect(func(): _buy(item_id, price))
+		buy.pressed.connect(func(): _buy(item_id))
 		row.add_child(buy)
 
-func _buy(item_id: String, price: int) -> void:
+func _buy(item_id: String) -> void:
 	if not is_instance_valid(mission_manager):
 		status_label.text = "تعذر الوصول إلى ملف اللاعب."
 		return
@@ -100,10 +100,15 @@ func _buy(item_id: String, price: int) -> void:
 		status_label.text = "هذا المنتج مملوك بالفعل."
 		_refresh_offers()
 		return
-	if int(mission_manager.money) < price:
+	var offer_price := 0
+	for offer in OFFERS:
+		if str(offer.id) == item_id:
+			offer_price = int(offer.price)
+			break
+	if int(mission_manager.money) < offer_price:
 		status_label.text = "رصيدك لا يكفي لشراء هذا المنتج."
 		return
-	if not mission_manager.has_method("purchase_outfit") or not mission_manager.purchase_outfit(item_id, price):
+	if not mission_manager.has_method("purchase_outfit") or not mission_manager.purchase_outfit(item_id):
 		status_label.text = "لم يكتمل الشراء؛ لم يتم اعتماد الخصم أو الملكية. حاول مرة أخرى."
 		return
 	if is_instance_valid(wardrobe_manager):
