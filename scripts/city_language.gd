@@ -165,19 +165,12 @@ func translate(key: String) -> String:
 	return str(dictionary.get(key, key))
 
 func set_language(mode: String) -> void:
+	# هذه الخدمة تغيّر حالة اللغة داخل الذاكرة فقط.
+	# الحفظ الدائم يتم من ProfileSettings عبر WalletManager.save_profile_metadata
+	# حتى لا تتجاوز الكتابة المباشرة سلامة ملف اللاعب والحفظ الذري.
 	if not ["auto", "ar", "en"].has(mode):
 		mode = "auto"
 	if language_mode == mode:
-		return
-	var config := ConfigFile.new()
-	var load_error := config.load(SAVE_PATH)
-	if load_error != OK and FileAccess.file_exists(SAVE_PATH):
-		push_warning("ملف إعدادات اللغة غير قابل للقراءة؛ لم يتم استبداله.")
-		return
-	config.set_value("settings", "language", mode)
-	var save_error := config.save(SAVE_PATH)
-	if save_error != OK:
-		push_warning("تعذر حفظ إعداد اللغة: %s" % save_error)
 		return
 	language_mode = mode
 	language_changed.emit()
