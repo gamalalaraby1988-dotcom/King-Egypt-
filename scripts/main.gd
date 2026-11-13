@@ -290,6 +290,12 @@ func enter_building_interior(building: Node3D, actor: Node3D) -> void:
 	interior_return_transform = body.global_transform
 	_show_interior_loading(false)
 	await get_tree().create_timer(0.65).timeout
+	# قد يُحذف المبنى أو اللاعب أثناء شاشة التحميل؛ لا تتابع الانتقال بمراجع منتهية.
+	if not is_inside_tree() or not is_instance_valid(building) or building.is_queued_for_deletion() or not is_instance_valid(body) or body.is_queued_for_deletion():
+		interior_transition_busy = false
+		interior_player = null
+		_hide_interior_loading()
+		return
 	_set_city_world_hidden(true)
 	_create_building_interior(str(building.get("building_title")))
 	body.global_position = INTERIOR_WORLD_POSITION + Vector3(0, 1.05, 2.8)
@@ -408,8 +414,12 @@ func return_from_building_interior() -> void:
 	interior_transition_busy = true
 	_show_interior_loading(false, "interior_return_loading")
 	await get_tree().create_timer(0.45).timeout
-	interior_player.global_transform = interior_return_transform
-	interior_player.velocity = Vector3.ZERO
+	# إذا اختفت الشخصية أثناء التحميل، أعد العالم ونظّف الانتقال بدل ترك المدينة مخفية.
+	if not is_inside_tree():
+		return
+	if is_instance_valid(interior_player) and not interior_player.is_queued_for_deletion():
+		interior_player.global_transform = interior_return_transform
+		interior_player.velocity = Vector3.ZERO
 	_set_city_world_hidden(false)
 	if is_instance_valid(interior_root):
 		interior_root.queue_free()
