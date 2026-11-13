@@ -376,7 +376,9 @@ func _select_horus_color_from_phone(color_id: String) -> void:
 func _refresh_wallet() -> void:
 	if not is_instance_valid(mission_manager):
 		return
-	if not WalletManager.initialized or WalletManager.integrity_blocked:
+	# القراءة الموحدة تتحقق من اتساق الملف قبل عرض أي رصيد.
+	var balances: Dictionary = WalletManager.get_balances()
+	if not WalletManager.initialized or WalletManager.integrity_blocked or balances.is_empty():
 		if is_instance_valid(money_label):
 			money_label.text = "ذهب: موقوف"
 		if is_instance_valid(chips_label):
@@ -385,11 +387,11 @@ func _refresh_wallet() -> void:
 			gems_label.text = "جواهر: موقوفة"
 		return
 	if is_instance_valid(money_label):
-		money_label.text = "ذهب: %d  +" % int(mission_manager.get("money"))
+		money_label.text = "ذهب: %d  +" % int(balances.get("money", 0))
 	if is_instance_valid(chips_label):
-		chips_label.text = "رقائق: %d  +" % int(mission_manager.get("chips"))
+		chips_label.text = "رقائق: %d  +" % int(balances.get("chips", 0))
 	if is_instance_valid(gems_label):
-		gems_label.text = "جواهر: %d" % WalletManager.get_balance("gems")
+		gems_label.text = "جواهر: %d" % int(balances.get("gems", 0))
 
 
 func _build_player_interaction_popup() -> void:
