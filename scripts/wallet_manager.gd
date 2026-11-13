@@ -124,6 +124,51 @@ func get_recent_transactions(limit: int = 5) -> Array:
 func has_transaction(transaction_id: String) -> bool:
 	return receipts.has(transaction_id)
 
+func purchase_once(transaction_id: String, currency: String, amount: int, reason: String, profile_updates: Dictionary = {}) -> bool:
+	# يطبق الخصم وتحديث الملكية/الإيصال في الملف نفسه؛ لا توجد ملكية دون خصم ناجح.
+	if not initialized or transaction_id.strip_edges().is_empty() or not CURRENCIES.has(currency):
+		return false
+	if amount <= 0 or amount > MAX_BALANCE or receipts.has(transaction_id):
+		return false
+	var config := ConfigFile.new()
+	if config.load(PROFILE_PATH) != OK:
+		return false
+	_refresh_legacy_balances()
+	var current := int(balances[currency])
+	if current < amount:
+		return false
+	var next_value := current - amount
+	var next_balances := balances.duplicate(true)
+	next_balances[currency] = next_value
+	var next_receipts := receipts.duplicate(true)
+	var timestamp := Time.get_datetime_string_from_system(true)
+	next_receipts[transaction_id] = timestamp
+	var next_ledger := ledger.duplicate(true)
+	next_ledger.append({
+		"transaction_id": transaction_id,
+		"kind": "purchase",
+		"currency": currency,
+		"amount": amount,
+		"balance_before": current,
+		"balance_after": next_value,
+		"reason": reason.substr(0, 120),
+		"timestamp": timestamp
+	})
+	for key in profile_updates:
+		config.set_value("profile", str(key), profile_updates[key])
+	if currency == "money" or currency == "chips":
+		config.set_value("profile", currency, next_value)
+	config.set_value("wallet", "schema_version", SCHEMA_VERSION)
+	config.set_value("wallet", "balances", next_balances)
+	config.set_value("wallet", "receipts", next_receipts)
+	config.set_value("wallet", "ledger", next_ledger)
+	if not _atomic_save(config):
+		return false
+	balances = next_balances
+	receipts = next_receipts
+	ledger = next_ledger
+	return true
+
 func credit(transaction_id: String, currency: String, amount: int, reason: String = "") -> bool:
 	return _transact(transaction_id, currency, amount, "credit", reason)
 
