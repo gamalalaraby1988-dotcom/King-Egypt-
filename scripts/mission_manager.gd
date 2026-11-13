@@ -713,7 +713,7 @@ func open_job(job_board: Node3D) -> void:
 	panel.visible = true
 
 func open_building(building: Node3D) -> void:
-	if not is_instance_valid(building) or building.is_queued_for_deletion() or mission_running:
+	if not is_instance_valid(building) or building.is_queued_for_deletion() or mission_running or job_running:
 		return
 	animal_selector.visible = false
 	selected_activity_kind = "mission"
@@ -763,6 +763,8 @@ func _show_building_activities() -> void:
 	open_building_activities(building)
 
 func open_building_activities(building: Node3D) -> void:
+	if mission_running or job_running or not is_instance_valid(building) or building.is_queued_for_deletion():
+		return
 	var data: Dictionary = building.get_mission_data()
 	interior_activities_button.visible = false
 	interior_return_button.visible = false
@@ -987,7 +989,7 @@ func _complete_active_job() -> void:
 	panel.visible = true
 
 func _accept_mission() -> void:
-	if not is_instance_valid(active_mission) or mission_running:
+	if not is_instance_valid(active_mission) or mission_running or job_running:
 		return
 	landmark_navigation_active = false
 	navigation_arrival_remaining = 0.0
