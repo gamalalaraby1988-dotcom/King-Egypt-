@@ -206,10 +206,12 @@
 
 ### حدود سير CI الحالي
 
-- `.github/workflows/godot-check.yml` يعمل تلقائيًا عند push أو pull request إلى `main` فقط، ويحتوي على import/check واختبار المحفظة وتشغيل المشهد headless.
+- `.github/workflows/godot-check.yml` يعمل عند push إلى `main`، وكذلك عند pull request يستهدف `main`. لذلك تُفحص تغييرات فرع التطوير عند فتح/تحديث طلب دمج إلى `main` حتى لو لم يكن اسم الفرع ضمن قائمة push.
 - `.github/workflows/android-debug-apk.yml` يعمل تلقائيًا عند push إلى `main` مع تغييرات محددة بالمسارات، أو عبر `workflow_dispatch`.
-- لذلك لا يوجد إثبات بأن commits فرع التطوير الحالي شغلت هذه الاختبارات تلقائيًا. يمكن اختيار الفرع عند تشغيل workflow_dispatch يدويًا من GitHub، لكن ذلك لم يُنفذ في هذه الدفعة.
-- لا توجد نتيجة CI أو APK جديدة صادرة عن هذه المراجعة.
+- تم التحقق من سجل GitHub Actions للـ commit `feaafa5c1a98d5b1d7b45d68b924ac49c867ea7e` على فرع `sync-latest-approved-decisions-77-79`: حدث التشغيل `pull_request` إلى `main`، وكانت النتيجة `success`.
+- نجحت الوظيفة `Import and headless startup`، بما في ذلك استيراد الموارد وفحص السكربتات، وتشغيل `tests/wallet_manager_test.gd`، وتشغيل المشهد الرئيسي headless.
+- رابط سجل التشغيل: https://github.com/gamalalaraby1988-dotcom/King-Egypt-/actions/runs/43427112075
+- هذا يثبت نجاح فحوصات Godot الحالية عند ذلك الـ commit فقط؛ لا يثبت backend خادميًا أو اختبار APK أو سلامة ترحيل بيانات حقيقية. تشغيل GitHub المستضاف يستخدم بيئة CI منفصلة، لكن سكربت الاختبار نفسه يكتب في ملف المستخدم الخاص بتلك البيئة.
 
 ### بوابة الاختبار التالية
 
