@@ -137,6 +137,40 @@ func fetch_economy_snapshot() -> bool:
 	economy_snapshot_received.emit(economy_snapshot.duplicate(true))
 	return true
 
+func change_test_display_name(new_name: String) -> Dictionary:
+	if not is_authenticated():
+		return {"ok": false, "error_code": "authentication_required", "message": "يجب تسجيل الدخول بحساب الاختبار أولًا."}
+	var normalized_name := new_name.strip_edges()
+	if normalized_name.is_empty() or normalized_name.length() > 24:
+		return {"ok": false, "error_code": "invalid_display_name", "message": "يجب أن يكون الاسم من 1 إلى 24 حرفًا."}
+	var request_token := access_token
+	var result := await _send_json(
+		HTTPClient.METHOD_POST,
+		"/rest/v1/rpc/change_my_test_display_name",
+		{"p_new_display_name": normalized_name},
+		request_token
+	)
+	if not is_authenticated() or access_token != request_token:
+		return {"ok": false, "error_code": "session_changed", "message": "تغيرت الجلسة أثناء الطلب؛ لم يتم اعتماد النتيجة."}
+	if not bool(result.get("ok", false)):
+		return {
+			"ok": false,
+			"error_code": "server_request_failed",
+			"message": str(result.get("message", "تعذر تغيير الاسم من الخادم."))
+		}
+	var data: Variant = result.get("data", [])
+	if not (data is Array) or data.is_empty() or not (data[0] is Dictionary):
+		return {"ok": false, "error_code": "invalid_server_response", "message": "استجابة تغيير الاسم من الخادم غير مكتملة."}
+	var row: Dictionary = data[0]
+	var succeeded := bool(row.get("success", false))
+	return {
+		"ok": succeeded,
+		"error_code": str(row.get("error_code", "")),
+		"display_name": str(row.get("current_display_name", "")),
+		"next_change_at": str(row.get("next_change_at", "")),
+		"message": "تم تغيير الاسم على الخادم." if succeeded else "لم يوافق الخادم على تغيير الاسم."
+	}
+
 func sign_out() -> void:
 	var token_to_revoke := access_token
 	_clear_session()
