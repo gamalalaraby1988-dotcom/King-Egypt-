@@ -142,12 +142,10 @@ func grant_reward_once(reward_id: String, money_amount: int = 0, xp_amount: int 
 	config.set_value("profile", "achievement_stats_initialized", achievement_stats_initialized)
 	config.set_value("profile", "daily_task_progress", daily_task_progress)
 	config.set_value("profile", "daily_task_events", daily_task_events)
-	var error := config.save(SAVE_PATH)
-	if error != OK:
-		push_warning("تعذر حفظ المكافأة %s: %s" % [reward_id, error])
+	var save_success := WalletManager.save_profile_update(config, next_money, next_chips)
+	if not save_success:
+		push_warning("تعذر حفظ المكافأة %s مع سجل المحفظة." % reward_id)
 		return false
-	if not WalletManager.sync_legacy_balances(next_money, next_chips):
-		push_warning("تم حفظ المكافأة لكن تعذرت مزامنة سجل المحفظة.")
 	money = next_money
 	xp = next_xp
 	chips = next_chips
@@ -184,12 +182,10 @@ func record_achievement_event_once(event_id: String, stat_key: String) -> bool:
 	config.set_value("profile", "achievement_stats_initialized", true)
 	config.set_value("profile", "daily_task_progress", daily_task_progress)
 	config.set_value("profile", "daily_task_events", daily_task_events)
-	var save_error := config.save(SAVE_PATH)
-	if save_error != OK:
-		push_warning("تعذر حفظ حدث الإنجاز %s: %s" % [event_id, save_error])
+	var save_success := WalletManager.save_profile_update(config, money, chips)
+	if not save_success:
+		push_warning("تعذر حفظ حدث الإنجاز %s مع سجل المحفظة." % event_id)
 		return false
-	if not WalletManager.sync_legacy_balances(money, chips):
-		push_warning("تعذر مزامنة سجل المحفظة بعد تحديث الإنجاز.")
 	achievement_totals = next_totals
 	achievement_events = next_events
 	achievement_stats_initialized = true
@@ -217,11 +213,9 @@ func initialize_achievement_totals_if_missing(legacy_totals: Dictionary) -> bool
 	config.set_value("profile", "achievement_stats_initialized", true)
 	config.set_value("profile", "daily_task_progress", daily_task_progress)
 	config.set_value("profile", "daily_task_events", daily_task_events)
-	if config.save(SAVE_PATH) != OK:
-		push_warning("تعذر حفظ ترحيل عدادات الإنجازات.")
+	if not WalletManager.save_profile_update(config, money, chips):
+		push_warning("تعذر حفظ ترحيل عدادات الإنجازات مع سجل المحفظة.")
 		return false
-	if not WalletManager.sync_legacy_balances(money, chips):
-		push_warning("تعذر مزامنة سجل المحفظة بعد ترحيل الإنجازات.")
 	achievement_totals = migrated
 	achievement_stats_initialized = true
 	return true
@@ -296,12 +290,10 @@ func complete_activity_once(activity_id: String, activity_kind: String, money_am
 	config.set_value("profile", "achievement_stats_initialized", true)
 	config.set_value("profile", "daily_task_progress", next_daily_progress)
 	config.set_value("profile", "daily_task_events", next_daily_events)
-	var save_error := config.save(SAVE_PATH)
-	if save_error != OK:
-		push_warning("تعذر حفظ إكمال النشاط %s: %s" % [activity_id, save_error])
+	var save_success := WalletManager.save_profile_update(config, next_money, next_chips)
+	if not save_success:
+		push_warning("تعذر حفظ إكمال النشاط %s مع سجل المحفظة." % activity_id)
 		return false
-	if not WalletManager.sync_legacy_balances(next_money, next_chips):
-		push_warning("تم حفظ النشاط لكن تعذرت مزامنة سجل المحفظة.")
 	money = next_money
 	xp = next_xp
 	chips = next_chips
@@ -345,12 +337,10 @@ func spend_money_once(transaction_id: String, amount: int) -> bool:
 	config.set_value("profile", "achievement_stats_initialized", achievement_stats_initialized)
 	config.set_value("profile", "daily_task_progress", daily_task_progress)
 	config.set_value("profile", "daily_task_events", daily_task_events)
-	var save_error := config.save(SAVE_PATH)
-	if save_error != OK:
-		push_warning("تعذر حفظ عملية الدفع %s: %s" % [transaction_id, save_error])
+	var save_success := WalletManager.save_profile_update(config, next_money, chips)
+	if not save_success:
+		push_warning("تعذر حفظ عملية الدفع %s مع سجل المحفظة." % transaction_id)
 		return false
-	if not WalletManager.sync_legacy_balances(next_money, chips):
-		push_warning("تم حفظ الدفع لكن تعذرت مزامنة سجل المحفظة.")
 	money = next_money
 	reward_receipts = next_receipts
 	return true
@@ -399,12 +389,10 @@ func purchase_outfit(outfit_id: String) -> bool:
 	config.set_value("profile", "achievement_stats_initialized", achievement_stats_initialized)
 	config.set_value("profile", "daily_task_progress", daily_task_progress)
 	config.set_value("profile", "daily_task_events", daily_task_events)
-	var error := config.save(SAVE_PATH)
-	if error != OK:
-		push_warning("تعذر حفظ شراء الإطلالة %s: %s" % [outfit_id, error])
+	var save_success := WalletManager.save_profile_update(config, next_money, chips)
+	if not save_success:
+		push_warning("تعذر حفظ شراء الإطلالة %s مع سجل المحفظة." % outfit_id)
 		return false
-	if not WalletManager.sync_legacy_balances(next_money, chips):
-		push_warning("تم حفظ الشراء لكن تعذرت مزامنة سجل المحفظة.")
 	money = next_money
 	owned_outfits = next_owned
 	reward_receipts = next_receipts
@@ -429,12 +417,9 @@ func _save_profile() -> bool:
 	config.set_value("profile", "achievement_stats_initialized", achievement_stats_initialized)
 	config.set_value("profile", "daily_task_progress", daily_task_progress)
 	config.set_value("profile", "daily_task_events", daily_task_events)
-	var error := config.save(SAVE_PATH)
-	if error != OK:
-		push_warning("تعذر حفظ ملف اللاعب: %s" % error)
+	if not WalletManager.save_profile_update(config, money, chips):
+		push_warning("تعذر حفظ ملف اللاعب مع سجل المحفظة.")
 		return false
-	if not WalletManager.sync_legacy_balances(money, chips):
-		push_warning("تعذر مزامنة أرصدة المال والرقائق في سجل المحفظة.")
 	return true
 
 func _load_profile() -> void:
