@@ -46,5 +46,16 @@ func _run_wallet_tests() -> void:
 		quit(1)
 		return
 
+	var money_before: int = wallet.get_balance("money")
+	var chips_before: int = wallet.get_balance("chips")
+	if not wallet.sync_legacy_balances(money_before + 7, chips_before + 2):
+		push_error("Legacy balance synchronization failed.")
+		quit(1)
+		return
+	if wallet.get_balance("money") != money_before + 7 or wallet.get_balance("chips") != chips_before + 2:
+		push_error("Legacy balance synchronization mismatch.")
+		quit(1)
+		return
+
 	print("Wallet transaction tests passed.")
 	quit(0)
