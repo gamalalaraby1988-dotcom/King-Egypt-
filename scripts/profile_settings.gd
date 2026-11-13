@@ -20,12 +20,56 @@ func _ready() -> void:
 	SupabaseTestClient.auth_changed.connect(_on_test_auth_changed)
 	_apply_settings()
 
-func _on_test_auth_changed(_is_authenticated: bool, _user_id: String) -> void:
+func _on_test_auth_changed(is_authenticated: bool, _user_id: String) -> void:
 	var config := ConfigFile.new()
 	if config.load(SAVE_PATH) != OK and FileAccess.file_exists(SAVE_PATH):
 		name_input.editable = false
-		name_change_status.text = "تعذر قراءة ملف اللاعب؛ تغيير الاسم موقوف لحماية البيانات."
+		name_change_status.text = "تعذر قراءة ملف اللاعب؛ تغيير الاسم ومزامنته موقوفان لحماية البيانات."
 		return
+	if not is_authenticated:
+		_update_name_change_status(config)
+		return
+	await _sync_display_name_from_server(config)
+
+func _sync_display_name_from_server(config: ConfigFile) -> void:
+	if not SupabaseTestClient.is_authenticated():
+		return
+	var sync_token := SupabaseTestClient.access_token
+	name_input.editable = false
+	name_change_status.text = "جارٍ جلب اسم الحساب ومزامنته..."
+	var local_name_value: Variant = config.get_value("profile", "player_name", "لاعب جديد")
+	var local_name := str(local_name_value).strip_edges() if local_name_value is String else "لاعب جديد"
+	var server_result: Dictionary = await SupabaseTestClient.fetch_test_display_name()
+	if not SupabaseTestClient.is_authenticated() or SupabaseTestClient.access_token != sync_token:
+		return
+	if not bool(server_result.get("ok", false)):
+		name_change_status.text = "تعذرت مزامنة اسم الحساب: %s" % str(server_result.get("message", "خطأ غير معروف."))
+		return
+	var server_name := str(server_result.get("display_name", "")).strip_edges()
+	if server_name.is_empty():
+		# انقل الاسم المحلي القديم إلى الحساب مرة واحدة فقط عند أول ربط.
+		if not local_name.is_empty() and local_name != "لاعب جديد":
+			var bootstrap_result: Dictionary = await SupabaseTestClient.change_test_display_name(local_name)
+			if not SupabaseTestClient.is_authenticated() or SupabaseTestClient.access_token != sync_token:
+				return
+			if not bool(bootstrap_result.get("ok", false)):
+				name_input.text = local_name
+				name_input.editable = true
+				name_change_status.text = str(bootstrap_result.get("message", "تعذر ربط الاسم المحلي بالحساب."))
+				return
+			server_name = str(bootstrap_result.get("display_name", local_name)).strip_edges()
+		else:
+			name_input.text = local_name
+			name_input.editable = true
+			name_change_status.text = "لم يُحدد اسم لهذا الحساب بعد؛ اختر اسمًا واحفظه لربطه بالحساب."
+			return
+	if server_name != local_name:
+		config.set_value("profile", "player_name", server_name)
+		if not WalletManager.save_profile_metadata(config):
+			name_input.text = server_name
+			name_change_status.text = "اسم الحساب محفوظ على الخادم، لكن تعذر تحديث النسخة المحلية. ستتم إعادة المزامنة عند المحاولة التالية."
+			return
+	name_input.text = server_name
 	_update_name_change_status(config)
 
 func _build_ui() -> void:
@@ -204,7 +248,13 @@ func _save_settings() -> void:
 	var selected_language: String = language_modes[clampi(language_select.selected, 0, 2)]
 	config.set_value("settings", "language", selected_language)
 	if not WalletManager.save_profile_metadata(config):
-		info_label.text = "تعذر حفظ الإعدادات؛ لم يتم اعتماد التغييرات لحماية ملف اللاعب."
+		if name_changed and not name_change_blocked:
+			name_input.text = requested_name
+			name_input.editable = false
+			name_change_status.text = "الاسم الجديد محفوظ على الحساب، لكن تعذر تحديث الملف المحلي. ستتم مزامنته من الحساب عند نجاح الاتصال التالي."
+			info_label.text = "وافق الخادم على تغيير الاسم، لكن تعذر حفظ النسخة المحلية. لم نفقد الاسم؛ الحساب هو المرجع وسيُعاد جلبه عند المزامنة."
+		else:
+			info_label.text = "تعذر حفظ الإعدادات؛ لم يتم اعتماد التغييرات لحماية ملف اللاعب."
 		return
 	CityLanguage.set_language(selected_language)
 	_apply_settings()
