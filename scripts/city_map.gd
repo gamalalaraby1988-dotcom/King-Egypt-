@@ -27,13 +27,13 @@ const REGION_BOUNDS := {
 
 # معالم مثبتة في main.gd؛ لا تُضاف البوابة أو الميناء قبل وجود مواقع فعلية لهما.
 const CITY_LANDMARKS := [
-	{"key": "shop", "position": Vector3(16.0, 0.0, 16.0)},
-	{"key": "restaurant", "position": Vector3(-16.0, 0.0, 16.0)},
-	{"key": "employment", "position": Vector3(16.0, 0.0, -16.0)},
-	{"key": "delivery", "position": Vector3(24.0, 0.0, 0.0)},
-	{"key": "city_guide", "position": Vector3(-24.0, 0.0, 0.0)},
-	{"key": "maintenance", "position": Vector3(0.0, 0.0, 24.0)},
-	{"key": "animal_camp", "position": Vector3(60.0, 0.0, 75.0)}
+	{"key": "shop", "position": Vector3(16.0, 0.0, 19.56)},
+	{"key": "restaurant", "position": Vector3(-16.0, 0.0, 19.56)},
+	{"key": "employment", "position": Vector3(16.0, 0.0, -12.44)},
+	{"key": "delivery", "position": Vector3(24.0, 0.0, 4.5)},
+	{"key": "city_guide", "position": Vector3(-24.0, 0.0, 4.5)},
+	{"key": "maintenance", "position": Vector3(4.5, 0.0, 24.0)},
+	{"key": "animal_camp", "position": Vector3(60.0, 0.0, 68.0)}
 ]
 
 func _ready() -> void:

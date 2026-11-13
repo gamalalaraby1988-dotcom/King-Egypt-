@@ -3,10 +3,10 @@ extends Node
 
 const SAVE_PATH := "user://kings_city_store.cfg"
 const OFFERS := [
-	{"id":"men_formal", "name":"بدلة رجالية رسمية", "price":500},
-	{"id":"women_formal", "name":"طقم نسائي رسمي", "price":500},
-	{"id":"urban_casual", "name":"إطلالة كاجوال", "price":300},
-	{"id":"sport", "name":"إطلالة رياضية", "price":250}
+	{"id":"men_formal", "name":"بدلة رجالية رسمية"},
+	{"id":"women_formal", "name":"طقم نسائي رسمي"},
+	{"id":"urban_casual", "name":"إطلالة كاجوال"},
+	{"id":"sport", "name":"إطلالة رياضية"}
 ]
 
 var mission_manager: Node
@@ -80,19 +80,22 @@ func _refresh_offers() -> void:
 		var label := Label.new()
 		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		var item_id: String = offer.id
-		var price: int = int(offer.price)
+		var has_price_source := is_instance_valid(mission_manager) and mission_manager.has_method("get_outfit_price")
+		var price: int = int(mission_manager.get_outfit_price(item_id)) if has_price_source else -1
 		if owned.has(item_id):
 			label.text = "%s — مملوكة" % offer.name
-		else:
+		elif price >= 0:
 			label.text = "%s — %d جنيه" % [offer.name, price]
+		else:
+			label.text = "%s — السعر غير متاح" % offer.name
 		row.add_child(label)
 		var buy := Button.new()
 		buy.text = "تم الشراء" if owned.has(item_id) else "شراء"
-		buy.disabled = owned.has(item_id)
-		buy.pressed.connect(func(): _buy(item_id, price))
+		buy.disabled = owned.has(item_id) or price < 0
+		buy.pressed.connect(func(): _buy(item_id))
 		row.add_child(buy)
 
-func _buy(item_id: String, price: int) -> void:
+func _buy(item_id: String) -> void:
 	if not is_instance_valid(mission_manager):
 		status_label.text = "تعذر الوصول إلى ملف اللاعب."
 		return
@@ -100,10 +103,14 @@ func _buy(item_id: String, price: int) -> void:
 		status_label.text = "هذا المنتج مملوك بالفعل."
 		_refresh_offers()
 		return
-	if int(mission_manager.money) < price:
+	var offer_price := int(mission_manager.get_outfit_price(item_id)) if mission_manager.has_method("get_outfit_price") else -1
+	if offer_price < 0:
+		status_label.text = "هذا المنتج غير متاح للشراء."
+		return
+	if int(mission_manager.money) < offer_price:
 		status_label.text = "رصيدك لا يكفي لشراء هذا المنتج."
 		return
-	if not mission_manager.has_method("purchase_outfit") or not mission_manager.purchase_outfit(item_id, price):
+	if not mission_manager.has_method("purchase_outfit") or not mission_manager.purchase_outfit(item_id):
 		status_label.text = "لم يكتمل الشراء؛ لم يتم اعتماد الخصم أو الملكية. حاول مرة أخرى."
 		return
 	if is_instance_valid(wardrobe_manager):

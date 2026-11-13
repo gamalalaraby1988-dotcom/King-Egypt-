@@ -32,6 +32,9 @@ func _notification(what: int) -> void:
 
 func _process(_delta: float) -> void:
 	if not visible:
+		# لا تسمح ببقاء أي أمر قيادة عالق إذا أُخفيت الواجهة أثناء لمس أحد الأزرار.
+		if drive_touch != -1 or brake_touch != -1 or steering_touch != -1 or reverse_active or absf(steering_value) > 0.001:
+			_clear_controls()
 		return
 	if is_instance_valid(vehicle):
 		vehicle.call("set_drive", drive_touch != -1)
@@ -74,6 +77,9 @@ func draw_rounded_rect(rect: Rect2, color: Color, radius: float) -> void:
 	draw_rect(rect, Color(1, 1, 1, 0.55), false, 2.0)
 
 func _input(event: InputEvent) -> void:
+	# لا تستقبل واجهة القيادة أي لمسات أثناء إخفائها أو خارج حالة القيادة.
+	if not visible:
+		return
 	if event is InputEventScreenTouch:
 		if event.pressed:
 			_press(event.index, event.position)

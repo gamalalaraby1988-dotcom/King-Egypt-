@@ -9,6 +9,8 @@ config/description="مشروع مدينة ثلاثية الأبعاد قابل �
 
 [autoload]
 CityLanguage="*res://scripts/city_language.gd"
+WalletManager="*res://scripts/wallet_manager.gd"
+VehicleStoreManager="*res://scripts/vehicle_store_manager.gd"
 
 [display]
 window/size/viewport_width=1280

@@ -133,12 +133,23 @@ func _load_state() -> void:
 	var saved_day := str(cfg.get_value("daily", "day", day_key))
 	if saved_day != day_key:
 		return
-	progress = cfg.get_value("daily", "progress", {})
+	var saved_progress: Variant = cfg.get_value("daily", "progress", {})
+	progress = {}
+	if saved_progress is Dictionary:
+		for task_key in ["walk", "job", "mission", "visit"]:
+			var task_value: Variant = saved_progress.get(task_key, 0)
+			if (task_value is int or task_value is float) and is_finite(float(task_value)):
+				progress[task_key] = clampi(int(task_value), 0, 1000000)
 	claimed = bool(cfg.get_value("daily", "claimed", false))
-	walked_meters = float(cfg.get_value("daily", "walked_meters", 0.0))
+	var saved_walked: float = float(cfg.get_value("daily", "walked_meters", 0.0))
+	walked_meters = maxf(0.0, saved_walked) if is_finite(saved_walked) else 0.0
 
 func _save_state() -> bool:
 	var cfg := ConfigFile.new()
+	var load_error := cfg.load(SAVE_PATH)
+	if load_error != OK and FileAccess.file_exists(SAVE_PATH):
+		push_warning("ملف الأنشطة اليومية موجود لكنه غير قابل للقراءة؛ أُوقفت الكتابة لحماية التقدم السابق.")
+		return false
 	cfg.set_value("daily", "day", day_key)
 	cfg.set_value("daily", "progress", progress)
 	cfg.set_value("daily", "claimed", claimed)

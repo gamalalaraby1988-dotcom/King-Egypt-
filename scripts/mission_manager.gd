@@ -41,6 +41,7 @@ var daily_task_events: Dictionary = {}
 var owned_outfits: Array = ["default"]
 
 const VALID_OUTFIT_IDS := ["default", "men_formal", "women_formal", "urban_casual", "sport"]
+const OUTFIT_PRICES := {"men_formal": 500, "women_formal": 500, "urban_casual": 300, "sport": 250}
 const LEGACY_STORE_PATH := "user://kings_city_store.cfg"
 var target_marker: MeshInstance3D
 var daily_activities: Node
@@ -60,13 +61,9 @@ var interior_return_button: Button
 var interior_activities_button: Button
 var interior_preview_active := false
 var interior_preview_building: Node3D = null
-var inside_building := false
-var current_interior_root: Node3D = null
-var saved_city_player_position := Vector3.ZERO
 var loading_layer: CanvasLayer
 var loading_panel: PanelContainer
 var loading_label: Label
-var interior_exit_button: Button
 var navigation_label: Label
 var navigation_arrow: Label
 var navigation_cancel_button: Button
@@ -78,6 +75,7 @@ var active_rental_transaction_id: String = ""
 var _key_was_down := false
 
 const SAVE_PATH := "user://kings_city_profile.cfg"
+const MAX_CURRENCY_BALANCE := 2000000000
 
 func _ready() -> void:
 	_build_ui()
@@ -96,8 +94,6 @@ func _refresh_navigation_language() -> void:
 		interior_activities_button.text = CityLanguage.translate("interior_view_activities")
 	if is_instance_valid(interior_return_button):
 		interior_return_button.text = CityLanguage.translate("interior_return")
-	if is_instance_valid(interior_exit_button):
-		interior_exit_button.text = CityLanguage.translate("interior_exit")
 	if is_instance_valid(close_button):
 		close_button.text = CityLanguage.translate("service_npc_close")
 	if is_instance_valid(loading_label) and loading_layer.visible:
@@ -111,7 +107,7 @@ func _notification(what: int) -> void:
 
 func grant_reward_once(reward_id: String, money_amount: int = 0, xp_amount: int = 0, chips_amount: int = 0) -> bool:
 	# يسجل الإيصال والمحفظة في ملف واحد؛ تكرار نفس المعرف لا يصرف المكافأة مجددًا.
-	if reward_id.is_empty() or money_amount < 0 or xp_amount < 0 or chips_amount < 0 or reward_receipts.has(reward_id):
+	if reward_id.is_empty() or money_amount < 0 or xp_amount < 0 or chips_amount < 0 or money + money_amount > MAX_CURRENCY_BALANCE or chips + chips_amount > MAX_CURRENCY_BALANCE or reward_receipts.has(reward_id):
 		return false
 	var next_money := money + money_amount
 	var next_xp := xp + xp_amount
@@ -140,9 +136,9 @@ func grant_reward_once(reward_id: String, money_amount: int = 0, xp_amount: int 
 	config.set_value("profile", "achievement_stats_initialized", achievement_stats_initialized)
 	config.set_value("profile", "daily_task_progress", daily_task_progress)
 	config.set_value("profile", "daily_task_events", daily_task_events)
-	var error := config.save(SAVE_PATH)
-	if error != OK:
-		push_warning("تعذر حفظ المكافأة %s: %s" % [reward_id, error])
+	var save_success := WalletManager.save_profile_update(config, next_money, next_chips)
+	if not save_success:
+		push_warning("تعذر حفظ المكافأة %s مع سجل المحفظة." % reward_id)
 		return false
 	money = next_money
 	xp = next_xp
@@ -180,9 +176,9 @@ func record_achievement_event_once(event_id: String, stat_key: String) -> bool:
 	config.set_value("profile", "achievement_stats_initialized", true)
 	config.set_value("profile", "daily_task_progress", daily_task_progress)
 	config.set_value("profile", "daily_task_events", daily_task_events)
-	var save_error := config.save(SAVE_PATH)
-	if save_error != OK:
-		push_warning("تعذر حفظ حدث الإنجاز %s: %s" % [event_id, save_error])
+	var save_success := WalletManager.save_profile_update(config, money, chips)
+	if not save_success:
+		push_warning("تعذر حفظ حدث الإنجاز %s مع سجل المحفظة." % event_id)
 		return false
 	achievement_totals = next_totals
 	achievement_events = next_events
@@ -211,8 +207,8 @@ func initialize_achievement_totals_if_missing(legacy_totals: Dictionary) -> bool
 	config.set_value("profile", "achievement_stats_initialized", true)
 	config.set_value("profile", "daily_task_progress", daily_task_progress)
 	config.set_value("profile", "daily_task_events", daily_task_events)
-	if config.save(SAVE_PATH) != OK:
-		push_warning("تعذر حفظ ترحيل عدادات الإنجازات.")
+	if not WalletManager.save_profile_update(config, money, chips):
+		push_warning("تعذر حفظ ترحيل عدادات الإنجازات مع سجل المحفظة.")
 		return false
 	achievement_totals = migrated
 	achievement_stats_initialized = true
@@ -226,7 +222,7 @@ func has_reward_receipt(reward_id: String) -> bool:
 
 func complete_activity_once(activity_id: String, activity_kind: String, money_amount: int = 0, xp_amount: int = 0, chips_amount: int = 0) -> bool:
 	# حفظ إكمال النشاط وإيصال المكافأة والمحفظة في ملف واحد يمنع إعادة الصرف بعد إعادة التشغيل.
-	if activity_id.is_empty() or money_amount < 0 or xp_amount < 0 or chips_amount < 0:
+	if activity_id.is_empty() or money_amount < 0 or xp_amount < 0 or chips_amount < 0 or money + money_amount > MAX_CURRENCY_BALANCE or chips + chips_amount > MAX_CURRENCY_BALANCE:
 		return false
 	var completion_key := activity_id
 	var receipt_id := "activity_%s_%s" % [activity_kind, activity_id]
@@ -288,9 +284,9 @@ func complete_activity_once(activity_id: String, activity_kind: String, money_am
 	config.set_value("profile", "achievement_stats_initialized", true)
 	config.set_value("profile", "daily_task_progress", next_daily_progress)
 	config.set_value("profile", "daily_task_events", next_daily_events)
-	var save_error := config.save(SAVE_PATH)
-	if save_error != OK:
-		push_warning("تعذر حفظ إكمال النشاط %s: %s" % [activity_id, save_error])
+	var save_success := WalletManager.save_profile_update(config, next_money, next_chips)
+	if not save_success:
+		push_warning("تعذر حفظ إكمال النشاط %s مع سجل المحفظة." % activity_id)
 		return false
 	money = next_money
 	xp = next_xp
@@ -306,39 +302,20 @@ func complete_activity_once(activity_id: String, activity_kind: String, money_am
 	daily_task_events = next_daily_events
 	return true
 
+
 func spend_money_once(transaction_id: String, amount: int) -> bool:
-	# للمدفوعات التي لا يجوز تنفيذها مرتين بسبب النقر المتكرر أو إعادة المحاولة.
-	if transaction_id.is_empty() or amount < 0 or money < amount:
+	# تأجير الخدمات المدفوعة يستخدم إيصال المحفظة نفسه لمنع الخصم المكرر.
+	if transaction_id.strip_edges().is_empty() or amount <= 0 or amount > MAX_CURRENCY_BALANCE:
 		return false
 	var receipt_id := "spend_%s" % transaction_id
-	if reward_receipts.has(receipt_id):
+	if reward_receipts.has(receipt_id) or WalletManager.has_transaction(receipt_id):
 		return false
 	var next_receipts := reward_receipts.duplicate(true)
-	next_receipts[receipt_id] = Time.get_datetime_string_from_system()
-	var next_money := money - amount
-	var config := ConfigFile.new()
-	var load_error := config.load(SAVE_PATH)
-	if load_error != OK and FileAccess.file_exists(SAVE_PATH):
-		push_warning("ملف اللاعب غير قابل للقراءة؛ أُوقفت عملية الدفع.")
+	next_receipts[receipt_id] = Time.get_datetime_string_from_system(true)
+	var updates := {"reward_receipts": next_receipts}
+	if not WalletManager.purchase_once(receipt_id, "money", amount, "Paid in-game service: " + transaction_id, updates):
 		return false
-	config.set_value("profile", "player_level", player_level)
-	config.set_value("profile", "xp", xp)
-	config.set_value("profile", "money", next_money)
-	config.set_value("profile", "chips", chips)
-	config.set_value("profile", "completed_missions", completed_missions)
-	config.set_value("profile", "completed_jobs", completed_jobs)
-	config.set_value("profile", "reward_receipts", next_receipts)
-	config.set_value("profile", "owned_outfits", owned_outfits)
-	config.set_value("profile", "achievement_totals", achievement_totals)
-	config.set_value("profile", "achievement_events", achievement_events)
-	config.set_value("profile", "achievement_stats_initialized", achievement_stats_initialized)
-	config.set_value("profile", "daily_task_progress", daily_task_progress)
-	config.set_value("profile", "daily_task_events", daily_task_events)
-	var save_error := config.save(SAVE_PATH)
-	if save_error != OK:
-		push_warning("تعذر حفظ عملية الدفع %s: %s" % [transaction_id, save_error])
-		return false
-	money = next_money
+	money = WalletManager.get_balance("money")
 	reward_receipts = next_receipts
 	return true
 
@@ -346,47 +323,31 @@ func get_daily_task_progress(day_id: String, task_id: String) -> int:
 	var day_progress: Dictionary = daily_task_progress.get(day_id, {})
 	return int(day_progress.get(task_id, 0))
 
+func get_outfit_price(outfit_id: String) -> int:
+	return int(OUTFIT_PRICES.get(outfit_id, -1))
+
 func get_owned_outfits() -> Array:
 	return owned_outfits.duplicate()
 
-func purchase_outfit(outfit_id: String, price: int) -> bool:
-	# الملكية والرصيد وإيصال الشراء تحفظ في ملف اللاعب نفسه.
-	# هذا يجعل إعادة المحاولة آمنة ويمنع خصم المال مرتين لنفس الإطلالة.
-	if not VALID_OUTFIT_IDS.has(outfit_id) or outfit_id == "default" or price < 0:
+func purchase_outfit(outfit_id: String) -> bool:
+	# واجهة الشراء لا ترسل السعر؛ المرجع الوحيد هو جدول الأسعار داخل اللعبة.
+	if not OUTFIT_PRICES.has(outfit_id) or owned_outfits.has(outfit_id):
 		return false
-	if owned_outfits.has(outfit_id) or money < price:
-		return false
+	var price: int = int(OUTFIT_PRICES[outfit_id])
 	var next_owned := owned_outfits.duplicate()
 	next_owned.append(outfit_id)
-	var next_money := money - price
 	var receipt_id := "purchase_outfit_%s" % outfit_id
+	if reward_receipts.has(receipt_id) or WalletManager.has_transaction(receipt_id):
+		return false
 	var next_receipts := reward_receipts.duplicate(true)
-	if next_receipts.has(receipt_id):
+	next_receipts[receipt_id] = Time.get_datetime_string_from_system(true)
+	var updates := {
+		"owned_outfits": next_owned,
+		"reward_receipts": next_receipts
+	}
+	if not WalletManager.purchase_once(receipt_id, "money", price, "Purchase outfit: " + outfit_id, updates):
 		return false
-	next_receipts[receipt_id] = Time.get_datetime_string_from_system()
-	var config := ConfigFile.new()
-	var load_error := config.load(SAVE_PATH)
-	if load_error != OK and FileAccess.file_exists(SAVE_PATH):
-		push_warning("ملف اللاعب موجود لكنه غير قابل للقراءة؛ أُوقف الشراء لحماية البيانات.")
-		return false
-	config.set_value("profile", "player_level", player_level)
-	config.set_value("profile", "xp", xp)
-	config.set_value("profile", "money", next_money)
-	config.set_value("profile", "chips", chips)
-	config.set_value("profile", "completed_missions", completed_missions)
-	config.set_value("profile", "completed_jobs", completed_jobs)
-	config.set_value("profile", "reward_receipts", next_receipts)
-	config.set_value("profile", "owned_outfits", next_owned)
-	config.set_value("profile", "achievement_totals", achievement_totals)
-	config.set_value("profile", "achievement_events", achievement_events)
-	config.set_value("profile", "achievement_stats_initialized", achievement_stats_initialized)
-	config.set_value("profile", "daily_task_progress", daily_task_progress)
-	config.set_value("profile", "daily_task_events", daily_task_events)
-	var error := config.save(SAVE_PATH)
-	if error != OK:
-		push_warning("تعذر حفظ شراء الإطلالة %s: %s" % [outfit_id, error])
-		return false
-	money = next_money
+	money = WalletManager.get_balance("money")
 	owned_outfits = next_owned
 	reward_receipts = next_receipts
 	return true
@@ -410,10 +371,10 @@ func _save_profile() -> bool:
 	config.set_value("profile", "achievement_stats_initialized", achievement_stats_initialized)
 	config.set_value("profile", "daily_task_progress", daily_task_progress)
 	config.set_value("profile", "daily_task_events", daily_task_events)
-	var error := config.save(SAVE_PATH)
-	if error != OK:
-		push_warning("تعذر حفظ ملف اللاعب: %s" % error)
-	return error == OK
+	if not WalletManager.save_profile_update(config, money, chips):
+		push_warning("تعذر حفظ ملف اللاعب مع سجل المحفظة.")
+		return false
+	return true
 
 func _load_profile() -> void:
 	var config := ConfigFile.new()
@@ -422,19 +383,40 @@ func _load_profile() -> void:
 		push_warning("تعذر قراءة ملف اللاعب؛ تم إيقاف الترحيل لتجنب فقدان البيانات.")
 		return
 	if error == OK:
-		player_level = int(config.get_value("profile", "player_level", 1))
-		xp = int(config.get_value("profile", "xp", 0))
-		money = int(config.get_value("profile", "money", 0))
-		chips = int(config.get_value("profile", "chips", 0))
-		completed_missions = config.get_value("profile", "completed_missions", {})
-		completed_jobs = config.get_value("profile", "completed_jobs", {})
-		reward_receipts = config.get_value("profile", "reward_receipts", {})
-		achievement_totals = config.get_value("profile", "achievement_totals", achievement_totals)
-		achievement_events = config.get_value("profile", "achievement_events", {})
+		player_level = _safe_profile_int(config.get_value("profile", "player_level", 1), 1, 1)
+		xp = _safe_profile_int(config.get_value("profile", "xp", 0), 0)
+		money = _safe_profile_int(config.get_value("profile", "money", 0), 0)
+		chips = _safe_profile_int(config.get_value("profile", "chips", 0), 0)
+		var saved_missions: Variant = config.get_value("profile", "completed_missions", {})
+		var saved_jobs: Variant = config.get_value("profile", "completed_jobs", {})
+		var saved_receipts: Variant = config.get_value("profile", "reward_receipts", {})
+		var saved_totals: Variant = config.get_value("profile", "achievement_totals", achievement_totals)
+		var saved_achievement_events: Variant = config.get_value("profile", "achievement_events", {})
+		var saved_daily_progress: Variant = config.get_value("profile", "daily_task_progress", {})
+		var saved_daily_events: Variant = config.get_value("profile", "daily_task_events", {})
+		completed_missions = saved_missions if saved_missions is Dictionary else {}
+		completed_jobs = saved_jobs if saved_jobs is Dictionary else {}
+		reward_receipts = saved_receipts if saved_receipts is Dictionary else {}
+		achievement_totals = {"jobs": 0, "missions": 0, "daily_claims": 0}
+		if saved_totals is Dictionary:
+			for stat_key in ["jobs", "missions", "daily_claims"]:
+				achievement_totals[stat_key] = _safe_profile_int(saved_totals.get(stat_key, 0), 0)
+		achievement_events = saved_achievement_events if saved_achievement_events is Dictionary else {}
+		daily_task_progress = {}
+		if saved_daily_progress is Dictionary:
+			for day_key in saved_daily_progress:
+				var day_value: Variant = saved_daily_progress[day_key]
+				if day_value is Dictionary:
+					var clean_day: Dictionary = {}
+					for task_key in day_value:
+						var task_value: Variant = day_value[task_key]
+						if (task_value is int or task_value is float) and is_finite(float(task_value)):
+							clean_day[str(task_key)] = clampi(int(task_value), 0, 1000000)
+					daily_task_progress[str(day_key)] = clean_day
+		daily_task_events = saved_daily_events if saved_daily_events is Dictionary else {}
 		achievement_stats_initialized = bool(config.get_value("profile", "achievement_stats_initialized", false))
-		daily_task_progress = config.get_value("profile", "daily_task_progress", {})
-		daily_task_events = config.get_value("profile", "daily_task_events", {})
-	var saved_owned = config.get_value("profile", "owned_outfits", null) if error == OK else null
+	var saved_owned: Variant = config.get_value("profile", "owned_outfits") if error == OK and config.has_section_key("profile", "owned_outfits") else null
+	var needs_profile_save := false
 	if saved_owned is Array:
 		owned_outfits = _sanitize_owned_outfits(saved_owned)
 	else:
@@ -445,8 +427,16 @@ func _load_profile() -> void:
 			owned_outfits = _sanitize_owned_outfits(legacy_owned if legacy_owned is Array else ["default"])
 		else:
 			owned_outfits = ["default"]
-		# اكتب البنية الموحدة حتى للحساب الجديد، أو بعد ترحيل ملف قديم.
-		_save_profile()
+		needs_profile_save = true
+
+	if needs_profile_save:
+		if not _save_profile():
+			push_warning("تعذر حفظ بيانات اللاعب بعد ترحيل الملكيات القديمة.")
+
+func _safe_profile_int(value: Variant, fallback: int, minimum: int = 0) -> int:
+	if not (value is int or value is float) or not is_finite(float(value)):
+		return fallback
+	return clampi(int(value), minimum, 2000000000)
 
 func _sanitize_owned_outfits(items: Array) -> Array:
 	var result: Array = ["default"]
@@ -465,19 +455,40 @@ func _process(_delta: float) -> void:
 	if navigation_route_notice_remaining > 0.0:
 		navigation_route_notice_remaining = maxf(navigation_route_notice_remaining - _delta, 0.0)
 	if not is_instance_valid(player):
+		_update_navigation_hud()
 		return
 	_update_interaction_target()
 	_update_interaction_hud()
-	if Input.is_key_pressed(KEY_E) and not _key_was_down and not mission_running and not job_running:
+	var interaction_key_down := Input.is_key_pressed(KEY_E)
+	var city_root := get_tree().current_scene
+	var vehicle_has_priority := false
+	if interaction_key_down and is_instance_valid(city_root):
+		if bool(city_root.get("vehicle_occupied")):
+			vehicle_has_priority = true
+		else:
+			var city_vehicle := city_root.get("city_vehicle") as Node3D
+			if is_instance_valid(city_vehicle) and player.global_position.distance_to(city_vehicle.global_position) <= 5.0:
+				vehicle_has_priority = true
+	if interaction_key_down and not _key_was_down and not mission_running and not job_running and not vehicle_has_priority:
 		interact()
-	_key_was_down = Input.is_key_pressed(KEY_E)
+	_key_was_down = interaction_key_down
 
-	stats_label.text = "المستوى %d  |  الخبرة %d  |  المال %d  |  الرقائق %d" % [player_level, xp, money, chips]
+	stats_label.text = "المستوى %d  |  الخبرة %d  |  المال %d  |  الرقائق %d  |  الجواهر %d" % [player_level, xp, money, chips, WalletManager.get_balance("gems")]
 	if job_running:
 		var job_distance := Vector2(player.global_position.x, player.global_position.z).distance_to(Vector2(active_job_target.x, active_job_target.z))
 		status_label.text = "الوظيفة: توجّه إلى نقطة العمل. المتبقي: %.1f متر" % job_distance
 		if job_distance <= 2.2:
 			_complete_active_job()
+	if mission_running and (not is_instance_valid(active_mission) or active_mission.is_queued_for_deletion()):
+		# لا تترك اللاعب عالقًا في مهمة إذا أزيل المبنى أثناء تنفيذها.
+		mission_running = false
+		active_mission = null
+		target_marker.visible = false
+		status_label.text = "تعذر إكمال المهمة لأن موقعها لم يعد متاحًا. لم تُصرف مكافأة."
+		description_label.text = "افتح مبنى متاحًا لبدء مهمة أخرى."
+		reward_label.text = "لم تُحتسب المهمة ولم تُصرف مكافأة."
+		accept_button.disabled = false
+		panel.visible = true
 	if mission_running:
 		var distance_to_target := Vector2(player.global_position.x, player.global_position.z).distance_to(Vector2(active_target.x, active_target.z))
 		status_label.text = "الهدف: اذهب إلى علامة المهمة. المسافة المتبقية: %.1f متر" % distance_to_target
@@ -487,7 +498,9 @@ func _process(_delta: float) -> void:
 
 
 func _update_interaction_target() -> void:
-	if inside_building:
+	# لا تفحص تفاعلات المدينة أثناء الانتقال أو أثناء وجود اللاعب داخل مبنى.
+	var city_root := get_tree().current_scene
+	if is_instance_valid(city_root) and (bool(city_root.get("interior_transition_busy")) or is_instance_valid(city_root.get("interior_root"))):
 		nearest_interactable = null
 		nearest_building = null
 		return
@@ -683,7 +696,7 @@ func open_job(job_board: Node3D) -> void:
 	panel.visible = true
 
 func open_building(building: Node3D) -> void:
-	if not is_instance_valid(building) or building.is_queued_for_deletion() or mission_running:
+	if not is_instance_valid(building) or building.is_queued_for_deletion() or mission_running or job_running:
 		return
 	animal_selector.visible = false
 	selected_activity_kind = "mission"
@@ -733,6 +746,8 @@ func _show_building_activities() -> void:
 	open_building_activities(building)
 
 func open_building_activities(building: Node3D) -> void:
+	if mission_running or job_running or not is_instance_valid(building) or building.is_queued_for_deletion():
+		return
 	var data: Dictionary = building.get_mission_data()
 	interior_activities_button.visible = false
 	interior_return_button.visible = false
@@ -785,116 +800,6 @@ func _create_loading_ui() -> void:
 	progress.value = 100
 	content.add_child(progress)
 	loading_layer.visible = false
-
-func _set_city_world_visible(is_visible: bool) -> void:
-	for node in get_tree().get_nodes_in_group("city_world_geometry"):
-		if not is_instance_valid(node):
-			continue
-		if node is VisualInstance3D:
-			node.visible = is_visible
-		if node is StaticBody3D:
-			node.collision_layer = 1 if is_visible else 0
-			node.collision_mask = 1 if is_visible else 0
-
-func _enter_building(building: Node3D) -> void:
-	if inside_building or not is_instance_valid(building) or building.is_queued_for_deletion():
-		return
-	var radius_value: Variant = building.get("interaction_radius")
-	var allowed_distance := float(radius_value) if radius_value != null else 4.5
-	if not is_instance_valid(player) or player.global_position.distance_to(building.global_position) > clampf(allowed_distance, 0.5, 4.8) + 0.65:
-		_update_interaction_target()
-		return
-	var city_root := get_tree().current_scene
-	if not is_instance_valid(city_root):
-		return
-	saved_city_player_position = player.global_position
-	panel.visible = false
-	interact_button.visible = false
-	loading_layer.visible = true
-	loading_label.text = CityLanguage.translate("interior_loading")
-	await get_tree().create_timer(0.9).timeout
-	if not is_instance_valid(building) or building.is_queued_for_deletion():
-		loading_layer.visible = false
-		return
-	_set_city_world_visible(false)
-	current_interior_root = Node3D.new()
-	current_interior_root.name = "GeneratedBuildingInterior"
-	city_root.add_child(current_interior_root)
-	var localized_building_name := str(building.get("building_title"))
-	if localized_building_name == "المتجر":
-		localized_building_name = CityLanguage.translate("shop")
-	elif localized_building_name == "المطعم":
-		localized_building_name = CityLanguage.translate("restaurant")
-	elif localized_building_name == "مركز التوظيف":
-		localized_building_name = CityLanguage.translate("employment")
-	_create_basic_interior(current_interior_root, localized_building_name)
-	player.global_position = Vector3(0, 1.0, 2.0)
-	player.velocity = Vector3.ZERO
-	inside_building = true
-	interior_exit_button.visible = true
-	loading_layer.visible = false
-	_update_interaction_hud()
-
-func _create_basic_interior(root: Node3D, building_name: String) -> void:
-	var floor_mesh := BoxMesh.new()
-	floor_mesh.size = Vector3(14, 0.3, 14)
-	_add_interior_box(root, "InteriorFloor", floor_mesh, Vector3(0, -0.2, 0), Color(0.63, 0.53, 0.38), true)
-	_add_interior_box(root, "BackWall", _box_mesh(Vector3(14, 5, 0.35)), Vector3(0, 2.3, -7), Color(0.73, 0.65, 0.49), true)
-	_add_interior_box(root, "LeftWall", _box_mesh(Vector3(0.35, 5, 14)), Vector3(-7, 2.3, 0), Color(0.69, 0.59, 0.43), true)
-	_add_interior_box(root, "RightWall", _box_mesh(Vector3(0.35, 5, 14)), Vector3(7, 2.3, 0), Color(0.69, 0.59, 0.43), true)
-	_add_interior_box(root, "FrontLeftWall", _box_mesh(Vector3(5.2, 5, 0.35)), Vector3(-4.4, 2.3, 7), Color(0.73, 0.65, 0.49), true)
-	_add_interior_box(root, "FrontRightWall", _box_mesh(Vector3(5.2, 5, 0.35)), Vector3(4.4, 2.3, 7), Color(0.73, 0.65, 0.49), true)
-	_add_interior_box(root, "CeilingTrim", _box_mesh(Vector3(14, 0.25, 14)), Vector3(0, 4.85, 0), Color(0.17, 0.23, 0.24), false)
-	_add_interior_box(root, "WelcomeCounter", _box_mesh(Vector3(3.2, 1.1, 0.8)), Vector3(0, 0.55, -3.5), Color(0.28, 0.22, 0.16), false)
-	var title := Label3D.new()
-	title.text = building_name
-	title.position = Vector3(0, 3.2, -6.75)
-	title.font_size = 42
-	title.modulate = Color(0.95, 0.79, 0.42)
-	root.add_child(title)
-
-func _box_mesh(size: Vector3) -> BoxMesh:
-	var mesh := BoxMesh.new()
-	mesh.size = size
-	return mesh
-
-func _add_interior_box(root: Node3D, node_name: String, mesh: BoxMesh, pos: Vector3, color: Color, collision: bool) -> void:
-	var visual := MeshInstance3D.new()
-	visual.name = node_name
-	visual.mesh = mesh
-	visual.position = pos
-	var material := StandardMaterial3D.new()
-	material.albedo_color = color
-	material.roughness = 0.9
-	visual.material_override = material
-	root.add_child(visual)
-	if collision:
-		var body := StaticBody3D.new()
-		body.position = pos
-		var shape_node := CollisionShape3D.new()
-		var shape := BoxShape3D.new()
-		shape.size = mesh.size
-		shape_node.shape = shape
-		body.add_child(shape_node)
-		root.add_child(body)
-
-func _exit_building() -> void:
-	if not inside_building or not is_instance_valid(player):
-		return
-	loading_layer.visible = true
-	loading_label.text = CityLanguage.translate("interior_city_loading")
-	interior_exit_button.visible = false
-	await get_tree().create_timer(0.75).timeout
-	if is_instance_valid(current_interior_root):
-		current_interior_root.queue_free()
-	current_interior_root = null
-	_set_city_world_visible(true)
-	player.global_position = saved_city_player_position
-	player.velocity = Vector3.ZERO
-	inside_building = false
-	loading_layer.visible = false
-	_update_interaction_target()
-	_update_interaction_hud()
 
 func _close_interior_preview() -> void:
 	interior_preview_active = false
@@ -957,7 +862,7 @@ func _complete_active_job() -> void:
 	panel.visible = true
 
 func _accept_mission() -> void:
-	if not is_instance_valid(active_mission) or mission_running:
+	if not is_instance_valid(active_mission) or active_mission.is_queued_for_deletion() or mission_running or job_running:
 		return
 	landmark_navigation_active = false
 	navigation_arrival_remaining = 0.0
@@ -1007,7 +912,12 @@ func _update_navigation_hud() -> void:
 	navigation_label.visible = navigating
 	navigation_arrow.visible = navigating
 	navigation_cancel_button.visible = navigating
-	if not navigating or not is_instance_valid(player):
+	if not is_instance_valid(player):
+		navigation_label.visible = false
+		navigation_arrow.visible = false
+		navigation_cancel_button.visible = false
+		return
+	if not navigating:
 		return
 	if navigation_arrival_remaining > 0.0 and not mission_running and not job_running and not landmark_navigation_active:
 		navigation_label.text = "%s %s" % [CityLanguage.translate("navigation_arrived"), CityLanguage.translate(landmark_navigation_key)]
@@ -1060,17 +970,22 @@ func _update_landmark_route_deviation() -> void:
 	navigation_route_recalculated = true
 
 func _distance_to_remaining_route(position_3d: Vector3) -> float:
-	if landmark_route_points.size() < 2:
-		return 0.0
+	var player_point := Vector2(position_3d.x, position_3d.z)
+	# بعد تجاوز آخر waypoint، نقيس المسافة إلى الوجهة النهائية بدل إرجاع INF.
+	if landmark_route_index >= landmark_route_points.size():
+		return player_point.distance_to(Vector2(landmark_navigation_target.x, landmark_navigation_target.z))
+	# قد تبقى نقطة واحدة فقط؛ تعامل معها كنقطة وصول لا كمقطع فارغ.
+	if landmark_route_points.size() - landmark_route_index == 1:
+		var final_point: Vector3 = landmark_route_points[landmark_route_index]
+		return player_point.distance_to(Vector2(final_point.x, final_point.z))
 	var closest_distance := INF
 	for index in range(maxi(landmark_route_index, 0), landmark_route_points.size() - 1):
 		var a: Vector2 = Vector2(landmark_route_points[index].x, landmark_route_points[index].z)
 		var b: Vector2 = Vector2(landmark_route_points[index + 1].x, landmark_route_points[index + 1].z)
-		var p := Vector2(position_3d.x, position_3d.z)
 		var segment := b - a
 		var denominator := segment.length_squared()
-		var weight := 0.0 if denominator <= 0.0001 else clampf((p - a).dot(segment) / denominator, 0.0, 1.0)
-		closest_distance = minf(closest_distance, p.distance_to(a + segment * weight))
+		var weight := 0.0 if denominator <= 0.0001 else clampf((player_point - a).dot(segment) / denominator, 0.0, 1.0)
+		closest_distance = minf(closest_distance, player_point.distance_to(a + segment * weight))
 	return closest_distance
 
 const CITY_ROAD_COORDS := [-72.0, -24.0, 0.0, 24.0, 72.0]
@@ -1078,13 +993,13 @@ const CITY_ROAD_COORDS := [-72.0, -24.0, 0.0, 24.0, 72.0]
 # نقاط الوقوف عند أبواب المباني ولوحات الوظائف، لا عند مركز كتلة المبنى.
 # المواقع متوافقة مع إحداثيات الإنشاء الحالية في main.gd.
 const CITY_LANDMARK_ENTRANCES := {
-	"shop": Vector3(16.0, 0.0, 21.0),
-	"restaurant": Vector3(-16.0, 0.0, 21.0),
-	"employment": Vector3(16.0, 0.0, -11.0),
-	"delivery": Vector3(24.0, 0.0, 2.5),
-	"city_guide": Vector3(-24.0, 0.0, 2.5),
-	"maintenance": Vector3(0.0, 0.0, 26.5),
-	"animal_camp": Vector3(60.0, 0.0, 75.0)
+	"shop": Vector3(16.0, 0.0, 19.56),
+	"restaurant": Vector3(-16.0, 0.0, 19.56),
+	"employment": Vector3(16.0, 0.0, -12.44),
+	"delivery": Vector3(24.0, 0.0, 4.5),
+	"city_guide": Vector3(-24.0, 0.0, 4.5),
+	"maintenance": Vector3(4.5, 0.0, 24.0),
+	"animal_camp": Vector3(60.0, 0.0, 68.0)
 }
 
 func get_landmark_entrance(landmark_key: String, fallback: Vector3) -> Vector3:
@@ -1107,6 +1022,7 @@ func _build_landmark_route(destination: Vector3, landmark_key: String) -> void:
 		landmark_route_points.append(Vector3(30.0, 0.0, 0.0))
 		landmark_route_points.append(Vector3(30.0, 0.0, 75.0))
 		landmark_route_points.append(Vector3(45.0, 0.0, 75.0))
+		landmark_route_points.append(Vector3(60.0, 0.0, 75.0))
 		landmark_route_points.append(destination)
 	else:
 		var target_node := _nearest_city_road_node(destination)
@@ -1371,13 +1287,6 @@ func _build_ui() -> void:
 	interior_return_button.visible = false
 	interior_return_button.pressed.connect(_close_interior_preview)
 	content.add_child(interior_return_button)
-	interior_exit_button = Button.new()
-	interior_exit_button.text = CityLanguage.translate("interior_exit")
-	interior_exit_button.position = Vector2(18, 180)
-	interior_exit_button.size = Vector2(150, 52)
-	interior_exit_button.visible = false
-	interior_exit_button.pressed.connect(_exit_building)
-	root_control.add_child(interior_exit_button)
 	_create_loading_ui()
 	close_button = Button.new()
 	close_button.text = CityLanguage.translate("service_npc_close")

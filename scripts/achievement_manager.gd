@@ -101,6 +101,10 @@ func _check_all() -> void:
 
 func _save_state() -> void:
 	var cfg := ConfigFile.new()
+	var load_error := cfg.load(SAVE_PATH)
+	if load_error != OK and FileAccess.file_exists(SAVE_PATH):
+		push_warning("ملف الإنجازات موجود لكنه غير قابل للقراءة؛ أُوقفت الكتابة لحماية التقدم السابق.")
+		return
 	cfg.set_value("achievements", "walked_meters", walked_meters)
 	cfg.set_value("achievements", "totals", totals)
 	cfg.set_value("achievements", "unlocked", unlocked)
@@ -114,9 +118,18 @@ func _load_state() -> void:
 	var cfg := ConfigFile.new()
 	if cfg.load(SAVE_PATH) != OK:
 		return
-	walked_meters = float(cfg.get_value("achievements", "walked_meters", 0.0))
-	totals = cfg.get_value("achievements", "totals", totals)
-	unlocked = cfg.get_value("achievements", "unlocked", {})
+	var saved_walked: float = float(cfg.get_value("achievements", "walked_meters", 0.0))
+	walked_meters = maxf(0.0, saved_walked) if is_finite(saved_walked) else 0.0
+	var saved_totals: Variant = cfg.get_value("achievements", "totals", totals)
+	var saved_unlocked: Variant = cfg.get_value("achievements", "unlocked", {})
+	if saved_totals is Dictionary:
+		totals = {
+			"jobs": maxi(0, int(saved_totals.get("jobs", 0))),
+			"missions": maxi(0, int(saved_totals.get("missions", 0))),
+			"daily_claims": maxi(0, int(saved_totals.get("daily_claims", 0)))
+		}
+	if saved_unlocked is Dictionary:
+		unlocked = saved_unlocked
 
 func _build_ui() -> void:
 	var layer := CanvasLayer.new()

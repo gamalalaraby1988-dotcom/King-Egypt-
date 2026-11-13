@@ -20,6 +20,10 @@ var popup_title: Label
 var popup_body: Label
 var money_label: Button
 var chips_label: Button
+var gems_label: Button
+var phone_popup: PanelContainer
+var vehicle_store_list: VBoxContainer
+var vehicle_store_status: Label
 var player_popup: PanelContainer
 var player_name_label: Label
 var player_level_label: Label
@@ -46,6 +50,7 @@ var group_move_button: Button
 var group_member_markers: Dictionary = {}
 
 const GROUP_MAX_MEMBERS := 4
+const GROUP_CHAT_MAX_LENGTH := 300
 
 const SECTIONS := {
 	"profile": ["الملف الشخصي", "عرض مستوى اللاعب وخبرته وإعدادات الحساب والشخصية."],
@@ -53,7 +58,7 @@ const SECTIONS := {
 	"rewards": ["المكافآت اليومية", "راجع الأنشطة اليومية واستلم مكافآتك بعد إكمال شروطها."],
 	"events": ["مركز الفعاليات", "الفعاليات المخطط لها: مهرجان الحيوانات لمدة 7 أيام، حفلات اللاعبين، وتحديات المدينة. ستظهر مواعيد الفعاليات ومؤقتاتها ومكافآتها عند تفعيل نظام الفعاليات المتصل."],
 	"pass": ["تذكرة الموسم", "تذكرة شهرية بجوائز رئيسية متتابعة: شخصية، ثم زي، ثم مركبة، ثم حيوان أليف. تفاصيل الموسم ومكافآته تُعرض عند تفعيل نظام المواسم."],
-	"shop": ["المتجر والعروض", "افتح المتجر لعرض الملابس والعناصر المتاحة. المشتريات تحتاج تأكيدًا واضحًا قبل الدفع."],
+	"phone": ["هاتف اللاعب", "متجر المركبات وإدارة المركبة المختارة."],
 	"map": ["خريطة المدينة", "استكشف مناطق المدينة واتبع اللافتات الإرشادية للوصول إلى الأماكن والمباني."],
 	"social": ["الأصدقاء والتواصل", "ابحث عن صديق باستخدام رمز اللاعب الفريد، أو اضغط على شخصية لاعب لعرض قائمة التفاعل."],
 	"group": ["مجموعتي", "مجموعة صغيرة من أربعة لاعبين كحد أقصى: قائد وثلاثة أعضاء."],
@@ -73,6 +78,18 @@ func _ready() -> void:
 	_build_group_popup()
 	_build_group_chat_popup()
 	_refresh_wallet()
+
+
+func _exit_tree() -> void:
+	# العلامات مضافة إلى المشهد الرئيسي، لذا يجب تنظيفها عند إزالة واجهة المدينة.
+	for marker_value in group_member_markers.values():
+		if is_instance_valid(marker_value):
+			marker_value.queue_free()
+	group_member_markers.clear()
+	if is_instance_valid(main_scene):
+		var meeting_marker := main_scene.get_node_or_null("GroupMeetingMarker")
+		if is_instance_valid(meeting_marker):
+			meeting_marker.queue_free()
 
 func _process(_delta: float) -> void:
 	if not is_instance_valid(mission_manager) and is_instance_valid(main_scene):
@@ -96,6 +113,7 @@ func _build() -> void:
 	root.add_child(top)
 	money_label = _make_button(top, "ذهب: 0  +", "wallet")
 	chips_label = _make_button(top, "رقائق: 0  +", "wallet")
+	gems_label = _make_button(top, "جواهر: 0", "wallet")
 
 	var left := VBoxContainer.new()
 	left.anchor_left = 0.012
@@ -120,7 +138,7 @@ func _build() -> void:
 	root.add_child(right)
 	_make_button(right, "👑 الفعاليات", "events")
 	_make_button(right, "🎟 الموسم", "pass")
-	_make_button(right, "🛍 المتجر", "shop")
+	_make_button(right, "📱 الهاتف", "phone")
 	_make_button(right, "🗺 الخريطة", "map")
 	_make_button(right, "🐈 الحيوانات", "pets")
 
@@ -179,7 +197,7 @@ func _make_button(parent: Control, caption: String, section: String) -> Button:
 
 func _on_button_pressed(section: String) -> void:
 	if section == "wallet":
-		_open_section("shop")
+		_open_section("phone")
 		return
 	if section == "settings":
 		_open_section("settings")
@@ -188,6 +206,9 @@ func _on_button_pressed(section: String) -> void:
 
 func _open_section(section: String) -> void:
 	if not SECTIONS.has(section):
+		return
+	if section == "phone":
+		_open_vehicle_store_phone()
 		return
 	popup_title.text = str(SECTIONS[section][0])
 	popup_body.text = str(SECTIONS[section][1])
@@ -202,10 +223,6 @@ func _open_section(section: String) -> void:
 		if is_instance_valid(daily) and is_instance_valid(daily.get("root_panel")):
 			daily.root_panel.visible = true
 			popup_body.text += "\nتم فتح لوحة الأنشطة اليومية الموجودة في اللعبة."
-	if section == "shop":
-		var shop := main_scene.get_node_or_null("ShopManager") if is_instance_valid(main_scene) else null
-		if is_instance_valid(shop) and shop.has_method("open_shop"):
-			shop.open_shop()
 	if section == "map":
 		var city_map := main_scene.get_node_or_null("CityMapHUD/CityMap") if is_instance_valid(main_scene) else null
 		if is_instance_valid(city_map):
@@ -215,6 +232,144 @@ func _open_section(section: String) -> void:
 					break
 	popup.visible = true
 
+func _open_vehicle_store_phone() -> void:
+	if is_instance_valid(popup):
+		popup.visible = false
+	if not is_instance_valid(phone_popup):
+		_build_vehicle_store_phone()
+	_refresh_vehicle_store_phone()
+	phone_popup.visible = true
+
+func _build_vehicle_store_phone() -> void:
+	phone_popup = PanelContainer.new()
+	phone_popup.name = "VehicleStorePhone"
+	phone_popup.anchor_left = 0.5
+	phone_popup.anchor_right = 0.5
+	phone_popup.anchor_top = 0.5
+	phone_popup.anchor_bottom = 0.5
+	phone_popup.offset_left = -190
+	phone_popup.offset_right = 190
+	phone_popup.offset_top = -285
+	phone_popup.offset_bottom = 285
+	phone_popup.visible = false
+	phone_popup.mouse_filter = Control.MOUSE_FILTER_STOP
+	root.add_child(phone_popup)
+	var content := VBoxContainer.new()
+	content.add_theme_constant_override("separation", 8)
+	phone_popup.add_child(content)
+	var heading := Label.new()
+	heading.text = "هاتف اللاعب — متجر المركبات"
+	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	heading.add_theme_font_size_override("font_size", 20)
+	content.add_child(heading)
+	var wallet_line := Label.new()
+	wallet_line.name = "VehicleStoreWalletLine"
+	wallet_line.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	content.add_child(wallet_line)
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	content.add_child(scroll)
+	vehicle_store_list = VBoxContainer.new()
+	vehicle_store_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(vehicle_store_list)
+	vehicle_store_status = Label.new()
+	vehicle_store_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	content.add_child(vehicle_store_status)
+	var close_button := Button.new()
+	close_button.text = "إغلاق الهاتف"
+	close_button.pressed.connect(func(): phone_popup.visible = false)
+	content.add_child(close_button)
+
+func _refresh_vehicle_store_phone() -> void:
+	if not is_instance_valid(vehicle_store_list):
+		return
+	for child in vehicle_store_list.get_children():
+		child.queue_free()
+	var catalog: Dictionary = VehicleStoreManager.get_catalog()
+	var owned: Array = VehicleStoreManager.get_owned_vehicles()
+	var selected := VehicleStoreManager.get_selected_vehicle_id()
+	for vehicle_id in catalog:
+		var offer: Dictionary = catalog[vehicle_id]
+		var row := VBoxContainer.new()
+		row.add_theme_constant_override("separation", 3)
+		vehicle_store_list.add_child(row)
+		var label := Label.new()
+		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		var price := int(offer.get("price", -1))
+		var currency := str(offer.get("currency", "money"))
+		var currency_name := "جوهرة" if currency == "gems" else "رقاقة" if currency == "chips" else "جنيه"
+		var status := "مملوكة" if owned.has(vehicle_id) else ("السعر لم يعتمد بعد" if price < 0 else ("مجانية" if price == 0 else "%d %s" % [price, currency_name]))
+		if selected == str(vehicle_id):
+			status += " • مختارة"
+		label.text = "%s — %s — %s" % [str(offer.get("name", vehicle_id)), str(offer.get("country", "")), status]
+		row.add_child(label)
+		var action := Button.new()
+		action.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		if owned.has(vehicle_id):
+			action.text = "المركبة المختارة" if selected == str(vehicle_id) else "اختيار المركبة"
+			action.disabled = selected == str(vehicle_id)
+			action.pressed.connect(_select_vehicle_from_phone.bind(str(vehicle_id)))
+		else:
+			action.text = "شراء" if price >= 0 else "غير متاح حتى اعتماد السعر"
+			action.disabled = price < 0
+			action.pressed.connect(_buy_vehicle_from_phone.bind(str(vehicle_id)))
+		row.add_child(action)
+	if owned.has("horus_2030"):
+		var colors_heading := Label.new()
+		colors_heading.text = "ألوان Horus 2030"
+		colors_heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		vehicle_store_list.add_child(colors_heading)
+		var owned_colors: Array = VehicleStoreManager.get_owned_horus_colors()
+		for color_id in VehicleStoreManager.get_horus_colors():
+			var color: Dictionary = VehicleStoreManager.get_horus_colors()[color_id]
+			var color_button := Button.new()
+			var price := int(color.get("price", -1))
+			if owned_colors.has(color_id):
+				color_button.text = "%s — مملوك / اختيار" % str(color.get("name", color_id))
+				color_button.pressed.connect(_select_horus_color_from_phone.bind(str(color_id)))
+			else:
+				color_button.text = "شراء %s — %d جوهرة" % [str(color.get("name", color_id)), price]
+				color_button.pressed.connect(_buy_horus_color_from_phone.bind(str(color_id)))
+			vehicle_store_list.add_child(color_button)
+	var wallet_line := phone_popup.find_child("VehicleStoreWalletLine", true, false) as Label
+	if is_instance_valid(wallet_line):
+		wallet_line.text = "المال: %d   الرقائق: %d   الجواهر: %d" % [
+			WalletManager.get_balance("money"),
+			WalletManager.get_balance("chips"),
+			WalletManager.get_balance("gems")
+		]
+
+func _buy_vehicle_from_phone(vehicle_id: String) -> void:
+	if VehicleStoreManager.purchase_vehicle(vehicle_id):
+		vehicle_store_status.text = "تم الشراء وحفظ الملكية والخصم معًا."
+	else:
+		vehicle_store_status.text = "لم يتم الشراء: تحقق من السعر المعتمد والرصيد والملكية."
+	_refresh_vehicle_store_phone()
+	_refresh_wallet()
+
+func _select_vehicle_from_phone(vehicle_id: String) -> void:
+	if VehicleStoreManager.select_vehicle(vehicle_id):
+		vehicle_store_status.text = "تم اختيار المركبة. ستُستخدم عند الاستدعاء التالي."
+	else:
+		vehicle_store_status.text = "تعذر اختيار مركبة غير مملوكة."
+	_refresh_vehicle_store_phone()
+
+func _buy_horus_color_from_phone(color_id: String) -> void:
+	if VehicleStoreManager.purchase_horus_color(color_id):
+		vehicle_store_status.text = "تم شراء اللون وحفظه."
+	else:
+		vehicle_store_status.text = "لم يتم شراء اللون: تحقق من امتلاك Horus والرصيد."
+	_refresh_vehicle_store_phone()
+	_refresh_wallet()
+
+func _select_horus_color_from_phone(color_id: String) -> void:
+	if VehicleStoreManager.select_horus_color(color_id):
+		vehicle_store_status.text = "تم اختيار اللون المملوك."
+	else:
+		vehicle_store_status.text = "لا يمكن اختيار لون غير مملوك."
+	_refresh_vehicle_store_phone()
+
 func _refresh_wallet() -> void:
 	if not is_instance_valid(mission_manager):
 		return
@@ -222,6 +377,8 @@ func _refresh_wallet() -> void:
 		money_label.text = "ذهب: %d  +" % int(mission_manager.get("money"))
 	if is_instance_valid(chips_label):
 		chips_label.text = "رقائق: %d  +" % int(mission_manager.get("chips"))
+	if is_instance_valid(gems_label):
+		gems_label.text = "جواهر: %d" % WalletManager.get_balance("gems")
 
 
 func _build_player_interaction_popup() -> void:
@@ -305,14 +462,19 @@ func _build_player_interaction_popup() -> void:
 
 func open_player_interaction(player_data: Dictionary) -> void:
 	# البيانات المتوقعة: player_id, display_name, level, account_age, avatar_text.
-	selected_player_id = str(player_data.get("player_id", ""))
+	selected_player_id = str(player_data.get("player_id", "")).strip_edges()
+	if selected_player_id.is_empty() or selected_player_id.length() > 64 or selected_player_id == "local_leader":
+		selected_player_id = ""
 	selected_player_is_friend = bool(player_data.get("is_friend", false))
 	player_primary_action_button.text = "إضافة للمجموعة" if selected_player_is_friend else "إضافة صديق"
-	player_name_label.text = str(player_data.get("display_name", "لاعب"))
-	player_level_label.text = "المستوى %s" % str(player_data.get("level", "—"))
-	player_status_label.text = str(player_data.get("account_age", ""))
-	player_avatar_label.text = str(player_data.get("avatar_text", "👤"))
-	player_action_status.text = ""
+	var clean_name := str(player_data.get("display_name", "لاعب")).strip_edges().substr(0, 24)
+	player_name_label.text = clean_name if not clean_name.is_empty() else "لاعب"
+	var clean_level := str(player_data.get("level", "—")).substr(0, 12)
+	player_level_label.text = "المستوى %s" % clean_level
+	player_status_label.text = str(player_data.get("account_age", "")).strip_edges().substr(0, 40)
+	var clean_avatar := str(player_data.get("avatar_text", "👤")).substr(0, 8)
+	player_avatar_label.text = clean_avatar if not clean_avatar.is_empty() else "👤"
+	player_action_status.text = "بيانات اللاعب غير صالحة؛ تعذر تنفيذ التفاعل." if selected_player_id.is_empty() else ""
 	player_popup.visible = true
 
 
@@ -321,8 +483,12 @@ func close_player_interaction() -> void:
 		player_popup.visible = false
 
 
+func _has_selected_player() -> bool:
+	return not selected_player_id.is_empty() and selected_player_id.length() <= 64 and selected_player_id != "local_leader"
+
+
 func _on_player_primary_action() -> void:
-	if selected_player_id.is_empty():
+	if not _has_selected_player():
 		player_action_status.text = "تعذر تنفيذ الطلب: رمز اللاعب غير متاح."
 		return
 	if selected_player_is_friend:
@@ -333,7 +499,7 @@ func _on_player_primary_action() -> void:
 
 
 func _on_player_gift_party() -> void:
-	if selected_player_id.is_empty():
+	if not _has_selected_player():
 		player_action_status.text = "تعذر تجهيز الإهداء: رمز اللاعب غير متاح."
 		return
 	party_gift_requested.emit(selected_player_id)
@@ -341,7 +507,7 @@ func _on_player_gift_party() -> void:
 
 
 func _on_player_report() -> void:
-	if selected_player_id.is_empty():
+	if not _has_selected_player():
 		player_action_status.text = "تعذر تجهيز البلاغ: رمز اللاعب غير متاح."
 		return
 	player_report_requested.emit(selected_player_id)
@@ -467,8 +633,9 @@ func _is_local_group_leader() -> bool:
 
 
 func _request_group_invite(player_id: String) -> void:
-	if player_id.is_empty():
-		player_action_status.text = "رمز اللاعب غير متاح."
+	player_id = player_id.strip_edges()
+	if player_id.is_empty() or player_id.length() > 64 or player_id == "local_leader":
+		player_action_status.text = "رمز اللاعب غير صالح."
 		return
 	if group_members.size() >= GROUP_MAX_MEMBERS:
 		player_action_status.text = "المجموعة مكتملة؛ الحد الأقصى أربعة لاعبين."
@@ -483,11 +650,15 @@ func _request_group_invite(player_id: String) -> void:
 
 
 func resolve_group_invitation(player_id: String, accepted: bool, display_name: String = "لاعب") -> void:
-	if not pending_group_invites.has(player_id):
+	player_id = player_id.strip_edges()
+	if player_id.is_empty() or player_id.length() > 64 or not pending_group_invites.has(player_id):
 		return
 	pending_group_invites.erase(player_id)
 	if accepted and group_members.size() < GROUP_MAX_MEMBERS and not _group_contains(player_id):
-		group_members.append({"player_id":player_id, "display_name":display_name, "is_leader":false})
+		var clean_name := display_name.strip_edges().substr(0, 24)
+		if clean_name.is_empty():
+			clean_name = "لاعب"
+		group_members.append({"player_id":player_id, "display_name":clean_name, "is_leader":false})
 	_refresh_group_popup()
 
 
@@ -502,9 +673,31 @@ func _remove_group_member(player_id: String) -> void:
 	for i in range(group_members.size() - 1, 0, -1):
 		if str(group_members[i].get("player_id", "")) == player_id:
 			group_members.remove_at(i)
+			_remove_group_member_marker(player_id)
 			group_member_removed.emit(player_id)
 			break
+	if group_members.size() <= 1:
+		_clear_group_meeting_marker()
+		group_meeting_position = Vector3.ZERO
+		if group_follow_enabled:
+			group_follow_enabled = false
+			group_follow_mode_requested.emit(false)
 	_refresh_group_popup()
+
+
+func _remove_group_member_marker(player_id: String) -> void:
+	var marker_value: Variant = group_member_markers.get(player_id, null)
+	if is_instance_valid(marker_value):
+		marker_value.queue_free()
+	group_member_markers.erase(player_id)
+
+
+func _clear_group_meeting_marker() -> void:
+	if not is_instance_valid(main_scene):
+		return
+	var marker := main_scene.get_node_or_null("GroupMeetingMarker")
+	if is_instance_valid(marker):
+		marker.queue_free()
 
 
 func _toggle_group_follow_mode() -> void:
@@ -538,6 +731,8 @@ func _start_group_move_to_meeting_point() -> void:
 
 func receive_group_member_positions(member_positions: Array) -> void:
 	# تستدعى بعد تحقق الخادم من عضوية كل لاعب؛ لا تنشئ شخصيات لعب حقيقية من بيانات غير موثوقة.
+	if not is_instance_valid(main_scene) or not main_scene.is_inside_tree():
+		return
 	var active_ids: Array[String] = []
 	for entry in member_positions:
 		if not entry is Dictionary:
@@ -557,7 +752,8 @@ func receive_group_member_positions(member_positions: Array) -> void:
 			break
 		active_ids.append(player_id)
 		var marker: Node3D = group_member_markers.get(player_id)
-		if not is_instance_valid(marker):
+		if not is_instance_valid(marker) or marker.is_queued_for_deletion():
+			group_member_markers.erase(player_id)
 			marker = Node3D.new()
 			marker.name = "GroupMember_" + player_id.validate_node_name()
 			var icon := MeshInstance3D.new()
@@ -579,13 +775,14 @@ func receive_group_member_positions(member_positions: Array) -> void:
 			marker.add_child(name_tag)
 			main_scene.add_child(marker)
 			group_member_markers[player_id] = marker
+		var name_tag := marker.get_node_or_null("Label3D") as Label3D
+		if is_instance_valid(name_tag):
+			var clean_name := str(entry.get("display_name", "عضو المجموعة")).strip_edges().substr(0, 24)
+			name_tag.text = clean_name if not clean_name.is_empty() else "عضو المجموعة"
 		marker.global_position = world_position + Vector3(0, 0.4, 0)
 	for old_id in group_member_markers.keys():
 		if not active_ids.has(str(old_id)):
-			var old_marker: Node3D = group_member_markers[old_id]
-			if is_instance_valid(old_marker):
-				old_marker.queue_free()
-			group_member_markers.erase(old_id)
+			_remove_group_member_marker(str(old_id))
 
 
 func receive_group_move_order(target_position: Vector3) -> void:
@@ -630,9 +827,7 @@ func receive_group_meeting_point(position: Vector3, leader_name: String = "قا�
 func _show_group_meeting_marker(position: Vector3) -> void:
 	if not position.is_finite() or not is_instance_valid(main_scene):
 		return
-	var old_marker := main_scene.get_node_or_null("GroupMeetingMarker")
-	if is_instance_valid(old_marker):
-		old_marker.queue_free()
+	_clear_group_meeting_marker()
 	var marker := Node3D.new()
 	marker.name = "GroupMeetingMarker"
 	marker.position = Vector3(position.x, 0.15, position.z)
@@ -725,8 +920,12 @@ func _send_group_chat_message(raw_message: String) -> void:
 	var message := raw_message.strip_edges()
 	if message.is_empty():
 		return
-	if group_members.is_empty():
+	if group_members.size() < 2:
+		group_chat_log.append_text("[color=gray]لا يمكن إرسال رسالة قبل انضمام عضو آخر إلى المجموعة.\n[/color]")
 		return
+	# حد محلي للطول لتجنب الرسائل الضخمة؛ يطبق الخادم الحد نفسه عند ربط الدردشة.
+	if message.length() > GROUP_CHAT_MAX_LENGTH:
+		message = message.substr(0, GROUP_CHAT_MAX_LENGTH)
 	var safe_message := message.replace("[", "(").replace("]", ")")
 	if group_chat_log.text == "[color=gray]رسائل المجموعة ستظهر هنا.[/color]":
 		group_chat_log.clear()
@@ -736,12 +935,18 @@ func _send_group_chat_message(raw_message: String) -> void:
 
 
 func receive_group_chat_message(sender_name: String, message: String) -> void:
-	if message.strip_edges().is_empty():
+	var clean_message := message.strip_edges()
+	if clean_message.is_empty() or not is_instance_valid(group_chat_log):
 		return
-	if not is_instance_valid(group_chat_log):
+	if group_members.size() < 2:
 		return
-	var safe_name := sender_name.replace("[", "(").replace("]", ")")
-	var safe_message := message.replace("[", "(").replace("]", ")")
+	# لا تعرض رسائل أطول من الحد المحلي أو أسماء مرسلين غير محدودة.
+	clean_message = clean_message.substr(0, GROUP_CHAT_MAX_LENGTH)
+	var clean_sender := sender_name.strip_edges().substr(0, 24)
+	if clean_sender.is_empty():
+		clean_sender = "عضو المجموعة"
+	var safe_name := clean_sender.replace("[", "(").replace("]", ")")
+	var safe_message := clean_message.replace("[", "(").replace("]", ")")
 	if group_chat_log.text == "[color=gray]رسائل المجموعة ستظهر هنا.[/color]":
 		group_chat_log.clear()
 	group_chat_log.append_text("[color=lightblue][" + safe_name + "][/color] " + safe_message + "\n")

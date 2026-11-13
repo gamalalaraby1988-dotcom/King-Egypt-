@@ -37,6 +37,15 @@ func _ready() -> void:
 
 
 func _process(_delta: float) -> void:
+	# المركبات تخص مساحة المدينة؛ أخفِ أدواتها طوال الانتقال أو الوجود داخل مبنى.
+	if interior_transition_busy or is_instance_valid(interior_root):
+		if is_instance_valid(vehicle_interaction_button):
+			vehicle_interaction_button.visible = false
+		if is_instance_valid(vehicle_summon_button):
+			vehicle_summon_button.visible = false
+		return
+	if vehicle_occupied and (not is_instance_valid(city_vehicle) or not is_instance_valid(get_node_or_null("Player"))):
+		_recover_vehicle_occupancy()
 	if vehicle_occupied:
 		if is_instance_valid(vehicle_interaction_button):
 			vehicle_interaction_button.visible = true
@@ -105,7 +114,11 @@ func _create_player_vehicle() -> void:
 	layer.add_child(vehicle_interaction_button)
 
 func _summon_player_vehicle() -> void:
-	if vehicle_occupied:
+	if interior_transition_busy or is_instance_valid(interior_root) or vehicle_occupied:
+		return
+	var selected_vehicle_id := VehicleStoreManager.get_selected_vehicle_id()
+	if not VehicleStoreManager.has_vehicle(selected_vehicle_id):
+		push_warning("لا يمكن استدعاء مركبة غير مملوكة.")
 		return
 	var player := get_node_or_null("Player") as CharacterBody3D
 	if not is_instance_valid(player):
@@ -119,16 +132,21 @@ func _summon_player_vehicle() -> void:
 		if city_vehicle == null:
 			return
 		city_vehicle.name = "PlayerVehicle"
+		city_vehicle.set_meta("vehicle_id", selected_vehicle_id)
 		add_child(city_vehicle)
 		city_vehicle.set_physics_process(false)
 		var vehicle_hud := city_vehicle.get_node_or_null("VehicleHUDLayer/VehicleHUD") as Control
 		if is_instance_valid(vehicle_hud):
+			if vehicle_hud.has_method("_clear_controls"):
+				vehicle_hud.call("_clear_controls")
 			vehicle_hud.visible = false
 		var vehicle_camera := city_vehicle.get_node_or_null("VehicleCameraPivot/SpringArm3D/VehicleCamera") as Camera3D
 		if is_instance_valid(vehicle_camera):
 			vehicle_camera.current = false
 
-	# تظهر السيارة بجانب اللاعب عند الاستدعاء، ويمكن استدعاؤها مجددًا إلى موقعه إذا تركها بعيدًا.
+	# سجل معرف المركبة المختارة مع الاستدعاء؛ لا يُسمح باختيار مركبة غير مملوكة.
+	city_vehicle.set_meta("vehicle_id", selected_vehicle_id)
+	# تظهر المركبة بجانب اللاعب عند الاستدعاء، ويمكن إحضارها مجددًا إذا تُركت بعيدًا.
 	var side := player.global_transform.basis.x.normalized()
 	var summon_position := player.global_position + side * 3.5
 	summon_position.y = player.global_position.y
@@ -143,6 +161,8 @@ func _summon_player_vehicle() -> void:
 		vehicle_interaction_button.visible = true
 
 func _toggle_vehicle_use() -> void:
+	if interior_transition_busy or is_instance_valid(interior_root):
+		return
 	if vehicle_occupied:
 		_exit_player_vehicle()
 		return
@@ -153,6 +173,7 @@ func _toggle_vehicle_use() -> void:
 		return
 	if player.get("animal_riding") == true or player.get("sitting") == true:
 		return
+	_set_mobile_hud_active(false)
 	vehicle_occupied = true
 	_player_saved_collision_layer = player.collision_layer
 	_player_saved_collision_mask = player.collision_mask
@@ -179,6 +200,39 @@ func _toggle_vehicle_use() -> void:
 		vehicle_interaction_button.text = "النزول من السيارة" if CityLanguage.get_language() == "ar" else "Exit vehicle"
 		vehicle_interaction_button.visible = true
 
+func _recover_vehicle_occupancy() -> void:
+	# لا تترك حالة الركوب عالقة إذا حُذفت السيارة أو اللاعب أثناء القيادة.
+	var player := get_node_or_null("Player") as CharacterBody3D
+	if is_instance_valid(city_vehicle):
+		city_vehicle.call("set_drive", false)
+		city_vehicle.call("set_brake", true)
+		city_vehicle.call("set_reverse", false)
+		city_vehicle.call("set_steering", 0.0)
+		city_vehicle.set_physics_process(false)
+		var vehicle_hud := city_vehicle.get_node_or_null("VehicleHUDLayer/VehicleHUD") as Control
+		if is_instance_valid(vehicle_hud):
+			if vehicle_hud.has_method("_clear_controls"):
+				vehicle_hud.call("_clear_controls")
+			vehicle_hud.visible = false
+		var vehicle_camera := city_vehicle.get_node_or_null("VehicleCameraPivot/SpringArm3D/VehicleCamera") as Camera3D
+		if is_instance_valid(vehicle_camera):
+			vehicle_camera.current = false
+	if is_instance_valid(player):
+		player.visible = true
+		player.collision_layer = _player_saved_collision_layer
+		player.collision_mask = _player_saved_collision_mask
+		player.set_physics_process(true)
+		var player_camera := player.get_node_or_null("CameraPivot/SpringArm3D/Camera3D") as Camera3D
+		if is_instance_valid(player_camera):
+			player_camera.current = true
+	vehicle_occupied = false
+	_set_mobile_hud_active(is_instance_valid(player))
+	if is_instance_valid(vehicle_interaction_button):
+		vehicle_interaction_button.visible = false
+		vehicle_interaction_button.text = "ركوب السيارة" if CityLanguage.get_language() == "ar" else "Enter vehicle"
+	if is_instance_valid(vehicle_summon_button):
+		vehicle_summon_button.visible = is_instance_valid(player)
+
 func _exit_player_vehicle() -> void:
 	if not vehicle_occupied:
 		return
@@ -201,6 +255,8 @@ func _exit_player_vehicle() -> void:
 		player_camera.current = true
 	var vehicle_hud := city_vehicle.get_node_or_null("VehicleHUDLayer/VehicleHUD") as Control
 	if is_instance_valid(vehicle_hud):
+		if vehicle_hud.has_method("_clear_controls"):
+			vehicle_hud.call("_clear_controls")
 		vehicle_hud.visible = false
 	city_vehicle.call("set_drive", false)
 	city_vehicle.call("set_brake", true)
@@ -208,6 +264,7 @@ func _exit_player_vehicle() -> void:
 	city_vehicle.call("set_steering", 0.0)
 	city_vehicle.set_physics_process(false)
 	vehicle_occupied = false
+	_set_mobile_hud_active(true)
 	if is_instance_valid(vehicle_interaction_button):
 		vehicle_interaction_button.text = "ركوب السيارة" if CityLanguage.get_language() == "ar" else "Enter vehicle"
 		vehicle_interaction_button.visible = player.global_position.distance_to(city_vehicle.global_position) <= 5.0
@@ -280,21 +337,43 @@ func _hide_interior_loading() -> void:
 
 func enter_building_interior(building: Node3D, actor: Node3D) -> void:
 	var body := actor as CharacterBody3D
-	if interior_transition_busy or not is_instance_valid(building) or not is_instance_valid(body):
+	if interior_transition_busy or is_instance_valid(interior_root) or vehicle_occupied:
+		return
+	if not is_instance_valid(building) or building.is_queued_for_deletion() or not is_instance_valid(body) or body.is_queued_for_deletion():
 		return
 	var building_data: Dictionary = building.get_mission_data() if building.has_method("get_mission_data") else {}
 	if not bool(building_data.get("requires_interior", false)):
 		return
+	# نظام المدينة الرئيسي هو المصدر الوحيد لحالة الانتقال؛ امنع الانتقال من وضعية غير آمنة.
+	if bool(body.get("sitting")) or bool(body.get("animal_riding")):
+		return
+	var manager := get_node_or_null("MissionManager")
+	if is_instance_valid(manager) and (bool(manager.get("mission_running")) or bool(manager.get("job_running"))):
+		return
+	var radius_value: Variant = building.get("interaction_radius")
+	var allowed_distance := float(radius_value) if radius_value != null else 4.5
+	if body.global_position.distance_to(building.global_position) > clampf(allowed_distance, 0.5, 4.8) + 0.65:
+		return
 	interior_transition_busy = true
 	interior_player = body
 	interior_return_transform = body.global_transform
+	body.set_physics_process(false)
 	_show_interior_loading(false)
 	await get_tree().create_timer(0.65).timeout
+	# أعد التحقق بعد التحميل؛ لا تنقل لاعبًا أو مبنى حُذف أثناء الانتظار.
+	if not is_inside_tree() or not is_instance_valid(building) or building.is_queued_for_deletion() or not is_instance_valid(body) or body.is_queued_for_deletion():
+		if is_instance_valid(body):
+			body.set_physics_process(true)
+		interior_transition_busy = false
+		interior_player = null
+		_hide_interior_loading()
+		return
 	_set_city_world_hidden(true)
 	_create_building_interior(str(building.get("building_title")))
 	body.global_position = INTERIOR_WORLD_POSITION + Vector3(0, 1.05, 2.8)
 	body.velocity = Vector3.ZERO
 	body.rotation.y = PI
+	body.set_physics_process(true)
 	interior_transition_busy = false
 	_show_interior_loading(true)
 
@@ -348,7 +427,8 @@ func _create_building_interior(building_title: String) -> void:
 	title.font_size = 44
 	title.pixel_size = 0.012
 	title.modulate = Color(1.0, 0.88, 0.58)
-	title.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	title.billboard = BaseMaterial3D.BILLBOARD_DISABLED
+	# Interior wall title remains aligned with the wall-mounted plaque.
 	interior_root.add_child(title)
 	_create_interior_furnishings(interior_root, building_title)
 	_create_interior_staff(interior_root, building_title)
@@ -403,14 +483,22 @@ func _create_interior_staff(root: Node3D, building_title: String) -> void:
 	root.add_child(staff)
 
 func return_from_building_interior() -> void:
-	if interior_transition_busy or not is_instance_valid(interior_player):
+	if interior_transition_busy or not is_instance_valid(interior_root):
 		return
 	interior_transition_busy = true
+	var body := interior_player
+	if is_instance_valid(body) and not body.is_queued_for_deletion():
+		body.set_physics_process(false)
 	_show_interior_loading(false, "interior_return_loading")
 	await get_tree().create_timer(0.45).timeout
-	interior_player.global_transform = interior_return_transform
-	interior_player.velocity = Vector3.ZERO
+	if not is_inside_tree():
+		return
+	# استعد المدينة حتى لو تعذر استعادة اللاعب؛ لا تترك العالم مخفيًا أو الانتقال مقفولًا.
 	_set_city_world_hidden(false)
+	if is_instance_valid(body) and not body.is_queued_for_deletion():
+		body.global_transform = interior_return_transform
+		body.velocity = Vector3.ZERO
+		body.set_physics_process(true)
 	if is_instance_valid(interior_root):
 		interior_root.queue_free()
 	interior_root = null
@@ -490,6 +578,14 @@ func _create_mobile_hud() -> void:
 	layer.add_child(touch_hud)
 	touch_hud.set("player", get_node_or_null("Player"))
 
+func _set_mobile_hud_active(active: bool) -> void:
+	var touch_hud := get_node_or_null("MobileHUD/TouchControls") as Control
+	if not is_instance_valid(touch_hud):
+		return
+	if touch_hud.has_method("_clear_touch_state"):
+		touch_hud.call("_clear_touch_state")
+	touch_hud.visible = active
+
 	var hud_layer := CanvasLayer.new()
 	hud_layer.name = "CityActionHUD"
 	hud_layer.set_script(load("res://scripts/city_hud.gd"))
@@ -524,29 +620,15 @@ func _create_interactive_buildings() -> void:
 	profile_ui.player = get_node_or_null("Player")
 	add_child(profile_ui)
 
-	var wardrobe := Node.new()
-	wardrobe.name = "WardrobeManager"
-	wardrobe.set_script(load("res://scripts/wardrobe_manager.gd"))
-	wardrobe.player = get_node_or_null("Player")
-	wardrobe.mission_manager = manager
-	add_child(wardrobe)
-	var shop := Node.new()
-	shop.name = "ShopManager"
-	shop.set_script(load("res://scripts/shop_manager.gd"))
-	shop.mission_manager = manager
-	shop.wardrobe_manager = wardrobe
-	manager.shop_manager = shop
-	add_child(shop)
-
 	_add_functional_building(manager, "المتجر", "مهمة شراء احتياجات", "تعرّف على المتجر واستلم قائمة احتياجات تجريبية من البوابة.", Vector3(16, 0, 16), Color(0.20, 0.48, 0.30), 150, 0, 1)
 	_add_functional_building(manager, "المطعم", "مهمة توصيل وجبة", "استلم طلب توصيل تجريبي من المطعم. ستصبح أهداف التوصيل الفعلية جزءًا من مرحلة لاحقة.", Vector3(-16, 0, 16), Color(0.65, 0.30, 0.18), 220, 2, 1)
 	_add_functional_building(manager, "مركز التوظيف", "مهمة التسجيل في وظيفة", "تعرّف على الوظائف المتاحة وشروط الالتحاق بها.", Vector3(16, 0, -16), Color(0.22, 0.34, 0.62), 300, 5, 1)
-	_create_job_board("وظيفة التوصيل", "توصيل طلب إلى نقطة الاستلام المحددة في المدينة.", Vector3(24, 0, 0), Vector3(0, 0, 14), 180, 0, 30, "courier_delivery")
-	_create_job_board("مرشد المدينة", "اذهب إلى نقطة المعلم السياحي وساعد الزائرين على اكتشاف المدينة.", Vector3(-24, 0, 0), Vector3(0, 0, -14), 220, 1, 40, "city_guide")
-	_create_job_board("عامل صيانة", "توجّه إلى موقع الصيانة المحدد وأكمل جولة الفحص الميدانية.", Vector3(0, 0, 24), Vector3(14, 0, 0), 250, 0, 45, "city_maintenance")
-	_create_service_staff("صاحب المتجر", "صاحب محل", "أهلًا بك! يمكنني مساعدتك في احتياجاتك ومشترياتك من المتجر.", Vector3(16, 0, 21))
-	_create_service_staff("موظف المطعم", "موظف", "مرحبًا! أستقبل طلبات المطعم وأساعدك في أنشطة التوصيل.", Vector3(-16, 0, 21))
-	_create_service_staff("موظف مركز التوظيف", "موظف", "أهلًا بك! يمكنك مراجعة الوظائف المتاحة وشروطها هنا.", Vector3(16, 0, -11))
+	_create_job_board("وظيفة التوصيل", "توصيل طلب إلى نقطة الاستلام المحددة في المدينة.", Vector3(24, 0, 4.5), Vector3(0, 0, 9.5), 180, 0, 30, "courier_delivery")
+	_create_job_board("مرشد المدينة", "اذهب إلى نقطة المعلم السياحي وساعد الزائرين على اكتشاف المدينة.", Vector3(-24, 0, 4.5), Vector3(0, 0, -18.5), 220, 1, 40, "city_guide")
+	_create_job_board("عامل صيانة", "توجّه إلى موقع الصيانة المحدد وأكمل جولة الفحص الميدانية.", Vector3(4.5, 0, 24), Vector3(9.5, 0, 0), 250, 0, 45, "city_maintenance", PI / 2.0)
+	_create_service_staff("صاحب المتجر", "صاحب محل", "أهلًا بك! يمكنني مساعدتك في احتياجاتك ومشترياتك من المتجر.", Vector3(19.5, 0, 20.2))
+	_create_service_staff("موظف المطعم", "موظف", "مرحبًا! أستقبل طلبات المطعم وأساعدك في أنشطة التوصيل.", Vector3(-12.5, 0, 20.2))
+	_create_service_staff("موظف مركز التوظيف", "موظف", "أهلًا بك! يمكنك مراجعة الوظائف المتاحة وشروطها هنا.", Vector3(19.5, 0, -11))
 
 func _add_functional_building(manager: Node, title: String, mission: String, description: String, pos: Vector3, color: Color, reward: int, chips_reward: int, level: int) -> void:
 	var building := Node3D.new()
@@ -575,11 +657,12 @@ func _add_functional_building(manager: Node, title: String, mission: String, des
 	manager.register_building(building)
 
 
-func _create_job_board(title: String, description: String, pos: Vector3, target_offset: Vector3, reward: int, chips_reward: int, xp_reward: int, job_id: String) -> void:
+func _create_job_board(title: String, description: String, pos: Vector3, target_offset: Vector3, reward: int, chips_reward: int, xp_reward: int, job_id: String, yaw: float = 0.0) -> void:
 	var board := Node3D.new()
 	board.name = "JobBoard_" + job_id
 	board.set_script(load("res://scripts/job_interaction.gd"))
 	board.position = pos
+	board.rotation.y = yaw
 	board.job_id = job_id
 	board.job_title = title
 	board.job_description = description
@@ -601,14 +684,16 @@ func _create_job_board(title: String, description: String, pos: Vector3, target_
 
 func _create_city_signage() -> void:
 	# Signposts reuse primitive meshes and point to known prototype destinations.
-	_create_direction_signpost("Signpost_Central", Vector3(0, 0, 8), "restaurant", "shop")
-	_create_direction_signpost("Signpost_Employment", Vector3(24, 0, -8), "employment", "city_center")
-	_create_direction_signpost("Signpost_Camp", Vector3(30, 0, 38), "city_center", "animal_camp")
+	_create_direction_signpost("Signpost_Central", Vector3(9, 0, 8), "restaurant", "shop", PI / 2.0)
+	# Move roadside signs off the road centerline and turn their faces toward the road.
+	_create_direction_signpost("Signpost_Employment", Vector3(29, 0, -8), "employment", "city_center", PI / 2.0)
+	_create_direction_signpost("Signpost_Camp", Vector3(34, 0, 38), "city_center", "animal_camp", PI / 2.0)
 
-func _create_direction_signpost(sign_name: String, pos: Vector3, left_key: String, right_key: String) -> void:
+func _create_direction_signpost(sign_name: String, pos: Vector3, left_key: String, right_key: String, yaw: float = 0.0) -> void:
 	var sign_root := Node3D.new()
 	sign_root.name = sign_name
 	sign_root.position = pos
+	sign_root.rotation.y = yaw
 	add_child(sign_root)
 	_create_box(sign_root, "StonePost", Vector3(0.35, 2.7, 0.35), Vector3(0, 1.35, 0), Color(0.66, 0.52, 0.32), false)
 	_create_box(sign_root, "DarkBoard", Vector3(6.2, 1.15, 0.22), Vector3(0, 2.65, 0), Color(0.08, 0.22, 0.23), false)
@@ -629,7 +714,8 @@ func _add_sign_label(parent: Node3D, key: String, pos: Vector3, y_rotation: floa
 	label.pixel_size = 0.006
 	label.outline_size = 10
 	label.modulate = Color(1.0, 0.91, 0.68)
-	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	# Keep text aligned with its physical sign face and directional arrows.
+	# Billboard mode made labels rotate independently of the board.
 	parent.add_child(label)
 
 
