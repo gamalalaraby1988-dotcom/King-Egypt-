@@ -30,9 +30,14 @@ func _ready() -> void:
 	queue_redraw()
 
 func _process(_delta: float) -> void:
-	if is_instance_valid(player):
-		player.set_mobile_move(joystick_vector)
-		player.set_mobile_sprint(sprint_active)
+	if not is_instance_valid(player):
+		return
+	if not visible:
+		player.set_mobile_move(Vector2.ZERO)
+		player.set_mobile_sprint(false)
+		return
+	player.set_mobile_move(joystick_vector)
+	player.set_mobile_sprint(sprint_active)
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_RESIZED:
@@ -75,6 +80,8 @@ func _draw_button(center: Vector2, radius: float, caption: String, active: bool)
 	draw_string(font, center + Vector2(-text_width / 2.0, text_size * 0.34), caption, HORIZONTAL_ALIGNMENT_LEFT, -1, text_size, Color.WHITE)
 
 func _unhandled_input(event: InputEvent) -> void:
+	if not visible:
+		return
 	if event is InputEventScreenTouch:
 		if event.pressed:
 			_handle_touch_press(event.index, event.position)
