@@ -433,7 +433,7 @@ func _load_profile() -> void:
 		xp = _safe_profile_int(config.get_value("profile", "xp", 0), 0)
 		money = _safe_profile_int(config.get_value("profile", "money", 0), 0)
 		chips = _safe_profile_int(config.get_value("profile", "chips", 0), 0)
-			var saved_missions: Variant = config.get_value("profile", "completed_missions", {})
+		var saved_missions: Variant = config.get_value("profile", "completed_missions", {})
 		var saved_jobs: Variant = config.get_value("profile", "completed_jobs", {})
 		var saved_receipts: Variant = config.get_value("profile", "reward_receipts", {})
 		var saved_totals: Variant = config.get_value("profile", "achievement_totals", achievement_totals)
