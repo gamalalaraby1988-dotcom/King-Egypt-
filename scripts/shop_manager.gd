@@ -3,10 +3,10 @@ extends Node
 
 const SAVE_PATH := "user://kings_city_store.cfg"
 const OFFERS := [
-	{"id":"men_formal", "name":"بدلة رجالية رسمية", "price":500},
-	{"id":"women_formal", "name":"طقم نسائي رسمي", "price":500},
-	{"id":"urban_casual", "name":"إطلالة كاجوال", "price":300},
-	{"id":"sport", "name":"إطلالة رياضية", "price":250}
+	{"id":"men_formal", "name":"بدلة رجالية رسمية"},
+	{"id":"women_formal", "name":"طقم نسائي رسمي"},
+	{"id":"urban_casual", "name":"إطلالة كاجوال"},
+	{"id":"sport", "name":"إطلالة رياضية"}
 ]
 
 var mission_manager: Node
@@ -80,15 +80,18 @@ func _refresh_offers() -> void:
 		var label := Label.new()
 		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		var item_id: String = offer.id
-		var price: int = mission_manager.get_outfit_price(item_id) if is_instance_valid(mission_manager) and mission_manager.has_method("get_outfit_price") else int(offer.price)
+		var has_price_source := is_instance_valid(mission_manager) and mission_manager.has_method("get_outfit_price")
+		var price: int = int(mission_manager.get_outfit_price(item_id)) if has_price_source else -1
 		if owned.has(item_id):
 			label.text = "%s — مملوكة" % offer.name
-		else:
+		elif price >= 0:
 			label.text = "%s — %d جنيه" % [offer.name, price]
+		else:
+			label.text = "%s — السعر غير متاح" % offer.name
 		row.add_child(label)
 		var buy := Button.new()
 		buy.text = "تم الشراء" if owned.has(item_id) else "شراء"
-		buy.disabled = owned.has(item_id)
+		buy.disabled = owned.has(item_id) or price < 0
 		buy.pressed.connect(func(): _buy(item_id))
 		row.add_child(buy)
 
