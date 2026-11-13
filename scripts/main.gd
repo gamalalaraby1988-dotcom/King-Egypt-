@@ -132,6 +132,8 @@ func _summon_player_vehicle() -> void:
 		city_vehicle.set_physics_process(false)
 		var vehicle_hud := city_vehicle.get_node_or_null("VehicleHUDLayer/VehicleHUD") as Control
 		if is_instance_valid(vehicle_hud):
+			if vehicle_hud.has_method("_clear_controls"):
+				vehicle_hud.call("_clear_controls")
 			vehicle_hud.visible = false
 		var vehicle_camera := city_vehicle.get_node_or_null("VehicleCameraPivot/SpringArm3D/VehicleCamera") as Camera3D
 		if is_instance_valid(vehicle_camera):
@@ -242,6 +244,8 @@ func _exit_player_vehicle() -> void:
 		player_camera.current = true
 	var vehicle_hud := city_vehicle.get_node_or_null("VehicleHUDLayer/VehicleHUD") as Control
 	if is_instance_valid(vehicle_hud):
+		if vehicle_hud.has_method("_clear_controls"):
+			vehicle_hud.call("_clear_controls")
 		vehicle_hud.visible = false
 	city_vehicle.call("set_drive", false)
 	city_vehicle.call("set_brake", true)
