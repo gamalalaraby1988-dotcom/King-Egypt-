@@ -153,18 +153,28 @@ func _save_settings() -> void:
 		requested_name = old_name if not old_name.is_empty() else "لاعب"
 	requested_name = requested_name.substr(0, 24)
 	var name_changed := requested_name != old_name
-	var today := Time.get_date_string_from_system()
-	var last_change_value: Variant = config.get_value("profile", "player_name_change_date", "")
-	var last_change_date := str(last_change_value) if last_change_value is String else ""
 	var name_change_blocked := false
-	if name_changed and last_change_date == today:
-		name_input.text = old_name
-		name_change_blocked = true
-		requested_name = old_name
-		name_changed = false
-	config.set_value("profile", "player_name", requested_name)
 	if name_changed:
-		config.set_value("profile", "player_name_change_date", today)
+		if not SupabaseTestClient.is_authenticated():
+			name_input.text = old_name
+			requested_name = old_name
+			name_changed = false
+			name_change_blocked = true
+			name_change_status.text = "تغيير الاسم متاح بعد تسجيل الدخول بحساب الاختبار؛ لا نعتمد ساعة الجهاز لتطبيق الحد اليومي."
+		else:
+			name_change_status.text = "جارٍ التحقق من حد تغيير الاسم على الخادم..."
+			var server_result: Dictionary = await SupabaseTestClient.change_test_display_name(requested_name)
+			if not bool(server_result.get("ok", false)):
+				name_input.text = old_name
+				requested_name = old_name
+				name_changed = false
+				name_change_blocked = true
+				name_change_status.text = str(server_result.get("message", "رفض الخادم تغيير الاسم."))
+			else:
+				requested_name = str(server_result.get("display_name", requested_name))
+				name_input.text = requested_name
+				name_change_status.text = "تم تغيير الاسم من الخادم. موعد السماح التالي: %s" % str(server_result.get("next_change_at", "يُحدده الخادم"))
+	config.set_value("profile", "player_name", requested_name)
 	config.set_value("settings", "volume", int(volume_slider.value))
 	config.set_value("settings", "quality", quality_select.selected)
 	var language_modes := ["auto", "ar", "en"]
@@ -181,18 +191,15 @@ func _save_settings() -> void:
 	info_label.text += "\nتم حفظ الإعدادات محليًا."
 	_update_name_change_status(config)
 
-func _update_name_change_status(config: ConfigFile) -> void:
+func _update_name_change_status(_config: ConfigFile) -> void:
 	if not is_instance_valid(name_change_status):
 		return
-	var last_change_value: Variant = config.get_value("profile", "player_name_change_date", "")
-	var last_change_date := str(last_change_value) if last_change_value is String else ""
-	var already_changed_today := last_change_date == Time.get_date_string_from_system()
-	name_input.editable = not already_changed_today
-	if already_changed_today:
-		name_change_status.text = "تم استخدام تغيير الاسم اليوم؛ سيُفتح التغيير مجددًا غدًا."
+	if SupabaseTestClient.is_authenticated():
+		name_input.editable = true
+		name_change_status.text = "تغيير الاسم يتم التحقق منه على الخادم مرة واحدة يوميًا."
 	else:
-		name_change_status.text = "يمكنك تغيير اسمك مرة واحدة يوميًا."
-	name_change_status.text += "\nملاحظة: هذا قيد محلي مؤقت؛ الحماية النهائية تتطلب اعتماد التوقيت من الخادم."
+		name_input.editable = false
+		name_change_status.text = "تغيير الاسم موقوف حتى تسجيل الدخول بحساب الاختبار؛ لا يُستخدم تاريخ الجهاز كحماية."
 
 func _apply_settings() -> void:
 	var master := AudioServer.get_bus_index("Master")
