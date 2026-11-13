@@ -499,9 +499,19 @@ func _process(_delta: float) -> void:
 		return
 	_update_interaction_target()
 	_update_interaction_hud()
-	if Input.is_key_pressed(KEY_E) and not _key_was_down and not mission_running and not job_running:
+	var interaction_key_down := Input.is_key_pressed(KEY_E)
+	var city_root := get_tree().current_scene
+	var vehicle_has_priority := false
+	if interaction_key_down and is_instance_valid(city_root):
+		if bool(city_root.get("vehicle_occupied")):
+			vehicle_has_priority = true
+		else:
+			var city_vehicle := city_root.get("city_vehicle") as Node3D
+			if is_instance_valid(city_vehicle) and player.global_position.distance_to(city_vehicle.global_position) <= 5.0:
+				vehicle_has_priority = true
+	if interaction_key_down and not _key_was_down and not mission_running and not job_running and not vehicle_has_priority:
 		interact()
-	_key_was_down = Input.is_key_pressed(KEY_E)
+	_key_was_down = interaction_key_down
 
 	stats_label.text = "المستوى %d  |  الخبرة %d  |  المال %d  |  الرقائق %d" % [player_level, xp, money, chips]
 	if job_running:
