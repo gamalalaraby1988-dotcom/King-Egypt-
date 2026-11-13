@@ -461,7 +461,7 @@ func _load_profile() -> void:
 					daily_task_progress[str(day_key)] = clean_day
 		daily_task_events = saved_daily_events if saved_daily_events is Dictionary else {}
 		achievement_stats_initialized = bool(config.get_value("profile", "achievement_stats_initialized", false))
-	var saved_owned = config.get_value("profile", "owned_outfits", null) if error == OK else null
+	var saved_owned: Variant = config.get_value("profile", "owned_outfits") if error == OK and config.has_section_key("profile", "owned_outfits") else null
 	var needs_profile_save := false
 	if saved_owned is Array:
 		owned_outfits = _sanitize_owned_outfits(saved_owned)
