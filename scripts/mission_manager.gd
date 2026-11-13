@@ -855,8 +855,14 @@ func _enter_building(building: Node3D) -> void:
 	loading_layer.visible = true
 	loading_label.text = CityLanguage.translate("interior_loading")
 	await get_tree().create_timer(0.9).timeout
-	if not is_instance_valid(building) or building.is_queued_for_deletion():
+	# أعد التحقق بعد التحميل؛ قد يختفي المبنى أو اللاعب أو مدير التفاعل خلال الانتظار.
+	if not is_inside_tree():
+		return
+	if not is_instance_valid(building) or building.is_queued_for_deletion() or not is_instance_valid(player) or player.is_queued_for_deletion():
 		loading_layer.visible = false
+		if is_instance_valid(player):
+			_update_interaction_target()
+			_update_interaction_hud()
 		return
 	_set_city_world_visible(false)
 	current_interior_root = Node3D.new()
@@ -927,16 +933,20 @@ func _exit_building() -> void:
 	loading_label.text = CityLanguage.translate("interior_city_loading")
 	interior_exit_button.visible = false
 	await get_tree().create_timer(0.75).timeout
+	if not is_inside_tree():
+		return
 	if is_instance_valid(current_interior_root):
 		current_interior_root.queue_free()
 	current_interior_root = null
 	_set_city_world_visible(true)
-	player.global_position = saved_city_player_position
-	player.velocity = Vector3.ZERO
+	if is_instance_valid(player) and not player.is_queued_for_deletion():
+		player.global_position = saved_city_player_position
+		player.velocity = Vector3.ZERO
 	inside_building = false
 	loading_layer.visible = false
-	_update_interaction_target()
-	_update_interaction_hud()
+	if is_instance_valid(player):
+		_update_interaction_target()
+		_update_interaction_hud()
 
 func _close_interior_preview() -> void:
 	interior_preview_active = false
