@@ -209,7 +209,7 @@ func _refresh_info() -> void:
 	if not is_instance_valid(mission_manager):
 		info_label.text = "بيانات اللاعب غير متاحة."
 		return
-	info_label.text = "المستوى: %d\nالخبرة: %d\nالمال الورقي: %d\nالرقائق: %d\nالجواهر: %d" % [
+	info_label.text = "المستوى: %d\nالخبرة: %d\nالمال: %d\nالرقائق: %d" % [
 		mission_manager.player_level, mission_manager.xp,
-		mission_manager.money, mission_manager.chips, mission_manager.gems
+		mission_manager.money, mission_manager.chips
 	]
