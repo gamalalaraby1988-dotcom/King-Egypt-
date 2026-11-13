@@ -247,6 +247,10 @@ func _transact(transaction_id: String, currency: String, amount: int, kind: Stri
 	return true
 
 func _persist_wallet(config: ConfigFile) -> bool:
+	# اكتب حقلي التوافق القديمين عند إنشاء ملف محفظة جديد/ترحيل قديم.
+	# بدون ذلك سيعتبر فحص الاتساق القيم المفقودة تعارضًا ويوقف أول حفظ للاعب جديد.
+	config.set_value("profile", "money", int(balances["money"]))
+	config.set_value("profile", "chips", int(balances["chips"]))
 	config.set_value("wallet", "schema_version", SCHEMA_VERSION)
 	config.set_value("wallet", "balances", balances)
 	config.set_value("wallet", "receipts", receipts)
