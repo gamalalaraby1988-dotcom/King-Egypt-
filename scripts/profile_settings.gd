@@ -224,9 +224,9 @@ func _refresh_info() -> void:
 			lines.append("تم ترحيل الأرصدة القديمة دون تغيير.")
 			continue
 		var currency := str(entry.get("currency", ""))
-		var currency_name := {"money": "مال", "chips": "رقائق", "gems": "جواهر"}.get(currency, currency)
+		var currency_name: String = str({"money": "مال", "chips": "رقائق", "gems": "جواهر"}.get(currency, currency))
 		var change := int(entry.get("balance_after", 0)) - int(entry.get("balance_before", 0))
-		var sign := "+" if change >= 0 else ""
+		var sign: String = "+" if change >= 0 else ""
 		lines.append("%s %s%d — %s" % [currency_name, sign, change, str(entry.get("reason", "عملية محفظة"))])
 	if lines.size() == 7:
 		lines.append("لا توجد حركات مسجلة بعد.")
