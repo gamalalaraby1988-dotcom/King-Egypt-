@@ -53,7 +53,8 @@ func sign_in_with_password(email: String, password: String) -> bool:
 	refresh_token = returned_refresh
 	user_id = returned_user_id
 	auth_changed.emit(true, user_id)
-	return await fetch_economy_snapshot()
+	await fetch_economy_snapshot()
+	return true
 
 func refresh_session() -> bool:
 	if refresh_token.is_empty():
