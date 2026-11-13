@@ -15,6 +15,7 @@ var refresh_token := ""
 var user_id := ""
 var economy_snapshot: Dictionary = {}
 var _http: HTTPRequest
+var _request_in_flight := false
 
 func _ready() -> void:
 	_http = HTTPRequest.new()
@@ -25,6 +26,11 @@ func is_authenticated() -> bool:
 	return not access_token.is_empty() and not user_id.is_empty()
 
 func sign_in_with_password(email: String, password: String) -> bool:
+	# لا تحتفظ بجلسة سابقة إذا فشلت محاولة تسجيل الدخول الجديدة.
+	if _request_in_flight:
+		request_failed.emit("هناك طلب اتصال جارٍ؛ انتظر حتى ينتهي.")
+		return false
+	_clear_session()
 	if email.strip_edges().is_empty() or password.is_empty():
 		request_failed.emit("أدخل البريد وكلمة المرور.")
 		return false
@@ -73,15 +79,17 @@ func refresh_session() -> bool:
 	var data: Dictionary = result.get("data", {})
 	var user: Dictionary = data.get("user", {})
 	var returned_user_id := str(user.get("id", ""))
-	if returned_user_id != TEST_AUTH_USER_ID:
+	var returned_access := str(data.get("access_token", ""))
+	var returned_refresh := str(data.get("refresh_token", ""))
+	if returned_user_id != TEST_AUTH_USER_ID or returned_access.is_empty() or returned_refresh.is_empty():
 		_clear_session()
-		request_failed.emit("تعذر التحقق من حساب الاختبار.")
+		request_failed.emit("تعذر التحقق من حساب الاختبار أو أن استجابة تجديد الجلسة غير مكتملة.")
 		return false
-	access_token = str(data.get("access_token", ""))
-	refresh_token = str(data.get("refresh_token", ""))
+	access_token = returned_access
+	refresh_token = returned_refresh
 	user_id = returned_user_id
 	auth_changed.emit(true, user_id)
-	return not access_token.is_empty() and not refresh_token.is_empty()
+	return true
 
 func fetch_economy_snapshot() -> bool:
 	if not is_authenticated():
@@ -117,6 +125,8 @@ func _clear_session() -> void:
 	auth_changed.emit(false, "")
 
 func _send_json(method: int, path: String, payload: Dictionary, bearer: String) -> Dictionary:
+	if _request_in_flight:
+		return {"ok": false, "message": "يوجد طلب HTTP آخر قيد التنفيذ."}
 	var headers := PackedStringArray([
 		"apikey: " + SUPABASE_PUBLISHABLE_KEY,
 		"Content-Type: application/json"
@@ -124,10 +134,13 @@ func _send_json(method: int, path: String, payload: Dictionary, bearer: String) 
 	if not bearer.is_empty():
 		headers.append("Authorization: Bearer " + bearer)
 	var body := JSON.stringify(payload) if not payload.is_empty() else "{}"
+	_request_in_flight = true
 	var request_error := _http.request(SUPABASE_URL + path, headers, method, body)
 	if request_error != OK:
+		_request_in_flight = false
 		return {"ok": false, "message": "تعذر بدء اتصال الشبكة (%s)." % str(request_error)}
 	var response: Array = await _http.request_completed
+	_request_in_flight = false
 	var transport_result := int(response[0])
 	var status_code := int(response[1])
 	var response_body := (response[3] as PackedByteArray).get_string_from_utf8()
