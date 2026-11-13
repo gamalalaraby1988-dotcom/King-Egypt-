@@ -114,6 +114,13 @@ func save_profile_update(config: ConfigFile, money_value: int, chips_value: int)
 	ledger = next_ledger
 	return true
 
+func get_recent_transactions(limit: int = 5) -> Array:
+	var result: Array = []
+	var count := mini(maxi(limit, 0), 20)
+	for index in range(ledger.size() - 1, maxi(ledger.size() - count - 1, -1), -1):
+		result.append(ledger[index].duplicate(true))
+	return result
+
 func has_transaction(transaction_id: String) -> bool:
 	return receipts.has(transaction_id)
 
