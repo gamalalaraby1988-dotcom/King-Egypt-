@@ -37,11 +37,13 @@ func _restore_file(source: String, destination: String, existed: bool) -> void:
 
 
 func _run() -> void:
+	print("WALLET TEST: begin and preserve existing files")
 	var had_profile := _copy_if_exists(PROFILE_PATH, PROFILE_BACKUP_PATH)
 	var had_wallet_backup := _copy_if_exists(WALLET_BACKUP_PATH, WALLET_BACKUP_COPY_PATH)
 	_remove_if_exists(PROFILE_PATH)
 	_remove_if_exists(WALLET_BACKUP_PATH)
 
+	print("WALLET TEST: legacy migration")
 	# Legacy profile: migration must preserve existing Cash and Chips and initialize Gems to zero.
 	var legacy := ConfigFile.new()
 	legacy.set_value("profile", "player_level", 4)
@@ -63,6 +65,7 @@ func _run() -> void:
 	_check(int(migrated.get_value("profile", "gems", -1)) == 0, "saved Gems initialized")
 	_check(int(migrated.get_value("profile", "wallet_schema_version", 0)) == 1, "wallet schema version written")
 
+	print("WALLET TEST: reward and spending transactions")
 	# Reward idempotency and all-currency persistence.
 	_check(manager.grant_reward_once("wallet_test_reward", 10, 5, 3, 2), "first three-currency reward accepted")
 	_check(not manager.grant_reward_once("wallet_test_reward", 10, 5, 3, 2), "duplicate reward rejected")
@@ -76,6 +79,7 @@ func _run() -> void:
 	_check(manager.complete_activity_once("wallet_test_mission", "mission", 1, 1, 1, 1), "activity with all currencies accepted")
 	_check(not manager.complete_activity_once("wallet_test_mission", "mission", 1, 1, 1, 1), "duplicate activity rejected")
 
+	print("WALLET TEST: reload persistence")
 	var reloaded = MissionManagerScript.new()
 	reloaded.call("_load_profile")
 	_check(reloaded.money == 1245 and reloaded.chips == 56 and reloaded.gems == 2, "balances persist after reload")
@@ -83,6 +87,7 @@ func _run() -> void:
 	_check(reloaded.reward_receipts.has("spend_currency_chips_wallet_test_spend_chips"), "spend receipt persists")
 	_check(reloaded.completed_missions.has("wallet_test_mission"), "activity completion persists")
 
+	print("WALLET TEST: corrupt profile protection")
 	# Corrupt files must not be overwritten by wallet operations.
 	var corrupt := FileAccess.open(PROFILE_PATH, FileAccess.WRITE)
 	_check(corrupt != null, "open profile for corruption guard test")
@@ -95,6 +100,7 @@ func _run() -> void:
 	_check(not blocked.grant_reward_once("wallet_test_corrupt", 1), "reward rejected for corrupt profile")
 	_check(FileAccess.get_file_as_string(PROFILE_PATH) == before, "corrupt profile left untouched")
 
+	print("WALLET TEST: restore files and finish")
 	manager.free()
 	reloaded.free()
 	blocked.free()
