@@ -61,13 +61,9 @@ var interior_return_button: Button
 var interior_activities_button: Button
 var interior_preview_active := false
 var interior_preview_building: Node3D = null
-var inside_building := false
-var current_interior_root: Node3D = null
-var saved_city_player_position := Vector3.ZERO
 var loading_layer: CanvasLayer
 var loading_panel: PanelContainer
 var loading_label: Label
-var interior_exit_button: Button
 var navigation_label: Label
 var navigation_arrow: Label
 var navigation_cancel_button: Button
@@ -98,8 +94,6 @@ func _refresh_navigation_language() -> void:
 		interior_activities_button.text = CityLanguage.translate("interior_view_activities")
 	if is_instance_valid(interior_return_button):
 		interior_return_button.text = CityLanguage.translate("interior_return")
-	if is_instance_valid(interior_exit_button):
-		interior_exit_button.text = CityLanguage.translate("interior_exit")
 	if is_instance_valid(close_button):
 		close_button.text = CityLanguage.translate("service_npc_close")
 	if is_instance_valid(loading_label) and loading_layer.visible:
@@ -504,10 +498,6 @@ func _process(_delta: float) -> void:
 
 
 func _update_interaction_target() -> void:
-	if inside_building:
-		nearest_interactable = null
-		nearest_building = null
-		return
 	var previous_target := nearest_interactable
 	var best: Node3D = null
 	var best_distance := INF
@@ -804,126 +794,6 @@ func _create_loading_ui() -> void:
 	progress.value = 100
 	content.add_child(progress)
 	loading_layer.visible = false
-
-func _set_city_world_visible(is_visible: bool) -> void:
-	for node in get_tree().get_nodes_in_group("city_world_geometry"):
-		if not is_instance_valid(node):
-			continue
-		if node is VisualInstance3D:
-			node.visible = is_visible
-		if node is StaticBody3D:
-			node.collision_layer = 1 if is_visible else 0
-			node.collision_mask = 1 if is_visible else 0
-
-func _enter_building(building: Node3D) -> void:
-	if inside_building or not is_instance_valid(building) or building.is_queued_for_deletion():
-		return
-	var radius_value: Variant = building.get("interaction_radius")
-	var allowed_distance := float(radius_value) if radius_value != null else 4.5
-	if not is_instance_valid(player) or player.global_position.distance_to(building.global_position) > clampf(allowed_distance, 0.5, 4.8) + 0.65:
-		_update_interaction_target()
-		return
-	var city_root := get_tree().current_scene
-	if not is_instance_valid(city_root):
-		return
-	saved_city_player_position = player.global_position
-	panel.visible = false
-	interact_button.visible = false
-	loading_layer.visible = true
-	loading_label.text = CityLanguage.translate("interior_loading")
-	await get_tree().create_timer(0.9).timeout
-	# أعد التحقق بعد التحميل؛ قد يختفي المبنى أو اللاعب أو مدير التفاعل خلال الانتظار.
-	if not is_inside_tree():
-		return
-	if not is_instance_valid(building) or building.is_queued_for_deletion() or not is_instance_valid(player) or player.is_queued_for_deletion():
-		loading_layer.visible = false
-		if is_instance_valid(player):
-			_update_interaction_target()
-			_update_interaction_hud()
-		return
-	_set_city_world_visible(false)
-	current_interior_root = Node3D.new()
-	current_interior_root.name = "GeneratedBuildingInterior"
-	city_root.add_child(current_interior_root)
-	var localized_building_name := str(building.get("building_title"))
-	if localized_building_name == "المتجر":
-		localized_building_name = CityLanguage.translate("shop")
-	elif localized_building_name == "المطعم":
-		localized_building_name = CityLanguage.translate("restaurant")
-	elif localized_building_name == "مركز التوظيف":
-		localized_building_name = CityLanguage.translate("employment")
-	_create_basic_interior(current_interior_root, localized_building_name)
-	player.global_position = Vector3(0, 1.0, 2.0)
-	player.velocity = Vector3.ZERO
-	inside_building = true
-	interior_exit_button.visible = true
-	loading_layer.visible = false
-	_update_interaction_hud()
-
-func _create_basic_interior(root: Node3D, building_name: String) -> void:
-	var floor_mesh := BoxMesh.new()
-	floor_mesh.size = Vector3(14, 0.3, 14)
-	_add_interior_box(root, "InteriorFloor", floor_mesh, Vector3(0, -0.2, 0), Color(0.63, 0.53, 0.38), true)
-	_add_interior_box(root, "BackWall", _box_mesh(Vector3(14, 5, 0.35)), Vector3(0, 2.3, -7), Color(0.73, 0.65, 0.49), true)
-	_add_interior_box(root, "LeftWall", _box_mesh(Vector3(0.35, 5, 14)), Vector3(-7, 2.3, 0), Color(0.69, 0.59, 0.43), true)
-	_add_interior_box(root, "RightWall", _box_mesh(Vector3(0.35, 5, 14)), Vector3(7, 2.3, 0), Color(0.69, 0.59, 0.43), true)
-	_add_interior_box(root, "FrontLeftWall", _box_mesh(Vector3(5.2, 5, 0.35)), Vector3(-4.4, 2.3, 7), Color(0.73, 0.65, 0.49), true)
-	_add_interior_box(root, "FrontRightWall", _box_mesh(Vector3(5.2, 5, 0.35)), Vector3(4.4, 2.3, 7), Color(0.73, 0.65, 0.49), true)
-	_add_interior_box(root, "CeilingTrim", _box_mesh(Vector3(14, 0.25, 14)), Vector3(0, 4.85, 0), Color(0.17, 0.23, 0.24), false)
-	_add_interior_box(root, "WelcomeCounter", _box_mesh(Vector3(3.2, 1.1, 0.8)), Vector3(0, 0.55, -3.5), Color(0.28, 0.22, 0.16), false)
-	var title := Label3D.new()
-	title.text = building_name
-	title.position = Vector3(0, 3.2, -6.75)
-	title.font_size = 42
-	title.modulate = Color(0.95, 0.79, 0.42)
-	root.add_child(title)
-
-func _box_mesh(size: Vector3) -> BoxMesh:
-	var mesh := BoxMesh.new()
-	mesh.size = size
-	return mesh
-
-func _add_interior_box(root: Node3D, node_name: String, mesh: BoxMesh, pos: Vector3, color: Color, collision: bool) -> void:
-	var visual := MeshInstance3D.new()
-	visual.name = node_name
-	visual.mesh = mesh
-	visual.position = pos
-	var material := StandardMaterial3D.new()
-	material.albedo_color = color
-	material.roughness = 0.9
-	visual.material_override = material
-	root.add_child(visual)
-	if collision:
-		var body := StaticBody3D.new()
-		body.position = pos
-		var shape_node := CollisionShape3D.new()
-		var shape := BoxShape3D.new()
-		shape.size = mesh.size
-		shape_node.shape = shape
-		body.add_child(shape_node)
-		root.add_child(body)
-
-func _exit_building() -> void:
-	if not inside_building or not is_instance_valid(player):
-		return
-	loading_layer.visible = true
-	loading_label.text = CityLanguage.translate("interior_city_loading")
-	interior_exit_button.visible = false
-	await get_tree().create_timer(0.75).timeout
-	if not is_inside_tree():
-		return
-	if is_instance_valid(current_interior_root):
-		current_interior_root.queue_free()
-	current_interior_root = null
-	_set_city_world_visible(true)
-	if is_instance_valid(player) and not player.is_queued_for_deletion():
-		player.global_position = saved_city_player_position
-		player.velocity = Vector3.ZERO
-	inside_building = false
-	loading_layer.visible = false
-	if is_instance_valid(player):
-		_update_interaction_target()
-		_update_interaction_hud()
 
 func _close_interior_preview() -> void:
 	interior_preview_active = false
@@ -1411,13 +1281,6 @@ func _build_ui() -> void:
 	interior_return_button.visible = false
 	interior_return_button.pressed.connect(_close_interior_preview)
 	content.add_child(interior_return_button)
-	interior_exit_button = Button.new()
-	interior_exit_button.text = CityLanguage.translate("interior_exit")
-	interior_exit_button.position = Vector2(18, 180)
-	interior_exit_button.size = Vector2(150, 52)
-	interior_exit_button.visible = false
-	interior_exit_button.pressed.connect(_exit_building)
-	root_control.add_child(interior_exit_button)
 	_create_loading_ui()
 	close_button = Button.new()
 	close_button.text = CityLanguage.translate("service_npc_close")
