@@ -166,6 +166,13 @@ func _save_settings() -> void:
 	var server_next_name_change_at := ""
 	var name_change_failure_message := ""
 	if name_changed:
+		# افحص إمكانية الحفظ المحلي قبل تنفيذ تغيير خادمي لا يمكن التراجع عنه ذريًا.
+		# احفظ الاسم القديم أولًا؛ لا يُكتب الاسم الجديد محليًا إلا بعد موافقة الخادم.
+		config.set_value("profile", "player_name", old_name)
+		if not WalletManager.save_profile_metadata(config):
+			name_input.text = old_name
+			info_label.text = "تعذر تأمين حفظ ملف اللاعب محليًا؛ لم نرسل طلب تغيير الاسم إلى الخادم."
+			return
 		if not SupabaseTestClient.is_authenticated():
 			name_input.text = old_name
 			requested_name = old_name
