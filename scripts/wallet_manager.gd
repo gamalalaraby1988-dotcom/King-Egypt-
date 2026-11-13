@@ -138,6 +138,23 @@ func save_profile_update(config: ConfigFile, money_value: int, chips_value: int)
 	ledger = next_ledger
 	return true
 
+func save_profile_metadata(config: ConfigFile) -> bool:
+	# حفظ الإعدادات والتقدم غير الاقتصادي عبر نفس مسار الحفظ الذري للمحفظة.
+	if not initialized or integrity_blocked or not _refresh_legacy_balances():
+		return false
+	var money_value: Variant = config.get_value("profile", "money", null)
+	var chips_value: Variant = config.get_value("profile", "chips", null)
+	if not _valid_amount(money_value) or not _valid_amount(chips_value):
+		return false
+	if int(money_value) != int(balances["money"]) or int(chips_value) != int(balances["chips"]):
+		push_error("Wallet: metadata save attempted to change balances outside a wallet transaction.")
+		return false
+	config.set_value("wallet", "schema_version", SCHEMA_VERSION)
+	config.set_value("wallet", "balances", balances)
+	config.set_value("wallet", "receipts", receipts)
+	config.set_value("wallet", "ledger", ledger)
+	return _atomic_save(config)
+
 func get_recent_transactions(limit: int = 5) -> Array:
 	var result: Array = []
 	var count := mini(maxi(limit, 0), 20)
