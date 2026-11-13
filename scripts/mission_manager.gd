@@ -1136,7 +1136,7 @@ const CITY_LANDMARK_ENTRANCES := {
 	"delivery": Vector3(24.0, 0.0, 2.5),
 	"city_guide": Vector3(-24.0, 0.0, 2.5),
 	"maintenance": Vector3(0.0, 0.0, 26.5),
-	"animal_camp": Vector3(60.0, 0.0, 75.0)
+	"animal_camp": Vector3(60.0, 0.0, 68.0)
 }
 
 func get_landmark_entrance(landmark_key: String, fallback: Vector3) -> Vector3:
