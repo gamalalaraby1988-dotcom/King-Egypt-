@@ -116,6 +116,10 @@ func _create_player_vehicle() -> void:
 func _summon_player_vehicle() -> void:
 	if interior_transition_busy or is_instance_valid(interior_root) or vehicle_occupied:
 		return
+	var selected_vehicle_id := VehicleStoreManager.get_selected_vehicle_id()
+	if not VehicleStoreManager.has_vehicle(selected_vehicle_id):
+		push_warning("لا يمكن استدعاء مركبة غير مملوكة.")
+		return
 	var player := get_node_or_null("Player") as CharacterBody3D
 	if not is_instance_valid(player):
 		return
@@ -128,6 +132,7 @@ func _summon_player_vehicle() -> void:
 		if city_vehicle == null:
 			return
 		city_vehicle.name = "PlayerVehicle"
+		city_vehicle.set_meta("vehicle_id", selected_vehicle_id)
 		add_child(city_vehicle)
 		city_vehicle.set_physics_process(false)
 		var vehicle_hud := city_vehicle.get_node_or_null("VehicleHUDLayer/VehicleHUD") as Control
