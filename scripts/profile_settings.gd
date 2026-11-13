@@ -170,9 +170,8 @@ func _save_settings() -> void:
 	var language_modes := ["auto", "ar", "en"]
 	var selected_language: String = language_modes[clampi(language_select.selected, 0, 2)]
 	config.set_value("settings", "language", selected_language)
-	var error := config.save(SAVE_PATH)
-	if error != OK:
-		info_label.text = "تعذر حفظ الإعدادات؛ لم يتم اعتماد تغيير اللغة. رمز الخطأ: %s" % error
+	if not WalletManager.save_profile_metadata(config):
+		info_label.text = "تعذر حفظ الإعدادات؛ لم يتم اعتماد التغييرات لحماية ملف اللاعب."
 		return
 	CityLanguage.set_language(selected_language)
 	_apply_settings()
