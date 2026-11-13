@@ -1063,10 +1063,10 @@ func _on_test_account_login_pressed() -> void:
 	test_account_status.text = "تم تسجيل الدخول بحساب الاختبار."
 	var snapshot: Dictionary = SupabaseTestClient.economy_snapshot
 	if snapshot.is_empty():
-		test_account_status.text += "\\nتعذر تحميل بيانات الاقتصاد."
+		test_account_status.text += "\nتعذر تحميل بيانات الاقتصاد."
 		return
 	test_account_snapshot.text = (
-		"Cash: %s | Chips: %s\\nGems: %s | XP: %s\\nAccount version: %s"
+		"Cash: %s | Chips: %s\nGems: %s | XP: %s\nAccount version: %s"
 		% [
 			str(snapshot.get("cash_balance", 0)),
 			str(snapshot.get("chips_balance", 0)),
