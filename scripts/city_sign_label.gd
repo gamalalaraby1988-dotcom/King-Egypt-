@@ -9,7 +9,8 @@ func _ready() -> void:
 	pixel_size = 0.006
 	outline_size = 10
 	modulate = Color(1.0, 0.91, 0.68)
-	billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	billboard = BaseMaterial3D.BILLBOARD_DISABLED
+	# Keep translated sign text aligned with the physical board instead of facing the camera independently.
 	cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	CityLanguage.language_changed.connect(_refresh_text)
 	_refresh_text()
