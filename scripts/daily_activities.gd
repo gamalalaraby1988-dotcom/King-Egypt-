@@ -133,9 +133,11 @@ func _load_state() -> void:
 	var saved_day := str(cfg.get_value("daily", "day", day_key))
 	if saved_day != day_key:
 		return
-	progress = cfg.get_value("daily", "progress", {})
+	var saved_progress: Variant = cfg.get_value("daily", "progress", {})
+	progress = saved_progress if saved_progress is Dictionary else {}
 	claimed = bool(cfg.get_value("daily", "claimed", false))
-	walked_meters = float(cfg.get_value("daily", "walked_meters", 0.0))
+	var saved_walked: float = float(cfg.get_value("daily", "walked_meters", 0.0))
+	walked_meters = maxf(0.0, saved_walked) if is_finite(saved_walked) else 0.0
 
 func _save_state() -> bool:
 	var cfg := ConfigFile.new()
