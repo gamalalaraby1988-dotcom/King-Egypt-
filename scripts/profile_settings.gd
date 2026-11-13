@@ -46,6 +46,7 @@ func _sync_display_name_from_server(config: ConfigFile) -> void:
 		name_change_status.text = "تعذرت مزامنة اسم الحساب: %s" % str(server_result.get("message", "خطأ غير معروف."))
 		return
 	var server_name := str(server_result.get("display_name", "")).strip_edges()
+	var server_next_name_change_at := str(server_result.get("next_change_at", ""))
 	if server_name.is_empty():
 		# انقل الاسم المحلي القديم إلى الحساب مرة واحدة فقط عند أول ربط.
 		if not local_name.is_empty() and local_name != "لاعب جديد":
@@ -58,6 +59,7 @@ func _sync_display_name_from_server(config: ConfigFile) -> void:
 				name_change_status.text = str(bootstrap_result.get("message", "تعذر ربط الاسم المحلي بالحساب."))
 				return
 			server_name = str(bootstrap_result.get("display_name", local_name)).strip_edges()
+			server_next_name_change_at = str(bootstrap_result.get("next_change_at", ""))
 		else:
 			name_input.text = local_name
 			name_input.editable = true
@@ -71,6 +73,8 @@ func _sync_display_name_from_server(config: ConfigFile) -> void:
 			return
 	name_input.text = server_name
 	_update_name_change_status(config)
+	if not server_next_name_change_at.is_empty():
+		name_change_status.text += "\nموعد السماح التالي حسب الخادم: %s" % server_next_name_change_at
 
 func _build_ui() -> void:
 	var layer := CanvasLayer.new()
