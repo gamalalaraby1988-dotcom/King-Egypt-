@@ -578,6 +578,8 @@ func _start_group_move_to_meeting_point() -> void:
 
 func receive_group_member_positions(member_positions: Array) -> void:
 	# تستدعى بعد تحقق الخادم من عضوية كل لاعب؛ لا تنشئ شخصيات لعب حقيقية من بيانات غير موثوقة.
+	if not is_instance_valid(main_scene) or not main_scene.is_inside_tree():
+		return
 	var active_ids: Array[String] = []
 	for entry in member_positions:
 		if not entry is Dictionary:
@@ -597,7 +599,8 @@ func receive_group_member_positions(member_positions: Array) -> void:
 			break
 		active_ids.append(player_id)
 		var marker: Node3D = group_member_markers.get(player_id)
-		if not is_instance_valid(marker):
+		if not is_instance_valid(marker) or marker.is_queued_for_deletion():
+			group_member_markers.erase(player_id)
 			marker = Node3D.new()
 			marker.name = "GroupMember_" + player_id.validate_node_name()
 			var icon := MeshInstance3D.new()
@@ -619,6 +622,10 @@ func receive_group_member_positions(member_positions: Array) -> void:
 			marker.add_child(name_tag)
 			main_scene.add_child(marker)
 			group_member_markers[player_id] = marker
+		var name_tag := marker.get_node_or_null("Label3D") as Label3D
+		if is_instance_valid(name_tag):
+			var clean_name := str(entry.get("display_name", "عضو المجموعة")).strip_edges().substr(0, 24)
+			name_tag.text = clean_name if not clean_name.is_empty() else "عضو المجموعة"
 		marker.global_position = world_position + Vector3(0, 0.4, 0)
 	for old_id in group_member_markers.keys():
 		if not active_ids.has(str(old_id)):
