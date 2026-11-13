@@ -48,12 +48,18 @@ func _run_wallet_tests() -> void:
 
 	var money_before: int = wallet.get_balance("money")
 	var chips_before: int = wallet.get_balance("chips")
-	if not wallet.sync_legacy_balances(money_before + 7, chips_before + 2):
-		push_error("Legacy balance synchronization failed.")
+	var profile_config := ConfigFile.new()
+	if profile_config.load("user://kings_city_profile.cfg") != OK:
+		push_error("Could not load profile for atomic wallet save test.")
+		quit(1)
+		return
+	profile_config.set_value("profile", "ci_wallet_test_marker", true)
+	if not wallet.save_profile_update(profile_config, money_before + 7, chips_before + 2):
+		push_error("Atomic player profile and wallet save failed.")
 		quit(1)
 		return
 	if wallet.get_balance("money") != money_before + 7 or wallet.get_balance("chips") != chips_before + 2:
-		push_error("Legacy balance synchronization mismatch.")
+		push_error("Atomic profile and wallet balance mismatch.")
 		quit(1)
 		return
 
