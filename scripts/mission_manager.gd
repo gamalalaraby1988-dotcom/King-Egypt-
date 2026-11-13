@@ -495,6 +495,7 @@ func _process(_delta: float) -> void:
 	if navigation_route_notice_remaining > 0.0:
 		navigation_route_notice_remaining = maxf(navigation_route_notice_remaining - _delta, 0.0)
 	if not is_instance_valid(player):
+		_update_navigation_hud()
 		return
 	_update_interaction_target()
 	_update_interaction_hud()
@@ -1059,7 +1060,12 @@ func _update_navigation_hud() -> void:
 	navigation_label.visible = navigating
 	navigation_arrow.visible = navigating
 	navigation_cancel_button.visible = navigating
-	if not navigating or not is_instance_valid(player):
+	if not is_instance_valid(player):
+		navigation_label.visible = false
+		navigation_arrow.visible = false
+		navigation_cancel_button.visible = false
+		return
+	if not navigating:
 		return
 	if navigation_arrival_remaining > 0.0 and not mission_running and not job_running and not landmark_navigation_active:
 		navigation_label.text = "%s %s" % [CityLanguage.translate("navigation_arrived"), CityLanguage.translate(landmark_navigation_key)]
