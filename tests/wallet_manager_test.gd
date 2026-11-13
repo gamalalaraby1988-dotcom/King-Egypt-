@@ -11,6 +11,52 @@ func _run_wallet_tests() -> void:
 		quit(1)
 		return
 
+	var initial_profile := ConfigFile.new()
+	if initial_profile.load("user://kings_city_profile.cfg") != OK:
+		push_error("Could not load the newly initialized wallet profile.")
+		quit(1)
+		return
+	if not initial_profile.has_section_key("profile", "money") or not initial_profile.has_section_key("profile", "chips"):
+		push_error("First-run wallet migration did not initialize legacy profile balances.")
+		quit(1)
+		return
+	if int(initial_profile.get_value("profile", "money")) != wallet.get_balance("money") or int(initial_profile.get_value("profile", "chips")) != wallet.get_balance("chips"):
+		push_error("First-run profile and wallet balances do not match.")
+		quit(1)
+		return
+
+	var metadata_config := ConfigFile.new()
+	if metadata_config.load("user://kings_city_profile.cfg") != OK:
+		push_error("Could not load profile for metadata persistence test.")
+		quit(1)
+		return
+	metadata_config.set_value("profile", "ci_metadata_test_marker", true)
+	var metadata_money_before: int = wallet.get_balance("money")
+	var metadata_chips_before: int = wallet.get_balance("chips")
+	if not wallet.save_profile_metadata(metadata_config):
+		push_error("Atomic profile metadata save failed.")
+		quit(1)
+		return
+	if wallet.get_balance("money") != metadata_money_before or wallet.get_balance("chips") != metadata_chips_before:
+		push_error("Metadata save unexpectedly changed wallet balances.")
+		quit(1)
+		return
+	var tampered_metadata := ConfigFile.new()
+	if tampered_metadata.load("user://kings_city_profile.cfg") != OK:
+		push_error("Could not reload profile for metadata integrity test.")
+		quit(1)
+		return
+	tampered_metadata.set_value("profile", "money", metadata_money_before + 1)
+	if wallet.save_profile_metadata(tampered_metadata):
+		push_error("Metadata save accepted a balance change outside a wallet transaction.")
+		quit(1)
+		return
+	var after_rejected_metadata := ConfigFile.new()
+	if after_rejected_metadata.load("user://kings_city_profile.cfg") != OK or int(after_rejected_metadata.get_value("profile", "money", -1)) != metadata_money_before:
+		push_error("Rejected metadata save changed the persisted balance.")
+		quit(1)
+		return
+
 	var transaction_id := "ci_wallet_test_%s" % str(Time.get_ticks_usec())
 	var before: int = wallet.get_balance("gems")
 	if not wallet.credit(transaction_id, "gems", 25, "CI test credit"):
