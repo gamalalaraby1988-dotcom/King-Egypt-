@@ -615,7 +615,7 @@ func _process(_delta: float) -> void:
 		interact()
 	_key_was_down = interaction_key_down
 
-	stats_label.text = "المستوى %d  |  الخبرة %d  |  المال %d  |  الرقائق %d  |  الجواهر %d" % [player_level, xp, money, chips, gems]
+	stats_label.text = "المستوى %d  |  الخبرة %d  |  المال الورقي %d  |  الرقائق %d  |  الجواهر %d" % [player_level, xp, money, chips, gems]
 	if job_running:
 		var job_distance := Vector2(player.global_position.x, player.global_position.z).distance_to(Vector2(active_job_target.x, active_job_target.z))
 		status_label.text = "الوظيفة: توجّه إلى نقطة العمل. المتبقي: %.1f متر" % job_distance
@@ -804,7 +804,7 @@ func _rent_selected_animal() -> void:
 		player.end_animal_ride()
 		status_label.text = "تعذر حفظ أجرة الركوب؛ لم يتم خصم المال. حاول مرة أخرى."
 		return
-	stats_label.text = "المستوى %d  |  الخبرة %d  |  المال %d  |  الرقائق %d  |  الجواهر %d" % [player_level, xp, money, chips, gems]
+	stats_label.text = "المستوى %d  |  الخبرة %d  |  المال الورقي %d  |  الرقائق %d  |  الجواهر %d" % [player_level, xp, money, chips, gems]
 	status_label.text = "دفعت %d جنيه وبدأت ركوب %s. اضغط زر تفاعل للنزول." % [price, animal_name]
 	description_label.text = "يمكنك التجول بالحيوان في المخيم والمدينة."
 	reward_label.text = "تم خصم أجرة الركوب من رصيدك."
