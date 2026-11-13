@@ -498,6 +498,12 @@ func _process(_delta: float) -> void:
 
 
 func _update_interaction_target() -> void:
+	# لا تفحص تفاعلات المدينة أثناء الانتقال أو أثناء وجود اللاعب داخل مبنى.
+	var city_root := get_tree().current_scene
+	if is_instance_valid(city_root) and (bool(city_root.get("interior_transition_busy")) or is_instance_valid(city_root.get("interior_root"))):
+		nearest_interactable = null
+		nearest_building = null
+		return
 	var previous_target := nearest_interactable
 	var best: Node3D = null
 	var best_distance := INF
