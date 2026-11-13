@@ -555,9 +555,9 @@ func _create_interactive_buildings() -> void:
 	_create_job_board("وظيفة التوصيل", "توصيل طلب إلى نقطة الاستلام المحددة في المدينة.", Vector3(24, 0, 4.5), Vector3(0, 0, 9.5), 180, 0, 30, "courier_delivery")
 	_create_job_board("مرشد المدينة", "اذهب إلى نقطة المعلم السياحي وساعد الزائرين على اكتشاف المدينة.", Vector3(-24, 0, 4.5), Vector3(0, 0, -18.5), 220, 1, 40, "city_guide")
 	_create_job_board("عامل صيانة", "توجّه إلى موقع الصيانة المحدد وأكمل جولة الفحص الميدانية.", Vector3(4.5, 0, 24), Vector3(9.5, 0, 0), 250, 0, 45, "city_maintenance", PI / 2.0)
-	_create_service_staff("صاحب المتجر", "صاحب محل", "أهلًا بك! يمكنني مساعدتك في احتياجاتك ومشترياتك من المتجر.", Vector3(16, 0, 21))
-	_create_service_staff("موظف المطعم", "موظف", "مرحبًا! أستقبل طلبات المطعم وأساعدك في أنشطة التوصيل.", Vector3(-16, 0, 21))
-	_create_service_staff("موظف مركز التوظيف", "موظف", "أهلًا بك! يمكنك مراجعة الوظائف المتاحة وشروطها هنا.", Vector3(16, 0, -11))
+	_create_service_staff("صاحب المتجر", "صاحب محل", "أهلًا بك! يمكنني مساعدتك في احتياجاتك ومشترياتك من المتجر.", Vector3(19.5, 0, 21))
+	_create_service_staff("موظف المطعم", "موظف", "مرحبًا! أستقبل طلبات المطعم وأساعدك في أنشطة التوصيل.", Vector3(-12.5, 0, 21))
+	_create_service_staff("موظف مركز التوظيف", "موظف", "أهلًا بك! يمكنك مراجعة الوظائف المتاحة وشروطها هنا.", Vector3(19.5, 0, -11))
 
 func _add_functional_building(manager: Node, title: String, mission: String, description: String, pos: Vector3, color: Color, reward: int, chips_reward: int, level: int) -> void:
 	var building := Node3D.new()
