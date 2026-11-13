@@ -44,6 +44,8 @@ func _process(_delta: float) -> void:
 		if is_instance_valid(vehicle_summon_button):
 			vehicle_summon_button.visible = false
 		return
+	if vehicle_occupied and (not is_instance_valid(city_vehicle) or not is_instance_valid(get_node_or_null("Player"))):
+		_recover_vehicle_occupancy()
 	if vehicle_occupied:
 		if is_instance_valid(vehicle_interaction_button):
 			vehicle_interaction_button.visible = true
@@ -187,6 +189,36 @@ func _toggle_vehicle_use() -> void:
 	if is_instance_valid(vehicle_interaction_button):
 		vehicle_interaction_button.text = "النزول من السيارة" if CityLanguage.get_language() == "ar" else "Exit vehicle"
 		vehicle_interaction_button.visible = true
+
+func _recover_vehicle_occupancy() -> void:
+	# لا تترك حالة الركوب عالقة إذا حُذفت السيارة أو اللاعب أثناء القيادة.
+	var player := get_node_or_null("Player") as CharacterBody3D
+	if is_instance_valid(city_vehicle):
+		city_vehicle.call("set_drive", false)
+		city_vehicle.call("set_brake", true)
+		city_vehicle.call("set_reverse", false)
+		city_vehicle.call("set_steering", 0.0)
+		city_vehicle.set_physics_process(false)
+		var vehicle_hud := city_vehicle.get_node_or_null("VehicleHUDLayer/VehicleHUD") as Control
+		if is_instance_valid(vehicle_hud):
+			vehicle_hud.visible = false
+		var vehicle_camera := city_vehicle.get_node_or_null("VehicleCameraPivot/SpringArm3D/VehicleCamera") as Camera3D
+		if is_instance_valid(vehicle_camera):
+			vehicle_camera.current = false
+	if is_instance_valid(player):
+		player.visible = true
+		player.collision_layer = _player_saved_collision_layer
+		player.collision_mask = _player_saved_collision_mask
+		player.set_physics_process(true)
+		var player_camera := player.get_node_or_null("CameraPivot/SpringArm3D/Camera3D") as Camera3D
+		if is_instance_valid(player_camera):
+			player_camera.current = true
+	vehicle_occupied = false
+	if is_instance_valid(vehicle_interaction_button):
+		vehicle_interaction_button.visible = false
+		vehicle_interaction_button.text = "ركوب السيارة" if CityLanguage.get_language() == "ar" else "Enter vehicle"
+	if is_instance_valid(vehicle_summon_button):
+		vehicle_summon_button.visible = is_instance_valid(player)
 
 func _exit_player_vehicle() -> void:
 	if not vehicle_occupied:
