@@ -137,10 +137,13 @@ func _save_settings() -> void:
 	var selected_language: String = language_modes[clampi(language_select.selected, 0, 2)]
 	config.set_value("settings", "language", selected_language)
 	var error := config.save(SAVE_PATH)
+	if error != OK:
+		info_label.text = "تعذر حفظ الإعدادات؛ لم يتم اعتماد تغيير اللغة. رمز الخطأ: %s" % error
+		return
 	CityLanguage.set_language(selected_language)
 	_apply_settings()
 	_refresh_info()
-	info_label.text += "\nتم حفظ الإعدادات محليًا." if error == OK else "\nتعذر حفظ الإعدادات."
+	info_label.text += "\nتم حفظ الإعدادات محليًا."
 
 func _apply_settings() -> void:
 	var master := AudioServer.get_bus_index("Master")
