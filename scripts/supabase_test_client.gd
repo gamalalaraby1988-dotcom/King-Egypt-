@@ -16,6 +16,7 @@ var user_id := ""
 var economy_snapshot: Dictionary = {}
 var _http: HTTPRequest
 var _request_in_flight := false
+var _session_generation := 0
 
 func _ready() -> void:
 	_http = HTTPRequest.new()
@@ -31,6 +32,7 @@ func sign_in_with_password(email: String, password: String) -> bool:
 		request_failed.emit("هناك طلب اتصال جارٍ؛ انتظر حتى ينتهي.")
 		return false
 	_clear_session()
+	var attempt_generation := _session_generation
 	if email.strip_edges().is_empty() or password.is_empty():
 		request_failed.emit("أدخل البريد وكلمة المرور.")
 		return false
@@ -40,6 +42,12 @@ func sign_in_with_password(email: String, password: String) -> bool:
 		{"email": email.strip_edges(), "password": password},
 		""
 	)
+	if attempt_generation != _session_generation:
+		var cancelled_data: Dictionary = result.get("data", {}) if result.get("data", {}) is Dictionary else {}
+		var cancelled_access := str(cancelled_data.get("access_token", ""))
+		if bool(result.get("ok", false)) and not cancelled_access.is_empty():
+			await _send_json(HTTPClient.METHOD_POST, "/auth/v1/logout", {}, cancelled_access)
+		return false
 	if not bool(result.get("ok", false)):
 		request_failed.emit(str(result.get("message", "تعذر تسجيل الدخول.")))
 		return false
@@ -59,8 +67,10 @@ func sign_in_with_password(email: String, password: String) -> bool:
 	refresh_token = returned_refresh
 	user_id = returned_user_id
 	auth_changed.emit(true, user_id)
+	var login_access_token := access_token
 	await fetch_economy_snapshot()
-	return true
+	# إذا وقع تسجيل الخروج أثناء تحميل اللقطة، لا تعتبر محاولة الدخول مكتملة.
+	return is_authenticated() and access_token == login_access_token
 
 func refresh_session() -> bool:
 	if _request_in_flight:
@@ -69,12 +79,19 @@ func refresh_session() -> bool:
 	if refresh_token.is_empty():
 		request_failed.emit("لا توجد جلسة قابلة للتجديد؛ سجّل الدخول مجددًا.")
 		return false
+	var refresh_generation := _session_generation
 	var result := await _send_json(
 		HTTPClient.METHOD_POST,
 		"/auth/v1/token?grant_type=refresh_token",
 		{"refresh_token": refresh_token},
 		""
 	)
+	if refresh_generation != _session_generation:
+		var cancelled_data: Dictionary = result.get("data", {}) if result.get("data", {}) is Dictionary else {}
+		var cancelled_access := str(cancelled_data.get("access_token", ""))
+		if bool(result.get("ok", false)) and not cancelled_access.is_empty():
+			await _send_json(HTTPClient.METHOD_POST, "/auth/v1/logout", {}, cancelled_access)
+		return false
 	if not bool(result.get("ok", false)):
 		_clear_session()
 		request_failed.emit(str(result.get("message", "انتهت الجلسة؛ سجّل الدخول مجددًا.")))
@@ -127,6 +144,7 @@ func sign_out() -> void:
 		await _send_json(HTTPClient.METHOD_POST, "/auth/v1/logout", {}, token_to_revoke)
 
 func _clear_session() -> void:
+	_session_generation += 1
 	access_token = ""
 	refresh_token = ""
 	user_id = ""
