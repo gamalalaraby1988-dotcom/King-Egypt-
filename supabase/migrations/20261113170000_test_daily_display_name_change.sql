@@ -10,7 +10,7 @@ create table if not exists game_test.player_profiles (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint player_profiles_display_name_length
-    check (display_name is null or char_length(display_name) between 1 and 32)
+    check (display_name is null or char_length(display_name) between 1 and 24)
 );
 
 create unique index if not exists player_profiles_display_name_ci_uq
@@ -49,7 +49,7 @@ begin
     return;
   end if;
 
-  if char_length(v_new_name) < 1 or char_length(v_new_name) > 32 then
+  if char_length(v_new_name) < 1 or char_length(v_new_name) > 24 then
     return query select false, null::text, null::timestamptz, 'invalid_display_name';
     return;
   end if;
