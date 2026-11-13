@@ -1112,17 +1112,22 @@ func _update_landmark_route_deviation() -> void:
 	navigation_route_recalculated = true
 
 func _distance_to_remaining_route(position_3d: Vector3) -> float:
-	if landmark_route_points.size() < 2:
-		return 0.0
+	var player_point := Vector2(position_3d.x, position_3d.z)
+	# بعد تجاوز آخر waypoint، نقيس المسافة إلى الوجهة النهائية بدل إرجاع INF.
+	if landmark_route_index >= landmark_route_points.size():
+		return player_point.distance_to(Vector2(landmark_navigation_target.x, landmark_navigation_target.z))
+	# قد تبقى نقطة واحدة فقط؛ تعامل معها كنقطة وصول لا كمقطع فارغ.
+	if landmark_route_points.size() - landmark_route_index == 1:
+		var final_point: Vector3 = landmark_route_points[landmark_route_index]
+		return player_point.distance_to(Vector2(final_point.x, final_point.z))
 	var closest_distance := INF
 	for index in range(maxi(landmark_route_index, 0), landmark_route_points.size() - 1):
 		var a: Vector2 = Vector2(landmark_route_points[index].x, landmark_route_points[index].z)
 		var b: Vector2 = Vector2(landmark_route_points[index + 1].x, landmark_route_points[index + 1].z)
-		var p := Vector2(position_3d.x, position_3d.z)
 		var segment := b - a
 		var denominator := segment.length_squared()
-		var weight := 0.0 if denominator <= 0.0001 else clampf((p - a).dot(segment) / denominator, 0.0, 1.0)
-		closest_distance = minf(closest_distance, p.distance_to(a + segment * weight))
+		var weight := 0.0 if denominator <= 0.0001 else clampf((player_point - a).dot(segment) / denominator, 0.0, 1.0)
+		closest_distance = minf(closest_distance, player_point.distance_to(a + segment * weight))
 	return closest_distance
 
 const CITY_ROAD_COORDS := [-72.0, -24.0, 0.0, 24.0, 72.0]
