@@ -20,31 +20,69 @@ func _check(condition: bool, message: String) -> void:
 
 func _copy_if_exists(source: String, destination: String) -> bool:
 	if not FileAccess.file_exists(source):
-		return false
+		return true
 	return DirAccess.copy_absolute(ProjectSettings.globalize_path(source), ProjectSettings.globalize_path(destination)) == OK
 
 
-func _remove_if_exists(path: String) -> void:
-	if FileAccess.file_exists(path):
-		DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+func _remove_if_exists(path: String) -> bool:
+	if not FileAccess.file_exists(path):
+		return true
+	return DirAccess.remove_absolute(ProjectSettings.globalize_path(path)) == OK
 
 
-func _restore_file(source: String, destination: String, existed: bool) -> void:
-	_remove_if_exists(destination)
-	if existed:
-		DirAccess.copy_absolute(ProjectSettings.globalize_path(source), ProjectSettings.globalize_path(destination))
-		_remove_if_exists(source)
+func _restore_file(source: String, destination: String, existed: bool) -> bool:
+	if not existed:
+		return _remove_if_exists(destination)
+	if not FileAccess.file_exists(source):
+		push_error("WALLET TEST CLEANUP FAILED: preserved backup is missing: " + source)
+		return false
+	var copy_error := DirAccess.copy_absolute(ProjectSettings.globalize_path(source), ProjectSettings.globalize_path(destination))
+	if copy_error != OK:
+		push_error("WALLET TEST CLEANUP FAILED: could not restore " + destination)
+		return false
+	return _remove_if_exists(source)
+
+
+func _recover_interrupted_run() -> bool:
+	# If a previous timed-out test left backup files, restore them before touching either profile.
+	if FileAccess.file_exists(PROFILE_BACKUP_PATH):
+		if not _restore_file(PROFILE_BACKUP_PATH, PROFILE_PATH, true):
+			return false
+	if FileAccess.file_exists(WALLET_BACKUP_COPY_PATH):
+		if not _restore_file(WALLET_BACKUP_COPY_PATH, WALLET_BACKUP_PATH, true):
+			return false
+	return true
 
 
 func _run() -> void:
-	print("WALLET TEST: begin and preserve existing files")
-	var had_profile := _copy_if_exists(PROFILE_PATH, PROFILE_BACKUP_PATH)
-	var had_wallet_backup := _copy_if_exists(WALLET_BACKUP_PATH, WALLET_BACKUP_COPY_PATH)
-	_remove_if_exists(PROFILE_PATH)
-	_remove_if_exists(WALLET_BACKUP_PATH)
+	print("WALLET TEST: begin")
+	if not _recover_interrupted_run():
+		push_error("WALLET TEST ABORTED: could not recover files from an interrupted run.")
+		quit(2)
+		return
+
+	var had_profile := FileAccess.file_exists(PROFILE_PATH)
+	var had_wallet_backup := FileAccess.file_exists(WALLET_BACKUP_PATH)
+	# Never delete the live profile unless its backup has been confirmed.
+	if not _copy_if_exists(PROFILE_PATH, PROFILE_BACKUP_PATH):
+		push_error("WALLET TEST ABORTED: could not preserve the original player profile.")
+		quit(2)
+		return
+	if not _copy_if_exists(WALLET_BACKUP_PATH, WALLET_BACKUP_COPY_PATH):
+		push_error("WALLET TEST ABORTED: could not preserve the existing wallet backup.")
+		if had_profile:
+			_restore_file(PROFILE_BACKUP_PATH, PROFILE_PATH, true)
+		quit(2)
+		return
+
+	if not _remove_if_exists(PROFILE_PATH) or not _remove_if_exists(WALLET_BACKUP_PATH):
+		push_error("WALLET TEST ABORTED: could not prepare isolated test files.")
+		_restore_file(PROFILE_BACKUP_PATH, PROFILE_PATH, had_profile)
+		_restore_file(WALLET_BACKUP_COPY_PATH, WALLET_BACKUP_PATH, had_wallet_backup)
+		quit(2)
+		return
 
 	print("WALLET TEST: legacy migration")
-	# Legacy profile: migration must preserve existing Cash and Chips and initialize Gems to zero.
 	var legacy := ConfigFile.new()
 	legacy.set_value("profile", "player_level", 4)
 	legacy.set_value("profile", "xp", 25)
@@ -66,7 +104,6 @@ func _run() -> void:
 	_check(int(migrated.get_value("profile", "wallet_schema_version", 0)) == 1, "wallet schema version written")
 
 	print("WALLET TEST: reward and spending transactions")
-	# Reward idempotency and all-currency persistence.
 	_check(manager.grant_reward_once("wallet_test_reward", 10, 5, 3, 2), "first three-currency reward accepted")
 	_check(not manager.grant_reward_once("wallet_test_reward", 10, 5, 3, 2), "duplicate reward rejected")
 	_check(manager.money == 1244 and manager.chips == 60 and manager.gems == 2, "reward balances updated once")
@@ -88,11 +125,10 @@ func _run() -> void:
 	_check(reloaded.completed_missions.has("wallet_test_mission"), "activity completion persists")
 
 	print("WALLET TEST: corrupt profile protection")
-	# Corrupt files must not be overwritten by wallet operations.
 	var corrupt := FileAccess.open(PROFILE_PATH, FileAccess.WRITE)
 	_check(corrupt != null, "open profile for corruption guard test")
 	if corrupt != null:
-		corrupt.store_string("[broken\nnot a config")
+		corrupt.store_string("[broken\\nnot a config")
 		corrupt.close()
 	var before := FileAccess.get_file_as_string(PROFILE_PATH)
 	var blocked = MissionManagerScript.new()
@@ -100,12 +136,20 @@ func _run() -> void:
 	_check(not blocked.grant_reward_once("wallet_test_corrupt", 1), "reward rejected for corrupt profile")
 	_check(FileAccess.get_file_as_string(PROFILE_PATH) == before, "corrupt profile left untouched")
 
-	print("WALLET TEST: restore files and finish")
+	print("WALLET TEST: release test objects")
+	# Release objects while the intentionally corrupt test profile is still present;
+	# their pre-delete save notification must not overwrite it.
 	manager.free()
 	reloaded.free()
 	blocked.free()
-	_restore_file(PROFILE_BACKUP_PATH, PROFILE_PATH, had_profile)
-	_restore_file(WALLET_BACKUP_COPY_PATH, WALLET_BACKUP_PATH, had_wallet_backup)
+
+	print("WALLET TEST: restore original files")
+	var profile_restored := _restore_file(PROFILE_BACKUP_PATH, PROFILE_PATH, had_profile)
+	var wallet_backup_restored := _restore_file(WALLET_BACKUP_COPY_PATH, WALLET_BACKUP_PATH, had_wallet_backup)
+	if not profile_restored or not wallet_backup_restored:
+		push_error("WALLET TEST FAILED: original profile files could not be fully restored.")
+		quit(2)
+		return
 
 	if failures.is_empty():
 		print("WALLET TESTS PASSED")
