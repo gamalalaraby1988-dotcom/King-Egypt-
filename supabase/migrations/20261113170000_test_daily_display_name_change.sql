@@ -1,6 +1,6 @@
 -- Test-only daily display-name change gate.
 -- Uses authenticated Supabase identity and server UTC date.
--- Direct table access stays closed; only the authenticated RPC is executable.
+-- Direct table access stays closed except SELECT for the linked account under RLS.
 
 create table if not exists game_test.player_profiles (
   test_account_id uuid primary key
@@ -106,3 +106,6 @@ revoke all on function public.change_my_test_display_name(text) from anon;
 grant execute on function public.change_my_test_display_name(text) to authenticated;
 
 revoke all on table game_test.player_profiles from public, anon, authenticated, service_role;
+-- Restore the intended read-only access after the blanket revoke above.
+-- RLS still limits each authenticated user to their linked test account.
+grant select on table game_test.player_profiles to authenticated;
