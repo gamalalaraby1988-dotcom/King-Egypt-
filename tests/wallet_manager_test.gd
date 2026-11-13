@@ -143,5 +143,44 @@ func _run_wallet_tests() -> void:
 		quit(1)
 		return
 
+	var mission_script: Script = load("res://scripts/mission_manager.gd")
+	var mission_manager = mission_script.new()
+	mission_manager.money = -10
+	mission_manager.chips = -20
+	if not mission_manager._refresh_wallet_cache():
+		push_error("MissionManager did not read the verified wallet snapshot.")
+		quit(1)
+		return
+	if mission_manager.money != wallet.get_balance("money") or mission_manager.chips != wallet.get_balance("chips"):
+		push_error("MissionManager wallet cache did not match the wallet snapshot.")
+		quit(1)
+		return
+	var saved_integrity_blocked: bool = wallet.integrity_blocked
+	wallet.integrity_blocked = true
+	mission_manager.money = 777
+	mission_manager.chips = 888
+	if mission_manager._refresh_wallet_cache():
+		push_error("MissionManager accepted a blocked wallet snapshot.")
+		wallet.integrity_blocked = saved_integrity_blocked
+		quit(1)
+		return
+	if mission_manager.money != 777 or mission_manager.chips != 888:
+		push_error("MissionManager changed cached balances while wallet integrity was blocked.")
+		wallet.integrity_blocked = saved_integrity_blocked
+		quit(1)
+		return
+	if mission_manager.grant_reward_once("ci_blocked_reward", 10, 5, 1):
+		push_error("MissionManager granted a reward while wallet integrity was blocked.")
+		wallet.integrity_blocked = saved_integrity_blocked
+		quit(1)
+		return
+	if mission_manager.complete_activity_once("ci_blocked_activity", "mission", 10, 5, 1):
+		push_error("MissionManager completed a paid activity while wallet integrity was blocked.")
+		wallet.integrity_blocked = saved_integrity_blocked
+		quit(1)
+		return
+	wallet.integrity_blocked = saved_integrity_blocked
+	mission_manager.free()
+
 	print("Wallet transaction tests passed.")
 	quit(0)
