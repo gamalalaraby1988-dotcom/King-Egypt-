@@ -117,10 +117,16 @@ func _load_settings() -> void:
 		name_input.text = "لاعب جديد"
 		language_select.select(0)
 		return
-	name_input.text = str(config.get_value("profile", "player_name", "لاعب جديد"))
-	volume_slider.value = float(config.get_value("settings", "volume", 80))
-	quality_select.select(int(config.get_value("settings", "quality", 0)))
-	var saved_language := str(config.get_value("settings", "language", "auto"))
+	var saved_name: Variant = config.get_value("profile", "player_name", "لاعب جديد")
+	name_input.text = str(saved_name).strip_edges().substr(0, 24) if saved_name is String else "لاعب جديد"
+	var saved_volume: Variant = config.get_value("settings", "volume", 80)
+	var volume_value := float(saved_volume) if saved_volume is int or saved_volume is float else 80.0
+	volume_slider.value = clampf(volume_value, 0.0, 100.0) if is_finite(volume_value) else 80.0
+	var saved_quality: Variant = config.get_value("settings", "quality", 0)
+	var quality_value := int(saved_quality) if saved_quality is int or saved_quality is float else 0
+	quality_select.select(clampi(quality_value, 0, 2))
+	var saved_language_value: Variant = config.get_value("settings", "language", "auto")
+	var saved_language := str(saved_language_value) if saved_language_value is String and ["auto", "ar", "en"].has(saved_language_value) else "auto"
 	language_select.select({"auto": 0, "ar": 1, "en": 2}.get(saved_language, 0))
 	CityLanguage.set_language(saved_language)
 
