@@ -6,6 +6,7 @@ var mission_manager: Node
 var player: Node3D
 var panel: PanelContainer
 var name_input: LineEdit
+var name_change_status: Label
 var volume_slider: HSlider
 var quality_select: OptionButton
 var language_select: OptionButton
@@ -58,6 +59,9 @@ func _build_ui() -> void:
 	name_input.placeholder_text = "اكتب اسم اللاعب"
 	name_input.max_length = 24
 	content.add_child(name_input)
+	name_change_status = Label.new()
+	name_change_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	content.add_child(name_change_status)
 
 	var volume_label := Label.new()
 	volume_label.text = "مستوى الصوت"
@@ -119,6 +123,7 @@ func _load_settings() -> void:
 		return
 	var saved_name: Variant = config.get_value("profile", "player_name", "لاعب جديد")
 	name_input.text = str(saved_name).strip_edges().substr(0, 24) if saved_name is String else "لاعب جديد"
+	_update_name_change_status(config)
 	var saved_volume: Variant = config.get_value("settings", "volume", 80)
 	var volume_value := float(saved_volume) if saved_volume is int or saved_volume is float else 80.0
 	volume_slider.value = clampf(volume_value, 0.0, 100.0) if is_finite(volume_value) else 80.0
@@ -136,7 +141,24 @@ func _save_settings() -> void:
 	if load_error != OK and FileAccess.file_exists(SAVE_PATH):
 		info_label.text = "ملف اللاعب موجود لكنه غير قابل للقراءة؛ أُوقفت كتابة الإعدادات لحماية الرصيد والبيانات."
 		return
-	config.set_value("profile", "player_name", name_input.text.strip_edges() if not name_input.text.strip_edges().is_empty() else "لاعب")
+	var old_name_value: Variant = config.get_value("profile", "player_name", "لاعب جديد")
+	var old_name := str(old_name_value).strip_edges() if old_name_value is String else "لاعب جديد"
+	var requested_name := name_input.text.strip_edges()
+	if requested_name.is_empty():
+		requested_name = old_name if not old_name.is_empty() else "لاعب"
+	requested_name = requested_name.substr(0, 24)
+	var name_changed := requested_name != old_name
+	var today := Time.get_date_string_from_system()
+	var last_change_value: Variant = config.get_value("profile", "player_name_change_date", "")
+	var last_change_date := str(last_change_value) if last_change_value is String else ""
+	if name_changed and last_change_date == today:
+		name_input.text = old_name
+		info_label.text = "يمكن تغيير اسم اللاعب مرة واحدة فقط في اليوم. حاول مرة أخرى غدًا؛ تم حفظ بقية الإعدادات دون تغيير الاسم."
+		requested_name = old_name
+		name_changed = false
+	config.set_value("profile", "player_name", requested_name)
+	if name_changed:
+		config.set_value("profile", "player_name_change_date", today)
 	config.set_value("settings", "volume", int(volume_slider.value))
 	config.set_value("settings", "quality", quality_select.selected)
 	var language_modes := ["auto", "ar", "en"]
@@ -150,6 +172,18 @@ func _save_settings() -> void:
 	_apply_settings()
 	_refresh_info()
 	info_label.text += "\nتم حفظ الإعدادات محليًا."
+	_update_name_change_status(config)
+
+func _update_name_change_status(config: ConfigFile) -> void:
+	if not is_instance_valid(name_change_status):
+		return
+	var last_change_value: Variant = config.get_value("profile", "player_name_change_date", "")
+	var last_change_date := str(last_change_value) if last_change_value is String else ""
+	if last_change_date == Time.get_date_string_from_system():
+		name_change_status.text = "تم استخدام تغيير الاسم اليوم؛ يمكنك تغييره غدًا."
+	else:
+		name_change_status.text = "يمكنك تغيير اسمك مرة واحدة يوميًا."
+	name_change_status.text += "\nملاحظة: هذا قيد محلي مؤقت؛ الحماية النهائية تتطلب اعتماد التوقيت من الخادم."
 
 func _apply_settings() -> void:
 	var master := AudioServer.get_bus_index("Master")
