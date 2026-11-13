@@ -63,5 +63,39 @@ func _run_wallet_tests() -> void:
 		quit(1)
 		return
 
+	var purchase_id := transaction_id + "_purchase"
+	var gems_before_purchase: int = wallet.get_balance("gems")
+	if not wallet.purchase_once(purchase_id, "gems", 5, "CI atomic purchase", {"ci_wallet_test_owned": ["test_vehicle"]}):
+		push_error("Atomic purchase transaction failed.")
+		quit(1)
+		return
+	if wallet.get_balance("gems") != gems_before_purchase - 5:
+		push_error("Atomic purchase did not debit the exact amount.")
+		quit(1)
+		return
+	if wallet.purchase_once(purchase_id, "gems", 5, "duplicate purchase", {"ci_wallet_test_owned": ["duplicate"]}):
+		push_error("Duplicate purchase was accepted.")
+		quit(1)
+		return
+	var verify_config := ConfigFile.new()
+	if verify_config.load("user://kings_city_profile.cfg") != OK or verify_config.get_value("profile", "ci_wallet_test_owned", []) != ["test_vehicle"]:
+		push_error("Purchase ownership update was not saved atomically.")
+		quit(1)
+		return
+	if wallet.purchase_once(transaction_id + "_free_claim", "money", 0, "CI free claim", {"ci_wallet_free_claim": true}) != true:
+		push_error("Receipt-backed free claim failed.")
+		quit(1)
+		return
+
+	var vehicle_store := root.get_node_or_null("VehicleStoreManager")
+	if vehicle_store == null or not vehicle_store.has_vehicle("toyota_corolla"):
+		push_error("Default vehicle ownership was not initialized.")
+		quit(1)
+		return
+	if vehicle_store.purchase_vehicle("rolls_royce_phantom"):
+		push_error("Vehicle with unapproved price was purchasable.")
+		quit(1)
+		return
+
 	print("Wallet transaction tests passed.")
 	quit(0)
