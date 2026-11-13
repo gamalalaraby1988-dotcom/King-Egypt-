@@ -79,6 +79,43 @@ func _refresh_legacy_balances() -> void:
 		if _valid_amount(value):
 			balances[currency] = int(value)
 
+func sync_legacy_balances(money_value: int, chips_value: int) -> bool:
+	if not initialized or not _valid_amount(money_value) or not _valid_amount(chips_value):
+		return false
+	var config := ConfigFile.new()
+	if config.load(PROFILE_PATH) != OK:
+		return false
+	var next_balances := balances.duplicate(true)
+	var next_ledger := ledger.duplicate(true)
+	var timestamp := Time.get_datetime_string_from_system(true)
+	for currency in ["money", "chips"]:
+		var target := money_value if currency == "money" else chips_value
+		var previous := int(next_balances[currency])
+		if previous == target:
+			continue
+		next_ledger.append({
+			"transaction_id": "legacy_sync_%s_%s" % [currency, str(Time.get_ticks_usec())],
+			"kind": "legacy_sync",
+			"currency": currency,
+			"amount": absi(target - previous),
+			"balance_before": previous,
+			"balance_after": target,
+			"reason": "Existing game reward or purchase flow",
+			"timestamp": timestamp
+		})
+		next_balances[currency] = target
+	config.set_value("profile", "money", money_value)
+	config.set_value("profile", "chips", chips_value)
+	config.set_value("wallet", "schema_version", SCHEMA_VERSION)
+	config.set_value("wallet", "balances", next_balances)
+	config.set_value("wallet", "receipts", receipts)
+	config.set_value("wallet", "ledger", next_ledger)
+	if not _atomic_save(config):
+		return false
+	balances = next_balances
+	ledger = next_ledger
+	return true
+
 func has_transaction(transaction_id: String) -> bool:
 	return receipts.has(transaction_id)
 
