@@ -128,7 +128,7 @@ func purchase_once(transaction_id: String, currency: String, amount: int, reason
 	# يطبق الخصم وتحديث الملكية/الإيصال في الملف نفسه؛ لا توجد ملكية دون خصم ناجح.
 	if not initialized or transaction_id.strip_edges().is_empty() or not CURRENCIES.has(currency):
 		return false
-	if amount <= 0 or amount > MAX_BALANCE or receipts.has(transaction_id):
+	if amount < 0 or amount > MAX_BALANCE or receipts.has(transaction_id):
 		return false
 	var config := ConfigFile.new()
 	if config.load(PROFILE_PATH) != OK:
