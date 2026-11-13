@@ -78,6 +78,7 @@ func _ready() -> void:
 	_build_group_popup()
 	_build_group_chat_popup()
 	_refresh_wallet()
+	_build_test_account_panel()
 
 
 func _exit_tree() -> void:
@@ -950,3 +951,132 @@ func receive_group_chat_message(sender_name: String, message: String) -> void:
 	if group_chat_log.text == "[color=gray]رسائل المجموعة ستظهر هنا.[/color]":
 		group_chat_log.clear()
 	group_chat_log.append_text("[color=lightblue][" + safe_name + "][/color] " + safe_message + "\n")
+
+
+# واجهة اختبار اتصال الحساب التجريبي فقط؛ لا تغيّر المحفظة المحلية ولا تمنح عملات.
+var test_account_panel: PanelContainer
+var test_account_status: Label
+var test_account_email: LineEdit
+var test_account_password: LineEdit
+var test_account_login_button: Button
+var test_account_snapshot: Label
+
+func _build_test_account_panel() -> void:
+	var open_button := Button.new()
+	open_button.name = "TestAccountButton"
+	open_button.text = "اتصال حساب الاختبار"
+	open_button.custom_minimum_size = Vector2(170, 42)
+	open_button.anchor_left = 1.0
+	open_button.anchor_right = 1.0
+	open_button.anchor_top = 0.0
+	open_button.anchor_bottom = 0.0
+	open_button.offset_left = -190
+	open_button.offset_right = -16
+	open_button.offset_top = 64
+	open_button.offset_bottom = 106
+	root.add_child(open_button)
+
+	test_account_panel = PanelContainer.new()
+	test_account_panel.name = "TestAccountPanel"
+	test_account_panel.anchor_left = 0.5
+	test_account_panel.anchor_right = 0.5
+	test_account_panel.anchor_top = 0.5
+	test_account_panel.anchor_bottom = 0.5
+	test_account_panel.offset_left = -210
+	test_account_panel.offset_right = 210
+	test_account_panel.offset_top = -190
+	test_account_panel.offset_bottom = 190
+	test_account_panel.visible = false
+	test_account_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	root.add_child(test_account_panel)
+
+	var content := VBoxContainer.new()
+	content.add_theme_constant_override("separation", 10)
+	test_account_panel.add_child(content)
+
+	var heading := Label.new()
+	heading.text = "ربط حساب الاختبار"
+	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	heading.add_theme_font_size_override("font_size", 22)
+	content.add_child(heading)
+
+	var note := Label.new()
+	note.text = "هذا الاتصال مخصص لحساب الاختبار الاصطناعي فقط."
+	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	content.add_child(note)
+
+	test_account_email = LineEdit.new()
+	test_account_email.placeholder_text = "البريد الإلكتروني لحساب الاختبار"
+	test_account_email.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	content.add_child(test_account_email)
+
+	test_account_password = LineEdit.new()
+	test_account_password.placeholder_text = "كلمة مرور حساب الاختبار"
+	test_account_password.secret = true
+	test_account_password.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	content.add_child(test_account_password)
+
+	test_account_status = Label.new()
+	test_account_status.text = "لم يتم الاتصال بعد."
+	test_account_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	content.add_child(test_account_status)
+
+	test_account_snapshot = Label.new()
+	test_account_snapshot.text = ""
+	test_account_snapshot.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	content.add_child(test_account_snapshot)
+
+	test_account_login_button = Button.new()
+	test_account_login_button.text = "تسجيل الدخول وقراءة الرصيد"
+	test_account_login_button.pressed.connect(_on_test_account_login_pressed)
+	content.add_child(test_account_login_button)
+
+	var logout_button := Button.new()
+	logout_button.text = "تسجيل الخروج"
+	logout_button.pressed.connect(_on_test_account_logout_pressed)
+	content.add_child(logout_button)
+
+	var close_button := Button.new()
+	close_button.text = "إغلاق"
+	close_button.pressed.connect(func(): test_account_panel.visible = false)
+	content.add_child(close_button)
+
+	open_button.pressed.connect(func():
+		test_account_panel.visible = not test_account_panel.visible
+	)
+
+func _on_test_account_login_pressed() -> void:
+	if not is_instance_valid(test_account_login_button):
+		return
+	test_account_login_button.disabled = true
+	test_account_status.text = "جارٍ التحقق من الحساب..."
+	test_account_snapshot.text = ""
+	var signed_in: bool = await SupabaseTestClient.sign_in_with_password(
+		test_account_email.text,
+		test_account_password.text
+	)
+	test_account_password.clear()
+	test_account_login_button.disabled = false
+	if not signed_in:
+		test_account_status.text = "فشل تسجيل الدخول. راجع بيانات حساب الاختبار واتصال الإنترنت."
+		return
+	test_account_status.text = "تم تسجيل الدخول بحساب الاختبار."
+	var snapshot: Dictionary = SupabaseTestClient.economy_snapshot
+	if snapshot.is_empty():
+		test_account_status.text += "\\nتعذر تحميل بيانات الاقتصاد."
+		return
+	test_account_snapshot.text = (
+		"Cash: %s | Chips: %s\\nGems: %s | XP: %s\\nAccount version: %s"
+		% [
+			str(snapshot.get("cash_balance", 0)),
+			str(snapshot.get("chips_balance", 0)),
+			str(snapshot.get("gems_balance", 0)),
+			str(snapshot.get("xp_total", 0)),
+			str(snapshot.get("account_version", 0))
+		]
+	)
+
+func _on_test_account_logout_pressed() -> void:
+	await SupabaseTestClient.sign_out()
+	test_account_status.text = "تم تسجيل الخروج."
+	test_account_snapshot.text = ""
