@@ -1159,6 +1159,7 @@ func _build_landmark_route(destination: Vector3, landmark_key: String) -> void:
 		landmark_route_points.append(Vector3(30.0, 0.0, 0.0))
 		landmark_route_points.append(Vector3(30.0, 0.0, 75.0))
 		landmark_route_points.append(Vector3(45.0, 0.0, 75.0))
+		landmark_route_points.append(Vector3(60.0, 0.0, 75.0))
 		landmark_route_points.append(destination)
 	else:
 		var target_node := _nearest_city_road_node(destination)
