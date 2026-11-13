@@ -37,6 +37,13 @@ func _ready() -> void:
 
 
 func _process(_delta: float) -> void:
+	# المركبات تخص مساحة المدينة؛ أخفِ أدواتها طوال الانتقال أو الوجود داخل مبنى.
+	if interior_transition_busy or is_instance_valid(interior_root):
+		if is_instance_valid(vehicle_interaction_button):
+			vehicle_interaction_button.visible = false
+		if is_instance_valid(vehicle_summon_button):
+			vehicle_summon_button.visible = false
+		return
 	if vehicle_occupied:
 		if is_instance_valid(vehicle_interaction_button):
 			vehicle_interaction_button.visible = true
@@ -105,7 +112,7 @@ func _create_player_vehicle() -> void:
 	layer.add_child(vehicle_interaction_button)
 
 func _summon_player_vehicle() -> void:
-	if vehicle_occupied:
+	if interior_transition_busy or is_instance_valid(interior_root) or vehicle_occupied:
 		return
 	var player := get_node_or_null("Player") as CharacterBody3D
 	if not is_instance_valid(player):
@@ -143,6 +150,8 @@ func _summon_player_vehicle() -> void:
 		vehicle_interaction_button.visible = true
 
 func _toggle_vehicle_use() -> void:
+	if interior_transition_busy or is_instance_valid(interior_root):
+		return
 	if vehicle_occupied:
 		_exit_player_vehicle()
 		return
