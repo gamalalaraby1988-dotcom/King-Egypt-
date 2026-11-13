@@ -354,7 +354,8 @@ func _create_building_interior(building_title: String) -> void:
 	title.font_size = 44
 	title.pixel_size = 0.012
 	title.modulate = Color(1.0, 0.88, 0.58)
-	title.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	title.billboard = BaseMaterial3D.BILLBOARD_DISABLED
+	# Interior wall title remains aligned with the wall-mounted plaque.
 	interior_root.add_child(title)
 	_create_interior_furnishings(interior_root, building_title)
 	_create_interior_staff(interior_root, building_title)
