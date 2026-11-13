@@ -376,6 +376,14 @@ func _select_horus_color_from_phone(color_id: String) -> void:
 func _refresh_wallet() -> void:
 	if not is_instance_valid(mission_manager):
 		return
+	if not WalletManager.initialized or WalletManager.integrity_blocked:
+		if is_instance_valid(money_label):
+			money_label.text = "ذهب: موقوف"
+		if is_instance_valid(chips_label):
+			chips_label.text = "رقائق: موقوفة"
+		if is_instance_valid(gems_label):
+			gems_label.text = "جواهر: موقوفة"
+		return
 	if is_instance_valid(money_label):
 		money_label.text = "ذهب: %d  +" % int(mission_manager.get("money"))
 	if is_instance_valid(chips_label):
