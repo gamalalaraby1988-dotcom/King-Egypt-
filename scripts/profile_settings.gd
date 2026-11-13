@@ -208,13 +208,13 @@ func _refresh_info() -> void:
 	if not is_instance_valid(mission_manager):
 		info_label.text = "بيانات اللاعب غير متاحة."
 		return
-	var wallet_available := WalletManager.initialized and not WalletManager.integrity_blocked
+	var balances: Dictionary = WalletManager.get_balances()
+	var wallet_available := WalletManager.initialized and not WalletManager.integrity_blocked and not balances.is_empty()
 	var lines: Array[String] = [
 		"المستوى: %d" % mission_manager.player_level,
 		"الخبرة: %d" % mission_manager.xp
 	]
 	if wallet_available:
-		var balances: Dictionary = WalletManager.get_balances()
 		lines.append("المال: %d" % int(balances.get("money", 0)))
 		lines.append("الرقائق: %d" % int(balances.get("chips", 0)))
 		lines.append("الجواهر: %d" % int(balances.get("gems", 0)))
