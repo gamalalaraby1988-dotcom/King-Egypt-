@@ -46,6 +46,7 @@ var group_move_button: Button
 var group_member_markers: Dictionary = {}
 
 const GROUP_MAX_MEMBERS := 4
+const GROUP_CHAT_MAX_LENGTH := 300
 
 const SECTIONS := {
 	"profile": ["الملف الشخصي", "عرض مستوى اللاعب وخبرته وإعدادات الحساب والشخصية."],
@@ -725,8 +726,12 @@ func _send_group_chat_message(raw_message: String) -> void:
 	var message := raw_message.strip_edges()
 	if message.is_empty():
 		return
-	if group_members.is_empty():
+	if group_members.size() < 2:
+		group_chat_log.append_text("[color=gray]لا يمكن إرسال رسالة قبل انضمام عضو آخر إلى المجموعة.\n[/color]")
 		return
+	# حد محلي للطول لتجنب الرسائل الضخمة؛ يطبق الخادم الحد نفسه عند ربط الدردشة.
+	if message.length() > GROUP_CHAT_MAX_LENGTH:
+		message = message.substr(0, GROUP_CHAT_MAX_LENGTH)
 	var safe_message := message.replace("[", "(").replace("]", ")")
 	if group_chat_log.text == "[color=gray]رسائل المجموعة ستظهر هنا.[/color]":
 		group_chat_log.clear()
@@ -736,12 +741,18 @@ func _send_group_chat_message(raw_message: String) -> void:
 
 
 func receive_group_chat_message(sender_name: String, message: String) -> void:
-	if message.strip_edges().is_empty():
+	var clean_message := message.strip_edges()
+	if clean_message.is_empty() or not is_instance_valid(group_chat_log):
 		return
-	if not is_instance_valid(group_chat_log):
+	if group_members.size() < 2:
 		return
-	var safe_name := sender_name.replace("[", "(").replace("]", ")")
-	var safe_message := message.replace("[", "(").replace("]", ")")
+	# لا تعرض رسائل أطول من الحد المحلي أو أسماء مرسلين غير محدودة.
+	clean_message = clean_message.substr(0, GROUP_CHAT_MAX_LENGTH)
+	var clean_sender := sender_name.strip_edges().substr(0, 24)
+	if clean_sender.is_empty():
+		clean_sender = "عضو المجموعة"
+	var safe_name := clean_sender.replace("[", "(").replace("]", ")")
+	var safe_message := clean_message.replace("[", "(").replace("]", ")")
 	if group_chat_log.text == "[color=gray]رسائل المجموعة ستظهر هنا.[/color]":
 		group_chat_log.clear()
 	group_chat_log.append_text("[color=lightblue][" + safe_name + "][/color] " + safe_message + "\n")
