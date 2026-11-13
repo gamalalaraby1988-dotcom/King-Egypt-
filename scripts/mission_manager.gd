@@ -292,7 +292,7 @@ func complete_activity_once(activity_id: String, activity_kind: String, money_am
 	config.set_value("profile", "xp", next_xp)
 	config.set_value("profile", "money", next_money)
 	config.set_value("profile", "chips", next_chips)
-	config.set_value("profile", "gems", gems)
+	config.set_value("profile", "gems", next_gems)
 	config.set_value("profile", "wallet_schema_version", WALLET_SCHEMA_VERSION)
 	config.set_value("profile", "completed_missions", next_completed_missions)
 	config.set_value("profile", "completed_jobs", next_completed_jobs)
