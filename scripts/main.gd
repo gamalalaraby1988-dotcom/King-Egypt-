@@ -639,7 +639,8 @@ func _add_sign_label(parent: Node3D, key: String, pos: Vector3, y_rotation: floa
 	label.pixel_size = 0.006
 	label.outline_size = 10
 	label.modulate = Color(1.0, 0.91, 0.68)
-	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	# Keep text aligned with its physical sign face and directional arrows.
+	# Billboard mode made labels rotate independently of the board.
 	parent.add_child(label)
 
 
