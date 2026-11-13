@@ -443,7 +443,17 @@ func _load_profile() -> void:
 		reward_receipts = saved_receipts if saved_receipts is Dictionary else {}
 		achievement_totals = saved_totals if saved_totals is Dictionary else {"jobs": 0, "missions": 0, "daily_claims": 0}
 		achievement_events = saved_achievement_events if saved_achievement_events is Dictionary else {}
-		daily_task_progress = saved_daily_progress if saved_daily_progress is Dictionary else {}
+		daily_task_progress = {}
+		if saved_daily_progress is Dictionary:
+			for day_key in saved_daily_progress:
+				var day_value: Variant = saved_daily_progress[day_key]
+				if day_value is Dictionary:
+					var clean_day: Dictionary = {}
+					for task_key in day_value:
+						var task_value: Variant = day_value[task_key]
+						if (task_value is int or task_value is float) and is_finite(float(task_value)):
+							clean_day[str(task_key)] = clampi(int(task_value), 0, 1000000)
+					daily_task_progress[str(day_key)] = clean_day
 		daily_task_events = saved_daily_events if saved_daily_events is Dictionary else {}
 		achievement_stats_initialized = bool(config.get_value("profile", "achievement_stats_initialized", false))
 	var saved_owned = config.get_value("profile", "owned_outfits", null) if error == OK else null
