@@ -598,20 +598,6 @@ func _create_interactive_buildings() -> void:
 	profile_ui.player = get_node_or_null("Player")
 	add_child(profile_ui)
 
-	var wardrobe := Node.new()
-	wardrobe.name = "WardrobeManager"
-	wardrobe.set_script(load("res://scripts/wardrobe_manager.gd"))
-	wardrobe.player = get_node_or_null("Player")
-	wardrobe.mission_manager = manager
-	add_child(wardrobe)
-	var shop := Node.new()
-	shop.name = "ShopManager"
-	shop.set_script(load("res://scripts/shop_manager.gd"))
-	shop.mission_manager = manager
-	shop.wardrobe_manager = wardrobe
-	manager.shop_manager = shop
-	add_child(shop)
-
 	_add_functional_building(manager, "المتجر", "مهمة شراء احتياجات", "تعرّف على المتجر واستلم قائمة احتياجات تجريبية من البوابة.", Vector3(16, 0, 16), Color(0.20, 0.48, 0.30), 150, 0, 1)
 	_add_functional_building(manager, "المطعم", "مهمة توصيل وجبة", "استلم طلب توصيل تجريبي من المطعم. ستصبح أهداف التوصيل الفعلية جزءًا من مرحلة لاحقة.", Vector3(-16, 0, 16), Color(0.65, 0.30, 0.18), 220, 2, 1)
 	_add_functional_building(manager, "مركز التوظيف", "مهمة التسجيل في وظيفة", "تعرّف على الوظائف المتاحة وشروط الالتحاق بها.", Vector3(16, 0, -16), Color(0.22, 0.34, 0.62), 300, 5, 1)
