@@ -163,12 +163,21 @@ func change_test_display_name(new_name: String) -> Dictionary:
 		return {"ok": false, "error_code": "invalid_server_response", "message": "استجابة تغيير الاسم من الخادم غير مكتملة."}
 	var row: Dictionary = data[0]
 	var succeeded := bool(row.get("success", false))
+	var error_code := str(row.get("error_code", ""))
+	var error_messages := {
+		"authentication_required": "انتهت جلسة الاختبار؛ سجّل الدخول مجددًا.",
+		"invalid_display_name": "الاسم غير صالح؛ استخدم من 1 إلى 24 حرفًا.",
+		"test_account_not_linked": "حساب الاختبار غير مرتبط بملف لاعب.",
+		"name_unchanged": "هذا هو اسمك الحالي بالفعل.",
+		"daily_limit_reached": "استخدمت تغيير الاسم اليوم؛ انتظر حتى الموعد الذي يحدده الخادم.",
+		"display_name_taken": "هذا الاسم مستخدم بالفعل؛ اختر اسمًا آخر."
+	}
 	return {
 		"ok": succeeded,
-		"error_code": str(row.get("error_code", "")),
+		"error_code": error_code,
 		"display_name": str(row.get("current_display_name", "")),
 		"next_change_at": str(row.get("next_change_at", "")),
-		"message": "تم تغيير الاسم على الخادم." if succeeded else "لم يوافق الخادم على تغيير الاسم."
+		"message": "تم تغيير الاسم على الخادم." if succeeded else str(error_messages.get(error_code, "لم يوافق الخادم على تغيير الاسم."))
 	}
 
 func sign_out() -> void:
