@@ -120,6 +120,11 @@ func _load_settings() -> void:
 	if config.load(SAVE_PATH) != OK:
 		name_input.text = "لاعب جديد"
 		language_select.select(0)
+		if FileAccess.file_exists(SAVE_PATH):
+			name_input.editable = false
+			name_change_status.text = "تعذر قراءة بيانات الاسم؛ لا يمكن التحقق من حق التغيير اليومي بأمان."
+		else:
+			_update_name_change_status(config)
 		return
 	var saved_name: Variant = config.get_value("profile", "player_name", "لاعب جديد")
 	name_input.text = str(saved_name).strip_edges().substr(0, 24) if saved_name is String else "لاعب جديد"
@@ -182,8 +187,10 @@ func _update_name_change_status(config: ConfigFile) -> void:
 		return
 	var last_change_value: Variant = config.get_value("profile", "player_name_change_date", "")
 	var last_change_date := str(last_change_value) if last_change_value is String else ""
-	if last_change_date == Time.get_date_string_from_system():
-		name_change_status.text = "تم استخدام تغيير الاسم اليوم؛ يمكنك تغييره غدًا."
+	var already_changed_today := last_change_date == Time.get_date_string_from_system()
+	name_input.editable = not already_changed_today
+	if already_changed_today:
+		name_change_status.text = "تم استخدام تغيير الاسم اليوم؛ سيُفتح التغيير مجددًا غدًا."
 	else:
 		name_change_status.text = "يمكنك تغيير اسمك مرة واحدة يوميًا."
 	name_change_status.text += "\nملاحظة: هذا قيد محلي مؤقت؛ الحماية النهائية تتطلب اعتماد التوقيت من الخادم."
