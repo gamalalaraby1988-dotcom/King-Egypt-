@@ -169,9 +169,15 @@ func set_language(mode: String) -> void:
 		mode = "auto"
 	if language_mode == mode:
 		return
-	language_mode = mode
 	var config := ConfigFile.new()
-	config.load(SAVE_PATH)
-	config.set_value("settings", "language", language_mode)
-	config.save(SAVE_PATH)
+	var load_error := config.load(SAVE_PATH)
+	if load_error != OK and FileAccess.file_exists(SAVE_PATH):
+		push_warning("ملف إعدادات اللغة غير قابل للقراءة؛ لم يتم استبداله.")
+		return
+	config.set_value("settings", "language", mode)
+	var save_error := config.save(SAVE_PATH)
+	if save_error != OK:
+		push_warning("تعذر حفظ إعداد اللغة: %s" % save_error)
+		return
+	language_mode = mode
 	language_changed.emit()
