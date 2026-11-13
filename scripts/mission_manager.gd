@@ -41,6 +41,7 @@ var daily_task_events: Dictionary = {}
 var owned_outfits: Array = ["default"]
 
 const VALID_OUTFIT_IDS := ["default", "men_formal", "women_formal", "urban_casual", "sport"]
+const OUTFIT_PRICES := {"men_formal": 500, "women_formal": 500, "urban_casual": 300, "sport": 250}
 const LEGACY_STORE_PATH := "user://kings_city_store.cfg"
 var target_marker: MeshInstance3D
 var daily_activities: Node
@@ -349,11 +350,12 @@ func get_daily_task_progress(day_id: String, task_id: String) -> int:
 func get_owned_outfits() -> Array:
 	return owned_outfits.duplicate()
 
-func purchase_outfit(outfit_id: String, price: int) -> bool:
-	# الملكية والرصيد وإيصال الشراء تحفظ في ملف اللاعب نفسه.
-	# هذا يجعل إعادة المحاولة آمنة ويمنع خصم المال مرتين لنفس الإطلالة.
-	if not VALID_OUTFIT_IDS.has(outfit_id) or outfit_id == "default" or price < 0:
+func purchase_outfit(outfit_id: String) -> bool:
+	# السعر المرجعي داخل مدير اللاعب؛ لا يقبل سعرًا يمرره واجهة العميل.
+	# هذا يمنع اختلاف سعر الواجهة عن قائمة الأسعار المعتمدة داخل المصدر.
+	if not OUTFIT_PRICES.has(outfit_id):
 		return false
+	var price: int = int(OUTFIT_PRICES[outfit_id])
 	if owned_outfits.has(outfit_id) or money < price:
 		return false
 	var next_owned := owned_outfits.duplicate()
