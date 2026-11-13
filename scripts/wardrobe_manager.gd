@@ -200,31 +200,39 @@ func _select_outfit(outfit_id: String) -> void:
 	if not owned_outfits.has(outfit_id):
 		status_label.text = "هذه الإطلالة غير مملوكة. يمكنك شراؤها من المتجر."
 		return
+	if not _save_selection(outfit_id, selected_hairstyle):
+		return
 	selected_outfit = outfit_id
 	_apply_outfit()
-	_save_selection()
 	_refresh_ui()
 	status_label.text = "تم تطبيق الإطلالة وحفظها على هذا الجهاز."
 
 func _select_hairstyle(hairstyle_id: String) -> void:
+	if not ["short", "long", "curly"].has(hairstyle_id):
+		status_label.text = "تسريحة الشعر غير متاحة."
+		return
+	if not _save_selection(selected_outfit, hairstyle_id):
+		return
 	selected_hairstyle = hairstyle_id
 	_apply_outfit()
-	_save_selection()
 	_refresh_ui()
 	status_label.text = "تم تحديث تسريحة الشعر وحفظ اختيارك."
 
-func _save_selection() -> void:
+func _save_selection(outfit_id: String, hairstyle_id: String) -> bool:
 	var config := ConfigFile.new()
 	var load_error := config.load(SAVE_PATH)
 	if load_error != OK and FileAccess.file_exists(SAVE_PATH):
 		if is_instance_valid(status_label):
 			status_label.text = "ملف الخزانة موجود لكنه غير قابل للقراءة؛ أُوقفت الكتابة لحماية الاختيارات السابقة."
-		return
-	config.set_value("wardrobe", "outfit_id", selected_outfit)
-	config.set_value("wardrobe", "hairstyle_id", selected_hairstyle)
+		return false
+	config.set_value("wardrobe", "outfit_id", outfit_id)
+	config.set_value("wardrobe", "hairstyle_id", hairstyle_id)
 	var result := config.save(SAVE_PATH)
 	if result != OK:
-		status_label.text = "تعذر حفظ الاختيار على هذا الجهاز."
+		if is_instance_valid(status_label):
+			status_label.text = "تعذر حفظ الاختيار على هذا الجهاز؛ لم يتم تطبيق التغيير."
+		return false
+	return true
 
 func _load_outfit() -> void:
 	var config := ConfigFile.new()
