@@ -80,6 +80,7 @@ func _ready() -> void:
 	_refresh_wallet()
 	# أدوات اتصال Supabase مرتبطة بحساب الاختبار؛ لا تظهر في نسخ الإنتاج.
 	if OS.is_debug_build():
+		SupabaseTestClient.request_failed.connect(_on_test_account_request_failed)
 		_build_test_account_panel()
 
 
@@ -972,6 +973,7 @@ var test_account_email: LineEdit
 var test_account_password: LineEdit
 var test_account_login_button: Button
 var test_account_snapshot: Label
+var test_account_error_message := ""
 
 func _build_test_account_panel() -> void:
 	var open_button := Button.new()
@@ -1061,6 +1063,7 @@ func _on_test_account_login_pressed() -> void:
 	if not is_instance_valid(test_account_login_button):
 		return
 	test_account_login_button.disabled = true
+	test_account_error_message = ""
 	test_account_status.text = "جارٍ التحقق من الحساب..."
 	test_account_snapshot.text = ""
 	var signed_in: bool = await SupabaseTestClient.sign_in_with_password(
@@ -1070,7 +1073,7 @@ func _on_test_account_login_pressed() -> void:
 	test_account_password.clear()
 	test_account_login_button.disabled = false
 	if not signed_in:
-		test_account_status.text = "فشل تسجيل الدخول. راجع بيانات حساب الاختبار واتصال الإنترنت."
+		test_account_status.text = test_account_error_message if not test_account_error_message.is_empty() else "فشل تسجيل الدخول. راجع بيانات حساب الاختبار واتصال الإنترنت."
 		return
 	test_account_status.text = "تم تسجيل الدخول بحساب الاختبار."
 	var snapshot: Dictionary = SupabaseTestClient.economy_snapshot
@@ -1087,6 +1090,12 @@ func _on_test_account_login_pressed() -> void:
 			str(snapshot.get("account_version", 0))
 		]
 	)
+
+func _on_test_account_request_failed(message: String) -> void:
+	test_account_error_message = message
+	if is_instance_valid(test_account_status):
+		test_account_status.text = message
+
 
 func _on_test_account_logout_pressed() -> void:
 	await SupabaseTestClient.sign_out()
