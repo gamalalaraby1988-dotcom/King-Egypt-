@@ -147,7 +147,7 @@ func save_profile_metadata(config: ConfigFile) -> bool:
 	if not _valid_amount(money_value) or not _valid_amount(chips_value):
 		return false
 	if int(money_value) != int(balances["money"]) or int(chips_value) != int(balances["chips"]):
-		push_error("Wallet: metadata save attempted to change balances outside a wallet transaction.")
+		push_warning("Wallet: metadata save rejected a balance change outside a wallet transaction.")
 		return false
 	config.set_value("wallet", "schema_version", SCHEMA_VERSION)
 	config.set_value("wallet", "balances", balances)
