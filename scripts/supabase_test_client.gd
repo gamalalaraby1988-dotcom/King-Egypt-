@@ -67,11 +67,13 @@ func sign_in_with_password(email: String, password: String) -> bool:
 	access_token = returned_access
 	refresh_token = returned_refresh
 	user_id = returned_user_id
-	auth_changed.emit(true, user_id)
 	var login_access_token := access_token
 	await fetch_economy_snapshot()
-	# إذا وقع تسجيل الخروج أثناء تحميل اللقطة، لا تعتبر محاولة الدخول مكتملة.
-	return is_authenticated() and access_token == login_access_token
+	# لا تطلق حدث المزامنة قبل انتهاء طلب لقطة الاقتصاد؛ عميل HTTP واحد فقط.
+	if not is_authenticated() or access_token != login_access_token:
+		return false
+	auth_changed.emit(true, user_id)
+	return true
 
 func refresh_session() -> bool:
 	if _request_in_flight:
@@ -205,6 +207,37 @@ func _clear_session() -> void:
 	user_id = ""
 	economy_snapshot.clear()
 	auth_changed.emit(false, "")
+
+
+func fetch_test_display_name() -> Dictionary:
+	if not is_authenticated():
+		return {"ok": false, "error_code": "authentication_required", "message": "يجب تسجيل الدخول أولًا."}
+	var request_token := access_token
+	var result := await _send_json(
+		HTTPClient.METHOD_POST,
+		"/rest/v1/rpc/get_my_test_display_name",
+		{},
+		request_token
+	)
+	if not is_authenticated() or access_token != request_token:
+		return {"ok": false, "error_code": "session_changed", "message": "تغيرت الجلسة أثناء مزامنة الاسم."}
+	if not bool(result.get("ok", false)):
+		return {"ok": false, "error_code": "server_request_failed", "message": str(result.get("message", "تعذر جلب اسم الحساب من الخادم."))}
+	var data: Variant = result.get("data", [])
+	if not (data is Array):
+		return {"ok": false, "error_code": "invalid_server_response", "message": "استجابة اسم الحساب من الخادم غير صالحة."}
+	if data.is_empty():
+		return {"ok": true, "display_name": "", "last_name_change_at": "", "next_change_at": ""}
+	if not (data[0] is Dictionary):
+		return {"ok": false, "error_code": "invalid_server_response", "message": "بيانات اسم الحساب من الخادم غير مكتملة."}
+	var row: Dictionary = data[0]
+	var raw_name: Variant = row.get("display_name", null)
+	return {
+		"ok": true,
+		"display_name": str(raw_name).strip_edges() if raw_name is String else "",
+		"last_name_change_at": str(row.get("last_name_change_at", "")),
+		"next_change_at": str(row.get("next_change_at", ""))
+	}
 
 func _send_json(method: int, path: String, payload: Dictionary, bearer: String) -> Dictionary:
 	if _request_in_flight:
