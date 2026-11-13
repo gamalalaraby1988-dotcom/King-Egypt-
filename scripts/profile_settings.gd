@@ -126,7 +126,10 @@ func _load_settings() -> void:
 
 func _save_settings() -> void:
 	var config := ConfigFile.new()
-	config.load(SAVE_PATH)
+	var load_error := config.load(SAVE_PATH)
+	if load_error != OK and FileAccess.file_exists(SAVE_PATH):
+		info_label.text = "ملف اللاعب موجود لكنه غير قابل للقراءة؛ أُوقفت كتابة الإعدادات لحماية الرصيد والبيانات."
+		return
 	config.set_value("profile", "player_name", name_input.text.strip_edges() if not name_input.text.strip_edges().is_empty() else "لاعب")
 	config.set_value("settings", "volume", int(volume_slider.value))
 	config.set_value("settings", "quality", quality_select.selected)
