@@ -161,7 +161,6 @@ func purchase_once(transaction_id: String, currency: String, amount: int, reason
 	var config := ConfigFile.new()
 	if config.load(PROFILE_PATH) != OK:
 		return false
-	_refresh_legacy_balances()
 	var current := int(balances[currency])
 	if current < amount:
 		return false
@@ -213,7 +212,6 @@ func _transact(transaction_id: String, currency: String, amount: int, kind: Stri
 	var config := ConfigFile.new()
 	if config.load(PROFILE_PATH) != OK:
 		return false
-	_refresh_legacy_balances()
 	var current := int(balances[currency])
 	if kind == "debit" and current < amount:
 		return false
