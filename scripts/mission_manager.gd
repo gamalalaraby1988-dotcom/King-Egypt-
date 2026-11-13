@@ -82,6 +82,7 @@ var _key_was_down := false
 const SAVE_PATH := "user://kings_city_profile.cfg"
 const WALLET_BACKUP_PATH := "user://kings_city_profile.pre_wallet_v1.cfg"
 const WALLET_SCHEMA_VERSION := 1
+const MAX_CURRENCY_BALANCE := 2000000000
 
 func _ready() -> void:
 	_build_ui()
@@ -115,7 +116,7 @@ func _notification(what: int) -> void:
 
 func grant_reward_once(reward_id: String, money_amount: int = 0, xp_amount: int = 0, chips_amount: int = 0, gems_amount: int = 0) -> bool:
 	# يسجل الإيصال والمحفظة في ملف واحد؛ تكرار نفس المعرف لا يصرف المكافأة مجددًا.
-	if reward_id.is_empty() or money_amount < 0 or xp_amount < 0 or chips_amount < 0 or gems_amount < 0 or reward_receipts.has(reward_id):
+	if reward_id.is_empty() or money_amount < 0 or xp_amount < 0 or chips_amount < 0 or gems_amount < 0 or money + money_amount > MAX_CURRENCY_BALANCE or chips + chips_amount > MAX_CURRENCY_BALANCE or gems + gems_amount > MAX_CURRENCY_BALANCE or reward_receipts.has(reward_id):
 		return false
 	var next_money := money + money_amount
 	var next_xp := xp + xp_amount
@@ -238,7 +239,7 @@ func has_reward_receipt(reward_id: String) -> bool:
 
 func complete_activity_once(activity_id: String, activity_kind: String, money_amount: int = 0, xp_amount: int = 0, chips_amount: int = 0, gems_amount: int = 0) -> bool:
 	# حفظ إكمال النشاط وإيصال المكافأة والمحفظة في ملف واحد يمنع إعادة الصرف بعد إعادة التشغيل.
-	if activity_id.is_empty() or money_amount < 0 or xp_amount < 0 or chips_amount < 0 or gems_amount < 0:
+	if activity_id.is_empty() or money_amount < 0 or xp_amount < 0 or chips_amount < 0 or gems_amount < 0 or money + money_amount > MAX_CURRENCY_BALANCE or chips + chips_amount > MAX_CURRENCY_BALANCE or gems + gems_amount > MAX_CURRENCY_BALANCE:
 		return false
 	var completion_key := activity_id
 	var receipt_id := "activity_%s_%s" % [activity_kind, activity_id]
