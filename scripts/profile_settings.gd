@@ -163,6 +163,8 @@ func _save_settings() -> void:
 	requested_name = requested_name.substr(0, 24)
 	var name_changed := requested_name != old_name
 	var name_change_blocked := false
+	var server_next_name_change_at := ""
+	var name_change_failure_message := ""
 	if name_changed:
 		if not SupabaseTestClient.is_authenticated():
 			name_input.text = old_name
@@ -178,11 +180,13 @@ func _save_settings() -> void:
 				requested_name = old_name
 				name_changed = false
 				name_change_blocked = true
-				name_change_status.text = str(server_result.get("message", "رفض الخادم تغيير الاسم."))
+				name_change_failure_message = str(server_result.get("message", "رفض الخادم تغيير الاسم."))
+				name_change_status.text = name_change_failure_message
 			else:
 				requested_name = str(server_result.get("display_name", requested_name))
 				name_input.text = requested_name
-				name_change_status.text = "تم تغيير الاسم من الخادم. موعد السماح التالي: %s" % str(server_result.get("next_change_at", "يُحدده الخادم"))
+				server_next_name_change_at = str(server_result.get("next_change_at", ""))
+				name_change_status.text = "تم تغيير الاسم من الخادم. موعد السماح التالي: %s" % (server_next_name_change_at if not server_next_name_change_at.is_empty() else "يُحدده الخادم")
 	config.set_value("profile", "player_name", requested_name)
 	config.set_value("settings", "volume", int(volume_slider.value))
 	config.set_value("settings", "quality", quality_select.selected)
@@ -196,9 +200,11 @@ func _save_settings() -> void:
 	_apply_settings()
 	_refresh_info()
 	if name_change_blocked:
-		info_label.text += "\nيمكن تغيير اسم اللاعب مرة واحدة فقط في اليوم. حاول مرة أخرى غدًا؛ تم حفظ بقية الإعدادات دون تغيير الاسم."
+		info_label.text += "\nتعذر اعتماد الاسم الجديد: %s تم حفظ بقية الإعدادات دون تغيير الاسم." % name_change_failure_message
 	info_label.text += "\nتم حفظ الإعدادات محليًا."
 	_update_name_change_status(config)
+	if not server_next_name_change_at.is_empty():
+		name_change_status.text += "\nموعد السماح التالي حسب الخادم: %s" % server_next_name_change_at
 
 func _update_name_change_status(_config: ConfigFile) -> void:
 	if not is_instance_valid(name_change_status):
