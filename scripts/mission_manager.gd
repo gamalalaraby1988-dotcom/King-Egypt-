@@ -427,18 +427,25 @@ func _load_profile() -> void:
 		push_warning("تعذر قراءة ملف اللاعب؛ تم إيقاف الترحيل لتجنب فقدان البيانات.")
 		return
 	if error == OK:
-		player_level = int(config.get_value("profile", "player_level", 1))
-		xp = int(config.get_value("profile", "xp", 0))
-		money = int(config.get_value("profile", "money", 0))
-		chips = int(config.get_value("profile", "chips", 0))
-		completed_missions = config.get_value("profile", "completed_missions", {})
-		completed_jobs = config.get_value("profile", "completed_jobs", {})
-		reward_receipts = config.get_value("profile", "reward_receipts", {})
-		achievement_totals = config.get_value("profile", "achievement_totals", achievement_totals)
-		achievement_events = config.get_value("profile", "achievement_events", {})
+		player_level = maxi(1, int(config.get_value("profile", "player_level", 1)))
+		xp = maxi(0, int(config.get_value("profile", "xp", 0)))
+		money = maxi(0, int(config.get_value("profile", "money", 0)))
+		chips = maxi(0, int(config.get_value("profile", "chips", 0)))
+		var saved_missions: Variant = config.get_value("profile", "completed_missions", {})
+		var saved_jobs: Variant = config.get_value("profile", "completed_jobs", {})
+		var saved_receipts: Variant = config.get_value("profile", "reward_receipts", {})
+		var saved_totals: Variant = config.get_value("profile", "achievement_totals", achievement_totals)
+		var saved_achievement_events: Variant = config.get_value("profile", "achievement_events", {})
+		var saved_daily_progress: Variant = config.get_value("profile", "daily_task_progress", {})
+		var saved_daily_events: Variant = config.get_value("profile", "daily_task_events", {})
+		completed_missions = saved_missions if saved_missions is Dictionary else {}
+		completed_jobs = saved_jobs if saved_jobs is Dictionary else {}
+		reward_receipts = saved_receipts if saved_receipts is Dictionary else {}
+		achievement_totals = saved_totals if saved_totals is Dictionary else {"jobs": 0, "missions": 0, "daily_claims": 0}
+		achievement_events = saved_achievement_events if saved_achievement_events is Dictionary else {}
+		daily_task_progress = saved_daily_progress if saved_daily_progress is Dictionary else {}
+		daily_task_events = saved_daily_events if saved_daily_events is Dictionary else {}
 		achievement_stats_initialized = bool(config.get_value("profile", "achievement_stats_initialized", false))
-		daily_task_progress = config.get_value("profile", "daily_task_progress", {})
-		daily_task_events = config.get_value("profile", "daily_task_events", {})
 	var saved_owned = config.get_value("profile", "owned_outfits", null) if error == OK else null
 	if saved_owned is Array:
 		owned_outfits = _sanitize_owned_outfits(saved_owned)
