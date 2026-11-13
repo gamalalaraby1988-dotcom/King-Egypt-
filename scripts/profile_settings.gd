@@ -181,7 +181,10 @@ func _save_settings() -> void:
 				name_changed = false
 				name_change_blocked = true
 				name_change_failure_message = str(server_result.get("message", "رفض الخادم تغيير الاسم."))
+				server_next_name_change_at = str(server_result.get("next_change_at", ""))
 				name_change_status.text = name_change_failure_message
+				if not server_next_name_change_at.is_empty():
+					name_change_status.text += " موعد السماح التالي حسب الخادم: %s" % server_next_name_change_at
 			else:
 				requested_name = str(server_result.get("display_name", requested_name))
 				name_input.text = requested_name
