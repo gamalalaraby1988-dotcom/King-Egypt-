@@ -144,7 +144,9 @@ func _summon_player_vehicle() -> void:
 		if is_instance_valid(vehicle_camera):
 			vehicle_camera.current = false
 
-	# تظهر السيارة بجانب اللاعب عند الاستدعاء، ويمكن استدعاؤها مجددًا إلى موقعه إذا تركها بعيدًا.
+	# سجل معرف المركبة المختارة مع الاستدعاء؛ لا يُسمح باختيار مركبة غير مملوكة.
+	city_vehicle.set_meta("vehicle_id", selected_vehicle_id)
+	# تظهر المركبة بجانب اللاعب عند الاستدعاء، ويمكن إحضارها مجددًا إذا تُركت بعيدًا.
 	var side := player.global_transform.basis.x.normalized()
 	var summon_position := player.global_position + side * 3.5
 	summon_position.y = player.global_position.y
