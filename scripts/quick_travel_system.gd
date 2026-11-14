@@ -110,6 +110,7 @@ func _on_dim_input(event: InputEvent) -> void:
 func _create_beach_portal() -> void:
 	var portal := Node3D.new()
 	portal.name = "FiveCivilizationsShipBeachGate"
+	portal.add_to_group("city_world_geometry")
 	portal.position = Vector3(0, 0.1, 238)
 	city.add_child(portal)
 	var ring := MeshInstance3D.new()
@@ -120,7 +121,6 @@ func _create_beach_portal() -> void:
 	torus.rings = 48
 	torus.ring_segments = 12
 	ring.mesh = torus
-	ring.rotation.x = PI / 2.0
 	ring.position.y = 2.0
 	var ring_mat := StandardMaterial3D.new()
 	ring_mat.albedo_color = GOLD
@@ -248,7 +248,7 @@ func _enter_ship() -> void:
 	player.set_physics_process(true)
 	city.set("interior_transition_busy", false)
 	ship_transition_busy = false
-	city.call("_show_interior_loading", true)
+	city.call("_hide_interior_loading")
 
 func _exit_ship_to_beach() -> void:
 	if not is_instance_valid(ship_interior) or ship_transition_busy or not is_instance_valid(player):
