@@ -349,7 +349,8 @@ func _exit_ship_to_beach() -> void:
 	player.set_physics_process(false)
 	city.call("_show_interior_loading", false, "interior_return_loading")
 	await get_tree().create_timer(0.55).timeout
-	if not is_inside_tree():
+	if not is_inside_tree() or not is_instance_valid(city) or not is_instance_valid(player) or not is_instance_valid(ship_interior):
+		_abort_ship_transition()
 		return
 	ship_interior.queue_free()
 	ship_interior = null
@@ -373,6 +374,9 @@ func _move_inside_ship(location_id: String) -> void:
 	player.set_physics_process(false)
 	city.call("_show_interior_loading", false, "interior_loading")
 	await get_tree().create_timer(0.4).timeout
+	if not is_inside_tree() or not is_instance_valid(city) or not is_instance_valid(player) or not is_instance_valid(ship_interior):
+		_abort_ship_transition()
+		return
 	ship_current_location = location_id
 	var destination: Vector3 = wing_spawns.get(location_id, SHIP_WORLD_POSITION + Vector3(0, 1.1, 7.0))
 	player.global_position = destination
@@ -384,6 +388,16 @@ func _move_inside_ship(location_id: String) -> void:
 	ship_transition_busy = false
 	city.call("_show_interior_loading", true)
 	_refresh_city_interactions()
+
+func _abort_ship_transition() -> void:
+	# استعادة حالة المدينة واللاعب إذا تعذر إكمال الانتقال بعد شاشة التحميل.
+	ship_transition_busy = false
+	if is_instance_valid(city):
+		city.set("interior_transition_busy", false)
+		city.set("interior_player", null)
+		city.call("_hide_interior_loading")
+	if is_instance_valid(player):
+		player.set_physics_process(true)
 
 func _refresh_city_interactions() -> void:
 	var manager := city.get_node_or_null("MissionManager")
