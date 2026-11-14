@@ -213,7 +213,8 @@ func _layout_mobile_controls() -> void:
 	var touch_radius := joystick_radius * 1.55
 	var clearance := 18.0 * scale_factor
 	if is_instance_valid(bottom_controls):
-		var bottom_gap := margin + touch_radius + clearance
+		# Keep the full bottom button row above the joystick touch-capture circle.
+		var bottom_gap := margin + joystick_radius + touch_radius + clearance
 		bottom_controls.offset_bottom = -bottom_gap
 		bottom_controls.offset_top = -(bottom_gap + 70.0 * scale_factor)
 	if is_instance_valid(left_controls):
