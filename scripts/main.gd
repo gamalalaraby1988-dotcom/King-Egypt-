@@ -28,6 +28,7 @@ var _city_collision_shape_cache: Dictionary = {}
 func _ready() -> void:
 	_create_ground()
 	_create_city()
+	_create_sidewalk_test_sample()
 	_create_city_signage()
 	_create_mobile_hud()
 	var key_light := get_node_or_null("DirectionalLight3D")
@@ -587,6 +588,19 @@ func _create_city() -> void:
 	for i in range(-8, 9):
 		_create_box(self, "RoadMark_X_%d" % i, Vector3(3, 0.025, 0.16), Vector3(i * 10, 0.06, 0), Color(0.92, 0.86, 0.62))
 		_create_box(self, "RoadMark_Z_%d" % i, Vector3(0.16, 0.025, 3), Vector3(0, 0.065, i * 10), Color(0.92, 0.86, 0.62))
+
+
+func _create_sidewalk_test_sample() -> void:
+	# عينة واحدة فقط لاختبار ارتفاع الرصيف وتصادمه بجوار الطريق الرئيسي.
+	# لا تُعمم قبل اختبار المشي والجري والقيادة داخل Godot وعلى Android.
+	_create_box(
+		self,
+		"Sidewalk_Test_Sample",
+		Vector3(12.0, 0.10, 1.2),
+		Vector3(-36.0, 0.05, 5.6),
+		Color(0.68, 0.62, 0.50),
+		true
+	)
 
 func _create_mobile_hud() -> void:
 	var layer := CanvasLayer.new()
