@@ -498,22 +498,27 @@ func _process(_delta: float) -> void:
 
 
 func _update_interaction_target() -> void:
-	# لا تفحص تفاعلات المدينة أثناء الانتقال أو أثناء وجود اللاعب داخل مبنى.
+	# أثناء الانتقال لا يوجد تفاعل. داخل السفينة نفحص بواباتها فقط؛ خارجها نفحص تفاعلات المدينة.
 	var city_root := get_tree().current_scene
-	if is_instance_valid(city_root) and (bool(city_root.get("interior_transition_busy")) or is_instance_valid(city_root.get("interior_root"))):
+	if is_instance_valid(city_root) and bool(city_root.get("interior_transition_busy")):
 		nearest_interactable = null
 		nearest_building = null
 		return
+	if not is_instance_valid(player):
+		nearest_interactable = null
+		nearest_building = null
+		return
+	var inside_ship := is_instance_valid(city_root) and is_instance_valid(city_root.get("interior_root")) and city_root.get("interior_root").has_meta("five_civilizations_ship")
+	var group_name := "ship_interactables" if inside_ship else "city_interactables"
 	var previous_target := nearest_interactable
 	var best: Node3D = null
 	var best_distance := INF
-	for candidate in get_tree().get_nodes_in_group("city_interactables"):
+	for candidate in get_tree().get_nodes_in_group(group_name):
 		if not is_instance_valid(candidate) or candidate.is_queued_for_deletion() or not candidate is Node3D:
 			continue
 		var radius_value: Variant = candidate.get("interaction_radius")
 		var allowed_distance := float(radius_value) if radius_value != null else 4.5
 		allowed_distance = clampf(allowed_distance, 0.5, 4.8)
-		# هامش خروج صغير للهدف الحالي يمنع وميض زر التفاعل عند حافة النطاق.
 		if candidate == previous_target:
 			allowed_distance += 0.65
 		var distance := player.global_position.distance_to(candidate.global_position)
@@ -524,6 +529,8 @@ func _update_interaction_target() -> void:
 	nearest_building = best if is_instance_valid(best) and best.has_method("get_mission_data") else null
 
 func _interaction_action_key(target: Node3D) -> String:
+	if target.has_method("get_quick_travel_data"):
+		return "interaction_enter"
 	if target.has_method("get_job_data"):
 		return "interaction_job"
 	if target.has_method("get_mission_data"):
@@ -547,6 +554,8 @@ func _update_interaction_hud() -> void:
 			display_name = str(nearest_interactable.get_job_data().get("title", CityLanguage.translate("interaction_job_name")))
 		elif nearest_building:
 			display_name = str(nearest_interactable.get("building_title"))
+		elif nearest_interactable.has_method("get_quick_travel_data"):
+			display_name = str(nearest_interactable.get_quick_travel_data().get("title", "بوابة"))
 		elif nearest_interactable.has_method("get_animal_rental_data"):
 			display_name = CityLanguage.translate("interaction_animal_staff")
 		elif nearest_interactable.has_method("get_interaction_data"):
