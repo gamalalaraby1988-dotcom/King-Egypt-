@@ -1,8 +1,9 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
 [ext_resource type="PackedScene" path="res://scenes/player.tscn" id="2_player"]
 [ext_resource type="Script" path="res://scripts/sky_cycle.gd" id="3_sky_cycle"]
+[ext_resource type="Script" path="res://scripts/city_world_expansion.gd" id="4_world_expansion"]
 
 [sub_resource type="Environment" id="Environment_main"]
 background_mode = 1
@@ -24,6 +25,9 @@ light_energy = 1.1
 
 [node name="SkyCycle" type="Node" parent="."]
 script = ExtResource("3_sky_cycle")
+
+[node name="CityWorldExpansion" type="Node" parent="."]
+script = ExtResource("4_world_expansion")
 
 [node name="Player" parent="." instance=ExtResource("2_player")]
 position = Vector3(0, 1, 0)

@@ -562,7 +562,7 @@ func _create_box(parent: Node3D, name: String, size: Vector3, pos: Vector3, colo
 		parent.add_child(body)
 
 func _create_ground() -> void:
-	_create_box(self, "Ground", Vector3(180, 1, 180), Vector3(0, -0.55, 0), Color(0.34, 0.42, 0.31), true)
+	_create_box(self, "Ground", Vector3(700, 1, 700), Vector3(0, -0.55, 0), Color(0.34, 0.42, 0.31), true)
 
 func _create_city() -> void:
 	for x in range(-city_half_size, city_half_size + 1):
