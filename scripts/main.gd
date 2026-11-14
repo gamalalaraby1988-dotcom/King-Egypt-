@@ -56,7 +56,7 @@ func _process(_delta: float) -> void:
 			vehicle_summon_button.visible = false
 		return
 	var player := get_node_or_null("Player") as CharacterBody3D
-	if is_instance_valid(player) and (player.get("animal_riding") == true or player.get("sitting") == true):
+	if is_instance_valid(player) and player.get("sitting") == true:
 		if is_instance_valid(vehicle_interaction_button):
 			vehicle_interaction_button.visible = true
 			vehicle_interaction_button.text = "🚪↗"
@@ -202,14 +202,6 @@ func _toggle_vehicle_use() -> void:
 		_exit_player_vehicle()
 		return
 	var player := get_node_or_null("Player") as CharacterBody3D
-	if is_instance_valid(player) and player.get("animal_riding") == true:
-		if player.has_method("end_animal_ride"):
-			player.call("end_animal_ride")
-		if is_instance_valid(vehicle_interaction_button):
-			vehicle_interaction_button.visible = false
-		if is_instance_valid(vehicle_summon_button):
-			vehicle_summon_button.visible = true
-		return
 	if is_instance_valid(player) and player.get("sitting") == true:
 		if player.has_method("toggle_sit"):
 			player.call("toggle_sit")
