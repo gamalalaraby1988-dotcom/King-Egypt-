@@ -117,8 +117,9 @@ func _fit_menu_to_viewport() -> void:
 	if not is_instance_valid(menu_panel):
 		return
 	var viewport_size := get_viewport().get_visible_rect().size
-	var panel_width := minf(410.0, maxf(280.0, viewport_size.x - 28.0))
-	var panel_height := minf(490.0, maxf(260.0, viewport_size.y - 48.0))
+	# لا نفرض حدًا أدنى أكبر من الشاشة؛ هذا يمنع قص النافذة في الشاشات الصغيرة أو الوضع الأفقي.
+	var panel_width := minf(410.0, maxf(1.0, viewport_size.x - 28.0))
+	var panel_height := minf(490.0, maxf(1.0, viewport_size.y - 48.0))
 	menu_panel.size = Vector2(panel_width, panel_height)
 	menu_panel.position = -menu_panel.size * 0.5
 
