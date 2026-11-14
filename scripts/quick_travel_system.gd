@@ -46,9 +46,12 @@ func _ready() -> void:
 	_create_beach_portal()
 
 func _process(_delta: float) -> void:
+	if not is_instance_valid(city):
+		_close_menu()
+		return
 	if not is_instance_valid(player):
 		player = city.get_node_or_null("Player") as CharacterBody3D
-	if menu_panel and menu_panel.visible:
+	if is_instance_valid(menu_panel) and menu_panel.visible:
 		if not is_instance_valid(player) or not is_instance_valid(active_gate) or player.global_position.distance_to(active_gate.global_position) > 6.0:
 			_close_menu()
 
@@ -289,9 +292,10 @@ func _location_title(location_id: String) -> String:
 func _close_menu() -> void:
 	if is_instance_valid(menu_panel):
 		menu_panel.visible = false
-	var dim := menu_layer.get_node_or_null("Dim") as ColorRect
-	if is_instance_valid(dim):
-		dim.visible = false
+	if is_instance_valid(menu_layer):
+		var dim := menu_layer.get_node_or_null("Dim") as ColorRect
+		if is_instance_valid(dim):
+			dim.visible = false
 	active_gate = null
 
 func _select_destination(destination_id: String) -> void:
