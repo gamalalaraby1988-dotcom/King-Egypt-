@@ -737,7 +737,7 @@ func _create_service_staff(display_name: String, role: String, dialogue: String,
 	add_child(staff)
 
 func _create_camp() -> void:
-	# طريق واضح يصل المخيم بالطريق الرئيسي مع تجنب كتل المباني.
+	# الطريق يظل موجودًا دائمًا؛ تفاصيل المخيم نفسها تُحمّل عند اقتراب اللاعب.
 	_create_box(self, "CampRoad_Entry", Vector3(32, 0.07, 5), Vector3(16, 0.025, 0), Color(0.12, 0.13, 0.15))
 	_create_box(self, "CampRoad_North", Vector3(5, 0.07, 75), Vector3(30, 0.025, 37.5), Color(0.12, 0.13, 0.15))
 	_create_box(self, "CampRoad_Camp", Vector3(30, 0.07, 5), Vector3(45, 0.025, 75), Color(0.12, 0.13, 0.15))
@@ -745,4 +745,5 @@ func _create_camp() -> void:
 	camp.name = "AnimalCamp"
 	camp.position = Vector3(60, 0, 75)
 	camp.set_script(load("res://scripts/camp_system.gd"))
+	camp.set("player", get_node_or_null("Player"))
 	add_child(camp)
