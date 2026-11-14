@@ -216,7 +216,7 @@ func _create_king_summit() -> void:
 		var midpoint := (start + finish) * 0.5
 		var direction := finish - start
 		var road := _box(mountain, "SummitRoad_%02d" % index, Vector3(7.0, 0.28, direction.length() + 1.0), midpoint - mountain.position, ROAD_COLOR, true)
-		road.look_at(finish - mountain.position, Vector3.UP)
+		road.look_at(finish, Vector3.UP)
 
 
 func _create_pyramid_district() -> void:
@@ -242,8 +242,8 @@ func _create_pyramid_district() -> void:
 		district.add_child(pyramid)
 
 	# وصلة الطريق الجديدة تبدأ بعد نهاية طريق المخيم الحالي ولا تستبدل أي مقطع قائم.
-	var link := _box(district, "CampToPyramidsRoad", Vector3(180, 0.12, 6), Vector3(-90, 0.04, 0), ROAD_COLOR)
-	link.position = Vector3(-90, 0.04, 0)
+	var link := _box(district, "CampToPyramidsRoad", Vector3(6, 0.12, 178), Vector3(-102.0, 0.04, -8.5), ROAD_COLOR)
+	link.rotation.y = atan2(175.0, 17.0)
 
 
 func _create_district_gateways() -> void:
