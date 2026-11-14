@@ -266,14 +266,15 @@ func _open_section(section: String) -> void:
 func _build_social_popup() -> void:
 	social_popup = PanelContainer.new()
 	social_popup.name = "SocialHubPopup"
-	social_popup.anchor_left = 0.5
-	social_popup.anchor_right = 0.5
-	social_popup.anchor_top = 0.5
-	social_popup.anchor_bottom = 0.5
-	social_popup.offset_left = -205
-	social_popup.offset_right = 205
-	social_popup.offset_top = -235
-	social_popup.offset_bottom = 235
+	# نافذة اجتماعية عمودية ضيقة على يمين الشاشة، مع إبقاء مساحة المدينة ظاهرة.
+	social_popup.anchor_left = 0.72
+	social_popup.anchor_right = 1.0
+	social_popup.anchor_top = 0.02
+	social_popup.anchor_bottom = 0.98
+	social_popup.offset_left = 0
+	social_popup.offset_right = -8
+	social_popup.offset_top = 0
+	social_popup.offset_bottom = 0
 	social_popup.visible = false
 	social_popup.mouse_filter = Control.MOUSE_FILTER_STOP
 	var panel_style := StyleBoxFlat.new()
