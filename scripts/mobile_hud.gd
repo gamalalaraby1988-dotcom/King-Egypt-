@@ -28,7 +28,7 @@ func _process(_delta: float) -> void:
 		player.set_mobile_sprint(false)
 		return
 	player.set_mobile_move(joystick_vector)
-	player.set_mobile_sprint(sprint_active)
+	player.set_mobile_sprint(false)
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_RESIZED:
