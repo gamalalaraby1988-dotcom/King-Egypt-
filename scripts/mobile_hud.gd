@@ -63,19 +63,24 @@ func _update_layout() -> void:
 
 func _draw() -> void:
 	_update_layout()
-	draw_circle(joystick_center, _joystick_draw_radius, Color(0.04, 0.06, 0.09, 0.30))
-	draw_arc(joystick_center, _joystick_draw_radius, 0.0, TAU, 48, Color(1, 1, 1, 0.58), 3.0 * minf(1.0, _joystick_draw_radius / 72.0))
-	draw_circle(joystick_center + joystick_vector * _joystick_draw_radius, maxf(17.0, 26.0 * _joystick_draw_radius / 72.0), Color(0.91, 0.75, 0.38, 0.90))
-	_draw_button(sprint_center, _sprint_draw_radius, "RUN", sprint_active)
+	# عصا اتجاهات دائرية بقاعدة داكنة وحافة ذهبية رفيعة.
+	draw_circle(joystick_center, _joystick_draw_radius, Color(0.025, 0.035, 0.045, 0.34))
+	draw_arc(joystick_center, _joystick_draw_radius, 0.0, TAU, 56, Color(0.82, 0.68, 0.36, 0.88), 2.2 * minf(1.0, _joystick_draw_radius / 72.0))
+	draw_arc(joystick_center, _joystick_draw_radius * 0.78, 0.0, TAU, 48, Color(1.0, 0.94, 0.78, 0.24), 1.0)
+	var knob_radius := maxf(17.0, 26.0 * _joystick_draw_radius / 72.0)
+	draw_circle(joystick_center + joystick_vector * _joystick_draw_radius, knob_radius, Color(0.72, 0.55, 0.25, 0.94))
+	draw_arc(joystick_center + joystick_vector * _joystick_draw_radius, knob_radius, 0.0, TAU, 40, Color(1.0, 0.91, 0.66, 0.95), 1.6)
+	_draw_button(sprint_center, _sprint_draw_radius, "🏃", sprint_active)
 	var sitting_now: bool = is_instance_valid(player) and bool(player.get("sitting"))
-	_draw_button(sit_center, _sit_draw_radius, "SIT", sitting_now)
+	_draw_button(sit_center, _sit_draw_radius, "🪑", sitting_now)
 
 func _draw_button(center: Vector2, radius: float, caption: String, active: bool) -> void:
-	var fill := Color(0.67, 0.48, 0.19, 0.82) if active else Color(0.04, 0.06, 0.09, 0.48)
+	var fill := Color(0.62, 0.43, 0.16, 0.88) if active else Color(0.025, 0.035, 0.045, 0.58)
 	draw_circle(center, radius, fill)
-	draw_arc(center, radius, 0.0, TAU, 40, Color(1, 1, 1, 0.78), 2.0)
+	draw_arc(center, radius, 0.0, TAU, 48, Color(0.86, 0.72, 0.42, 0.96), 2.0)
+	draw_arc(center, radius * 0.84, 0.0, TAU, 40, Color(1.0, 0.95, 0.82, 0.22), 1.0)
 	var font := ThemeDB.fallback_font
-	var text_size := maxi(11, roundi(17.0 * radius / 43.0))
+	var text_size := maxi(18, roundi(25.0 * radius / 43.0))
 	var text_width := font.get_string_size(caption, HORIZONTAL_ALIGNMENT_LEFT, -1, text_size).x
 	draw_string(font, center + Vector2(-text_width / 2.0, text_size * 0.34), caption, HORIZONTAL_ALIGNMENT_LEFT, -1, text_size, Color.WHITE)
 
