@@ -205,8 +205,8 @@ func _make_button(parent: Control, caption: String, section: String) -> Button:
 	var button := Button.new()
 	button.text = str(icons.get(section, "•"))
 	button.tooltip_text = caption
-	button.custom_minimum_size = Vector2(46, 46)
-	button.add_theme_font_size_override("font_size", 23)
+	button.custom_minimum_size = Vector2(112, 46) if section == "wallet" else Vector2(46, 46)
+	button.add_theme_font_size_override("font_size", 13 if section == "wallet" else 23)
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color(0.025, 0.035, 0.045, 0.78)
 	style.border_color = Color(0.82, 0.67, 0.36, 0.96)
