@@ -3,7 +3,7 @@ extends Node
 ## يستخدم زر التفاعل الحالي وشاشة التحميل الموجودة في Main.
 
 const SHIP_WORLD_POSITION := Vector3(1000.0, 0.0, 1000.0)
-const BEACH_RETURN_POSITION := Vector3(0.0, 1.1, 231.0)
+const BEACH_RETURN_POSITION := Vector3(0.0, 1.1, 234.0)
 const GOLD := Color(0.82, 0.63, 0.29)
 const STONE := Color(0.70, 0.61, 0.46)
 const DARK := Color(0.055, 0.105, 0.12)

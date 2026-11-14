@@ -591,6 +591,12 @@ func open_interactable(target: Node3D) -> void:
 	if player.global_position.distance_to(target.global_position) > clampf(allowed_distance, 0.5, 4.8) + 0.65:
 		_update_interaction_target()
 		return
+	if target.has_method("get_quick_travel_data"):
+		var city_root := get_tree().current_scene
+		var travel_system := city_root.get_node_or_null("QuickTravelSystem") if is_instance_valid(city_root) else null
+		if is_instance_valid(travel_system):
+			travel_system.open_for_gate(target)
+		return
 	if target.has_method("is_shop_owner") and target.is_shop_owner() and is_instance_valid(shop_manager):
 		shop_manager.open_shop()
 		return
