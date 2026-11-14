@@ -398,6 +398,13 @@ func _abort_ship_transition() -> void:
 		city.call("_hide_interior_loading")
 	if is_instance_valid(player):
 		player.set_physics_process(true)
+	# إذا كانت السفينة موجودة بالفعل، لا تترك عالم المدينة مخفيًا بعد إلغاء الانتقال.
+	if is_instance_valid(city) and is_instance_valid(ship_interior):
+		city.call("_set_city_world_hidden", true)
+	elif is_instance_valid(city):
+		city.call("_set_city_world_hidden", false)
+		city.set("interior_root", null)
+		ship_current_location = "ship_exterior"
 
 func _refresh_city_interactions() -> void:
 	var manager := city.get_node_or_null("MissionManager")
