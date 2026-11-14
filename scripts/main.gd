@@ -66,7 +66,7 @@ func _process(_delta: float) -> void:
 	var close_enough := player.global_position.distance_to(city_vehicle.global_position) <= 5.0
 	if is_instance_valid(vehicle_interaction_button):
 		vehicle_interaction_button.visible = close_enough
-		vehicle_interaction_button.text = "ركوب السيارة" if CityLanguage.get_language() == "ar" else "Enter vehicle"
+		vehicle_interaction_button.text = "ركوب" if CityLanguage.get_language() == "ar" else "Enter"
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.keycode == KEY_E:
@@ -115,15 +115,15 @@ func _create_player_vehicle() -> void:
 	vehicle_interaction_button = Button.new()
 	vehicle_interaction_button.name = "VehicleInteractionButton"
 	vehicle_interaction_button.text = "ركوب السيارة"
-	vehicle_interaction_button.custom_minimum_size = Vector2(190, 58)
-	vehicle_interaction_button.anchor_left = 0.5
-	vehicle_interaction_button.anchor_right = 0.5
-	vehicle_interaction_button.anchor_top = 1.0
-	vehicle_interaction_button.anchor_bottom = 1.0
-	vehicle_interaction_button.offset_left = -95
-	vehicle_interaction_button.offset_right = 95
-	vehicle_interaction_button.offset_top = -150
-	vehicle_interaction_button.offset_bottom = -92
+	vehicle_interaction_button.custom_minimum_size = Vector2(132, 52)
+	vehicle_interaction_button.anchor_left = 1.0
+	vehicle_interaction_button.anchor_right = 1.0
+	vehicle_interaction_button.anchor_top = 0.76
+	vehicle_interaction_button.anchor_bottom = 0.76
+	vehicle_interaction_button.offset_left = -140
+	vehicle_interaction_button.offset_right = -8
+	vehicle_interaction_button.offset_top = -26
+	vehicle_interaction_button.offset_bottom = 26
 	vehicle_interaction_button.visible = false
 	vehicle_interaction_button.pressed.connect(_toggle_vehicle_use)
 	layer.add_child(vehicle_interaction_button)
@@ -212,7 +212,7 @@ func _toggle_vehicle_use() -> void:
 	if is_instance_valid(vehicle_camera):
 		vehicle_camera.current = true
 	if is_instance_valid(vehicle_interaction_button):
-		vehicle_interaction_button.text = "النزول من السيارة" if CityLanguage.get_language() == "ar" else "Exit vehicle"
+		vehicle_interaction_button.text = "نزول" if CityLanguage.get_language() == "ar" else "Exit"
 		vehicle_interaction_button.visible = true
 
 func _recover_vehicle_occupancy() -> void:
