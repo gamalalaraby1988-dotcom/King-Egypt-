@@ -35,7 +35,6 @@ func _ready() -> void:
 		key_light.add_to_group("quality_shadow_light")
 	_create_interactive_buildings()
 	_create_camp()
-	_create_city_map()
 	_create_interior_transition_ui()
 	_create_player_vehicle()
 
@@ -713,17 +712,6 @@ func _add_sign_label(parent: Node3D, key: String, pos: Vector3, y_rotation: floa
 	# Billboard mode made labels rotate independently of the board.
 	parent.add_child(label)
 
-
-func _create_city_map() -> void:
-	var layer := CanvasLayer.new()
-	layer.name = "CityMapHUD"
-	add_child(layer)
-	var map_control := Control.new()
-	map_control.name = "CityMap"
-	map_control.set_script(load("res://scripts/city_map.gd"))
-	map_control.player = get_node_or_null("Player")
-	map_control.mission_manager = get_node_or_null("MissionManager")
-	layer.add_child(map_control)
 
 
 func _create_service_staff(display_name: String, role: String, dialogue: String, pos: Vector3) -> void:
