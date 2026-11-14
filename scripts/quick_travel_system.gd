@@ -15,6 +15,7 @@ var menu_panel: PanelContainer
 var menu_title: Label
 var menu_subtitle: Label
 var menu_list: VBoxContainer
+var menu_scroll: ScrollContainer
 var active_gate: Node3D
 var ship_interior: Node3D
 var ship_current_location := "ship_hall"
@@ -39,6 +40,8 @@ func _ready() -> void:
 	city = get_parent() as Node3D
 	player = city.get_node_or_null("Player") as CharacterBody3D
 	_create_menu()
+	get_viewport().size_changed.connect(_fit_menu_to_viewport)
+	_fit_menu_to_viewport()
 	_create_beach_portal()
 
 func _process(_delta: float) -> void:
@@ -64,7 +67,7 @@ func _create_menu() -> void:
 	menu_panel.set_anchors_preset(Control.PRESET_CENTER)
 	menu_panel.position = Vector2(-205, -245)
 	menu_panel.size = Vector2(410, 490)
-	menu_panel.custom_minimum_size = Vector2(360, 300)
+	menu_panel.custom_minimum_size = Vector2.ZERO
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color(0.045, 0.075, 0.08, 0.98)
 	style.border_color = GOLD
@@ -94,14 +97,30 @@ func _create_menu() -> void:
 	column.add_child(menu_subtitle)
 	var separator := HSeparator.new()
 	column.add_child(separator)
+	menu_scroll = ScrollContainer.new()
+	menu_scroll.name = "DestinationScroll"
+	menu_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	menu_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	menu_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	column.add_child(menu_scroll)
 	menu_list = VBoxContainer.new()
+	menu_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	menu_list.add_theme_constant_override("separation", 7)
-	column.add_child(menu_list)
+	menu_scroll.add_child(menu_list)
 	var close := Button.new()
 	close.text = "إغلاق"
 	close.custom_minimum_size = Vector2(0, 46)
 	close.pressed.connect(_close_menu)
 	column.add_child(close)
+
+func _fit_menu_to_viewport() -> void:
+	if not is_instance_valid(menu_panel):
+		return
+	var viewport_size := get_viewport().get_visible_rect().size
+	var panel_width := minf(410.0, maxf(280.0, viewport_size.x - 28.0))
+	var panel_height := minf(490.0, maxf(260.0, viewport_size.y - 48.0))
+	menu_panel.size = Vector2(panel_width, panel_height)
+	menu_panel.position = -menu_panel.size * 0.5
 
 func _on_dim_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed:
