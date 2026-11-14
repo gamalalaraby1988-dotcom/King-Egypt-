@@ -37,6 +37,7 @@ var wing_colors := {
 }
 
 func _ready() -> void:
+	set_process_unhandled_key_input(true)
 	city = get_parent() as Node3D
 	player = city.get_node_or_null("Player") as CharacterBody3D
 	_create_menu()
