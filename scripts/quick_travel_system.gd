@@ -130,13 +130,17 @@ func _fit_menu_to_viewport() -> void:
 		close_button.custom_minimum_size.y = 42.0 if compact_layout else 46.0
 
 func _on_dim_input(event: InputEvent) -> void:
-	# دعم النقر بالماوس واللمس على الهاتف لإغلاق النافذة من خارجها.
+	# هذه الإشارة تصل عند الضغط على طبقة التعتيم خارج لوحة القائمة.
 	if event is InputEventMouseButton and event.pressed:
 		_close_menu()
 	elif event is InputEventScreenTouch and event.pressed:
 		_close_menu()
-	elif event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
+
+func _unhandled_key_input(event: InputEvent) -> void:
+	# التقاط Escape على مستوى العقدة حتى يعمل حتى عندما لا يكون عنصر الواجهة هو صاحب التركيز.
+	if menu_panel.visible and event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
 		_close_menu()
+		get_viewport().set_input_as_handled()
 
 func _create_beach_portal() -> void:
 	var portal := Node3D.new()
