@@ -1,7 +1,8 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
 [ext_resource type="PackedScene" path="res://scenes/player.tscn" id="2_player"]
+[ext_resource type="Script" path="res://scripts/sky_cycle.gd" id="3_sky_cycle"]
 
 [sub_resource type="Environment" id="Environment_main"]
 background_mode = 1
@@ -20,6 +21,9 @@ environment = SubResource("Environment_main")
 rotation = Vector3(-0.8, -0.5, 0)
 shadow_enabled = true
 light_energy = 1.1
+
+[node name="SkyCycle" type="Node" parent="."]
+script = ExtResource("3_sky_cycle")
 
 [node name="Player" parent="." instance=ExtResource("2_player")]
 position = Vector3(0, 1, 0)
