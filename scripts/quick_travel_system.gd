@@ -321,7 +321,12 @@ func _enter_ship() -> void:
 	await get_tree().create_timer(0.65).timeout
 	if not is_instance_valid(player) or not is_inside_tree():
 		ship_transition_busy = false
-		city.set("interior_transition_busy", false)
+		if is_instance_valid(city):
+			city.set("interior_transition_busy", false)
+			city.set("interior_player", null)
+			city.call("_hide_interior_loading")
+		if is_instance_valid(player):
+			player.set_physics_process(true)
 		return
 	city.call("_set_city_world_hidden", true)
 	ship_interior = _build_ship_interior()
