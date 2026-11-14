@@ -142,8 +142,8 @@ func _on_dim_input(event: InputEvent) -> void:
 		_close_menu()
 
 func _unhandled_key_input(event: InputEvent) -> void:
-	# التقاط Escape على مستوى العقدة حتى يعمل حتى عندما لا يكون عنصر الواجهة هو صاحب التركيز.
-	if menu_panel.visible and event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
+	# التقاط Escape بأمان حتى إذا أزيلت لوحة التنقل أثناء تبديل المشهد.
+	if is_instance_valid(menu_panel) and menu_panel.visible and event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
 		_close_menu()
 		get_viewport().set_input_as_handled()
 
@@ -204,6 +204,11 @@ func _make_material(color: Color) -> StandardMaterial3D:
 func open_for_gate(gate: Node3D) -> void:
 	if ship_transition_busy or not is_instance_valid(gate) or not is_instance_valid(player):
 		return
+	if not is_instance_valid(menu_layer) or not is_instance_valid(menu_panel) or not is_instance_valid(menu_list) or not is_instance_valid(menu_scroll):
+		return
+	var dim := menu_layer.get_node_or_null("Dim") as ColorRect
+	if not is_instance_valid(dim):
+		return
 	active_gate = gate
 	var data: Dictionary = gate.get_quick_travel_data()
 	var gate_id := str(data.get("gate_id", ""))
@@ -254,7 +259,6 @@ func open_for_gate(gate: Node3D) -> void:
 		menu_list.add_child(button)
 	# ابدأ كل مرة من أول الوجهات حتى لا تُفتح القائمة في موضع تمرير قديم.
 	menu_scroll.scroll_vertical = 0
-	var dim := menu_layer.get_node("Dim") as ColorRect
 	dim.visible = true
 	menu_panel.visible = true
 	# يسهّل التنقل بلوحة المفاتيح فور فتح القائمة دون الحاجة إلى تحديد زر يدويًا.
