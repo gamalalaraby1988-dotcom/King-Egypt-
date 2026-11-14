@@ -252,6 +252,11 @@ func open_for_gate(gate: Node3D) -> void:
 	var dim := menu_layer.get_node("Dim") as ColorRect
 	dim.visible = true
 	menu_panel.visible = true
+	# يسهّل التنقل بلوحة المفاتيح فور فتح القائمة دون الحاجة إلى تحديد زر يدويًا.
+	if menu_list.get_child_count() > 0:
+		var first_destination := menu_list.get_child(0) as Button
+		if is_instance_valid(first_destination):
+			first_destination.grab_focus()
 
 func _destination_button_text(destination_id: String, label_text: String) -> String:
 	var symbol := "◆"
