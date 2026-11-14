@@ -243,6 +243,8 @@ func open_for_gate(gate: Node3D) -> void:
 		button.add_theme_stylebox_override("focus", hover)
 		button.pressed.connect(_select_destination.bind(str(option.id)))
 		menu_list.add_child(button)
+	# ابدأ كل مرة من أول الوجهات حتى لا تُفتح القائمة في موضع تمرير قديم.
+	menu_scroll.scroll_vertical = 0
 	var dim := menu_layer.get_node("Dim") as ColorRect
 	dim.visible = true
 	menu_panel.visible = true
