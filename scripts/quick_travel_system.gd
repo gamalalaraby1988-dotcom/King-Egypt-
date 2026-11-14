@@ -410,6 +410,27 @@ func _create_wing_room(root: Node3D, id: String, x: float, accent: Color) -> voi
 				_add_ship_cylinder(room, "FrenchDecorativeColumn", 0.28, 3.1, Vector3(side * 2.75, 1.7, -4.5), Color(0.82, 0.78, 0.69))
 			_add_ship_box(room, "FrenchRoyalCornice", Vector3(6.8, 0.24, 0.55), Vector3(0, 3.45, -4.5), GOLD)
 			_add_ship_box(room, "FrenchBluePanel", Vector3(4.8, 1.5, 0.18), Vector3(0, 2.0, -6.7), Color(0.16, 0.25, 0.42))
+	# شارة جدارية ثلاثية الأبعاد تميز هوية كل جناح من دون تغيير مساحة الحركة.
+	_add_ship_box(room, "CivilizationEmblemBacking", Vector3(1.55, 1.35, 0.12), Vector3(0, 2.05, -6.58), DARK)
+	match id:
+		"wing_greek":
+			_add_ship_sphere(room, "GreekEmblemCenter", 0.42, Vector3(0, 2.1, -6.43), Color(0.82, 0.78, 0.62))
+			_add_ship_cylinder(room, "GreekEmblemStem", 0.12, 0.9, Vector3(0, 1.45, -6.42), GOLD)
+		"wing_roman":
+			_add_ship_sphere(room, "RomanEmblemCenter", 0.38, Vector3(0, 2.1, -6.43), Color(0.75, 0.58, 0.38))
+			for side in [-1.0, 1.0]:
+				_add_ship_sphere(room, "RomanLaurelDetail", 0.16, Vector3(side * 0.48, 2.1, -6.4), GOLD)
+		"wing_japanese":
+			_add_ship_box(room, "JapaneseEmblemToriiTop", Vector3(1.25, 0.14, 0.14), Vector3(0, 2.48, -6.42), Color(0.72, 0.16, 0.12))
+			_add_ship_box(room, "JapaneseEmblemToriiLeft", Vector3(0.12, 0.78, 0.14), Vector3(-0.38, 2.05, -6.42), Color(0.72, 0.16, 0.12))
+			_add_ship_box(room, "JapaneseEmblemToriiRight", Vector3(0.12, 0.78, 0.14), Vector3(0.38, 2.05, -6.42), Color(0.72, 0.16, 0.12))
+		"wing_chinese":
+			_add_ship_sphere(room, "ChineseEmblemCenter", 0.42, Vector3(0, 2.1, -6.43), Color(0.72, 0.12, 0.08))
+			_add_ship_box(room, "ChineseEmblemTop", Vector3(0.9, 0.12, 0.18), Vector3(0, 2.58, -6.4), GOLD)
+		"wing_french":
+			_add_ship_sphere(room, "FrenchEmblemCenter", 0.26, Vector3(0, 2.1, -6.42), Color(0.2, 0.32, 0.55))
+			_add_ship_sphere(room, "FrenchEmblemUpperLeft", 0.18, Vector3(-0.3, 2.42, -6.42), GOLD)
+			_add_ship_sphere(room, "FrenchEmblemUpperRight", 0.18, Vector3(0.3, 2.42, -6.42), GOLD)
 	var wing_light := OmniLight3D.new()
 	wing_light.position = Vector3(0, 3.4, -1)
 	wing_light.light_color = accent
