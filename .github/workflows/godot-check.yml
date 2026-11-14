@@ -2,7 +2,7 @@ name: Godot project check
 
 on:
   push:
-    branches: [main, sync-latest-approved-decisions-77-79, integration/supabase-godot-auth-readonly]
+    branches: [main, sync-latest-approved-decisions-77-79, integration/supabase-godot-auth-readonly, ui/sunday-city-hud-implementation]
   pull_request:
     branches: [main]
   workflow_dispatch:
