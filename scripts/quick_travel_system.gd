@@ -352,6 +352,19 @@ func _create_wing_room(root: Node3D, id: String, x: float, accent: Color) -> voi
 	_add_ship_box(room, "WingBackWall", Vector3(7.2, 4.2, 0.35), Vector3(0, 2.1, -7), DARK, true)
 	_add_ship_box(room, "WingLeftWall", Vector3(0.35, 4.2, 12), Vector3(-3.6, 2.1, -1), DARK, true)
 	_add_ship_box(room, "WingRightWall", Vector3(0.35, 4.2, 12), Vector3(3.6, 2.1, -1), DARK, true)
+	# حليات أرضية منخفضة على جانبي الممر، لا تعيق حركة اللاعب.
+	_add_ship_box(room, "WingFloorInlayLeft", Vector3(0.08, 0.035, 8.4), Vector3(-3.05, 0.145, -1.0), GOLD)
+	_add_ship_box(room, "WingFloorInlayRight", Vector3(0.08, 0.035, 8.4), Vector3(3.05, 0.145, -1.0), GOLD)
+	_add_ship_box(room, "WingWallTrimLeft", Vector3(0.08, 2.8, 0.16), Vector3(-3.37, 2.2, -1.0), accent)
+	_add_ship_box(room, "WingWallTrimRight", Vector3(0.08, 2.8, 0.16), Vector3(3.37, 2.2, -1.0), accent)
+	var wing_title := Label3D.new()
+	wing_title.name = "WingNamePlaque"
+	wing_title.text = str(wing_titles.get(id, "جناح الحضارة"))
+	wing_title.position = Vector3(0, 3.35, -6.78)
+	wing_title.font_size = 30
+	wing_title.pixel_size = 0.012
+	wing_title.modulate = accent
+	room.add_child(wing_title)
 	_add_ship_box(room, "WingDisplayPlinth", Vector3(2.8, 0.55, 2.8), Vector3(0, 0.4, -2), GOLD)
 	_add_ship_box(room, "WingDisplayColumn", Vector3(0.7, 1.4, 0.7), Vector3(0, 1.25, -2), accent)
 	_add_ship_sphere(room, "WingCivilizationArtifact", 0.65, Vector3(0, 2.35, -2), accent)
