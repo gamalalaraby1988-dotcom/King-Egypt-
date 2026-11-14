@@ -55,7 +55,7 @@ func _process(_delta: float) -> void:
 		return
 	if is_instance_valid(vehicle_summon_button):
 		vehicle_summon_button.visible = true
-		vehicle_summon_button.text = "إحضار السيارة" if CityLanguage.get_language() == "ar" else "Call vehicle"
+		vehicle_summon_button.text = "🚘"
 	if not is_instance_valid(city_vehicle):
 		if is_instance_valid(vehicle_interaction_button):
 			vehicle_interaction_button.visible = false
@@ -85,16 +85,30 @@ func _create_player_vehicle() -> void:
 
 	vehicle_summon_button = Button.new()
 	vehicle_summon_button.name = "VehicleSummonButton"
-	vehicle_summon_button.text = "إحضار السيارة"
-	vehicle_summon_button.custom_minimum_size = Vector2(190, 58)
-	vehicle_summon_button.anchor_left = 0.0
-	vehicle_summon_button.anchor_right = 0.0
-	vehicle_summon_button.anchor_top = 0.0
-	vehicle_summon_button.anchor_bottom = 0.0
-	vehicle_summon_button.offset_left = 24
-	vehicle_summon_button.offset_right = 214
-	vehicle_summon_button.offset_top = 24
-	vehicle_summon_button.offset_bottom = 82
+	vehicle_summon_button.text = "🚘"
+	vehicle_summon_button.tooltip_text = "إحضار السيارة"
+	vehicle_summon_button.custom_minimum_size = Vector2(72, 72)
+	vehicle_summon_button.anchor_left = 1.0
+	vehicle_summon_button.anchor_right = 1.0
+	vehicle_summon_button.anchor_top = 0.62
+	vehicle_summon_button.anchor_bottom = 0.62
+	vehicle_summon_button.offset_left = -94
+	vehicle_summon_button.offset_right = -22
+	vehicle_summon_button.offset_top = -36
+	vehicle_summon_button.offset_bottom = 36
+	vehicle_summon_button.add_theme_font_size_override("font_size", 30)
+	var summon_style := StyleBoxFlat.new()
+	summon_style.bg_color = Color(0.025, 0.035, 0.045, 0.78)
+	summon_style.border_color = Color(0.86, 0.70, 0.36, 0.98)
+	summon_style.set_border_width_all(2)
+	summon_style.set_corner_radius_all(36)
+	summon_style.content_margin_left = 8
+	summon_style.content_margin_right = 8
+	summon_style.content_margin_top = 8
+	summon_style.content_margin_bottom = 8
+	vehicle_summon_button.add_theme_stylebox_override("normal", summon_style)
+	vehicle_summon_button.add_theme_stylebox_override("hover", summon_style)
+	vehicle_summon_button.add_theme_stylebox_override("pressed", summon_style)
 	vehicle_summon_button.pressed.connect(_summon_player_vehicle)
 	layer.add_child(vehicle_summon_button)
 
