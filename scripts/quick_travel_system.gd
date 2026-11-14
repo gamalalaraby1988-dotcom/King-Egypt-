@@ -355,6 +355,24 @@ func _create_wing_room(root: Node3D, id: String, x: float, accent: Color) -> voi
 	# حليات أرضية منخفضة على جانبي الممر، لا تعيق حركة اللاعب.
 	_add_ship_box(room, "WingFloorInlayLeft", Vector3(0.08, 0.035, 8.4), Vector3(-3.05, 0.145, -1.0), GOLD)
 	_add_ship_box(room, "WingFloorInlayRight", Vector3(0.08, 0.035, 8.4), Vector3(3.05, 0.145, -1.0), GOLD)
+	# زخرفة أرضية منخفضة خاصة بكل حضارة، خارج خط السير الأوسط.
+	match id:
+		"wing_greek":
+			_add_ship_box(room, "GreekFloorMotifCrossbar", Vector3(3.8, 0.025, 0.10), Vector3(0, 0.16, -5.0), GOLD)
+			_add_ship_box(room, "GreekFloorMotifSide", Vector3(0.10, 0.025, 2.2), Vector3(-1.85, 0.16, -5.0), accent)
+			_add_ship_box(room, "GreekFloorMotifSide", Vector3(0.10, 0.025, 2.2), Vector3(1.85, 0.16, -5.0), accent)
+		"wing_roman":
+			_add_ship_box(room, "RomanFloorMosaicBar", Vector3(3.8, 0.025, 0.12), Vector3(0, 0.16, -5.0), accent)
+			_add_ship_box(room, "RomanFloorMosaicBar", Vector3(3.8, 0.025, 0.12), Vector3(0, 0.16, -4.55), GOLD)
+		"wing_japanese":
+			_add_ship_box(room, "JapaneseFloorSteppingStone", Vector3(0.85, 0.035, 0.85), Vector3(-2.1, 0.16, -4.8), Color(0.72, 0.66, 0.48))
+			_add_ship_box(room, "JapaneseFloorSteppingStone", Vector3(0.85, 0.035, 0.85), Vector3(2.1, 0.16, -4.8), Color(0.72, 0.66, 0.48))
+		"wing_chinese":
+			_add_ship_box(room, "ChineseFloorBorder", Vector3(3.8, 0.025, 0.12), Vector3(0, 0.16, -5.0), Color(0.72, 0.12, 0.08))
+			_add_ship_box(room, "ChineseFloorGoldLine", Vector3(3.8, 0.025, 0.08), Vector3(0, 0.16, -4.55), GOLD)
+		"wing_french":
+			_add_ship_box(room, "FrenchFloorBlueInlay", Vector3(3.8, 0.025, 0.12), Vector3(0, 0.16, -5.0), Color(0.16, 0.25, 0.42))
+			_add_ship_box(room, "FrenchFloorGoldLine", Vector3(3.8, 0.025, 0.08), Vector3(0, 0.16, -4.55), GOLD)
 	_add_ship_box(room, "WingWallTrimLeft", Vector3(0.08, 2.8, 0.16), Vector3(-3.37, 2.2, -1.0), accent)
 	_add_ship_box(room, "WingWallTrimRight", Vector3(0.08, 2.8, 0.16), Vector3(3.37, 2.2, -1.0), accent)
 	# إضاءة جدارية هادئة وإطار علوي ذهبي موحد لكل جناح.
