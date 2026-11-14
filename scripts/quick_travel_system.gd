@@ -108,6 +108,7 @@ func _create_menu() -> void:
 	menu_list.add_theme_constant_override("separation", 7)
 	menu_scroll.add_child(menu_list)
 	var close := Button.new()
+	close.name = "CloseButton"
 	close.text = "إغلاق"
 	close.custom_minimum_size = Vector2(0, 46)
 	close.pressed.connect(_close_menu)
@@ -122,6 +123,11 @@ func _fit_menu_to_viewport() -> void:
 	var panel_height := minf(490.0, maxf(1.0, viewport_size.y - 48.0))
 	menu_panel.size = Vector2(panel_width, panel_height)
 	menu_panel.position = -menu_panel.size * 0.5
+	var compact_layout := viewport_size.y < 560.0
+	menu_title.add_theme_font_size_override("font_size", 20 if compact_layout else 24)
+	var close_button := menu_panel.get_node_or_null("VBoxContainer/CloseButton") as Button
+	if is_instance_valid(close_button):
+		close_button.custom_minimum_size.y = 42.0 if compact_layout else 46.0
 
 func _on_dim_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed:
@@ -205,7 +211,9 @@ func open_for_gate(gate: Node3D) -> void:
 	for option in options:
 		var button := Button.new()
 		button.text = _destination_button_text(str(option.id), str(option.label))
-		button.custom_minimum_size = Vector2(0, 52)
+		var compact_layout := get_viewport().get_visible_rect().size.y < 560.0
+		button.custom_minimum_size = Vector2(0, 44 if compact_layout else 52)
+		button.add_theme_font_size_override("font_size", 16 if compact_layout else 18)
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		button.alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		button.add_theme_color_override("font_color", Color(0.94, 0.90, 0.79))
