@@ -203,14 +203,54 @@ func open_for_gate(gate: Node3D) -> void:
 		options.append({"id": "beach", "label": "الخروج إلى الشاطئ"})
 	for option in options:
 		var button := Button.new()
-		button.text = str(option.label)
-		button.custom_minimum_size = Vector2(0, 48)
+		button.text = _destination_button_text(str(option.id), str(option.label))
+		button.custom_minimum_size = Vector2(0, 52)
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		button.alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		button.add_theme_color_override("font_color", Color(0.94, 0.90, 0.79))
+		button.add_theme_color_override("font_hover_color", Color(1.0, 0.96, 0.84))
+		button.add_theme_color_override("font_pressed_color", GOLD)
+		var normal := StyleBoxFlat.new()
+		normal.bg_color = Color(0.10, 0.14, 0.14, 0.98)
+		normal.border_color = Color(0.42, 0.34, 0.21)
+		normal.set_border_width_all(1)
+		normal.set_corner_radius_all(9)
+		normal.content_margin_left = 14
+		normal.content_margin_right = 14
+		var hover := normal.duplicate() as StyleBoxFlat
+		hover.bg_color = Color(0.16, 0.19, 0.17, 1.0)
+		hover.border_color = GOLD
+		var pressed := normal.duplicate() as StyleBoxFlat
+		pressed.bg_color = Color(0.19, 0.16, 0.10, 1.0)
+		pressed.border_color = GOLD
+		button.add_theme_stylebox_override("normal", normal)
+		button.add_theme_stylebox_override("hover", hover)
+		button.add_theme_stylebox_override("pressed", pressed)
+		button.add_theme_stylebox_override("focus", hover)
 		button.pressed.connect(_select_destination.bind(str(option.id)))
 		menu_list.add_child(button)
 	var dim := menu_layer.get_node("Dim") as ColorRect
 	dim.visible = true
 	menu_panel.visible = true
+
+func _destination_button_text(destination_id: String, label_text: String) -> String:
+	var symbol := "◆"
+	match destination_id:
+		"ship_hall":
+			symbol = "⚓"
+		"wing_greek":
+			symbol = "🏛"
+		"wing_roman":
+			symbol = "♜"
+		"wing_japanese":
+			symbol = "⛩"
+		"wing_chinese":
+			symbol = "☯"
+		"wing_french":
+			symbol = "⚜"
+		"beach":
+			symbol = "⇦"
+	return "%s   %s" % [symbol, label_text]
 
 func _location_title(location_id: String) -> String:
 	if location_id == "ship_exterior":
