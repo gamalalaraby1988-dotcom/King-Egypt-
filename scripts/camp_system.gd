@@ -1,14 +1,15 @@
 extends Node3D
 ## مخيم بسيط يضم ثمانية أماكن للحيوانات وموظف التأجير.
 
-func _ready() -> void:
-	_build_camp()
-
 var _camp_material_cache: Dictionary = {}
 var _camp_box_mesh_cache: Dictionary = {}
 
+func _ready() -> void:
+	_build_camp()
+
+
 func _mat(color: Color) -> StandardMaterial3D:
-	var key := color.to_html(true)
+	var key := "%s|%s|%s|%s" % [str(color.r), str(color.g), str(color.b), str(color.a)]
 	if _camp_material_cache.has(key):
 		return _camp_material_cache[key] as StandardMaterial3D
 	var material := StandardMaterial3D.new()

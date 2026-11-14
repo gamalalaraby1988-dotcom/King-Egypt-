@@ -21,6 +21,10 @@ var _player_saved_collision_layer := 1
 var _player_saved_collision_mask := 1
 const INTERIOR_WORLD_POSITION := Vector3(1000.0, 0.0, 1000.0)
 
+var _city_material_cache: Dictionary = {}
+var _city_box_mesh_cache: Dictionary = {}
+var _city_collision_shape_cache: Dictionary = {}
+
 func _ready() -> void:
 	_create_ground()
 	_create_city()
@@ -510,12 +514,9 @@ func return_from_building_interior() -> void:
 		manager._update_interaction_target()
 		manager._update_interaction_hud()
 
-var _city_material_cache: Dictionary = {}
-var _city_box_mesh_cache: Dictionary = {}
-var _city_collision_shape_cache: Dictionary = {}
 
 func _material(color: Color) -> StandardMaterial3D:
-	var key := color.to_html(true)
+	var key := "%s|%s|%s|%s" % [str(color.r), str(color.g), str(color.b), str(color.a)]
 	if _city_material_cache.has(key):
 		return _city_material_cache[key] as StandardMaterial3D
 	var material := StandardMaterial3D.new()
