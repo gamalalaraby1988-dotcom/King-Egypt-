@@ -357,6 +357,12 @@ func _create_wing_room(root: Node3D, id: String, x: float, accent: Color) -> voi
 	_add_ship_box(room, "WingFloorInlayRight", Vector3(0.08, 0.035, 8.4), Vector3(3.05, 0.145, -1.0), GOLD)
 	_add_ship_box(room, "WingWallTrimLeft", Vector3(0.08, 2.8, 0.16), Vector3(-3.37, 2.2, -1.0), accent)
 	_add_ship_box(room, "WingWallTrimRight", Vector3(0.08, 2.8, 0.16), Vector3(3.37, 2.2, -1.0), accent)
+	# إضاءة جدارية هادئة وإطار علوي ذهبي موحد لكل جناح.
+	_add_ship_box(room, "WingCeilingTrimFront", Vector3(6.8, 0.12, 0.18), Vector3(0, 4.02, 3.0), GOLD)
+	_add_ship_box(room, "WingCeilingTrimRear", Vector3(6.8, 0.12, 0.18), Vector3(0, 4.02, -5.8), GOLD)
+	for side in [-1.0, 1.0]:
+		_add_ship_box(room, "WingSconceMount", Vector3(0.16, 0.58, 0.32), Vector3(side * 3.28, 2.75, -1.8), GOLD)
+		_add_ship_sphere(room, "WingSconceGlow", 0.19, Vector3(side * 3.18, 2.75, -1.8), accent)
 	var wing_title := Label3D.new()
 	wing_title.name = "WingNamePlaque"
 	wing_title.text = str(wing_titles.get(id, "جناح الحضارة"))
@@ -437,6 +443,13 @@ func _create_wing_room(root: Node3D, id: String, x: float, accent: Color) -> voi
 	wing_light.light_energy = 0.85
 	wing_light.omni_range = 12
 	room.add_child(wing_light)
+	for side in [-1.0, 1.0]:
+		var sconce_light := OmniLight3D.new()
+		sconce_light.position = Vector3(side * 2.85, 2.75, -1.8)
+		sconce_light.light_color = accent
+		sconce_light.light_energy = 0.28
+		sconce_light.omni_range = 4.0
+		room.add_child(sconce_light)
 
 func _add_ship_sphere(parent: Node3D, node_name: String, radius: float, pos: Vector3, color: Color) -> void:
 	var node := MeshInstance3D.new()
