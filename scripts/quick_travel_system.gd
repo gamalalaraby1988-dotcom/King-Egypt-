@@ -48,8 +48,9 @@ func _ready() -> void:
 func _process(_delta: float) -> void:
 	if not is_instance_valid(player):
 		player = city.get_node_or_null("Player") as CharacterBody3D
-	if menu_panel and menu_panel.visible and (not is_instance_valid(active_gate) or player.global_position.distance_to(active_gate.global_position) > 6.0):
-		_close_menu()
+	if menu_panel and menu_panel.visible:
+		if not is_instance_valid(player) or not is_instance_valid(active_gate) or player.global_position.distance_to(active_gate.global_position) > 6.0:
+			_close_menu()
 
 func _create_menu() -> void:
 	menu_layer = CanvasLayer.new()
