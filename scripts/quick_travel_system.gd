@@ -285,6 +285,8 @@ func _move_inside_ship(location_id: String) -> void:
 	ship_current_location = location_id
 	var destination: Vector3 = wing_spawns.get(location_id, SHIP_WORLD_POSITION + Vector3(0, 1.1, 7.0))
 	player.global_position = destination
+	if wing_titles.has(location_id):
+		player.rotation.y = PI
 	player.velocity = Vector3.ZERO
 	player.set_physics_process(true)
 	city.set("interior_transition_busy", false)
@@ -365,7 +367,8 @@ func _create_wing_room(root: Node3D, id: String, x: float, accent: Color) -> voi
 	room.add_child(return_label)
 	var return_gate := _make_gate("return_" + id, "بوابة العودة إلى القاعة الرئيسية", id, room)
 	return_gate.position = Vector3(0, 0, 3.4)
-	wing_spawns[id] = SHIP_WORLD_POSITION + Vector3(x, 1.1, -8.0)
+	# نقطة الوصول قريبة بما يكفي من بوابة العودة داخل الجناح، مع مساحة حركة أمامها.
+	wing_spawns[id] = SHIP_WORLD_POSITION + Vector3(x, 1.1, -3.8)
 	# عناصر معمارية مميزة لكل حضارة، دون إضافة طابق أو كتلة مبنى مستقلة.
 	match id:
 		"wing_greek":
