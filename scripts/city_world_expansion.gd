@@ -215,8 +215,12 @@ func _create_king_summit() -> void:
 		var finish := path_points[index + 1]
 		var midpoint := (start + finish) * 0.5
 		var direction := finish - start
-		var road := _box(mountain, "SummitRoad_%02d" % index, Vector3(7.0, 0.28, direction.length() + 1.0), midpoint - mountain.position, ROAD_COLOR, true)
+		var road_name := "SummitRoad_%02d" % index
+		var road := _box(mountain, road_name, Vector3(7.0, 0.28, direction.length() + 1.0), midpoint - mountain.position, ROAD_COLOR, true)
 		road.look_at(finish, Vector3.UP)
+		var road_collision := mountain.get_node_or_null(road_name + "_Collision") as StaticBody3D
+		if is_instance_valid(road_collision):
+			road_collision.rotation = road.rotation
 
 
 func _create_pyramid_district() -> void:
