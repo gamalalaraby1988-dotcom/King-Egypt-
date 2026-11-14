@@ -15,6 +15,8 @@ signal group_leader_move_requested(target_position: Vector3)
 var main_scene: Node
 var mission_manager: Node
 var root: Control
+var left_controls: VBoxContainer
+var bottom_controls: HBoxContainer
 var popup: PanelContainer
 var popup_title: Label
 var popup_body: Label
@@ -124,17 +126,17 @@ func _build() -> void:
 	chips_label = _make_button(top, "رقائق: 0  +", "wallet")
 	gems_label = _make_button(top, "جواهر: 0", "wallet")
 
-	var left := VBoxContainer.new()
-	left.anchor_left = 0.012
-	left.anchor_top = 0.15
-	left.anchor_bottom = 0.68
-	left.offset_right = 150
-	left.add_theme_constant_override("separation", 7)
-	root.add_child(left)
-	_make_button(left, "👤 الملف", "profile")
-	_make_button(left, "📜 المهام", "missions")
-	_make_button(left, "🎁 المكافآت", "rewards")
-	_make_button(left, "🏆 الإنجازات", "missions")
+	left_controls = VBoxContainer.new()
+	left_controls.anchor_left = 0.012
+	left_controls.anchor_top = 0.15
+	left_controls.anchor_bottom = 0.68
+	left_controls.offset_right = 150
+	left_controls.add_theme_constant_override("separation", 7)
+	root.add_child(left_controls)
+	_make_button(left_controls, "👤 الملف", "profile")
+	_make_button(left_controls, "📜 المهام", "missions")
+	_make_button(left_controls, "🎁 المكافآت", "rewards")
+	_make_button(left_controls, "🏆 الإنجازات", "missions")
 
 	var right := VBoxContainer.new()
 	right.anchor_left = 1.0
@@ -151,21 +153,20 @@ func _build() -> void:
 	_make_button(right, "🗺 الخريطة", "map")
 	_make_button(right, "🐈 الحيوانات", "pets")
 
-	var bottom := HBoxContainer.new()
-	bottom.anchor_left = 0.28
-	bottom.anchor_right = 0.72
-	bottom.anchor_top = 1.0
-	bottom.anchor_bottom = 1.0
-	bottom.offset_top = -66
-	bottom.alignment = BoxContainer.ALIGNMENT_CENTER
-	bottom.add_theme_constant_override("separation", 8)
-	root.add_child(bottom)
-	_make_button(bottom, "💬 محادثة", "chat")
-	_make_button(bottom, "👥 أصدقاء", "social")
-	_make_button(bottom, "🛡 مجموعتي", "group")
-	_make_button(bottom, "😊 تعبيرات", "emotes")
-	_make_button(bottom, "🎉 حفلة", "party")
-	_make_button(bottom, "⚙", "settings")
+	bottom_controls = HBoxContainer.new()
+	bottom_controls.anchor_left = 0.28
+	bottom_controls.anchor_right = 0.72
+	bottom_controls.anchor_top = 1.0
+	bottom_controls.anchor_bottom = 1.0
+	bottom_controls.alignment = BoxContainer.ALIGNMENT_CENTER
+	bottom_controls.add_theme_constant_override("separation", 8)
+	root.add_child(bottom_controls)
+	_make_button(bottom_controls, "💬 محادثة", "chat")
+	_make_button(bottom_controls, "👥 أصدقاء", "social")
+	_make_button(bottom_controls, "🛡 مجموعتي", "group")
+	_make_button(bottom_controls, "😊 تعبيرات", "emotes")
+	_make_button(bottom_controls, "🎉 حفلة", "party")
+	_make_button(bottom_controls, "⚙", "settings")
 
 	popup = PanelContainer.new()
 	popup.anchor_left = 0.5
@@ -194,6 +195,30 @@ func _build() -> void:
 	close.text = "إغلاق"
 	close.pressed.connect(func(): popup.visible = false)
 	content.add_child(close)
+	root.resized.connect(_layout_mobile_controls)
+	_layout_mobile_controls()
+
+func _layout_mobile_controls() -> void:
+	if not is_instance_valid(root):
+		return
+	var viewport_size := root.size
+	if viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
+		return
+	# Keep HUD controls outside the joystick's full touch-capture circle.
+	# These dimensions mirror MobileHUD's responsive joystick sizing.
+	var short_side := minf(viewport_size.x, viewport_size.y)
+	var scale_factor := clampf(short_side / 720.0, 0.58, 1.0)
+	var margin := 24.0 * scale_factor
+	var joystick_radius := 72.0 * scale_factor
+	var touch_radius := joystick_radius * 1.55
+	var clearance := 18.0 * scale_factor
+	if is_instance_valid(bottom_controls):
+		var bottom_gap := margin + touch_radius + clearance
+		bottom_controls.offset_bottom = -bottom_gap
+		bottom_controls.offset_top = -(bottom_gap + 70.0 * scale_factor)
+	if is_instance_valid(left_controls):
+		var safe_bottom_y := viewport_size.y - margin - joystick_radius - touch_radius - clearance
+		left_controls.anchor_bottom = clampf(safe_bottom_y / viewport_size.y, 0.25, 0.68)
 
 func _make_button(parent: Control, caption: String, section: String) -> Button:
 	var icons := {
