@@ -311,15 +311,18 @@ func _build_ship_interior() -> Node3D:
 	_add_ship_box(root, "HallGoldBand", Vector3(40, 0.22, 0.3), Vector3(0, 3.7, -16.7), GOLD)
 	_add_ship_box(root, "HallDisplayBase", Vector3(4.8, 0.55, 4.8), Vector3(0, 0.45, -3), GOLD)
 	_add_ship_box(root, "HallDisplayColumn", Vector3(1.1, 2.5, 1.1), Vector3(0, 1.9, -3), Color(0.82, 0.70, 0.43))
+	_add_ship_sphere(root, "FiveCivilizationsGoldenEmblem", 0.9, Vector3(0, 3.55, -3), GOLD)
 	var hall_gate := _make_gate("ship_hall", "بوابة القاعة الرئيسية", "ship_hall", root)
 	hall_gate.position = Vector3(0, 0, 13)
-	for index in range(5):
-		var ids := ["wing_greek", "wing_roman", "wing_japanese", "wing_chinese", "wing_french"]
+	# البوابات الحضارية الخمس مجتمعة داخل القاعة الرئيسية فقط.
+	var ids := ["wing_greek", "wing_roman", "wing_japanese", "wing_chinese", "wing_french"]
+	for index in range(ids.size()):
 		var id: String = ids[index]
 		var x := -16.0 + float(index) * 8.0
 		var color: Color = wing_colors[id]
 		_add_ship_box(root, "WingPortalFrame_" + id, Vector3(5.8, 4.4, 0.45), Vector3(x, 2.2, 8.0), GOLD, true)
 		_add_ship_box(root, "WingPortalDark_" + id, Vector3(4.7, 3.5, 0.18), Vector3(x, 1.95, 7.72), DARK)
+		_add_ship_box(root, "WingPortalAccent_" + id, Vector3(4.1, 0.12, 0.12), Vector3(x, 3.75, 7.58), color)
 		var label := Label3D.new()
 		label.text = str(wing_titles[id])
 		label.position = Vector3(x, 4.8, 7.7)
@@ -329,7 +332,6 @@ func _build_ship_interior() -> Node3D:
 		root.add_child(label)
 		var gate := _make_gate(id, "بوابة " + str(wing_titles[id]), id, root)
 		gate.position = Vector3(x, 0, 6.0)
-		wing_spawns[id] = SHIP_WORLD_POSITION + Vector3(x, 1.1, -5.0)
 		_create_wing_room(root, id, x, color)
 	var light := OmniLight3D.new()
 	light.position = Vector3(0, 4.4, 0)
@@ -349,12 +351,78 @@ func _create_wing_room(root: Node3D, id: String, x: float, accent: Color) -> voi
 	_add_ship_box(room, "WingLeftWall", Vector3(0.35, 4.2, 12), Vector3(-3.6, 2.1, -1), DARK, true)
 	_add_ship_box(room, "WingRightWall", Vector3(0.35, 4.2, 12), Vector3(3.6, 2.1, -1), DARK, true)
 	_add_ship_box(room, "WingDisplayPlinth", Vector3(2.8, 0.55, 2.8), Vector3(0, 0.4, -2), GOLD)
+	_add_ship_box(room, "WingDisplayColumn", Vector3(0.7, 1.4, 0.7), Vector3(0, 1.25, -2), accent)
+	_add_ship_sphere(room, "WingCivilizationArtifact", 0.65, Vector3(0, 2.35, -2), accent)
+	# لكل جناح بوابة رجوع واحدة إلى القاعة؛ أما بوابات الحضارات الخمس فتبقى في القاعة.
+	_add_ship_box(room, "ReturnGateFrame", Vector3(3.4, 3.8, 0.35), Vector3(0, 1.9, 4.2), GOLD)
+	_add_ship_box(room, "ReturnGateInset", Vector3(2.65, 2.9, 0.16), Vector3(0, 1.75, 4.0), DARK)
+	var return_label := Label3D.new()
+	return_label.text = "العودة إلى القاعة الرئيسية"
+	return_label.position = Vector3(0, 4.0, 3.85)
+	return_label.font_size = 20
+	return_label.pixel_size = 0.012
+	return_label.modulate = GOLD
+	room.add_child(return_label)
+	var return_gate := _make_gate("return_" + id, "بوابة العودة إلى القاعة الرئيسية", id, room)
+	return_gate.position = Vector3(0, 0, 3.4)
+	wing_spawns[id] = SHIP_WORLD_POSITION + Vector3(x, 1.1, -8.0)
+	# عناصر معمارية مميزة لكل حضارة، دون إضافة طابق أو كتلة مبنى مستقلة.
+	match id:
+		"wing_greek":
+			for side in [-1.0, 1.0]:
+				_add_ship_cylinder(room, "GreekMarbleColumn", 0.34, 3.0, Vector3(side * 2.7, 1.65, -4.5), Color(0.88, 0.84, 0.72))
+			_add_ship_box(room, "GreekPediment", Vector3(6.2, 0.35, 0.45), Vector3(0, 3.35, -4.5), GOLD)
+			_add_ship_box(room, "GreekFrieze", Vector3(5.8, 0.18, 0.22), Vector3(0, 2.95, -4.25), Color(0.88, 0.84, 0.72))
+		"wing_roman":
+			for side in [-1.0, 1.0]:
+				_add_ship_cylinder(room, "RomanPillar", 0.42, 3.2, Vector3(side * 2.65, 1.75, -4.4), Color(0.73, 0.55, 0.43))
+			_add_ship_box(room, "RomanArchLintel", Vector3(6.0, 0.55, 0.55), Vector3(0, 3.45, -4.4), GOLD)
+			_add_ship_box(room, "RomanMosaicBand", Vector3(6.4, 0.12, 0.5), Vector3(0, 0.22, -4.4), Color(0.76, 0.55, 0.28))
+		"wing_japanese":
+			_add_ship_box(room, "JapaneseRoofLower", Vector3(7.0, 0.22, 2.0), Vector3(0, 3.65, -4.5), Color(0.25, 0.12, 0.10))
+			_add_ship_box(room, "JapaneseRoofUpper", Vector3(5.8, 0.2, 1.45), Vector3(0, 3.95, -4.5), accent)
+			_add_ship_box(room, "JapaneseGardenPath", Vector3(1.1, 0.08, 4.0), Vector3(0, 0.22, -4.5), Color(0.72, 0.66, 0.48))
+			_add_ship_sphere(room, "JapaneseLantern", 0.34, Vector3(-2.4, 2.5, -4.5), GOLD)
+			_add_ship_sphere(room, "JapaneseLantern", 0.34, Vector3(2.4, 2.5, -4.5), GOLD)
+		"wing_chinese":
+			_add_ship_box(room, "ChineseRoofLower", Vector3(7.0, 0.24, 1.8), Vector3(0, 3.65, -4.5), Color(0.45, 0.08, 0.06))
+			_add_ship_box(room, "ChineseRoofUpper", Vector3(5.7, 0.2, 1.35), Vector3(0, 3.95, -4.5), GOLD)
+			_add_ship_sphere(room, "ChineseLantern", 0.42, Vector3(-2.5, 2.5, -4.2), Color(0.72, 0.12, 0.08))
+			_add_ship_sphere(room, "ChineseLantern", 0.42, Vector3(2.5, 2.5, -4.2), Color(0.72, 0.12, 0.08))
+		"wing_french":
+			for side in [-1.0, 1.0]:
+				_add_ship_cylinder(room, "FrenchDecorativeColumn", 0.28, 3.1, Vector3(side * 2.75, 1.7, -4.5), Color(0.82, 0.78, 0.69))
+			_add_ship_box(room, "FrenchRoyalCornice", Vector3(6.8, 0.24, 0.55), Vector3(0, 3.45, -4.5), GOLD)
+			_add_ship_box(room, "FrenchBluePanel", Vector3(4.8, 1.5, 0.18), Vector3(0, 2.0, -6.7), Color(0.16, 0.25, 0.42))
 	var wing_light := OmniLight3D.new()
 	wing_light.position = Vector3(0, 3.4, -1)
 	wing_light.light_color = accent
 	wing_light.light_energy = 0.85
 	wing_light.omni_range = 12
 	room.add_child(wing_light)
+
+func _add_ship_sphere(parent: Node3D, node_name: String, radius: float, pos: Vector3, color: Color) -> void:
+	var node := MeshInstance3D.new()
+	node.name = node_name
+	var mesh := SphereMesh.new()
+	mesh.radius = radius
+	mesh.height = radius * 2.0
+	node.mesh = mesh
+	node.position = pos
+	node.material_override = _make_material(color)
+	parent.add_child(node)
+
+func _add_ship_cylinder(parent: Node3D, node_name: String, radius: float, height: float, pos: Vector3, color: Color) -> void:
+	var node := MeshInstance3D.new()
+	node.name = node_name
+	var mesh := CylinderMesh.new()
+	mesh.top_radius = radius
+	mesh.bottom_radius = radius
+	mesh.height = height
+	node.mesh = mesh
+	node.position = pos
+	node.material_override = _make_material(color)
+	parent.add_child(node)
 
 func _add_ship_box(parent: Node3D, name: String, size: Vector3, pos: Vector3, color: Color, collision: bool = false) -> void:
 	var mesh_node := MeshInstance3D.new()
