@@ -510,19 +510,43 @@ func return_from_building_interior() -> void:
 		manager._update_interaction_target()
 		manager._update_interaction_hud()
 
+var _city_material_cache: Dictionary = {}
+var _city_box_mesh_cache: Dictionary = {}
+var _city_collision_shape_cache: Dictionary = {}
+
 func _material(color: Color) -> StandardMaterial3D:
+	var key := color.to_html(true)
+	if _city_material_cache.has(key):
+		return _city_material_cache[key] as StandardMaterial3D
 	var material := StandardMaterial3D.new()
 	material.albedo_color = color
 	material.roughness = 0.9
+	_city_material_cache[key] = material
 	return material
+
+func _get_city_box_mesh(size: Vector3) -> BoxMesh:
+	var key := "%s|%s|%s" % [str(size.x), str(size.y), str(size.z)]
+	if _city_box_mesh_cache.has(key):
+		return _city_box_mesh_cache[key] as BoxMesh
+	var mesh := BoxMesh.new()
+	mesh.size = size
+	_city_box_mesh_cache[key] = mesh
+	return mesh
+
+func _get_city_collision_shape(size: Vector3) -> BoxShape3D:
+	var key := "%s|%s|%s" % [str(size.x), str(size.y), str(size.z)]
+	if _city_collision_shape_cache.has(key):
+		return _city_collision_shape_cache[key] as BoxShape3D
+	var shape := BoxShape3D.new()
+	shape.size = size
+	_city_collision_shape_cache[key] = shape
+	return shape
 
 func _create_box(parent: Node3D, name: String, size: Vector3, pos: Vector3, color: Color, collision: bool = false) -> void:
 	var mesh_instance := MeshInstance3D.new()
 	mesh_instance.name = name
 	mesh_instance.add_to_group("city_world_geometry")
-	var mesh := BoxMesh.new()
-	mesh.size = size
-	mesh_instance.mesh = mesh
+	mesh_instance.mesh = _get_city_box_mesh(size)
 	mesh_instance.position = pos
 	mesh_instance.material_override = _material(color)
 	parent.add_child(mesh_instance)
@@ -531,9 +555,7 @@ func _create_box(parent: Node3D, name: String, size: Vector3, pos: Vector3, colo
 		body.name = name + "Collision"
 		body.add_to_group("city_world_geometry")
 		var shape_node := CollisionShape3D.new()
-		var shape := BoxShape3D.new()
-		shape.size = size
-		shape_node.shape = shape
+		shape_node.shape = _get_city_collision_shape(size)
 		body.position = pos
 		body.add_child(shape_node)
 		parent.add_child(body)

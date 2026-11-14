@@ -4,18 +4,32 @@ extends Node3D
 func _ready() -> void:
 	_build_camp()
 
+var _camp_material_cache: Dictionary = {}
+var _camp_box_mesh_cache: Dictionary = {}
+
 func _mat(color: Color) -> StandardMaterial3D:
-	var m := StandardMaterial3D.new()
-	m.albedo_color = color
-	m.roughness = 0.95
-	return m
+	var key := color.to_html(true)
+	if _camp_material_cache.has(key):
+		return _camp_material_cache[key] as StandardMaterial3D
+	var material := StandardMaterial3D.new()
+	material.albedo_color = color
+	material.roughness = 0.95
+	_camp_material_cache[key] = material
+	return material
+
+func _get_box_mesh(size: Vector3) -> BoxMesh:
+	var key := "%s|%s|%s" % [str(size.x), str(size.y), str(size.z)]
+	if _camp_box_mesh_cache.has(key):
+		return _camp_box_mesh_cache[key] as BoxMesh
+	var mesh := BoxMesh.new()
+	mesh.size = size
+	_camp_box_mesh_cache[key] = mesh
+	return mesh
 
 func _box(parent: Node3D, label: String, size: Vector3, pos: Vector3, color: Color) -> void:
 	var node := MeshInstance3D.new()
 	node.name = label
-	var mesh := BoxMesh.new()
-	mesh.size = size
-	node.mesh = mesh
+	node.mesh = _get_box_mesh(size)
 	node.position = pos
 	node.material_override = _mat(color)
 	parent.add_child(node)
@@ -35,25 +49,26 @@ func _build_camp() -> void:
 	for x in [-4.0, 4.0]:
 		for z in [-2.5, 2.5]:
 			_box(self, "CanopyPost", Vector3(0.22, 3.2, 0.22), Vector3(x, 1.6, z), Color(0.30, 0.20, 0.12))
+	# مشاركة موارد مجسمات الحيوانات المتكررة بدل إنشاء نسخة هندسية لكل حيوان.
+	var shared_body_mesh := CapsuleMesh.new()
+	shared_body_mesh.radius = 0.48
+	shared_body_mesh.height = 1.8
+	var shared_head_mesh := SphereMesh.new()
+	shared_head_mesh.radius = 0.34
+	shared_head_mesh.height = 0.68
 	# ثمانية أماكن واضحة للحيوانات، مع مجسمات أولية خفيفة.
 	for i in range(8):
 		var animal := Node3D.new()
 		animal.name = "CampAnimal_%02d" % (i + 1)
 		var col := Color(0.48 + float(i % 3) * 0.12, 0.30 + float(i % 2) * 0.12, 0.18 + float(i % 4) * 0.06)
 		var body := MeshInstance3D.new()
-		var body_mesh := CapsuleMesh.new()
-		body_mesh.radius = 0.48
-		body_mesh.height = 1.8
-		body.mesh = body_mesh
+		body.mesh = shared_body_mesh
 		body.rotation.z = PI / 2.0
 		body.position.y = 0.95
 		body.material_override = _mat(col)
 		animal.add_child(body)
 		var head := MeshInstance3D.new()
-		var head_mesh := SphereMesh.new()
-		head_mesh.radius = 0.34
-		head_mesh.height = 0.68
-		head.mesh = head_mesh
+		head.mesh = shared_head_mesh
 		head.position = Vector3(0, 1.55, -0.65)
 		head.material_override = _mat(col.lightened(0.12))
 		animal.add_child(head)
