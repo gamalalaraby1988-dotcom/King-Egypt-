@@ -120,7 +120,7 @@ func _create_menu() -> void:
 	column.add_child(close)
 
 func _fit_menu_to_viewport() -> void:
-	if not is_instance_valid(menu_panel):
+	if not is_instance_valid(menu_panel) or not is_instance_valid(menu_title):
 		return
 	var viewport_size := get_viewport().get_visible_rect().size
 	# لا نفرض حدًا أدنى أكبر من الشاشة؛ هذا يمنع قص النافذة في الشاشات الصغيرة أو الوضع الأفقي.
@@ -133,6 +133,12 @@ func _fit_menu_to_viewport() -> void:
 	var close_button := menu_panel.get_node_or_null("VBoxContainer/CloseButton") as Button
 	if is_instance_valid(close_button):
 		close_button.custom_minimum_size.y = 42.0 if compact_layout else 46.0
+	# حدّث أزرار الوجهات المفتوحة أيضًا عند تدوير الهاتف أو تغيير حجم النافذة.
+	if is_instance_valid(menu_list):
+		for child in menu_list.get_children():
+			if child is Button:
+				child.custom_minimum_size.y = 44.0 if compact_layout else 52.0
+				child.add_theme_font_size_override("font_size", 16 if compact_layout else 18)
 
 func _on_dim_input(event: InputEvent) -> void:
 	# هذه الإشارة تصل عند الضغط على طبقة التعتيم خارج لوحة القائمة.
