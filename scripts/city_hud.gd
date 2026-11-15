@@ -722,7 +722,7 @@ func can_show_group_gather_button(is_leader: bool, member_count: int, inside_apa
 
 
 func can_submit_group_invitation_response(pending_invite_id: String, invite_id: String) -> bool:
-	return pending_invite_id.strip_edges().is_empty() and not invite_id.strip_edges().is_empty()
+	return pending_invite_id.strip_edges().is_empty() and SocialChatManager.is_valid_invite_id(invite_id)
 
 
 func _update_group_gather_visibility() -> void:
