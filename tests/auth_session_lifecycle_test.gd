@@ -121,11 +121,23 @@ func _run_auth_session_tests() -> void:
 		quit(1)
 		return
 
+	# A realtime socket remains bound to the exact identity and generation that opened it.
+	social._realtime_session_user_id = "00000000-0000-4000-8000-000000000001"
+	social._realtime_session_generation = auth.get_session_generation()
+	if not social._realtime_session_is_current():
+		push_error("Realtime socket did not recognize its owning authenticated session.")
+		quit(1)
+		return
+
 	# Switch to a second authenticated UID and verify its achievement file is isolated.
 	auth._advance_session_generation()
 	auth._authenticated_user_id = "00000000-0000-4000-8000-000000000002"
 	auth._authenticated_email = "ci-session-b@example.invalid"
 	auth.session_changed.emit("00000000-0000-4000-8000-000000000001", "00000000-0000-4000-8000-000000000002", auth.get_session_generation())
+	if social._realtime_session_is_current() or not social._realtime_session_user_id.is_empty() or social._realtime_session_generation != -1:
+		push_error("Realtime socket retained account A ownership after switching to account B.")
+		quit(1)
+		return
 	# A delayed callback from A must not consume or overwrite B's active RPC slot.
 	var stale_rpc_request := HTTPRequest.new()
 	var current_rpc_request := HTTPRequest.new()
