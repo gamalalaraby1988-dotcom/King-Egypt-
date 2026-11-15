@@ -213,7 +213,11 @@ func _run_social_validation_tests() -> void:
 		push_error("Queued invitations became actionable while the previous response was pending.")
 		quit(1)
 		return
-	invitation_overlay.call("_tick", 2.0)
+	# Simulate real elapsed wall-clock time, including time spent backgrounded.
+	for queued_item in invitation_overlay._queue:
+		if str(queued_item.get("invite_id", "")) == "ci-queued-expired":
+			queued_item["expires_at"] = float(Time.get_unix_time_from_system()) - 1.0
+	invitation_overlay.call("_tick", 0.0)
 	if expired_count[0] != 2 or invitation_overlay.get_pending_invitation_count() != 1 or not invitation_overlay._current.is_empty():
 		push_error("A queued invitation did not expire while the previous response was pending.")
 		quit(1)
