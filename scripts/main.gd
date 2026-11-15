@@ -54,6 +54,20 @@ func _ready() -> void:
 	_create_interior_transition_ui()
 	_create_player_vehicle()
 	_create_auth_login_panel()
+	_create_character_selection_ui()
+
+
+func _create_character_selection_ui() -> void:
+	# شاشة معاينة الشخصيات الجاهزة؛ الاختيار النهائي ينتظر الأصول وخدمة الملف الشخصي.
+	var selection_script := load("res://scripts/character_selection_ui.gd") as Script
+	if selection_script == null:
+		push_warning("تعذر تحميل واجهة اختيار الشخصيات.")
+		return
+	var selection_ui := CanvasLayer.new()
+	selection_ui.name = "CharacterSelectionUI"
+	selection_ui.set_script(selection_script)
+	selection_ui.set("player", get_node_or_null("Player"))
+	add_child(selection_ui)
 
 
 func _create_auth_login_panel() -> void:
