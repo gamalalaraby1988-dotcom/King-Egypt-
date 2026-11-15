@@ -24,6 +24,22 @@ func _run_social_validation_tests() -> void:
 		quit(1)
 		return
 
+	social.set_realtime_player_code("bad-code")
+	if not social._realtime_player_code.is_empty() or social._realtime_topics.has("chat:invites:BAD-CODE"):
+		push_error("An invalid player identity created a realtime invitation subscription.")
+		quit(1)
+		return
+	social.set_realtime_player_code("AB12CD34EF")
+	if social._realtime_player_code != "AB12CD34EF" or not social._realtime_topics.has("chat:invites:AB12CD34EF"):
+		push_error("A valid player identity did not create its invitation subscription.")
+		quit(1)
+		return
+	social.set_realtime_player_code("")
+	if not social._realtime_player_code.is_empty() or social._realtime_topics.has("chat:invites:AB12CD34EF"):
+		push_error("Clearing a player identity left its realtime invitation subscription active.")
+		quit(1)
+		return
+
 	if social.open_direct_conversation("bad-code"):
 		push_error("Invalid player code was accepted for direct conversation.")
 		quit(1)
