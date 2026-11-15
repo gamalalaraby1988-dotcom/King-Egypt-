@@ -273,6 +273,22 @@ func _run_social_validation_tests() -> void:
 	var invitation_script: Script = load("res://scripts/invitation_overlay.gd")
 	var invitation_overlay: Control = invitation_script.new()
 	root.add_child(invitation_overlay)
+	var invitation_now := float(Time.get_unix_time_from_system())
+	var capped_deadline := float(invitation_overlay.call("resolve_invitation_expiry", {
+		"expires_at": invitation_now + 90.0
+	}, invitation_now))
+	if capped_deadline > invitation_now + 30.0:
+		push_error("A supplied invitation deadline extended the approved 30-second lifetime.")
+		quit(1)
+		return
+	var stale_created_at := Time.get_datetime_string_from_unix_time(int(invitation_now) - 40)
+	var stale_deadline := float(invitation_overlay.call("resolve_invitation_expiry", {
+		"created_at": stale_created_at
+	}, invitation_now))
+	if stale_deadline > invitation_now - 9.0:
+		push_error("An invitation created more than 30 seconds ago received a fresh lifetime.")
+		quit(1)
+		return
 	invitation_overlay.enqueue_invitation({
 		"invite_id": "ci-account-a-invite",
 		"title": "CI invitation",
