@@ -8,6 +8,7 @@ var _status_label: Label
 var _send_button: Button
 var _verify_button: Button
 var _enter_button: Button
+var _otp_available := false
 
 func _ready() -> void:
 	layer = 80
@@ -97,6 +98,8 @@ func _build_ui() -> void:
 
 func _request_otp() -> void:
 	var email := _email_input.text.strip_edges()
+	_otp_available = false
+	_verify_button.disabled = true
 	_send_button.disabled = true
 	_status_label.text = "جارٍ طلب رمز التحقق..."
 	if not AuthManager.request_email_otp(email):
@@ -109,6 +112,7 @@ func _verify_otp() -> void:
 		_verify_button.disabled = false
 
 func _on_otp_sent(_email: String) -> void:
+	_otp_available = true
 	_send_button.disabled = false
 	_verify_button.disabled = false
 	_status_label.text = "إذا كان البريد مسجلًا ومسموحًا له بتسجيل الدخول، فسيصلك رمز. أدخله هنا."
@@ -126,5 +130,5 @@ func _enter_city() -> void:
 
 func _on_authentication_failed(message: String) -> void:
 	_send_button.disabled = false
-	_verify_button.disabled = false
+	_verify_button.disabled = not _otp_available
 	_status_label.text = message
