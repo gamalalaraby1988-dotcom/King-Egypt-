@@ -1,7 +1,10 @@
 extends Node
 ## إنجازات دائمة محليًا مرتبطة بالتجول والوظائف والمهام والأنشطة اليومية.
 
-const SAVE_PATH := "user://kings_city_achievements.cfg"
+const LEGACY_SAVE_PATH := "user://kings_city_achievements.cfg"
+var _save_path := ""
+var _profile_session_uid := ""
+var _profile_session_generation := -1
 var player: Node3D
 var mission_manager: Node
 var walked_meters := 0.0
@@ -22,6 +25,29 @@ var summary_label: Label
 var open_button: Button
 
 func _ready() -> void:
+	_build_ui()
+	if not AccountDataSession.session_ready.is_connected(_on_account_session_ready):
+		AccountDataSession.session_ready.connect(_on_account_session_ready)
+	if not AccountDataSession.session_invalidated.is_connected(_on_account_session_invalidated):
+		AccountDataSession.session_invalidated.connect(_on_account_session_invalidated)
+	if AccountDataSession.is_ready():
+		_on_account_session_ready(AccountDataSession.get_user_id(), AccountDataSession.get_generation(), AccountDataSession.get_profile_path())
+
+func _exit_tree() -> void:
+	if AccountDataSession.session_ready.is_connected(_on_account_session_ready):
+		AccountDataSession.session_ready.disconnect(_on_account_session_ready)
+	if AccountDataSession.session_invalidated.is_connected(_on_account_session_invalidated):
+		AccountDataSession.session_invalidated.disconnect(_on_account_session_invalidated)
+
+func _on_account_session_ready(user_id: String, generation: int, profile_path: String) -> void:
+	if not AccountDataSession.is_session_current(user_id, generation):
+		return
+	_profile_session_uid = user_id
+	_profile_session_generation = generation
+	_save_path = profile_path.get_base_dir() + "/achievements.cfg"
+	walked_meters = 0.0
+	totals = {"jobs": 0, "missions": 0, "daily_claims": 0}
+	unlocked = {}
 	_load_state()
 	if is_instance_valid(mission_manager) and mission_manager.has_method("initialize_achievement_totals_if_missing"):
 		mission_manager.initialize_achievement_totals_if_missing(totals)
@@ -30,11 +56,24 @@ func _ready() -> void:
 	last_saved_walk_meters = walked_meters
 	if is_instance_valid(player):
 		last_position = player.global_position
-	_build_ui()
 	_check_all()
 
+func _on_account_session_invalidated(_previous_user_id: String, _generation: int) -> void:
+	_profile_session_uid = ""
+	_profile_session_generation = -1
+	_save_path = ""
+	walked_meters = 0.0
+	last_saved_walk_meters = 0.0
+	last_position = Vector3.ZERO
+	totals = {"jobs": 0, "missions": 0, "daily_claims": 0}
+	unlocked = {}
+	_refresh_ui()
+
+func _has_active_profile_session() -> bool:
+	return not _save_path.is_empty() and AccountDataSession.is_session_current(_profile_session_uid, _profile_session_generation)
+
 func _process(_delta: float) -> void:
-	if not is_instance_valid(player):
+	if not _has_active_profile_session() or not is_instance_valid(player):
 		return
 	var current := player.global_position
 	var step := Vector2(current.x - last_position.x, current.z - last_position.z).length()
@@ -100,23 +139,28 @@ func _check_all() -> void:
 	_refresh_ui()
 
 func _save_state() -> void:
+	if not _has_active_profile_session():
+		return
+	var save_path := _save_path
 	var cfg := ConfigFile.new()
-	var load_error := cfg.load(SAVE_PATH)
-	if load_error != OK and FileAccess.file_exists(SAVE_PATH):
+	var load_error := cfg.load(save_path)
+	if load_error != OK and FileAccess.file_exists(save_path):
 		push_warning("ملف الإنجازات موجود لكنه غير قابل للقراءة؛ أُوقفت الكتابة لحماية التقدم السابق.")
 		return
 	cfg.set_value("achievements", "walked_meters", walked_meters)
 	cfg.set_value("achievements", "totals", totals)
 	cfg.set_value("achievements", "unlocked", unlocked)
-	var error := cfg.save(SAVE_PATH)
+	var error := cfg.save(save_path)
 	if error != OK:
 		push_warning("تعذر حفظ الإنجازات: %s" % error)
 	else:
 		last_saved_walk_meters = walked_meters
 
 func _load_state() -> void:
+	if not _has_active_profile_session():
+		return
 	var cfg := ConfigFile.new()
-	if cfg.load(SAVE_PATH) != OK:
+	if cfg.load(_save_path) != OK:
 		return
 	var saved_walked: float = float(cfg.get_value("achievements", "walked_meters", 0.0))
 	walked_meters = maxf(0.0, saved_walked) if is_finite(saved_walked) else 0.0
