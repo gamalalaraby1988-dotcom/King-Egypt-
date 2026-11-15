@@ -96,6 +96,10 @@ func get_authenticated_email() -> String:
 	return _authenticated_email
 
 func clear_session() -> void:
+	# Prevent an in-flight OTP response from restoring a session after local sign-out.
+	if not _pending_action.is_empty():
+		_http.cancel_request()
+		_clear_pending()
 	_access_token = ""
 	_refresh_token = ""
 	_authenticated_user_id = ""
@@ -118,6 +122,8 @@ func _on_request_completed(
 	var request_email := _pending_email
 	var response_text := body.get_string_from_utf8()
 	_clear_pending()
+	if action.is_empty():
+		return
 
 	if result != HTTPRequest.RESULT_SUCCESS:
 		authentication_failed.emit("تعذر الاتصال بخدمة تسجيل الدخول.")
