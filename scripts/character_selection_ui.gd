@@ -2,7 +2,7 @@ extends CanvasLayer
 ## واجهة اختيار الشخصيات الجاهزة — معاينة فقط حتى ربط الأصول النهائية وخدمة الملف الشخصي.
 ## لا توجد خزانة أو أدوات تغيير ملابس/ألوان أو حفظ محلي لهوية الشخصية.
 
-const AVATAR_SCENE := "res://scenes/characters/avatar_visual.tscn"
+const PLACEHOLDER_AVATAR_SCENE := "res://scenes/characters/avatar_visual.tscn"
 const CHARACTERS := [
 	{"id":"eg_m_adam","name":"آدم","country":"مصر","flag":"🇪🇬","gender":"male","tier":"متاح مبدئيًا","status":"مجاني مقترح"},
 	{"id":"eg_m_omar","name":"عمر","country":"مصر","flag":"🇪🇬","gender":"male","tier":"متاح مبدئيًا","status":"مجاني مقترح"},
