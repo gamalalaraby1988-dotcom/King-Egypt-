@@ -152,11 +152,14 @@ func _on_request_completed(result: int, response_code: int, _headers: PackedStri
 		operation_failed.emit(action, "تعذر الاتصال بخدمة التواصل.")
 		return
 	var text_body := body.get_string_from_utf8()
-	var parsed: Variant = JSON.parse_string(text_body)
 	if response_code < 200 or response_code >= 300:
 		operation_failed.emit(action, "رفض الخادم الطلب (HTTP %d)." % response_code)
 		return
-	operation_completed.emit(action, parsed)
+	var response_json := JSON.new()
+	if response_json.parse(text_body) != OK:
+		operation_failed.emit(action, "استجابة خدمة التواصل غير صالحة. حاول مرة أخرى.")
+		return
+	operation_completed.emit(action, response_json.data)
 
 func create_chat_group() -> bool:
 	return _rpc("create_my_test_chat_group", {}, "group_create")
