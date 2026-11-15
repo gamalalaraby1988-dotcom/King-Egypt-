@@ -586,7 +586,7 @@ func _update_interaction_hud() -> void:
 			display_name = str(interaction_data.get("title", nearest_interactable.get("character_name")))
 		else:
 			display_name = str(nearest_interactable.get("character_name"))
-		interact_button.text = CityLanguage.translate(_interaction_action_key(nearest_interactable))
+		interact_button.text = "فتح الصندوق" if nearest_interactable.has_method("get_daily_reward_chest_data") else CityLanguage.translate(_interaction_action_key(nearest_interactable))
 		prompt_label.text = "%s %s — %s" % [CityLanguage.translate("interaction_near"), display_name, CityLanguage.translate("interaction_press_hint")]
 		interact_button.visible = true
 	else:
