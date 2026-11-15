@@ -16,6 +16,8 @@ var _realtime_socket: WebSocketPeer
 var _realtime_topics: Dictionary = {}
 var _realtime_join_refs: Dictionary = {}
 var _realtime_ready_topics: Dictionary = {}
+var _realtime_topic_retry_seconds: Dictionary = {}
+const REALTIME_TOPIC_RETRY_DELAY := 2.0
 var _realtime_ref := 0
 var _realtime_heartbeat_elapsed := 0.0
 var _realtime_retry_elapsed := 0.0
@@ -52,6 +54,7 @@ func _on_auth_session_changed(_previous_user_id: String, _current_user_id: Strin
 	_realtime_topics.clear()
 	_realtime_join_refs.clear()
 	_realtime_ready_topics.clear()
+	_realtime_topic_retry_seconds.clear()
 	_realtime_last_token = ""
 	_realtime_session_user_id = ""
 	_realtime_session_generation = -1
@@ -329,6 +332,7 @@ func _process(delta: float) -> void:
 			_send_realtime_frame("phoenix", "heartbeat", {}, "")
 		while _realtime_socket.get_available_packet_count() > 0:
 			_handle_realtime_packet(_realtime_socket.get_packet())
+		_process_realtime_topic_retries(delta)
 	elif state == WebSocketPeer.STATE_CLOSED:
 		if _realtime_connected:
 			_realtime_connected = false
@@ -424,6 +428,7 @@ func _subscribe_realtime_topic(topic: String) -> void:
 
 func _leave_realtime_topic(topic: String) -> void:
 	_realtime_topics.erase(topic)
+	_realtime_topic_retry_seconds.erase(topic)
 	_realtime_ready_topics.erase(topic)
 	if _realtime_join_refs.has(topic) and _realtime_connected:
 		_send_realtime_frame("realtime:" + topic, "phx_leave", {}, str(_realtime_join_refs[topic]))
@@ -433,6 +438,7 @@ func _leave_realtime_topic(topic: String) -> void:
 func _join_realtime_topic(topic: String) -> void:
 	if not _realtime_connected or _realtime_join_refs.has(topic):
 		return
+	_realtime_topic_retry_seconds.erase(topic)
 	_realtime_ref += 1
 	var join_ref := str(_realtime_ref)
 	_realtime_ready_topics.erase(topic)
@@ -459,6 +465,41 @@ func _send_realtime_frame(topic: String, event_name: String, payload: Dictionary
 	_realtime_socket.send_text(JSON.stringify(frame))
 
 
+func _schedule_realtime_topic_retry(topic: String, failed_join_ref: String) -> void:
+	# Ignore stale failures and channels the current account no longer wants.
+	var active_join_ref := str(_realtime_join_refs.get(topic, ""))
+	if not _realtime_topics.has(topic) or active_join_ref.is_empty():
+		return
+	if not failed_join_ref.is_empty() and active_join_ref != failed_join_ref:
+		return
+	_realtime_join_refs.erase(topic)
+	_realtime_ready_topics.erase(topic)
+	_realtime_topic_retry_seconds[topic] = REALTIME_TOPIC_RETRY_DELAY
+
+
+func _take_due_realtime_topic_retries(delta: float) -> Array[String]:
+	var due_topics: Array[String] = []
+	for topic_variant in _realtime_topic_retry_seconds.keys():
+		var topic := str(topic_variant)
+		if not _realtime_topics.has(topic) or _realtime_join_refs.has(topic):
+			_realtime_topic_retry_seconds.erase(topic)
+			continue
+		var remaining := maxf(0.0, float(_realtime_topic_retry_seconds[topic]) - maxf(0.0, delta))
+		if remaining <= 0.0:
+			_realtime_topic_retry_seconds.erase(topic)
+			due_topics.append(topic)
+		else:
+			_realtime_topic_retry_seconds[topic] = remaining
+	return due_topics
+
+
+func _process_realtime_topic_retries(delta: float) -> void:
+	if not _realtime_connected or not _realtime_session_is_current():
+		return
+	for topic in _take_due_realtime_topic_retries(delta):
+		_join_realtime_topic(topic)
+
+
 func is_realtime_join_ack_current(topic: String, join_ref: String) -> bool:
 	return not topic.is_empty() and not join_ref.is_empty() and _realtime_topics.has(topic) and str(_realtime_join_refs.get(topic, "")) == join_ref
 
@@ -477,18 +518,18 @@ func _handle_realtime_packet(packet: PackedByteArray) -> void:
 	var event_name := str(parsed.get("event", ""))
 	var payload: Variant = parsed.get("payload", {})
 	if event_name == "phx_reply":
+		var reply_join_ref := str(parsed.get("join_ref", ""))
 		if payload is Dictionary and str(payload.get("status", "")) == "error":
-			_realtime_ready_topics.erase(topic)
-			realtime_status_changed.emit("رفض الخادم قناة: " + topic)
+			_schedule_realtime_topic_retry(topic, reply_join_ref)
+			realtime_status_changed.emit("تعذر الانضمام للقناة؛ ستتم إعادة المحاولة: " + topic)
 		elif payload is Dictionary and str(payload.get("status", "")) == "ok":
-			var reply_join_ref := str(parsed.get("join_ref", ""))
 			if is_realtime_join_ack_current(topic, reply_join_ref):
+				_realtime_topic_retry_seconds.erase(topic)
 				_realtime_ready_topics[topic] = true
 				realtime_status_changed.emit("القنوات اللحظية جاهزة")
 		return
 	if event_name == "phx_error" or event_name == "phx_close":
-		_realtime_join_refs.erase(topic)
-		_realtime_ready_topics.erase(topic)
+		_schedule_realtime_topic_retry(topic, str(parsed.get("join_ref", "")))
 		return
 	if event_name == "broadcast" and payload is Dictionary:
 		# Ignore packets for channels this session has not successfully joined.
