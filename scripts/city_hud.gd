@@ -604,7 +604,7 @@ func _on_player_report() -> void:
 		return
 	player_report_requested.emit(selected_player_id)
 	var reasons := ["harassment", "spam", "inappropriate_name", "cheating", "other"]
-	var reason := reasons[player_report_reason.selected] if is_instance_valid(player_report_reason) else "other"
+	var reason: String = str(reasons[player_report_reason.selected]) if is_instance_valid(player_report_reason) else "other"
 	var details := player_report_details.text if is_instance_valid(player_report_details) else ""
 	SocialChatManager.report_player(selected_player_id, reason, details)
 	player_action_status.text = "جارٍ إرسال البلاغ إلى خادم الإشراف..."
@@ -1628,7 +1628,7 @@ func _on_social_operation_completed(action: String, data: Variant) -> void:
 					social_chat_status.text = "تعذر التحقق من رمز اللاعب؛ ستظل بقية بيانات التواصل قيد التحميل."
 			SocialChatManager.check_moderator_access()
 		"moderator_check":
-			var allowed := data is bool and data
+			var allowed: bool = data is bool and bool(data)
 			if is_instance_valid(moderation_button):
 				moderation_button.visible = allowed
 			SocialChatManager.list_chat_group_invites()
