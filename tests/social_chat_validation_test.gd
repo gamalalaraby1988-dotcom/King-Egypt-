@@ -22,6 +22,14 @@ func _run_social_validation_tests() -> void:
 		quit(1)
 		return
 	social._realtime_ready_topics = {"chat:direct:joined": true}
+	if not social.is_realtime_join_ack_current("chat:direct:joined", "ci-join-ref"):
+		push_error("The current realtime join acknowledgement was not recognized.")
+		quit(1)
+		return
+	if social.is_realtime_join_ack_current("chat:direct:joined", "stale-join-ref") or social.is_realtime_join_ack_current("chat:direct:unjoined", "ci-join-ref"):
+		push_error("A stale or unrelated realtime join acknowledgement was accepted.")
+		quit(1)
+		return
 	if not social.is_realtime_topic_subscribed("chat:direct:joined"):
 		push_error("A server-acknowledged realtime topic was not recognized.")
 		quit(1)
