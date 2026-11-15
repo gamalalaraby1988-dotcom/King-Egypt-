@@ -239,6 +239,15 @@ func _run_auth_session_tests() -> void:
 		push_error("clear_session did not clear authentication.")
 		quit(1)
 		return
+	var signed_out_profile_settings: Node = profile_settings_script.new()
+	root.add_child(signed_out_profile_settings)
+	await process_frame
+	if signed_out_profile_settings.name_input.editable:
+		push_error("Profile name editing was enabled without an authenticated account.")
+		quit(1)
+		return
+	signed_out_profile_settings.free()
+	signed_out_profile_settings = null
 	if auth.is_session_current("00000000-0000-4000-8000-000000000001", auth.get_session_generation()):
 		push_error("A cleared session was still considered current.")
 		quit(1)
