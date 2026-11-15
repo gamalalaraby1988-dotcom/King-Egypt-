@@ -34,8 +34,8 @@ func _run_social_validation_tests() -> void:
 		push_error("A supplied invitation deadline extended the approved 30-second lifetime.")
 		quit(1)
 		return
-	var shortened_deadline := expiry_probe.resolve_invitation_expiry({"created_at": known_created_at, "expires_at": known_created_timestamp + 20.0}, known_created_timestamp + 10.0)
-	if not is_equal_approx(shortened_deadline, known_created_timestamp + 20.0):
+	var anchored_shortened_deadline := expiry_probe.resolve_invitation_expiry({"created_at": known_created_at, "expires_at": known_created_timestamp + 20.0}, known_created_timestamp + 10.0)
+	if not is_equal_approx(anchored_shortened_deadline, known_created_timestamp + 20.0):
 		push_error("A shorter supplied invitation deadline was not respected.")
 		quit(1)
 		return
