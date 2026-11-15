@@ -160,6 +160,20 @@ func _run_social_validation_tests() -> void:
 		push_error("The group invite picker did not restrict its results to explicitly online friends.")
 		quit(1)
 		return
+
+	if city_hud.has_group_invite_presence_metadata([
+		{"player_code":"AB12CD34EF", "display_name":"صديق"}
+	]):
+		push_error("The group invite picker treated a friend list without presence fields as having online status.")
+		quit(1)
+		return
+	if not city_hud.has_group_invite_presence_metadata([
+		{"player_code":"AB12CD34EF", "display_name":"صديق", "is_online":false}
+	]):
+		push_error("The group invite picker failed to recognize explicit offline presence metadata.")
+		quit(1)
+		return
+
 	if str(online_invite_friends[0].get("player_code", "")) != "AB12CD34EF" or str(online_invite_friends[1].get("player_code", "")) != "EF56GH78JK":
 		push_error("The group invite picker returned an offline or unknown-presence friend.")
 		quit(1)
