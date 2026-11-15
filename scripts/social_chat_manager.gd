@@ -91,7 +91,11 @@ func report_player(player_code: String, reason: String, details: String) -> bool
 	}, "report_player")
 
 func open_direct_conversation(player_code: String) -> bool:
-	return _rpc("open_test_direct_conversation", {"p_player_code": player_code}, "direct_open")
+	var clean_code := player_code.strip_edges().to_upper()
+	if not is_valid_player_code(clean_code):
+		operation_failed.emit("direct_open", "رمز اللاعب غير صالح.")
+		return false
+	return _rpc("open_test_direct_conversation", {"p_player_code": clean_code}, "direct_open")
 
 func read_direct_messages(conversation_id: String) -> bool:
 	if conversation_id.is_empty():
@@ -174,17 +178,30 @@ func get_chat_group() -> bool:
 	return _rpc("get_my_test_chat_group", {}, "group_info")
 
 func invite_chat_group_member(player_code: String) -> bool:
-	return _rpc("invite_my_test_chat_group_member", {"p_player_code": player_code}, "group_invite")
+	var clean_code := player_code.strip_edges().to_upper()
+	if not is_valid_player_code(clean_code):
+		operation_failed.emit("group_invite", "رمز اللاعب غير صالح.")
+		return false
+	return _rpc("invite_my_test_chat_group_member", {"p_player_code": clean_code}, "group_invite")
 
 func respond_chat_group_invite(invite_id: String, accept: bool) -> bool:
 	return _rpc("respond_my_test_chat_group_invite", {"p_invite_id": invite_id, "p_accept": accept}, "group_invite_response")
 
 func send_chat_message(channel: String, body: String) -> bool:
-	return _rpc("send_my_test_chat_message", {"p_channel": channel, "p_body": body}, "chat_send")
+	var clean_channel := channel.strip_edges().to_lower()
+	var clean_body := body.strip_edges()
+	if not ["public", "group"].has(clean_channel) or clean_body.is_empty() or clean_body.length() > 300:
+		operation_failed.emit("chat_send", "القناة أو نص الرسالة غير صالح.")
+		return false
+	return _rpc("send_my_test_chat_message", {"p_channel": clean_channel, "p_body": clean_body}, "chat_send")
 
 func read_chat_messages(channel: String) -> bool:
+	var clean_channel := channel.strip_edges().to_lower()
+	if not ["public", "group"].has(clean_channel):
+		operation_failed.emit("chat_read", "قناة المحادثة غير صالحة.")
+		return false
 	return _rpc("read_my_test_chat_messages", {
-		"p_channel": channel,
+		"p_channel": clean_channel,
 		"p_before_message_id": null,
 		"p_limit": 50
 	}, "chat_read")
