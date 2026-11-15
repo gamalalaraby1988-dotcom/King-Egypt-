@@ -502,7 +502,7 @@ func _build_player_interaction_popup() -> void:
 func open_player_interaction(player_data: Dictionary) -> void:
 	# البيانات المتوقعة: player_id, display_name, level, account_age, avatar_text.
 	selected_player_id = str(player_data.get("player_code", player_data.get("player_id", ""))).strip_edges().to_upper()
-	if not selected_player_id.matches("^[A-Z0-9]{10}$"):
+	if not SocialChatManager.is_valid_player_code(selected_player_id):
 		selected_player_id = ""
 	if is_instance_valid(player_block_button):
 		player_block_button.visible = not selected_player_id.is_empty()
