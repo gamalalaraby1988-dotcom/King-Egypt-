@@ -15,6 +15,7 @@ var _pending_session_generation := -1
 var _realtime_socket: WebSocketPeer
 var _realtime_topics: Dictionary = {}
 var _realtime_join_refs: Dictionary = {}
+var _realtime_ready_topics: Dictionary = {}
 var _realtime_ref := 0
 var _realtime_heartbeat_elapsed := 0.0
 var _realtime_retry_elapsed := 0.0
@@ -50,6 +51,7 @@ func _on_auth_session_changed(_previous_user_id: String, _current_user_id: Strin
 	_realtime_connected = false
 	_realtime_topics.clear()
 	_realtime_join_refs.clear()
+	_realtime_ready_topics.clear()
 	_realtime_last_token = ""
 	_realtime_session_user_id = ""
 	_realtime_session_generation = -1
@@ -278,6 +280,7 @@ func _process(delta: float) -> void:
 		# A stale socket must not replay topics or identities after reconnecting.
 		_realtime_topics.clear()
 		_realtime_join_refs.clear()
+		_realtime_ready_topics.clear()
 		_realtime_last_token = ""
 		_realtime_session_user_id = ""
 		_realtime_session_generation = -1
@@ -294,6 +297,7 @@ func _process(delta: float) -> void:
 		_realtime_connected = false
 		_realtime_topics.clear()
 		_realtime_join_refs.clear()
+		_realtime_ready_topics.clear()
 		_realtime_player_code = ""
 		_realtime_group_id = ""
 		_realtime_direct_id = ""
@@ -329,6 +333,7 @@ func _process(delta: float) -> void:
 		if _realtime_connected:
 			_realtime_connected = false
 			_realtime_join_refs.clear()
+			_realtime_ready_topics.clear()
 			realtime_status_changed.emit("انقطع الاتصال؛ جارٍ إعادة المحاولة")
 		_realtime_retry_elapsed += delta
 		if _realtime_retry_elapsed >= _realtime_retry_delay:
@@ -367,6 +372,7 @@ func _connect_realtime_socket() -> void:
 		return
 	_realtime_connected = false
 	_realtime_join_refs.clear()
+	_realtime_ready_topics.clear()
 
 
 func get_realtime_identity() -> bool:
@@ -418,6 +424,7 @@ func _subscribe_realtime_topic(topic: String) -> void:
 
 func _leave_realtime_topic(topic: String) -> void:
 	_realtime_topics.erase(topic)
+	_realtime_ready_topics.erase(topic)
 	if _realtime_join_refs.has(topic) and _realtime_connected:
 		_send_realtime_frame("realtime:" + topic, "phx_leave", {}, str(_realtime_join_refs[topic]))
 	_realtime_join_refs.erase(topic)
@@ -428,6 +435,7 @@ func _join_realtime_topic(topic: String) -> void:
 		return
 	_realtime_ref += 1
 	var join_ref := str(_realtime_ref)
+	_realtime_ready_topics.erase(topic)
 	_realtime_join_refs[topic] = join_ref
 	var payload := {
 		"config": {
@@ -452,7 +460,7 @@ func _send_realtime_frame(topic: String, event_name: String, payload: Dictionary
 
 
 func is_realtime_topic_subscribed(topic: String) -> bool:
-	return not topic.is_empty() and _realtime_topics.has(topic) and _realtime_join_refs.has(topic)
+	return not topic.is_empty() and _realtime_topics.has(topic) and _realtime_join_refs.has(topic) and _realtime_ready_topics.has(topic)
 
 
 func _handle_realtime_packet(packet: PackedByteArray) -> void:
@@ -466,12 +474,18 @@ func _handle_realtime_packet(packet: PackedByteArray) -> void:
 	var payload: Variant = parsed.get("payload", {})
 	if event_name == "phx_reply":
 		if payload is Dictionary and str(payload.get("status", "")) == "error":
+			_realtime_ready_topics.erase(topic)
 			realtime_status_changed.emit("رفض الخادم قناة: " + topic)
 		elif payload is Dictionary and str(payload.get("status", "")) == "ok":
-			realtime_status_changed.emit("القنوات اللحظية جاهزة")
+			var reply_join_ref := str(parsed.get("join_ref", ""))
+			var active_join_ref := str(_realtime_join_refs.get(topic, ""))
+			if not active_join_ref.is_empty() and reply_join_ref == active_join_ref and _realtime_topics.has(topic):
+				_realtime_ready_topics[topic] = true
+				realtime_status_changed.emit("القنوات اللحظية جاهزة")
 		return
 	if event_name == "phx_error" or event_name == "phx_close":
 		_realtime_join_refs.erase(topic)
+		_realtime_ready_topics.erase(topic)
 		return
 	if event_name == "broadcast" and payload is Dictionary:
 		# Ignore packets for channels this session has not successfully joined.
