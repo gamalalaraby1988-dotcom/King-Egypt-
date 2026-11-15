@@ -241,7 +241,7 @@ func debit(transaction_id: String, currency: String, amount: int, reason: String
 	return _transact(transaction_id, currency, amount, "debit", reason)
 
 func _transact(transaction_id: String, currency: String, amount: int, kind: String, reason: String) -> bool:
-	if not initialized or transaction_id.strip_edges().is_empty() or not CURRENCIES.has(currency):
+	if not _can_access_profile() or transaction_id.strip_edges().is_empty() or not CURRENCIES.has(currency):
 		return false
 	if amount <= 0 or amount > MAX_BALANCE or receipts.has(transaction_id):
 		return false
