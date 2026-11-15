@@ -1869,9 +1869,10 @@ func _submit_group_invitation_response(invitation: Dictionary, accepted: bool) -
 	_pending_group_invite_response_id = invite_id
 	if is_instance_valid(invitation_overlay):
 		invitation_overlay.call("set_response_pending", true)
-	if not SocialChatManager.respond_chat_group_invite(invite_id, accepted):
-		_pending_group_invite_response_id = ""
-		_continue_deferred_group_invite_responses()
+	# The manager emits operation_failed synchronously when an RPC cannot
+	# start, and the failure handler releases this slot and advances the queue.
+	# Do not advance here as well or one failed request could skip a queued item.
+	SocialChatManager.respond_chat_group_invite(invite_id, accepted)
 
 
 func _continue_deferred_group_invite_responses() -> void:
