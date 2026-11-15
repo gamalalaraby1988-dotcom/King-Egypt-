@@ -421,8 +421,11 @@ func _abort_ship_transition() -> void:
 		ship_current_location = "ship_exterior"
 
 func _refresh_city_interactions() -> void:
+	# قد تنتهي عملية الانتقال أثناء إزالة المدينة؛ لا تحدّث واجهة التفاعل إلا إذا بقيت العقد صالحة.
+	if not is_instance_valid(city) or not city.is_inside_tree():
+		return
 	var manager := city.get_node_or_null("MissionManager")
-	if is_instance_valid(manager):
+	if is_instance_valid(manager) and not manager.is_queued_for_deletion():
 		manager.call("_update_interaction_target")
 		manager.call("_update_interaction_hud")
 
