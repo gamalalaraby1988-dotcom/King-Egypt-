@@ -1437,7 +1437,7 @@ func _on_social_operation_completed(action: String, data: Variant) -> void:
 						continue
 					var sender := "أنت" if bool(item.get("sender_is_me", false)) else "الصديق"
 					var body := str(item.get("body", "")).replace("[", "(").replace("]", ")")
-					social_chat_log.append_text("[color=gold][" + sender + "][/color] " + body + "\\n")
+					social_chat_log.append_text("[color=gold][" + sender + "][/color] " + body + "\n")
 			social_chat_status.text = "محادثة الأصدقاء متصلة."
 		"direct_send":
 			if data is Array and not data.is_empty() and data[0] is Dictionary and bool(data[0].get("success", false)):
