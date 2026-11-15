@@ -172,6 +172,9 @@ func _run_auth_session_tests() -> void:
 	mission_manager.daily_chest_reward_configured = true
 	mission_manager.daily_chest_server_claimed = true
 	mission_manager.daily_chest_reward_day = "2099-01-01"
+	mission_manager.achievement_totals = {"jobs": 7, "missions": 4, "daily_claims": 2}
+	mission_manager.reward_receipts = {"ci_private_reward": "claimed"}
+	mission_manager.daily_task_progress = {"2099-01-01": {"ci_task": 9}}
 
 	# Seed account-bound realtime state and prove sign-out clears every subscription.
 	social._realtime_topics = {
@@ -233,6 +236,18 @@ func _run_auth_session_tests() -> void:
 	mission_manager._on_account_session_invalidated("00000000-0000-4000-8000-000000000001", auth.get_session_generation())
 	if mission_manager.owned_outfits != ["default"] or mission_manager.daily_chest_reward_configured or mission_manager.daily_chest_server_claimed or not mission_manager.daily_chest_reward_day.is_empty():
 		push_error("Mission state from the previous account remained after session invalidation.")
+		quit(1)
+		return
+	if mission_manager.get_achievement_totals() != {"jobs": 0, "missions": 0, "daily_claims": 0}:
+		push_error("Achievement totals from the previous account were exposed after sign-out.")
+		quit(1)
+		return
+	if mission_manager.has_reward_receipt("ci_private_reward"):
+		push_error("A previous-account reward receipt remained readable after sign-out.")
+		quit(1)
+		return
+	if mission_manager.get_daily_task_progress("2099-01-01", "ci_task") != 0:
+		push_error("Daily task progress from the previous account remained readable after sign-out.")
 		quit(1)
 		return
 	if auth.is_authenticated():
