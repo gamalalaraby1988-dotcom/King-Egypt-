@@ -19,6 +19,7 @@ on:
       - "project.godot"
       - "scenes/**"
       - "scripts/**"
+      - "tests/**"
       - "assets/**"
       - ".github/workflows/godot-headless-check.yml"
 
