@@ -135,7 +135,10 @@ func _create_menu() -> void:
 func _fit_menu_to_viewport() -> void:
 	if not is_instance_valid(menu_panel) or not is_instance_valid(menu_title):
 		return
-	var viewport_size := get_viewport().get_visible_rect().size
+	var viewport := get_viewport()
+	if not is_instance_valid(viewport):
+		return
+	var viewport_size := viewport.get_visible_rect().size
 	# لا نفرض حدًا أدنى أكبر من الشاشة؛ هذا يمنع قص النافذة في الشاشات الصغيرة أو الوضع الأفقي.
 	var panel_width := minf(410.0, maxf(1.0, viewport_size.x - 28.0))
 	var panel_height := minf(490.0, maxf(1.0, viewport_size.y - 48.0))
@@ -164,7 +167,9 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	# التقاط Escape بأمان حتى إذا أزيلت لوحة التنقل أثناء تبديل المشهد.
 	if is_instance_valid(menu_panel) and menu_panel.visible and event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
 		_close_menu()
-		get_viewport().set_input_as_handled()
+		var viewport := get_viewport()
+		if is_instance_valid(viewport):
+			viewport.set_input_as_handled()
 
 func _create_beach_portal() -> void:
 	# قد يُعاد إنشاء نظام التنقل أثناء بقاء المدينة؛ لا تضف بوابة شاطئ مكررة.
