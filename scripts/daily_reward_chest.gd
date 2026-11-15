@@ -22,7 +22,7 @@ func _material(color: Color, metallic: float = 0.0, roughness: float = 0.45) -> 
 	mat.roughness = roughness
 	return mat
 
-func _add_box(part_name: String, size: Vector3, offset: Vector3, material: Material, parent: Node3D = self) -> MeshInstance3D:
+func _add_box(part_name: String, size: Vector3, offset: Vector3, material: Material) -> MeshInstance3D:
 	var part := MeshInstance3D.new()
 	part.name = part_name
 	var mesh := BoxMesh.new()
@@ -30,7 +30,7 @@ func _add_box(part_name: String, size: Vector3, offset: Vector3, material: Mater
 	part.mesh = mesh
 	part.position = offset
 	part.material_override = material
-	parent.add_child(part)
+	add_child(part)
 	return part
 
 func _add_cylinder(part_name: String, radius: float, height: float, offset: Vector3, material: Material) -> MeshInstance3D:
