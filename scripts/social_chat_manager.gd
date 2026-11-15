@@ -96,6 +96,21 @@ func send_direct_message(conversation_id: String, body: String) -> bool:
 		"p_body": clean_body
 	}, "direct_send")
 
+func check_moderator_access() -> bool:
+	return _rpc("is_my_test_moderator", {}, "moderator_check")
+
+func list_moderation_reports() -> bool:
+	return _rpc("list_test_player_reports_for_moderation", {}, "moderation_reports")
+
+func set_moderation_report_status(report_id: String, status: String) -> bool:
+	if report_id.is_empty() or not ["reviewing", "resolved", "dismissed"].has(status):
+		operation_failed.emit("moderation_update", "طلب مراجعة غير صالح.")
+		return false
+	return _rpc("set_test_player_report_status", {
+		"p_report_id": report_id,
+		"p_status": status
+	}, "moderation_update")
+
 func _rpc(function_name: String, payload: Dictionary, action: String) -> bool:
 	if not AuthManager.is_authenticated():
 		operation_failed.emit(action, "سجّل الدخول أولًا.")
