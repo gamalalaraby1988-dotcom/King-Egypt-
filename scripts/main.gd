@@ -630,7 +630,7 @@ func _save_apartment_design() -> bool:
 	var load_error := config.load(APARTMENT_SAVE_PATH)
 	if load_error != OK and FileAccess.file_exists(APARTMENT_SAVE_PATH):
 		return false
-	config.set_value("apartment", "schema_version", 1)
+	config.set_value("apartment", "schema_version", 2)
 	config.set_value("apartment", "design_index", apartment_design_index)
 	return config.save(APARTMENT_SAVE_PATH) == OK
 
