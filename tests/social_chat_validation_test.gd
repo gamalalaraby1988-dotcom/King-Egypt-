@@ -168,7 +168,10 @@ func _run_social_validation_tests() -> void:
 		"title": "Queued invitation",
 		"expires_at": float(Time.get_unix_time_from_system()) + 60.0
 	})
+	# Simulate the accept/decline handler starting its RPC before the active
+	# invitation is removed; the queued item must remain hidden until the reply.
 	invitation_overlay.call("set_response_pending", true)
+	invitation_overlay.call("_finish_current", true)
 	if invitation_overlay.get_pending_invitation_count() != 1 or not invitation_overlay._current.is_empty():
 		push_error("A queued invitation became actionable while the previous response was pending.")
 		quit(1)
