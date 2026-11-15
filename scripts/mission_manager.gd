@@ -131,7 +131,11 @@ func _on_account_session_invalidated(_previous_user_id: String, _generation: int
 	chips = 0
 	completed_missions = {}
 	completed_jobs = {}
+	owned_outfits = ["default"]
 	reward_receipts = {}
+	daily_chest_reward_configured = false
+	daily_chest_server_claimed = false
+	daily_chest_reward_day = ""
 	achievement_totals = {"jobs": 0, "missions": 0, "daily_claims": 0}
 	achievement_events = {}
 	achievement_stats_initialized = false
