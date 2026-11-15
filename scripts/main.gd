@@ -12,6 +12,8 @@ var interior_exit_button: Button
 var interior_quick_travel_layer: CanvasLayer
 var interior_quick_travel_panel: PanelContainer
 var interior_quick_travel_buttons: Array[Button] = []
+var apartment_customization_layer: CanvasLayer = null
+var apartment_design_index := 0
 var interior_transition_busy := false
 var interior_loading_message_key := "interior_loading"
 var interior_hidden_world_states: Dictionary = {}
@@ -23,6 +25,8 @@ var _vehicle_key_was_down := false
 var _player_saved_collision_layer := 1
 var _player_saved_collision_mask := 1
 const INTERIOR_WORLD_POSITION := Vector3(1000.0, 0.0, 1000.0)
+const APARTMENT_SAVE_PATH := "user://kings_city_apartment.cfg"
+const APARTMENT_DESIGN_NAMES := ["الملكي الذهبي", "النيل الفيروزي", "الأسواني الدافئ"]
 
 func _ready() -> void:
 	_create_ground()
@@ -402,6 +406,7 @@ func _open_private_apartment() -> void:
 	_show_interior_loading(false)
 	_set_city_world_hidden(true)
 	_create_building_interior("شقتي")
+	_create_apartment_customization_ui()
 	body.global_position = INTERIOR_WORLD_POSITION + Vector3(0, 1.05, 2.8)
 	body.velocity = Vector3.ZERO
 	body.rotation.y = PI
@@ -517,7 +522,8 @@ func _create_building_interior(building_title: String) -> void:
 	_create_box(interior_root, "FrontWallLeft", Vector3(4.6, 5, 0.35), Vector3(-4.7, 2.5, 7), Color(0.69, 0.59, 0.43), true)
 	_create_box(interior_root, "FrontWallRight", Vector3(4.6, 5, 0.35), Vector3(4.7, 2.5, 7), Color(0.69, 0.59, 0.43), true)
 	_create_box(interior_root, "DoorLintel", Vector3(4.0, 1.1, 0.35), Vector3(0, 4.45, 7), Color(0.76, 0.58, 0.25), true)
-	_create_box(interior_root, "ReceptionDesk", Vector3(4.2, 1.15, 1.1), Vector3(0, 0.75, -2.4), Color(0.30, 0.20, 0.12), true)
+	if building_title != "شقتي":
+		_create_box(interior_root, "ReceptionDesk", Vector3(4.2, 1.15, 1.1), Vector3(0, 0.75, -2.4), Color(0.30, 0.20, 0.12), true)
 	_create_box(interior_root, "GoldWallBand", Vector3(13.8, 0.18, 0.22), Vector3(0, 3.9, -6.78), Color(0.86, 0.67, 0.30))
 	var title := Label3D.new()
 	title.text = building_title
@@ -553,6 +559,19 @@ func _create_interior_furnishings(root: Node3D, building_title: String) -> void:
 		_create_box(root, "ApartmentBedMattress", Vector3(2.7, 0.22, 3.0), Vector3(3.8, 0.75, -2.0), Color(0.78, 0.72, 0.61))
 		_create_box(root, "ApartmentBedHeadboard", Vector3(2.9, 1.2, 0.18), Vector3(3.8, 1.0, -3.65), Color(0.43, 0.29, 0.17), true)
 		_create_box(root, "ApartmentGoldFeature", Vector3(4.8, 0.12, 0.18), Vector3(0, 3.35, -6.76), Color(0.86, 0.67, 0.30))
+		for item_name in ["ApartmentLivingRug", "ApartmentSofaBase", "ApartmentSofaBack"]:
+			var fabric_item := root.get_node_or_null(item_name) as MeshInstance3D
+			if is_instance_valid(fabric_item):
+				fabric_item.add_to_group("apartment_fabric")
+		for item_name in ["ApartmentCoffeeTable", "ApartmentTVConsole", "ApartmentDiningTable", "ApartmentBedBase", "ApartmentBedHeadboard"]:
+			var wood_item := root.get_node_or_null(item_name) as MeshInstance3D
+			if is_instance_valid(wood_item):
+				wood_item.add_to_group("apartment_wood")
+		var gold_item := root.get_node_or_null("ApartmentGoldFeature") as MeshInstance3D
+		if is_instance_valid(gold_item):
+			gold_item.add_to_group("apartment_gold")
+		_load_apartment_design()
+		_apply_apartment_design(root)
 	elif building_title == "المتجر":
 		for index in range(3):
 			var x := -4.2 + float(index) * 4.2
@@ -579,6 +598,84 @@ func _create_interior_furnishings(root: Node3D, building_title: String) -> void:
 	else:
 		_create_box(root, "GenericWaitingBench", Vector3(3.2, 0.55, 0.8), Vector3(0, 0.28, 2.5), Color(0.34, 0.25, 0.16), true)
 
+
+func _load_apartment_design() -> void:
+	var config := ConfigFile.new()
+	if config.load(APARTMENT_SAVE_PATH) != OK:
+		apartment_design_index = 0
+		return
+	var saved_value: Variant = config.get_value("apartment", "design_index", 0)
+	if saved_value is int and int(saved_value) >= 0 and int(saved_value) < APARTMENT_DESIGN_NAMES.size():
+		apartment_design_index = int(saved_value)
+	else:
+		apartment_design_index = 0
+
+func _save_apartment_design() -> bool:
+	var config := ConfigFile.new()
+	var load_error := config.load(APARTMENT_SAVE_PATH)
+	if load_error != OK and FileAccess.file_exists(APARTMENT_SAVE_PATH):
+		return false
+	config.set_value("apartment", "schema_version", 1)
+	config.set_value("apartment", "design_index", apartment_design_index)
+	return config.save(APARTMENT_SAVE_PATH) == OK
+
+func _apply_apartment_design(root: Node3D) -> void:
+	var fabric_colors := [
+		Color(0.12, 0.29, 0.28),
+		Color(0.08, 0.43, 0.43),
+		Color(0.48, 0.29, 0.17)
+	]
+	var wood_colors := [
+		Color(0.34, 0.20, 0.11),
+		Color(0.22, 0.17, 0.12),
+		Color(0.39, 0.24, 0.13)
+	]
+	var gold_colors := [
+		Color(0.86, 0.67, 0.30),
+		Color(0.66, 0.78, 0.68),
+		Color(0.83, 0.57, 0.30)
+	]
+	var fabric := fabric_colors[apartment_design_index]
+	var wood := wood_colors[apartment_design_index]
+	var gold := gold_colors[apartment_design_index]
+	for item in root.find_children("*", "MeshInstance3D", true, false):
+		if item.is_in_group("apartment_fabric"):
+			item.material_override = _material(fabric)
+		elif item.is_in_group("apartment_wood"):
+			item.material_override = _material(wood)
+		elif item.is_in_group("apartment_gold"):
+			item.material_override = _material(gold)
+
+func _create_apartment_customization_ui() -> void:
+	if is_instance_valid(apartment_customization_layer):
+		apartment_customization_layer.queue_free()
+	apartment_customization_layer = CanvasLayer.new()
+	apartment_customization_layer.name = "ApartmentCustomizationLayer"
+	apartment_customization_layer.layer = 25
+	add_child(apartment_customization_layer)
+	var design_button := Button.new()
+	design_button.name = "ApartmentDesignButton"
+	design_button.custom_minimum_size = Vector2(250, 54)
+	design_button.position = Vector2(24, 96)
+	design_button.text = "تصميم الشقة: " + APARTMENT_DESIGN_NAMES[apartment_design_index]
+	design_button.add_theme_font_size_override("font_size", 18)
+	design_button.pressed.connect(_cycle_apartment_design)
+	apartment_customization_layer.add_child(design_button)
+
+func _cycle_apartment_design() -> void:
+	if not is_instance_valid(interior_root) or interior_transition_busy:
+		return
+	var next_index := (apartment_design_index + 1) % APARTMENT_DESIGN_NAMES.size()
+	var previous_index := apartment_design_index
+	apartment_design_index = next_index
+	if not _save_apartment_design():
+		apartment_design_index = previous_index
+		push_warning("تعذر حفظ تصميم الشقة على هذا الجهاز.")
+		return
+	_apply_apartment_design(interior_root)
+	var design_button := get_node_or_null("ApartmentCustomizationLayer/ApartmentDesignButton") as Button
+	if is_instance_valid(design_button):
+		design_button.text = "تصميم الشقة: " + APARTMENT_DESIGN_NAMES[apartment_design_index]
 
 func _create_interior_exit_marker(root: Node3D) -> void:
 	var exit_marker := Node3D.new()
@@ -630,6 +727,9 @@ func return_from_building_interior(destination: Vector3 = Vector3(0.0, -9999.0, 
 	interior_transition_busy = false
 	_hide_interior_loading()
 	_hide_interior_quick_travel_menu()
+	if is_instance_valid(apartment_customization_layer):
+		apartment_customization_layer.queue_free()
+	apartment_customization_layer = null
 	var manager := get_node_or_null("MissionManager")
 	if is_instance_valid(manager) and manager.has_method("_update_interaction_target"):
 		manager._update_interaction_target()
