@@ -338,7 +338,7 @@ func _create_interior_quick_travel_ui() -> void:
 	content.add_child(heading)
 	var entries := [
 		["⛺  المخيم", true],
-		["🏠  الشقة", false],
+		["🏠  الشقة", true],
 		["𓉐  قمة الملوك", false],
 		["⚜  الميدان", false],
 		["⛵  السفينة", false],
@@ -354,7 +354,7 @@ func _create_interior_quick_travel_ui() -> void:
 		content.add_child(travel_button)
 		interior_quick_travel_buttons.append(travel_button)
 	var note := Label.new()
-	note.text = "بعض الوجهات ستُفعّل عند اكتمال مواقعها وأنظمتها."
+	note.text = "الشقة نموذج خاص محفوظ محليًا على هذا الجهاز. زيارة الأصدقاء تحتاج خادم حسابات واتصالًا شبكيًا."
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	note.add_theme_font_size_override("font_size", 12)
@@ -378,11 +378,36 @@ func _on_interior_quick_travel_selected(index: int) -> void:
 	if index == 0:
 		_hide_interior_quick_travel_menu()
 		await return_from_building_interior(Vector3(60.0, 0.15, 68.0))
+	elif index == 1:
+		_hide_interior_quick_travel_menu()
+		await _open_private_apartment()
 	elif index == 5:
 		_hide_interior_quick_travel_menu()
 		await return_from_building_interior()
 	else:
 		return
+
+func _open_private_apartment() -> void:
+	# نسخة محلية أولية للشقة؛ لا تمثل زيارة أصدقاء أو ملكية مرتبطة بحساب خادمي.
+	var body := interior_player
+	if not is_instance_valid(body) or not is_instance_valid(interior_root) or interior_transition_busy:
+		return
+	await return_from_building_interior()
+	if not is_inside_tree() or not is_instance_valid(body) or body.is_queued_for_deletion():
+		return
+	interior_transition_busy = true
+	interior_player = body
+	interior_return_transform = body.global_transform
+	body.set_physics_process(false)
+	_show_interior_loading(false)
+	_set_city_world_hidden(true)
+	_create_building_interior("شقتي")
+	body.global_position = INTERIOR_WORLD_POSITION + Vector3(0, 1.05, 2.8)
+	body.velocity = Vector3.ZERO
+	body.rotation.y = PI
+	body.set_physics_process(true)
+	interior_transition_busy = false
+	_show_interior_loading(true)
 
 func _refresh_interior_ui_language() -> void:
 	if is_instance_valid(interior_loading_label):
@@ -515,7 +540,20 @@ func _create_building_interior(building_title: String) -> void:
 
 func _create_interior_furnishings(root: Node3D, building_title: String) -> void:
 	# أثاث هندسي خفيف ومختلف لكل مبنى، دون صور أو خامات أو مكتبات إضافية.
-	if building_title == "المتجر":
+	if building_title == "شقتي":
+		# توزيع أولي لشقة خاصة: صالة معيشة، تلفاز، سفرة، وغرفة نوم.
+		_create_box(root, "ApartmentLivingRug", Vector3(6.2, 0.06, 4.2), Vector3(0, 0.22, 1.0), Color(0.42, 0.24, 0.16))
+		_create_box(root, "ApartmentSofaBase", Vector3(3.8, 0.65, 1.0), Vector3(-2.0, 0.48, 1.6), Color(0.12, 0.29, 0.28), true)
+		_create_box(root, "ApartmentSofaBack", Vector3(3.8, 1.0, 0.28), Vector3(-2.0, 1.0, 2.0), Color(0.16, 0.36, 0.34), true)
+		_create_box(root, "ApartmentCoffeeTable", Vector3(1.8, 0.22, 0.9), Vector3(-2.0, 0.48, -0.1), Color(0.34, 0.20, 0.11), true)
+		_create_box(root, "ApartmentTVConsole", Vector3(3.2, 0.65, 0.55), Vector3(2.2, 0.38, -3.8), Color(0.24, 0.17, 0.12), true)
+		_create_box(root, "ApartmentTVScreen", Vector3(2.4, 1.35, 0.12), Vector3(2.2, 1.45, -4.0), Color(0.035, 0.07, 0.09))
+		_create_box(root, "ApartmentDiningTable", Vector3(2.2, 0.16, 1.3), Vector3(3.7, 0.95, 1.2), Color(0.40, 0.25, 0.13), true)
+		_create_box(root, "ApartmentBedBase", Vector3(2.8, 0.48, 3.2), Vector3(3.8, 0.42, -2.0), Color(0.34, 0.24, 0.19), true)
+		_create_box(root, "ApartmentBedMattress", Vector3(2.7, 0.22, 3.0), Vector3(3.8, 0.75, -2.0), Color(0.78, 0.72, 0.61))
+		_create_box(root, "ApartmentBedHeadboard", Vector3(2.9, 1.2, 0.18), Vector3(3.8, 1.0, -3.65), Color(0.43, 0.29, 0.17), true)
+		_create_box(root, "ApartmentGoldFeature", Vector3(4.8, 0.12, 0.18), Vector3(0, 3.35, -6.76), Color(0.86, 0.67, 0.30))
+	elif building_title == "المتجر":
 		for index in range(3):
 			var x := -4.2 + float(index) * 4.2
 			_create_box(root, "ShopShelf_%d" % index, Vector3(1.0, 2.5, 3.4), Vector3(x, 1.25, -0.4), Color(0.34, 0.23, 0.13), true)
@@ -550,6 +588,9 @@ func _create_interior_exit_marker(root: Node3D) -> void:
 	root.add_child(exit_marker)
 
 func _create_interior_staff(root: Node3D, building_title: String) -> void:
+	# الشقة ملكية خاصة؛ لا يظهر فيها موظف خدمة افتراضي.
+	if building_title == "شقتي":
+		return
 	# موظف محلي داخل كل مبنى؛ يستخدم نظام التفاعل الحالي دون إنشاء نظام مكافآت جديد.
 	var staff := Node3D.new()
 	staff.name = "InteriorServiceStaff"
