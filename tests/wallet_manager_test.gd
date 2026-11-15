@@ -6,8 +6,13 @@ func _initialize() -> void:
 func _run_wallet_tests() -> void:
 	await process_frame
 	var wallet := root.get_node_or_null("WalletManager")
-	if wallet == null or not wallet.initialized:
-		push_error("WalletManager autoload did not initialize.")
+	if wallet == null or not wallet.initialized or not wallet.test_storage_enabled:
+		push_error("WalletManager did not initialize with isolated CI storage.")
+		quit(1)
+		return
+
+	if wallet.profile_path == wallet.profile_path:
+		push_error("Wallet test is pointing at the real player profile.")
 		quit(1)
 		return
 
@@ -49,7 +54,7 @@ func _run_wallet_tests() -> void:
 	var money_before: int = wallet.get_balance("money")
 	var chips_before: int = wallet.get_balance("chips")
 	var profile_config := ConfigFile.new()
-	if profile_config.load("user://kings_city_profile.cfg") != OK:
+	if profile_config.load(wallet.profile_path) != OK:
 		push_error("Could not load profile for atomic wallet save test.")
 		quit(1)
 		return
@@ -78,7 +83,7 @@ func _run_wallet_tests() -> void:
 		quit(1)
 		return
 	var verify_config := ConfigFile.new()
-	if verify_config.load("user://kings_city_profile.cfg") != OK or verify_config.get_value("profile", "ci_wallet_test_owned", []) != ["test_vehicle"]:
+	if verify_config.load(wallet.profile_path) != OK or verify_config.get_value("profile", "ci_wallet_test_owned", []) != ["test_vehicle"]:
 		push_error("Purchase ownership update was not saved atomically.")
 		quit(1)
 		return
@@ -115,5 +120,10 @@ func _run_wallet_tests() -> void:
 		quit(1)
 		return
 
-	print("Wallet transaction and purchase-gating tests passed.")
+	if not wallet.default_profile_unchanged_after_test():
+		push_error("Wallet test modified the default player profile.")
+		quit(1)
+		return
+
+	print("Wallet transaction and purchase-gating tests passed using isolated fixture storage.")
 	quit(0)
