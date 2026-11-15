@@ -901,7 +901,7 @@ func receive_group_member_positions(member_positions: Array) -> void:
 func receive_group_move_order(target_position: Vector3) -> void:
 	if not target_position.is_finite():
 		if is_instance_valid(group_meeting_status):
-			group_meeting_status.text = "تعذر استقبال موقع التجمع؛ الإحداثيات غير صالحة."
+			group_meeting_status.text = "تعذر استقبال موقع القائد؛ الإحداثيات غير صالحة."
 		return
 	group_meeting_position = target_position
 	if is_instance_valid(group_meeting_status):
