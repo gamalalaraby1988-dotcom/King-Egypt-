@@ -93,13 +93,23 @@ func _run_invitation_overlay_tests() -> void:
 		quit(1)
 		return
 
-	overlay.call("_finish_current", true)
-	if accepted_ids != ["apartment-1"]:
-		push_error("The unified invitation accept action was not emitted.")
+	var apartment_accept_button := overlay.find_child("AcceptInvitationButton", true, false) as Button
+	var apartment_decline_button := overlay.find_child("DeclineInvitationButton", true, false) as Button
+	if apartment_accept_button == null or apartment_decline_button == null or not apartment_accept_button.disabled or not apartment_decline_button.disabled:
+		push_error("An apartment invitation without a server response flow exposed active response buttons.")
 		quit(1)
 		return
-	if int(overlay.call("get_pending_invitation_count")) != 0:
-		push_error("The invitation queue was not cleared after completion.")
+	overlay.call("_finish_current", true)
+	if not accepted_ids.is_empty() or int(overlay.call("get_pending_invitation_count")) != 1:
+		push_error("An unsupported apartment invitation was incorrectly accepted or dismissed.")
+		quit(1)
+		return
+	var apartment_expired: Dictionary = overlay.get("_current")
+	apartment_expired["expires_at"] = float(Time.get_unix_time_from_system()) - 1.0
+	overlay.set("_current", apartment_expired)
+	overlay.call("_tick", 0.0)
+	if expired_ids != ["group-1", "apartment-1"] or int(overlay.call("get_pending_invitation_count")) != 0:
+		push_error("The unsupported apartment invitation did not expire cleanly without a false response.")
 		quit(1)
 		return
 
