@@ -1,9 +1,15 @@
 extends Node
 ## خدمة محفظة محلية موحدة. الخادم الموثوق مطلوب لحماية اقتصاد اللعب الجماعي.
 
-const PROFILE_PATH := "user://kings_city_profile.cfg"
-const TEMP_PATH := "user://kings_city_profile.wallet.tmp"
-const BACKUP_PATH := "user://kings_city_profile.pre_wallet_backup.cfg"
+const DEFAULT_PROFILE_PATH := "user://kings_city_profile.cfg"
+const DEFAULT_TEMP_PATH := "user://kings_city_profile.wallet.tmp"
+const DEFAULT_BACKUP_PATH := "user://kings_city_profile.pre_wallet_backup.cfg"
+var profile_path := DEFAULT_PROFILE_PATH
+var temp_path := DEFAULT_TEMP_PATH
+var backup_path := DEFAULT_BACKUP_PATH
+var test_storage_enabled := false
+var _default_profile_existed_before_test := false
+var _default_profile_snapshot := PackedByteArray()
 const SCHEMA_VERSION := 1
 const MAX_BALANCE := 2000000000
 const CURRENCIES := ["money", "chips", "gems"]
@@ -14,12 +20,35 @@ var ledger: Array = []
 var initialized := false
 
 func _ready() -> void:
+	var raw_args := OS.get_cmdline_args()
+	var user_args := OS.get_cmdline_user_args()
+	var running_wallet_test := raw_args.has("res://tests/wallet_manager_test.gd") or raw_args.has("--script=res://tests/wallet_manager_test.gd")
+	if running_wallet_test and not user_args.has("--wallet-test"):
+		push_error("Wallet test refused to initialize without its isolated-storage flag.")
+		return
+	if user_args.has("--wallet-test"):
+		_default_profile_existed_before_test = FileAccess.file_exists(DEFAULT_PROFILE_PATH)
+		if _default_profile_existed_before_test:
+			_default_profile_snapshot = FileAccess.get_file_as_bytes(DEFAULT_PROFILE_PATH)
+		var suffix := str(Time.get_ticks_usec())
+		profile_path = "user://ci_wallet_fixture_%s.cfg" % suffix
+		temp_path = "user://ci_wallet_fixture_%s.wallet.tmp" % suffix
+		backup_path = "user://ci_wallet_fixture_%s.backup.cfg" % suffix
+		test_storage_enabled = true
 	initialize_wallet()
+
+func default_profile_unchanged_after_test() -> bool:
+	var exists_now := FileAccess.file_exists(DEFAULT_PROFILE_PATH)
+	if exists_now != _default_profile_existed_before_test:
+		return false
+	if not exists_now:
+		return true
+	return FileAccess.get_file_as_bytes(DEFAULT_PROFILE_PATH) == _default_profile_snapshot
 
 func initialize_wallet() -> bool:
 	var config := ConfigFile.new()
-	var err := config.load(PROFILE_PATH)
-	if err != OK and FileAccess.file_exists(PROFILE_PATH):
+	var err := config.load(profile_path)
+	if err != OK and FileAccess.file_exists(profile_path):
 		push_error("Wallet: profile file is unreadable; wallet initialization stopped.")
 		return false
 
@@ -72,7 +101,7 @@ func get_balances() -> Dictionary:
 func _refresh_legacy_balances() -> void:
 	# المال والرقائق ما زالا يُحدّثان عبر أنظمة اللعبة القديمة؛ اقرأ آخر قيمهما المحفوظة.
 	var config := ConfigFile.new()
-	if config.load(PROFILE_PATH) != OK:
+	if config.load(profile_path) != OK:
 		return
 	for currency in ["money", "chips"]:
 		var value: Variant = config.get_value("profile", currency, balances[currency])
@@ -131,7 +160,7 @@ func purchase_once(transaction_id: String, currency: String, amount: int, reason
 	if amount < 0 or amount > MAX_BALANCE or receipts.has(transaction_id):
 		return false
 	var config := ConfigFile.new()
-	if config.load(PROFILE_PATH) != OK:
+	if config.load(profile_path) != OK:
 		return false
 	_refresh_legacy_balances()
 	var current := int(balances[currency])
@@ -181,7 +210,7 @@ func _transact(transaction_id: String, currency: String, amount: int, kind: Stri
 	if amount <= 0 or amount > MAX_BALANCE or receipts.has(transaction_id):
 		return false
 	var config := ConfigFile.new()
-	if config.load(PROFILE_PATH) != OK:
+	if config.load(profile_path) != OK:
 		return false
 	_refresh_legacy_balances()
 	var current := int(balances[currency])
@@ -231,16 +260,16 @@ func _persist_wallet(config: ConfigFile) -> bool:
 	return true
 
 func _atomic_save(config: ConfigFile) -> bool:
-	if config.save(TEMP_PATH) != OK:
+	if config.save(temp_path) != OK:
 		return false
-	var original_exists := FileAccess.file_exists(PROFILE_PATH)
-	if original_exists and not FileAccess.file_exists(BACKUP_PATH):
-		if DirAccess.copy_absolute(ProjectSettings.globalize_path(PROFILE_PATH), ProjectSettings.globalize_path(BACKUP_PATH)) != OK:
-			DirAccess.remove_absolute(ProjectSettings.globalize_path(TEMP_PATH))
+	var original_exists := FileAccess.file_exists(profile_path)
+	if original_exists and not FileAccess.file_exists(backup_path):
+		if DirAccess.copy_absolute(ProjectSettings.globalize_path(profile_path), ProjectSettings.globalize_path(backup_path)) != OK:
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(temp_path))
 			return false
-	var original_path := ProjectSettings.globalize_path(PROFILE_PATH)
-	var temp_path := ProjectSettings.globalize_path(TEMP_PATH)
-	var backup_path := ProjectSettings.globalize_path(BACKUP_PATH)
+	var original_path := ProjectSettings.globalize_path(profile_path)
+	var temp_path := ProjectSettings.globalize_path(temp_path)
+	var backup_path := ProjectSettings.globalize_path(backup_path)
 	if original_exists:
 		var rotate_error := DirAccess.rename_absolute(original_path, backup_path + ".pending")
 		if rotate_error != OK:
