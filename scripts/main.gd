@@ -462,6 +462,21 @@ func _create_interior_furnishings(root: Node3D, building_title: String) -> void:
 			for side in [-1.0, 1.0]:
 				_create_box(root, "RestaurantSeat_%d_%d" % [index, int(side)], Vector3(0.8, 0.85, 0.8), Vector3(x + side * 1.35, 0.42, z), Color(0.18, 0.31, 0.29), true)
 		_create_box(root, "RestaurantServingCounter", Vector3(4.0, 1.0, 0.9), Vector3(0, 0.5, -5.1), Color(0.32, 0.19, 0.12), true)
+	elif building_title == "الكازينو الأوروبي VIP":
+		# صالة VIP أولية خفيفة: تستخدم الصناديق والخامات المشتركة الموجودة،
+		# ولا تنشئ ملفات أصول أو أنظمة لعب/مكافآت/اقتصاد جديدة.
+		_create_box(root, "VIPReception", Vector3(3.8, 0.95, 0.9), Vector3(0, 0.48, -5.0), Color(0.12, 0.14, 0.17), true)
+		_create_box(root, "VIPReceptionGoldTrim", Vector3(3.9, 0.10, 0.96), Vector3(0, 0.98, -5.0), Color(0.82, 0.65, 0.31))
+		for index in range(2):
+			var side := -1.0 if index == 0 else 1.0
+			var x := side * 3.8
+			_create_box(root, "VIPLoungeSofa_%d" % index, Vector3(2.4, 0.72, 1.0), Vector3(x, 0.38, -0.4), Color(0.10, 0.17, 0.18), true)
+			_create_box(root, "VIPLoungeBack_%d" % index, Vector3(2.4, 1.05, 0.22), Vector3(x, 0.9, -0.82), Color(0.10, 0.17, 0.18), true)
+			_create_box(root, "VIPLoungeGoldBase_%d" % index, Vector3(2.45, 0.10, 1.04), Vector3(x, 0.12, -0.4), Color(0.76, 0.57, 0.25))
+			_create_box(root, "VIPLoungeTable_%d" % index, Vector3(1.35, 0.16, 0.85), Vector3(x, 0.55, 1.35), Color(0.20, 0.15, 0.12), true)
+			_create_box(root, "VIPLoungeTableBase_%d" % index, Vector3(0.18, 0.48, 0.18), Vector3(x, 0.28, 1.35), Color(0.78, 0.61, 0.29), true)
+		_create_box(root, "VIPFeaturePanel", Vector3(4.8, 2.4, 0.16), Vector3(0, 2.25, -6.65), Color(0.08, 0.13, 0.15))
+		_create_box(root, "VIPFeatureGoldFrame", Vector3(5.0, 0.12, 0.22), Vector3(0, 3.52, -6.65), Color(0.84, 0.68, 0.34))
 	elif building_title == "مركز التوظيف":
 		for index in range(3):
 			var x := -4.0 + float(index) * 4.0
@@ -475,6 +490,9 @@ func _create_interior_furnishings(root: Node3D, building_title: String) -> void:
 
 func _create_interior_staff(root: Node3D, building_title: String) -> void:
 	# موظف محلي داخل كل مبنى؛ يستخدم نظام التفاعل الحالي دون إنشاء نظام مكافآت جديد.
+	# لا ننشئ موظفًا افتراضيًا للكازينو قبل اعتماد دوره وحواره وتفاعله.
+	if building_title == "الكازينو الأوروبي VIP":
+		return
 	var staff := Node3D.new()
 	staff.name = "InteriorServiceStaff"
 	staff.set_script(load("res://scripts/service_npc.gd"))
