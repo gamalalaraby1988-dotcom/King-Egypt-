@@ -40,6 +40,22 @@ func _run_social_validation_tests() -> void:
 		quit(1)
 		return
 
+	social.subscribe_group_chat("group-a")
+	if social._realtime_group_id != "group-a" or not social._realtime_topics.has("chat:group:group-a"):
+		push_error("The initial group subscription was not registered.")
+		quit(1)
+		return
+	social.subscribe_group_chat("group-b")
+	if social._realtime_group_id != "group-b" or social._realtime_topics.has("chat:group:group-a") or not social._realtime_topics.has("chat:group:group-b"):
+		push_error("Switching groups left the previous realtime group topic subscribed.")
+		quit(1)
+		return
+	social.subscribe_group_chat("")
+	if not social._realtime_group_id.is_empty() or social._realtime_topics.has("chat:group:group-b"):
+		push_error("Leaving a group did not clear its realtime subscription.")
+		quit(1)
+		return
+
 	if social.open_direct_conversation("bad-code"):
 		push_error("Invalid player code was accepted for direct conversation.")
 		quit(1)
