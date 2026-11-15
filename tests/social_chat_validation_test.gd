@@ -614,6 +614,7 @@ func _run_social_validation_tests() -> void:
 		return
 	invitation_overlay.enqueue_invitation({
 		"invite_id": "ci-account-a-invite",
+		"type": "group_invite",
 		"title": "CI invitation",
 		"body": "Account A invitation",
 		"expires_at": float(Time.get_unix_time_from_system()) + 60.0
@@ -646,6 +647,7 @@ func _run_social_validation_tests() -> void:
 		return
 	invitation_overlay.enqueue_invitation({
 		"invite_id": "ci-account-b-invite",
+		"type": "group_invite",
 		"title": "Queued invitation",
 		"expires_at": float(Time.get_unix_time_from_system()) + 60.0
 	})
@@ -690,6 +692,7 @@ func _run_social_validation_tests() -> void:
 	)
 	invitation_overlay.enqueue_invitation({
 		"invite_id": "ci-late-tap-invite",
+		"type": "group_invite",
 		"title": "Late tap invitation",
 		"expires_at": float(Time.get_unix_time_from_system()) + 60.0
 	})
