@@ -59,6 +59,7 @@ var social_friends_box: VBoxContainer
 var friend_search_input: LineEdit
 var selected_friend_code := ""
 var selected_friend_conversation_id := ""
+var social_group_create_button: Button
 
 const GROUP_MAX_MEMBERS := 4
 const GROUP_CHAT_MAX_LENGTH := 300
@@ -1000,6 +1001,17 @@ func _build_social_chat_panel() -> void:
 	social_chat_status.add_theme_font_size_override("font_size", 10)
 	social_chat_status.add_theme_color_override("font_color", Color(0.95, 0.72, 0.35))
 	conversation.add_child(social_chat_status)
+	social_group_create_button = Button.new()
+	social_group_create_button.text = "إنشاء مجموعة (حتى 4 لاعبين)"
+	social_group_create_button.pressed.connect(_create_social_group)
+	social_group_create_button.visible = false
+	conversation.add_child(social_group_create_button)
+	var invite_group_button := Button.new()
+	invite_group_button.text = "دعوة الصديق المحدد للمجموعة"
+	invite_group_button.pressed.connect(_invite_selected_friend_to_group)
+	invite_group_button.visible = false
+	invite_group_button.name = "InviteSelectedFriendToGroup"
+	conversation.add_child(invite_group_button)
 	social_chat_log = RichTextLabel.new()
 	social_chat_log.bbcode_enabled = true
 	social_chat_log.scroll_following = true
@@ -1034,12 +1046,14 @@ func _open_social_chat_panel() -> void:
 	social_chat_panel.visible = true
 	if AuthManager.is_authenticated():
 		_refresh_social_friends()
+		SocialChatManager.get_chat_group()
 	if is_instance_valid(social_chat_input):
 		social_chat_input.grab_focus()
 
 
 func _on_social_authenticated(_user_id: String, _email: String) -> void:
 	_refresh_social_friends()
+	SocialChatManager.get_chat_group()
 
 
 func _refresh_social_friends() -> void:
@@ -1117,6 +1131,49 @@ func _on_social_operation_completed(action: String, data: Variant) -> void:
 				SocialChatManager.read_direct_messages(selected_friend_conversation_id)
 			else:
 				social_chat_status.text = "لم تُرسل الرسالة؛ تحقق من الصداقة والاتصال."
+		"group_create":
+			if data is Array and not data.is_empty() and data[0] is Dictionary and bool(data[0].get("success", false)):
+				social_chat_status.text = "تم إنشاء المجموعة على الخادم."
+				SocialChatManager.get_chat_group()
+			else:
+				social_chat_status.text = "تعذر إنشاء المجموعة."
+		"group_info":
+			group_members.clear()
+			if data is Array:
+				for member in data:
+					if member is Dictionary:
+						group_members.append({"player_id": str(member.get("player_code", "")), "display_name": str(member.get("display_name", "لاعب")), "is_leader": bool(member.get("is_leader", false))})
+			if group_members.is_empty():
+				group_members = [{"player_id":"local_leader", "display_name":"أنت", "is_leader":true}]
+				if is_instance_valid(social_group_create_button):
+					social_group_create_button.visible = (social_chat_channel == "المجموعة")
+				social_chat_status.text = "لا توجد مجموعة متصلة. أنشئ مجموعتك للبدء."
+			else:
+				if is_instance_valid(social_group_create_button):
+					social_group_create_button.visible = false
+				social_chat_status.text = "تم تحميل أعضاء المجموعة من الخادم."
+			_refresh_group_popup()
+		"group_invite":
+			social_chat_status.text = "نتيجة دعوة المجموعة: " + str(data)
+			SocialChatManager.get_chat_group()
+		"chat_send":
+			if data is Array and not data.is_empty() and data[0] is Dictionary and bool(data[0].get("success", false)):
+				social_chat_input.clear()
+				SocialChatManager.read_chat_messages("group" if social_chat_channel == "المجموعة" else "public")
+			else:
+				var reason := str(data[0].get("error_code", "unknown")) if data is Array and not data.is_empty() and data[0] is Dictionary else "unknown"
+				social_chat_status.text = "لم تُرسل الرسالة: " + reason
+		"chat_read":
+			social_chat_log.clear()
+			if data is Array:
+				var ordered_chat: Array = data.duplicate()
+				ordered_chat.reverse()
+				for item in ordered_chat:
+					if item is Dictionary:
+						var sender_name := "أنت" if bool(item.get("sender_is_me", false)) else str(item.get("sender_name", "لاعب"))
+					var safe_body := str(item.get("body", "")).replace("[", "(").replace("]", ")")
+						social_chat_log.append_text("[color=gold][" + sender_name + "][/color] " + safe_body + "\n")
+			social_chat_status.text = "المحادثة متصلة بالخادم."
 		_:
 			social_chat_status.text = "اكتملت العملية: " + action
 
@@ -1136,11 +1193,16 @@ func _select_social_chat_channel(channel: String) -> void:
 		_refresh_social_friends()
 		social_chat_status.text = "اختر صديقًا من القائمة لفتح محادثته الخاصة."
 	elif channel == "المجموعة":
-		social_chat_status.text = "دردشة المجموعة تنتظر ربط خدمة المجموعات بالخادم."
-		social_chat_log.append_text("[color=gray]رسائل المجموعة غير متصلة حاليًا.[/color]")
+		social_chat_status.text = "جارٍ تحميل المجموعة ورسائلها..."
+		if is_instance_valid(social_group_create_button):
+			social_group_create_button.visible = group_members.size() <= 1
+		SocialChatManager.get_chat_group()
+		SocialChatManager.read_chat_messages("group")
 	else:
-		social_chat_status.text = "الدردشة العامة تنتظر إنشاء قناة عامة آمنة على الخادم."
-		social_chat_log.append_text("[color=gray]الرسائل العامة غير متصلة حاليًا.[/color]")
+		if is_instance_valid(social_group_create_button):
+			social_group_create_button.visible = false
+		social_chat_status.text = "جارٍ تحميل الدردشة العامة..."
+		SocialChatManager.read_chat_messages("public")
 
 
 func _insert_social_chat_emoji(emoji: String) -> void:
@@ -1163,9 +1225,20 @@ func _submit_social_chat_message(raw_message: String) -> void:
 			return
 		SocialChatManager.send_direct_message(selected_friend_conversation_id, message)
 	elif social_chat_channel == "المجموعة":
-		social_chat_status.text = "لم تُرسل الرسالة: اتصال دردشة المجموعة لم يُفعّل بعد."
+		SocialChatManager.send_chat_message("group", message)
 	else:
-		social_chat_status.text = "لم تُرسل الرسالة: اتصال الدردشة العامة لم يُفعّل بعد."
+		SocialChatManager.send_chat_message("public", message)
+
+
+func _create_social_group() -> void:
+	SocialChatManager.create_chat_group()
+
+
+func _invite_selected_friend_to_group() -> void:
+	if selected_friend_code.is_empty():
+		social_chat_status.text = "اختر صديقًا أولًا من قائمة الأصدقاء."
+		return
+	SocialChatManager.invite_chat_group_member(selected_friend_code)
 
 
 func _build_group_chat_popup() -> void:
