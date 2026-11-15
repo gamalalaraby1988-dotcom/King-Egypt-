@@ -98,6 +98,8 @@ func record_daily_claimed(day_id: String) -> void:
 	_record_event_once("daily:%s" % day_id, "daily_claims")
 
 func _record_event_once(event_id: String, stat_key: String) -> void:
+	if not _has_active_profile_session():
+		return
 	if not is_instance_valid(mission_manager) or not mission_manager.has_method("record_achievement_event_once"):
 		return
 	if mission_manager.record_achievement_event_once(event_id, stat_key):
@@ -106,6 +108,8 @@ func _record_event_once(event_id: String, stat_key: String) -> void:
 		_check_all()
 
 func _current_value(kind: String) -> int:
+	if not _has_active_profile_session():
+		return 0
 	match kind:
 		"walk":
 			return int(walked_meters)
@@ -115,6 +119,11 @@ func _current_value(kind: String) -> int:
 			return int(totals.get(kind, 0))
 
 func _check_all() -> void:
+	if not _has_active_profile_session():
+		totals = {"jobs": 0, "missions": 0, "daily_claims": 0}
+		unlocked.clear()
+		_refresh_ui()
+		return
 	if is_instance_valid(mission_manager) and mission_manager.has_method("get_achievement_totals"):
 		totals = mission_manager.get_achievement_totals()
 	var changed := false
