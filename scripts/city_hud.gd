@@ -873,10 +873,10 @@ func _build_friend_character_portrait(friend: Dictionary) -> Control:
 	if packed != null:
 		var character := packed.instantiate() as Node3D
 		if character != null:
-			world.add_child(character)
 			if scene_path == "res://scenes/characters/avatar_visual.tscn" and character.has_method("apply_character_identity"):
 				var character_id := str(friend.get("selected_character_id", friend.get("character_id", ""))).strip_edges()
-				character.apply_character_identity(character_id)
+				character.ready.connect(character.apply_character_identity.bind(character_id), CONNECT_ONE_SHOT)
+			world.add_child(character)
 	return portrait
 
 
