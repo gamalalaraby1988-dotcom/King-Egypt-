@@ -163,6 +163,21 @@ func _run_social_validation_tests() -> void:
 		push_error("An already-expired invitation was queued instead of being rejected.")
 		quit(1)
 		return
+	invitation_overlay.enqueue_invitation({
+		"invite_id": "ci-account-b-invite",
+		"title": "Queued invitation",
+		"expires_at": float(Time.get_unix_time_from_system()) + 60.0
+	})
+	invitation_overlay.call("set_response_pending", true)
+	if invitation_overlay.get_pending_invitation_count() != 1 or not invitation_overlay._current.is_empty():
+		push_error("A queued invitation became actionable while the previous response was pending.")
+		quit(1)
+		return
+	invitation_overlay.call("set_response_pending", false)
+	if invitation_overlay.get_pending_invitation_count() != 2 or str(invitation_overlay.get_current_invitation().get("invite_id", "")) != "ci-account-b-invite":
+		push_error("The next invitation was not shown after the pending response completed.")
+		quit(1)
+		return
 	invitation_overlay.clear_pending_invitations()
 	if invitation_overlay.get_pending_invitation_count() != 0 or not invitation_overlay._current.is_empty() or invitation_overlay._panel.visible:
 		push_error("A previous account's active or queued invitation survived account cleanup.")
