@@ -64,6 +64,15 @@ var social_friends_box: VBoxContainer
 var friend_search_input: LineEdit
 var selected_friend_code := ""
 var local_player_code := ""
+var _pending_direct_open_player_code := ""
+var _group_channel_button: Button
+var _friends_channel_button: Button
+var _unread_group_messages := 0
+var _unread_direct_by_friend: Dictionary = {}
+var _friend_buttons: Dictionary = {}
+var _friend_base_labels: Dictionary = {}
+var _direct_conversation_to_friend: Dictionary = {}
+var _friend_to_conversation: Dictionary = {}
 var selected_friend_conversation_id := ""
 var social_group_create_button: Button
 var social_group_invite_button: Button
@@ -1055,6 +1064,10 @@ func _build_social_chat_panel() -> void:
 		channel_button.add_theme_font_size_override("font_size", 11)
 		channel_button.pressed.connect(_select_social_chat_channel.bind(channel))
 		channels.add_child(channel_button)
+		if channel == "الأصدقاء":
+			_friends_channel_button = channel_button
+		elif channel == "المجموعة":
+			_group_channel_button = channel_button
 
 	var body := HBoxContainer.new()
 	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -1334,8 +1347,7 @@ func _open_social_chat_panel() -> void:
 	if not is_instance_valid(social_chat_panel):
 		return
 	social_chat_panel.visible = true
-	if is_instance_valid(social_chat_dock_button):
-		social_chat_dock_button.text = "💬"
+	_refresh_unread_indicators()
 	if AuthManager.is_authenticated():
 		SocialChatManager.list_chat_group_invites()
 		_refresh_blocked_players()
@@ -1386,6 +1398,7 @@ func _on_social_friend_selected(player_code: String) -> void:
 		return
 	social_chat_channel = "الأصدقاء"
 	selected_friend_code = player_code
+	_pending_direct_open_player_code = player_code
 	selected_friend_conversation_id = ""
 	social_chat_log.clear()
 	social_chat_status.text = "جارٍ فتح محادثة الصديق..."
@@ -1429,6 +1442,8 @@ func _on_social_operation_completed(action: String, data: Variant) -> void:
 				player_popup.visible = false
 				_refresh_blocked_players()
 		"friends_list":
+			_friend_buttons.clear()
+			_friend_base_labels.clear()
 			for child in social_friends_box.get_children():
 				child.queue_free()
 			if data is Array:
@@ -1442,6 +1457,9 @@ func _on_social_operation_completed(action: String, data: Variant) -> void:
 					friend_button.custom_minimum_size.y = 48
 					friend_button.pressed.connect(_on_social_friend_selected.bind(code))
 					social_friends_box.add_child(friend_button)
+					_friend_buttons[code] = friend_button
+					_friend_base_labels[code] = friend_button.text
+					_update_friend_unread_badge(code)
 			if social_friends_box.get_child_count() == 0:
 				var empty_label := Label.new()
 				empty_label.text = "لا يوجد أصدقاء بعد"
@@ -1485,11 +1503,22 @@ func _on_social_operation_completed(action: String, data: Variant) -> void:
 				var result: Dictionary = data[0]
 				if bool(result.get("success", false)):
 					selected_friend_conversation_id = str(result.get("conversation_id", ""))
+					if not _pending_direct_open_player_code.is_empty():
+						_direct_conversation_to_friend[selected_friend_conversation_id] = _pending_direct_open_player_code
+						_friend_to_conversation[_pending_direct_open_player_code] = selected_friend_conversation_id
+						_unread_direct_by_friend.erase(_pending_direct_open_player_code)
+						_update_friend_unread_badge(_pending_direct_open_player_code)
+						_pending_direct_open_player_code = ""
+					_refresh_unread_indicators()
 					SocialChatManager.subscribe_direct_chat(selected_friend_conversation_id)
 					SocialChatManager.read_direct_messages(selected_friend_conversation_id)
 				else:
 					social_chat_status.text = "تعذر فتح المحادثة: " + str(result.get("error_code", "unknown"))
 		"direct_read":
+			if not selected_friend_code.is_empty():
+				_unread_direct_by_friend.erase(selected_friend_code)
+				_update_friend_unread_badge(selected_friend_code)
+			_refresh_unread_indicators()
 			social_chat_log.clear()
 			if data is Array:
 				var ordered: Array = data.duplicate()
@@ -1574,6 +1603,9 @@ func _on_social_operation_completed(action: String, data: Variant) -> void:
 				var reason := str(data[0].get("error_code", "unknown")) if data is Array and not data.is_empty() and data[0] is Dictionary else "unknown"
 				social_chat_status.text = "لم تُرسل الرسالة: " + reason
 		"chat_read":
+			if social_chat_channel == "المجموعة":
+				_unread_group_messages = 0
+				_refresh_unread_indicators()
 			social_chat_log.clear()
 			if data is Array:
 				var ordered_chat: Array = data.duplicate()
@@ -1632,14 +1664,29 @@ func _on_social_realtime_event(topic: String, event_name: String, payload: Dicti
 	elif topic.begins_with("chat:direct:") and topic == "chat:direct:" + selected_friend_conversation_id and social_chat_channel == "الأصدقاء" and social_chat_panel.visible:
 		should_show = true
 	if not should_show or not is_instance_valid(social_chat_log):
-		if is_instance_valid(social_chat_dock_button):
-			social_chat_dock_button.text = "💬 🔴"
+		if topic.begins_with("chat:group:"):
+			_unread_group_messages += 1
+		elif topic.begins_with("chat:direct:"):
+			var conversation_id := topic.trim_prefix("chat:direct:")
+			var friend_code := str(_direct_conversation_to_friend.get(conversation_id, ""))
+			if not friend_code.is_empty():
+				_unread_direct_by_friend[friend_code] = int(_unread_direct_by_friend.get(friend_code, 0)) + 1
+				_update_friend_unread_badge(friend_code)
+		_refresh_unread_indicators()
 		return
 	var message_id := str(payload.get("message_id", ""))
 	if not message_id.is_empty() and _seen_realtime_message_ids.has(message_id):
 		return
 	if not message_id.is_empty():
 		_seen_realtime_message_ids[message_id] = true
+	if topic.begins_with("chat:group:"):
+		_unread_group_messages = 0
+	elif topic.begins_with("chat:direct:"):
+		var active_friend_code := str(_direct_conversation_to_friend.get(selected_friend_conversation_id, selected_friend_code))
+		if not active_friend_code.is_empty():
+			_unread_direct_by_friend.erase(active_friend_code)
+			_update_friend_unread_badge(active_friend_code)
+	_refresh_unread_indicators()
 	var sender := str(payload.get("sender_name", "لاعب"))
 	var safe_body := str(payload.get("body", "")).replace("[", "(").replace("]", ")")
 	social_chat_log.append_text("[color=gold][" + sender + "][/color] " + safe_body + "\n")
@@ -1705,6 +1752,28 @@ func _remove_social_invite_card(invite_id: String) -> void:
 	social_invites_box.visible = social_invites_box.get_child_count() > 0
 
 
+func _update_friend_unread_badge(player_code: String) -> void:
+	var friend_button: Button = _friend_buttons.get(player_code) as Button
+	if not is_instance_valid(friend_button):
+		return
+	var base_label := str(_friend_base_labels.get(player_code, player_code))
+	var unread := int(_unread_direct_by_friend.get(player_code, 0))
+	friend_button.text = base_label if unread <= 0 else base_label + "\n🔴 " + str(unread)
+
+
+func _refresh_unread_indicators() -> void:
+	var direct_total := 0
+	for value in _unread_direct_by_friend.values():
+		direct_total += int(value)
+	if is_instance_valid(_group_channel_button):
+		_group_channel_button.text = "المجموعة" if _unread_group_messages <= 0 else "المجموعة 🔴 " + str(_unread_group_messages)
+	if is_instance_valid(_friends_channel_button):
+		_friends_channel_button.text = "الأصدقاء" if direct_total <= 0 else "الأصدقاء 🔴 " + str(direct_total)
+	if is_instance_valid(social_chat_dock_button):
+		var total := _unread_group_messages + direct_total
+		social_chat_dock_button.text = "💬" if total <= 0 else "💬 🔴 " + str(total)
+
+
 func _select_social_chat_channel(channel: String) -> void:
 	if not ["الأصدقاء", "المجموعة", "العامة"].has(channel):
 		return
@@ -1716,6 +1785,8 @@ func _select_social_chat_channel(channel: String) -> void:
 		_refresh_social_friends()
 		social_chat_status.text = "اختر صديقًا من القائمة لفتح محادثته الخاصة."
 	elif channel == "المجموعة":
+		_unread_group_messages = 0
+		_refresh_unread_indicators()
 		social_chat_status.text = "جارٍ تحميل المجموعة ورسائلها..."
 		if is_instance_valid(social_group_create_button):
 			social_group_create_button.visible = group_members.size() <= 1
