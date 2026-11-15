@@ -10,6 +10,8 @@ const SUPABASE_PUBLISHABLE_KEY := "sb_publishable_BrWeMmhyOpL73Uca40Ug0Q_8Zgw55s
 
 var _http: HTTPRequest
 var _pending_action := ""
+var _pending_user_id := ""
+var _pending_session_generation := -1
 var _realtime_socket: WebSocketPeer
 var _realtime_topics: Dictionary = {}
 var _realtime_join_refs: Dictionary = {}
@@ -29,6 +31,28 @@ func _ready() -> void:
 	_http.timeout = 20.0
 	add_child(_http)
 	_http.request_completed.connect(_on_request_completed)
+	if not AuthManager.session_changed.is_connected(_on_auth_session_changed):
+		AuthManager.session_changed.connect(_on_auth_session_changed)
+
+func _on_auth_session_changed(_previous_user_id: String, _current_user_id: String, _generation: int) -> void:
+	# Never carry a prior account's realtime subscriptions into a new identity.
+	if _realtime_socket != null:
+		if _realtime_socket.get_ready_state() != WebSocketPeer.STATE_CLOSED:
+			_realtime_socket.close()
+		_realtime_socket = null
+	_realtime_connected = false
+	_realtime_topics.clear()
+	_realtime_join_refs.clear()
+	_realtime_last_token = ""
+	_realtime_player_code = ""
+	_realtime_group_id = ""
+	_realtime_direct_id = ""
+	_realtime_heartbeat_elapsed = 0.0
+	_realtime_retry_elapsed = 0.0
+	realtime_status_changed.emit("تم فصل الاتصال السابق؛ يلزم إعادة الاشتراك للحساب الحالي")
+
+func _request_session_is_current(user_id: String, generation: int) -> bool:
+	return not user_id.is_empty() and AuthManager.is_session_current(user_id, generation)
 
 func get_daily_chest_status() -> bool:
 	return _rpc("get_my_test_daily_chest_status", {}, "daily_chest_status")
@@ -139,6 +163,8 @@ func _rpc(function_name: String, payload: Dictionary, action: String) -> bool:
 		operation_failed.emit(action, "هناك طلب اجتماعي آخر قيد التنفيذ.")
 		return false
 	_pending_action = action
+	_pending_user_id = AuthManager.get_authenticated_user_id()
+	_pending_session_generation = AuthManager.get_session_generation()
 	var headers := PackedStringArray([
 		"apikey: " + SUPABASE_PUBLISHABLE_KEY,
 		"Authorization: Bearer " + AuthManager.get_access_token(),
@@ -155,8 +181,15 @@ func _rpc(function_name: String, payload: Dictionary, action: String) -> bool:
 
 func _on_request_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
 	var action := _pending_action
+	var request_user_id := _pending_user_id
+	var request_generation := _pending_session_generation
 	_pending_action = ""
+	_pending_user_id = ""
+	_pending_session_generation = -1
 	if action.is_empty():
+		return
+	# A response from an account that signed out or switched identity is discarded.
+	if not _request_session_is_current(request_user_id, request_generation):
 		return
 	if result != HTTPRequest.RESULT_SUCCESS:
 		operation_failed.emit(action, "تعذر الاتصال بخدمة التواصل.")
