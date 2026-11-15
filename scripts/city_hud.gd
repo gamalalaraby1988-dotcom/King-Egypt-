@@ -64,6 +64,7 @@ var social_group_invite_button: Button
 var social_invites_box: VBoxContainer
 var social_chat_dock_button: Button
 var _seen_realtime_message_ids: Dictionary = {}
+var _pending_group_invite_response_id := ""
 
 const GROUP_MAX_MEMBERS := 4
 const GROUP_CHAT_MAX_LENGTH := 300
@@ -1190,9 +1191,11 @@ func _on_social_operation_completed(action: String, data: Variant) -> void:
 			SocialChatManager.get_chat_group()
 		"group_invite_response":
 			social_chat_status.text = "نتيجة الرد على الدعوة: " + str(data)
+			if str(data) == "accepted" or str(data) == "declined":
+				_remove_social_invite_card(_pending_group_invite_response_id)
+				_pending_group_invite_response_id = ""
 			if str(data) == "accepted":
 				SocialChatManager.get_chat_group()
-			SocialChatManager.list_chat_group_invites()
 		"chat_send":
 			if data is Array and not data.is_empty() and data[0] is Dictionary and bool(data[0].get("success", false)):
 				social_chat_input.clear()
@@ -1294,7 +1297,17 @@ func _add_social_group_invite_card(invite: Dictionary) -> void:
 
 
 func _respond_to_social_group_invite(invite_id: String, accepted: bool) -> void:
+	_pending_group_invite_response_id = invite_id
 	SocialChatManager.respond_chat_group_invite(invite_id, accepted)
+
+
+func _remove_social_invite_card(invite_id: String) -> void:
+	if not is_instance_valid(social_invites_box):
+		return
+	for child in social_invites_box.get_children():
+		if child.has_meta("invite_id") and str(child.get_meta("invite_id")) == invite_id:
+			child.queue_free()
+	social_invites_box.visible = social_invites_box.get_child_count() > 0
 
 
 func _select_social_chat_channel(channel: String) -> void:
