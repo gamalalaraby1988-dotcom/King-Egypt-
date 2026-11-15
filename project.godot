@@ -11,6 +11,7 @@ config/description="مشروع مدينة ثلاثية الأبعاد قابل �
 AuthManager="*res://scripts/auth_manager.gd"
 SocialChatManager="*res://scripts/social_chat_manager.gd"
 CityLanguage="*res://scripts/city_language.gd"
+AccountDataSession="*res://scripts/account_data_session.gd"
 WalletManager="*res://scripts/wallet_manager.gd"
 VehicleStoreManager="*res://scripts/vehicle_store_manager.gd"
 
