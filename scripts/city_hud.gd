@@ -1059,9 +1059,9 @@ func _open_social_chat_panel() -> void:
 	if is_instance_valid(social_chat_dock_button):
 		social_chat_dock_button.text = "💬"
 	if AuthManager.is_authenticated():
-		if is_instance_valid(social_chat_input):
+		SocialChatManager.list_chat_group_invites()
+	if is_instance_valid(social_chat_input):
 		social_chat_input.grab_focus()
-
 
 func _on_social_authenticated(_user_id: String, _email: String) -> void:
 	SocialChatManager.connect_realtime()
