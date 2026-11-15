@@ -138,6 +138,26 @@ func _run_auth_session_tests() -> void:
 		push_error("Realtime socket retained account A ownership after switching to account B.")
 		quit(1)
 		return
+	# If a stale socket is detected outside the auth-change signal, it must not replay A's topics for B.
+	social._realtime_topics = {
+		"chat:public:messages": true,
+		"chat:group:account-a-group": true,
+		"chat:direct:account-a-direct": true,
+		"chat:invites:ABCDEFGHIJ": true
+	}
+	social._realtime_join_refs = {"chat:group:account-a-group": "old-ref"}
+	social._realtime_player_code = "ABCDEFGHIJ"
+	social._realtime_group_id = "account-a-group"
+	social._realtime_direct_id = "account-a-direct"
+	social._realtime_session_user_id = "00000000-0000-4000-8000-000000000001"
+	social._realtime_session_generation = first_generation
+	social._realtime_socket = WebSocketPeer.new()
+	social._process(0.0)
+	if social._realtime_socket != null or not social._realtime_topics.is_empty() or not social._realtime_join_refs.is_empty() or not social._realtime_player_code.is_empty() or not social._realtime_group_id.is_empty() or not social._realtime_direct_id.is_empty():
+		push_error("A stale realtime socket replayed account A subscriptions or identity after account B became active.")
+		quit(1)
+		return
+
 	# A delayed callback from A must not consume or overwrite B's active RPC slot.
 	var stale_rpc_request := HTTPRequest.new()
 	var current_rpc_request := HTTPRequest.new()
