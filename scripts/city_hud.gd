@@ -744,6 +744,13 @@ func _open_group_invite_popup() -> void:
 	SocialChatManager.list_friends()
 
 
+func has_group_invite_presence_metadata(friends: Array) -> bool:
+	for friend in friends:
+		if friend is Dictionary and (friend.has("is_online") or friend.has("online") or friend.has("presence") or friend.has("status")):
+			return true
+	return false
+
+
 func get_online_group_invite_friends(friends: Array) -> Array:
 	var online_friends: Array = []
 	for friend in friends:
@@ -762,6 +769,9 @@ func _refresh_group_invite_friends(friends: Array) -> void:
 	for child in group_invite_list.get_children():
 		child.queue_free()
 	_group_invite_friends_cache = get_online_group_invite_friends(friends)
+	if not has_group_invite_presence_metadata(friends):
+		group_invite_status.text = "حالة اتصال الأصدقاء غير متاحة من الخادم حاليًا. لم نعرض حالات غير مؤكدة."
+		return
 	if group_members.size() >= GROUP_MAX_MEMBERS:
 		group_invite_status.text = "المجموعة مكتملة؛ لا يمكن إرسال دعوات جديدة."
 		return
@@ -777,12 +787,14 @@ func _refresh_group_invite_friends(friends: Array) -> void:
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 8)
 		group_invite_list.add_child(row)
-		var avatar := Label.new()
-		avatar.text = "👤"
-		avatar.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		avatar.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		var avatar := TextureRect.new()
+		avatar.name = "FriendAvatar"
 		avatar.custom_minimum_size = Vector2(42, 42)
-		avatar.add_theme_font_size_override("font_size", 24)
+		avatar.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+		avatar.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		var avatar_texture: Variant = friend.get("avatar_texture", null)
+		if avatar_texture is Texture2D:
+			avatar.texture = avatar_texture
 		row.add_child(avatar)
 		var name_column := VBoxContainer.new()
 		name_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
