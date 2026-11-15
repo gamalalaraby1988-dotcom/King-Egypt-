@@ -16,11 +16,15 @@ func _run_invitation_overlay_tests() -> void:
 
 	var expired_ids: Array[String] = []
 	var accepted_ids: Array[String] = []
+	var declined_ids: Array[String] = []
 	overlay.connect("invitation_expired", func(item: Dictionary) -> void:
 		expired_ids.append(str(item.get("invite_id", "")))
 	)
 	overlay.connect("invitation_accepted", func(item: Dictionary) -> void:
 		accepted_ids.append(str(item.get("invite_id", "")))
+	)
+	overlay.connect("invitation_declined", func(item: Dictionary) -> void:
+		declined_ids.append(str(item.get("invite_id", "")))
 	)
 
 	var now := float(Time.get_unix_time_from_system())
@@ -69,5 +73,31 @@ func _run_invitation_overlay_tests() -> void:
 		quit(1)
 		return
 
-	print("Unified invitation overlay queue and 30-second expiry tests passed.")
+	var decline_now := float(Time.get_unix_time_from_system())
+	overlay.call("enqueue_invitation", {
+		"invite_id": "group-decline",
+		"type": "group_invite",
+		"title": "دعوة مجموعة",
+		"body": "اختبار الرفض",
+		"expires_at": decline_now + 30.0
+	})
+	overlay.call("enqueue_invitation", {
+		"invite_id": "apartment-after-decline",
+		"type": "apartment_invite",
+		"title": "دعوة شقة",
+		"body": "اختبار ترتيب الطابور",
+		"expires_at": decline_now + 60.0
+	})
+	overlay.call("_finish_current", false)
+	if declined_ids != ["group-decline"]:
+		push_error("The unified invitation decline action was not emitted exactly once.")
+		quit(1)
+		return
+	current_invitation = overlay.call("get_current_invitation")
+	if str(current_invitation.get("invite_id", "")) != "apartment-after-decline":
+		push_error("The next invitation did not appear after declining the active invitation.")
+		quit(1)
+		return
+
+	print("Unified invitation queue, accept, decline, and 30-second expiry tests passed.")
 	quit(0)
