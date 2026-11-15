@@ -87,7 +87,7 @@ func _run_invitation_overlay_tests() -> void:
 		"type": "apartment_invite",
 		"title": "دعوة شقة",
 		"body": "اختبار انتهاء المهلة أثناء انتظار الرد",
-		"expires_at": decline_now + 1.0
+		"expires_at": decline_now + 10.0
 	})
 	overlay.call("enqueue_invitation", {
 		"invite_id": "group-after-wait",
@@ -110,7 +110,7 @@ func _run_invitation_overlay_tests() -> void:
 		push_error("The queued invitation was not retained while the decline response was pending.")
 		quit(1)
 		return
-	overlay.call("_tick", 2.0)
+	overlay.call("_tick", 11.0)
 	overlay.call("set_response_pending", false)
 	if expired_ids != ["group-1", "apartment-after-decline"]:
 		push_error("An invitation that expired while waiting for the server response was not discarded.")
