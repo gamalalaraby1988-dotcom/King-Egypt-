@@ -46,13 +46,19 @@ func _ready() -> void:
 	_create_beach_portal()
 
 func _process(_delta: float) -> void:
-	if not is_instance_valid(city):
+	# لا تستخدم مراجع المدينة أو اللاعب بعد خروجها من المشهد أو بدء حذفها.
+	if not is_instance_valid(city) or city.is_queued_for_deletion() or not city.is_inside_tree():
 		_close_menu()
 		return
-	if not is_instance_valid(player):
+	if not is_instance_valid(player) or player.is_queued_for_deletion() or not player.is_inside_tree():
 		player = city.get_node_or_null("Player") as CharacterBody3D
 	if is_instance_valid(menu_panel) and menu_panel.visible:
-		if not is_instance_valid(player) or not is_instance_valid(active_gate) or player.global_position.distance_to(active_gate.global_position) > 6.0:
+		var player_ready := is_instance_valid(player) and not player.is_queued_for_deletion() and player.is_inside_tree()
+		var gate_ready := is_instance_valid(active_gate) and not active_gate.is_queued_for_deletion() and active_gate.is_inside_tree()
+		if not player_ready or not gate_ready:
+			_close_menu()
+			return
+		if player.global_position.distance_to(active_gate.global_position) > 6.0:
 			_close_menu()
 
 func _create_menu() -> void:
