@@ -14,6 +14,9 @@ var interior_quick_travel_panel: PanelContainer
 var interior_quick_travel_buttons: Array[Button] = []
 var apartment_customization_layer: CanvasLayer = null
 var apartment_design_index := 0
+var apartment_furniture_layer: CanvasLayer = null
+var apartment_furniture_index := 0
+var apartment_furniture_defaults: Dictionary = {}
 var interior_transition_busy := false
 var interior_loading_message_key := "interior_loading"
 var interior_hidden_world_states: Dictionary = {}
@@ -27,6 +30,15 @@ var _player_saved_collision_mask := 1
 const INTERIOR_WORLD_POSITION := Vector3(1000.0, 0.0, 1000.0)
 const APARTMENT_SAVE_PATH := "user://kings_city_apartment.cfg"
 const APARTMENT_DESIGN_NAMES := ["الملكي الذهبي", "النيل الفيروزي", "الأسواني الدافئ"]
+
+const APARTMENT_FURNITURE_GROUPS := [
+	{"label": "السجادة", "nodes": ["ApartmentLivingRug"]},
+	{"label": "الأريكة", "nodes": ["ApartmentSofaBase", "ApartmentSofaBack"]},
+	{"label": "طاولة الوسط", "nodes": ["ApartmentCoffeeTable"]},
+	{"label": "التلفاز", "nodes": ["ApartmentTVConsole", "ApartmentTVScreen"]},
+	{"label": "السفرة", "nodes": ["ApartmentDiningTable"]},
+	{"label": "السرير", "nodes": ["ApartmentBedBase", "ApartmentBedMattress", "ApartmentBedHeadboard"]}
+]
 
 func _ready() -> void:
 	_create_ground()
@@ -407,6 +419,7 @@ func _open_private_apartment() -> void:
 	_set_city_world_hidden(true)
 	_create_building_interior("شقتي")
 	_create_apartment_customization_ui()
+	_create_apartment_furniture_ui()
 	body.global_position = INTERIOR_WORLD_POSITION + Vector3(0, 1.05, 2.8)
 	body.velocity = Vector3.ZERO
 	body.rotation.y = PI
@@ -572,6 +585,8 @@ func _create_interior_furnishings(root: Node3D, building_title: String) -> void:
 			gold_item.add_to_group("apartment_gold")
 		_load_apartment_design()
 		_apply_apartment_design(root)
+		_capture_apartment_furniture_defaults(root)
+		_load_apartment_furniture(root)
 	elif building_title == "المتجر":
 		for index in range(3):
 			var x := -4.2 + float(index) * 4.2
@@ -677,6 +692,160 @@ func _cycle_apartment_design() -> void:
 	if is_instance_valid(design_button):
 		design_button.text = "تصميم الشقة: " + APARTMENT_DESIGN_NAMES[apartment_design_index]
 
+
+func _capture_apartment_furniture_defaults(root: Node3D) -> void:
+	apartment_furniture_defaults.clear()
+	for group_data in APARTMENT_FURNITURE_GROUPS:
+		for node_name in group_data["nodes"]:
+			for suffix in ["", "Collision"]:
+				var node := root.get_node_or_null(node_name + suffix) as Node3D
+				if is_instance_valid(node):
+					apartment_furniture_defaults[node.name] = {"position": node.position, "rotation": node.rotation}
+
+func _get_apartment_group_nodes(root: Node3D, group_index: int) -> Array[Node3D]:
+	var result: Array[Node3D] = []
+	if group_index < 0 or group_index >= APARTMENT_FURNITURE_GROUPS.size():
+		return result
+	for node_name in APARTMENT_FURNITURE_GROUPS[group_index]["nodes"]:
+		for suffix in ["", "Collision"]:
+			var node := root.get_node_or_null(node_name + suffix) as Node3D
+			if is_instance_valid(node):
+				result.append(node)
+	return result
+
+func _load_apartment_furniture(root: Node3D) -> void:
+	var config := ConfigFile.new()
+	if config.load(APARTMENT_SAVE_PATH) != OK:
+		return
+	for node_name in apartment_furniture_defaults.keys():
+		var node := root.get_node_or_null(node_name) as Node3D
+		if not is_instance_valid(node):
+			continue
+		var saved_position: Variant = config.get_value("furniture", node_name + "_position", null)
+		var saved_rotation: Variant = config.get_value("furniture", node_name + "_rotation", null)
+		if saved_position is Vector3 and saved_rotation is Vector3:
+			node.position = saved_position
+			node.rotation = saved_rotation
+
+func _save_apartment_furniture() -> bool:
+	var config := ConfigFile.new()
+	var load_error := config.load(APARTMENT_SAVE_PATH)
+	if load_error != OK and FileAccess.file_exists(APARTMENT_SAVE_PATH):
+		return false
+	config.set_value("apartment", "schema_version", 2)
+	config.set_value("apartment", "design_index", apartment_design_index)
+	if is_instance_valid(interior_root):
+		for node_name in apartment_furniture_defaults.keys():
+			var node := interior_root.get_node_or_null(node_name) as Node3D
+			if is_instance_valid(node):
+				config.set_value("furniture", node_name + "_position", node.position)
+				config.set_value("furniture", node_name + "_rotation", node.rotation)
+	return config.save(APARTMENT_SAVE_PATH) == OK
+
+func _create_apartment_furniture_ui() -> void:
+	if is_instance_valid(apartment_furniture_layer):
+		apartment_furniture_layer.queue_free()
+	apartment_furniture_layer = CanvasLayer.new()
+	apartment_furniture_layer.name = "ApartmentFurnitureLayer"
+	apartment_furniture_layer.layer = 26
+	add_child(apartment_furniture_layer)
+	var panel := PanelContainer.new()
+	panel.name = "ApartmentFurniturePanel"
+	panel.position = Vector2(18, 164)
+	panel.custom_minimum_size = Vector2(300, 0)
+	apartment_furniture_layer.add_child(panel)
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 5)
+	panel.add_child(column)
+	var heading := Label.new()
+	heading.text = "ترتيب أثاث الشقة"
+	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	heading.add_theme_font_size_override("font_size", 17)
+	column.add_child(heading)
+	var selected_label := Label.new()
+	selected_label.name = "SelectedFurnitureLabel"
+	selected_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	column.add_child(selected_label)
+	var select_row := HBoxContainer.new()
+	column.add_child(select_row)
+	_add_apartment_furniture_button(select_row, "السابق", func(): _select_apartment_furniture(-1))
+	_add_apartment_furniture_button(select_row, "التالي", func(): _select_apartment_furniture(1))
+	var move_grid := GridContainer.new()
+	move_grid.columns = 3
+	column.add_child(move_grid)
+	_add_apartment_furniture_button(move_grid, "↖", func(): _move_selected_apartment_furniture(Vector3(-0.35, 0, -0.35)))
+	_add_apartment_furniture_button(move_grid, "↑", func(): _move_selected_apartment_furniture(Vector3(0, 0, -0.35)))
+	_add_apartment_furniture_button(move_grid, "↗", func(): _move_selected_apartment_furniture(Vector3(0.35, 0, -0.35)))
+	_add_apartment_furniture_button(move_grid, "←", func(): _move_selected_apartment_furniture(Vector3(-0.35, 0, 0)))
+	_add_apartment_furniture_button(move_grid, "إرجاع", _reset_selected_apartment_furniture)
+	_add_apartment_furniture_button(move_grid, "→", func(): _move_selected_apartment_furniture(Vector3(0.35, 0, 0)))
+	_add_apartment_furniture_button(move_grid, "↙", func(): _move_selected_apartment_furniture(Vector3(-0.35, 0, 0.35)))
+	_add_apartment_furniture_button(move_grid, "↓", func(): _move_selected_apartment_furniture(Vector3(0, 0, 0.35)))
+	_add_apartment_furniture_button(move_grid, "↘", func(): _move_selected_apartment_furniture(Vector3(0.35, 0, 0.35)))
+	var rotate_row := HBoxContainer.new()
+	column.add_child(rotate_row)
+	_add_apartment_furniture_button(rotate_row, "↶ تدوير", func(): _rotate_selected_apartment_furniture(-15.0))
+	_add_apartment_furniture_button(rotate_row, "تدوير ↷", func(): _rotate_selected_apartment_furniture(15.0))
+	_update_apartment_furniture_label()
+
+func _add_apartment_furniture_button(parent: Control, button_text: String, callback: Callable) -> void:
+	var button := Button.new()
+	button.text = button_text
+	button.custom_minimum_size = Vector2(88, 42)
+	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	button.add_theme_font_size_override("font_size", 15)
+	button.pressed.connect(callback)
+	parent.add_child(button)
+
+func _update_apartment_furniture_label() -> void:
+	if not is_instance_valid(apartment_furniture_layer):
+		return
+	var label := apartment_furniture_layer.get_node_or_null("ApartmentFurniturePanel/VBoxContainer/SelectedFurnitureLabel") as Label
+	if is_instance_valid(label):
+		label.text = "العنصر: " + str(APARTMENT_FURNITURE_GROUPS[apartment_furniture_index]["label"])
+
+func _select_apartment_furniture(direction: int) -> void:
+	apartment_furniture_index = posmod(apartment_furniture_index + direction, APARTMENT_FURNITURE_GROUPS.size())
+	_update_apartment_furniture_label()
+
+func _move_selected_apartment_furniture(offset: Vector3) -> void:
+	if not is_instance_valid(interior_root) or interior_transition_busy:
+		return
+	var nodes := _get_apartment_group_nodes(interior_root, apartment_furniture_index)
+	if nodes.is_empty():
+		return
+	for node in nodes:
+		node.position.x = clampf(node.position.x + offset.x, -5.8, 5.8)
+		node.position.z = clampf(node.position.z + offset.z, -5.8, 5.8)
+	_save_apartment_furniture()
+
+func _rotate_selected_apartment_furniture(degrees: float) -> void:
+	if not is_instance_valid(interior_root) or interior_transition_busy:
+		return
+	var nodes := _get_apartment_group_nodes(interior_root, apartment_furniture_index)
+	if nodes.is_empty():
+		return
+	var pivot := Vector3.ZERO
+	for node in nodes:
+		pivot += node.position
+	pivot /= float(nodes.size())
+	var angle := deg_to_rad(degrees)
+	for node in nodes:
+		var relative := node.position - pivot
+		node.position = pivot + Vector3(relative.x * cos(angle) - relative.z * sin(angle), relative.y, relative.x * sin(angle) + relative.z * cos(angle))
+		node.rotation.y += angle
+	_save_apartment_furniture()
+
+func _reset_selected_apartment_furniture() -> void:
+	if not is_instance_valid(interior_root) or interior_transition_busy:
+		return
+	for node in _get_apartment_group_nodes(interior_root, apartment_furniture_index):
+		if apartment_furniture_defaults.has(node.name):
+			var defaults: Dictionary = apartment_furniture_defaults[node.name]
+			node.position = defaults["position"]
+			node.rotation = defaults["rotation"]
+	_save_apartment_furniture()
+
 func _create_interior_exit_marker(root: Node3D) -> void:
 	var exit_marker := Node3D.new()
 	exit_marker.name = "ApartmentExitInteraction"
@@ -730,6 +899,9 @@ func return_from_building_interior(destination: Vector3 = Vector3(0.0, -9999.0, 
 	if is_instance_valid(apartment_customization_layer):
 		apartment_customization_layer.queue_free()
 	apartment_customization_layer = null
+	if is_instance_valid(apartment_furniture_layer):
+		apartment_furniture_layer.queue_free()
+	apartment_furniture_layer = null
 	var manager := get_node_or_null("MissionManager")
 	if is_instance_valid(manager) and manager.has_method("_update_interaction_target"):
 		manager._update_interaction_target()
