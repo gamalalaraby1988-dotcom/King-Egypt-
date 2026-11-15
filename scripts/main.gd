@@ -1039,6 +1039,16 @@ func _create_interactive_buildings() -> void:
 	_create_service_staff("صاحب المتجر", "صاحب محل", "أهلًا بك! يمكنني مساعدتك في احتياجاتك ومشترياتك من المتجر.", Vector3(19.5, 0, 20.2))
 	_create_service_staff("موظف المطعم", "موظف", "مرحبًا! أستقبل طلبات المطعم وأساعدك في أنشطة التوصيل.", Vector3(-12.5, 0, 20.2))
 	_create_service_staff("موظف مركز التوظيف", "موظف", "أهلًا بك! يمكنك مراجعة الوظائف المتاحة وشروطها هنا.", Vector3(19.5, 0, -11))
+	_create_daily_reward_chest()
+
+func _create_daily_reward_chest() -> void:
+	# نقطة صغيرة بجوار ساحة المحور الرئيسي، بعيدًا عن مداخل المباني.
+	var chest := Node3D.new()
+	chest.name = "DailyPharaonicRewardChest"
+	chest.set_script(load("res://scripts/daily_reward_chest.gd"))
+	chest.position = Vector3(7.5, 0.0, 7.5)
+	add_child(chest)
+
 
 func _add_functional_building(manager: Node, title: String, mission: String, description: String, pos: Vector3, color: Color, reward: int, chips_reward: int, level: int) -> void:
 	var building := Node3D.new()
