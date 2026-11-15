@@ -16,13 +16,13 @@ const VEHICLES := {
 	"hongqi_guoli": {"name": "Hongqi Guoli", "country": "الصين", "currency": "gems", "price": -1},
 	"fiat_500": {"name": "Fiat 500", "country": "إيطاليا", "currency": "money", "price": -1},
 	"mini_cooper_s": {"name": "MINI Cooper S", "country": "بريطانيا", "currency": "gems", "price": -1},
-	"horus_2030": {"name": "Horus 2030", "country": "مصر", "currency": "gems", "price": 500}
+	"horus_2030": {"name": "Horus 2030", "country": "مصر", "currency": "gems", "price": -1}
 }
 const HORUS_COLORS := {
-	"obsidian_gold": {"name": "الأسود الملكي", "price": 200},
-	"royal_sapphire": {"name": "الأزرق الفرعوني", "price": 300},
-	"pharaoh_pearl": {"name": "الأبيض الملكي", "price": 400},
-	"golden_horus": {"name": "الذهب الخالص", "price": 600}
+	"obsidian_gold": {"name": "الأسود الملكي", "price": -1},
+	"royal_sapphire": {"name": "الأزرق الفرعوني", "price": -1},
+	"pharaoh_pearl": {"name": "الأبيض الملكي", "price": -1},
+	"golden_horus": {"name": "الذهب الخالص", "price": -1}
 }
 var selected_vehicle_id := "toyota_corolla"
 
@@ -68,20 +68,9 @@ func select_vehicle(vehicle_id: String) -> bool:
 	selected_vehicle_id = vehicle_id
 	return true
 
-func purchase_vehicle(vehicle_id: String) -> bool:
-	if not VEHICLES.has(vehicle_id) or has_vehicle(vehicle_id):
-		return false
-	var offer: Dictionary = VEHICLES[vehicle_id]
-	var price := int(offer.get("price", -1))
-	var currency := str(offer.get("currency", ""))
-	if price < 0 or not ["money", "chips", "gems"].has(currency):
-		return false # السعر غير معتمد بعد؛ لا تخمين ولا شراء.
-	var next_owned := get_owned_vehicles()
-	next_owned.append(vehicle_id)
-	var tx_id := "vehicle_purchase_" + vehicle_id
-	if not WalletManager.purchase_once(tx_id, currency, price, "Vehicle purchase: " + vehicle_id, {"owned_vehicles": next_owned}):
-		return false
-	return true
+func purchase_vehicle(_vehicle_id: String) -> bool:
+	# الشراء غير متاح قبل اكتمال الاقتصاد الموحد واعتماده واختباره.
+	return false
 
 func get_horus_colors() -> Dictionary:
 	return HORUS_COLORS.duplicate(true)
@@ -93,20 +82,9 @@ func get_owned_horus_colors() -> Array:
 	var stored: Variant = config.get_value("profile", "owned_horus_colors", [])
 	return stored.duplicate() if stored is Array else []
 
-func purchase_horus_color(color_id: String) -> bool:
-	if not HORUS_COLORS.has(color_id) or not has_vehicle("horus_2030"):
-		return false
-	var owned := get_owned_horus_colors()
-	if owned.has(color_id):
-		return select_horus_color(color_id)
-	var next_owned := owned.duplicate()
-	next_owned.append(color_id)
-	var price := int(HORUS_COLORS[color_id].price)
-	var tx_id := "horus_color_" + color_id
-	return WalletManager.purchase_once(tx_id, "gems", price, "Horus 2030 color: " + color_id, {
-		"owned_horus_colors": next_owned,
-		"selected_horus_color": color_id
-	})
+func purchase_horus_color(_color_id: String) -> bool:
+	# لا تُفعّل أسعار أو خصومات ألوان قبل اعتماد الاقتصاد الموحد.
+	return false
 
 func select_horus_color(color_id: String) -> bool:
 	if not HORUS_COLORS.has(color_id) or not get_owned_horus_colors().has(color_id) or not has_vehicle("horus_2030"):
