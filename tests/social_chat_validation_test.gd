@@ -378,7 +378,7 @@ func _run_social_validation_tests() -> void:
 		quit(1)
 		return
 	var expired_count := [0]
-	dedupe_overlay.invitation_expired.connect(func(_item: Dictionary) -> void:
+	invitation_overlay.invitation_expired.connect(func(_item: Dictionary) -> void:
 		expired_count[0] += 1
 	)
 	invitation_overlay.enqueue_invitation({
@@ -460,7 +460,7 @@ func _run_social_validation_tests() -> void:
 		push_error("A late decline tap was emitted after the invitation deadline.")
 		quit(1)
 		return
-	dedupe_overlay.clear_pending_invitations()
+	invitation_overlay.clear_pending_invitations()
 	if invitation_overlay.get_pending_invitation_count() != 0 or not invitation_overlay._current.is_empty() or invitation_overlay._panel.visible:
 		push_error("A previous account's active or queued invitation survived account cleanup.")
 		quit(1)
