@@ -101,6 +101,26 @@ func _run_auth_session_tests() -> void:
 		return
 	var achievement_file_before_signout := FileAccess.get_file_as_bytes(expected_achievement_path)
 
+	# Profile names belong to the authenticated account; device preferences stay separate.
+	var legacy_profile_path := "user://kings_city_profile.cfg"
+	var legacy_profile_existed := FileAccess.file_exists(legacy_profile_path)
+	var legacy_profile_snapshot := FileAccess.get_file_as_bytes(legacy_profile_path) if legacy_profile_existed else PackedByteArray()
+	var profile_settings_script: Script = load("res://scripts/profile_settings.gd")
+	var profile_settings: Node = profile_settings_script.new()
+	root.add_child(profile_settings)
+	await process_frame
+	if profile_settings.name_input.text != "لاعب جديد":
+		push_error("A fresh account unexpectedly inherited a profile name.")
+		quit(1)
+		return
+	profile_settings.name_input.text = "CI Account A"
+	profile_settings._save_settings()
+	var first_profile_config := ConfigFile.new()
+	if first_profile_config.load(AccountDataSession.get_profile_path()) != OK or str(first_profile_config.get_value("profile", "player_name", "")) != "CI Account A":
+		push_error("Profile settings did not save the name to the active account profile.")
+		quit(1)
+		return
+
 	# Switch to a second authenticated UID and verify its achievement file is isolated.
 	auth._advance_session_generation()
 	auth._authenticated_user_id = "00000000-0000-4000-8000-000000000002"
@@ -109,6 +129,17 @@ func _run_auth_session_tests() -> void:
 	var second_achievement_path := "user://accounts/00000000-0000-4000-8000-000000000002/achievements.cfg"
 	if achievement_manager._save_path != second_achievement_path or achievement_manager.walked_meters != 0.0:
 		push_error("A second account inherited achievement progress from the first account.")
+		quit(1)
+		return
+	if profile_settings.name_input.text != "لاعب جديد":
+		push_error("A second account inherited the first account's profile name.")
+		quit(1)
+		return
+	profile_settings.name_input.text = "CI Account B"
+	profile_settings._save_settings()
+	var second_profile_config := ConfigFile.new()
+	if second_profile_config.load(AccountDataSession.get_profile_path()) != OK or str(second_profile_config.get_value("profile", "player_name", "")) != "CI Account B":
+		push_error("Profile settings did not save the second account's name independently.")
 		quit(1)
 		return
 	achievement_manager.walked_meters = 3.5
@@ -125,6 +156,10 @@ func _run_auth_session_tests() -> void:
 	auth.session_changed.emit("00000000-0000-4000-8000-000000000002", "00000000-0000-4000-8000-000000000001", auth.get_session_generation())
 	if achievement_manager._save_path != expected_achievement_path or achievement_manager.walked_meters != 12.5:
 		push_error("Returning to the first account did not restore its own achievement progress.")
+		quit(1)
+		return
+	if profile_settings.name_input.text != "CI Account A":
+		push_error("Returning to the first account did not restore its own profile name.")
 		quit(1)
 		return
 	var legacy_achievement_path := "user://kings_city_achievements.cfg"
@@ -171,6 +206,18 @@ func _run_auth_session_tests() -> void:
 		push_error("Achievement manager modified the legacy shared progress file.")
 		quit(1)
 		return
+	if profile_settings.name_input.text != "لاعب جديد" or profile_settings.name_input.editable:
+		push_error("Profile settings retained the previous account name after sign-out.")
+		quit(1)
+		return
+	if FileAccess.file_exists(legacy_profile_path) != legacy_profile_existed:
+		push_error("Profile settings created or removed the legacy shared profile file.")
+		quit(1)
+		return
+	if legacy_profile_existed and FileAccess.get_file_as_bytes(legacy_profile_path) != legacy_profile_snapshot:
+		push_error("Profile settings modified the legacy shared profile file.")
+		quit(1)
+		return
 	if not social._pending_action.is_empty() or not social._pending_user_id.is_empty() or social._pending_session_generation != -1:
 		push_error("Pending social RPC retained the signed-out account session.")
 		quit(1)
@@ -205,6 +252,9 @@ func _run_auth_session_tests() -> void:
 		quit(1)
 		return
 
+	profile_settings.free()
+	profile_settings = null
+	profile_settings_script = null
 	achievement_manager.free()
 	achievement_manager = null
 	achievement_script = null
