@@ -5,6 +5,11 @@ func _initialize() -> void:
 
 func _run_social_validation_tests() -> void:
 	await process_frame
+	create_timer(120.0).timeout.connect(func() -> void:
+		push_error("Social chat validation test watchdog expired.")
+		quit(1)
+	)
+	print("SOCIAL_TEST_STAGE: autoload_ready")
 	var social := root.get_node_or_null("SocialChatManager")
 	if social == null:
 		push_error("SocialChatManager autoload did not initialize.")
@@ -39,6 +44,7 @@ func _run_social_validation_tests() -> void:
 		return
 	dedupe_overlay.free()
 
+	print("SOCIAL_TEST_STAGE: invitation_dedupe_complete")
 	var city_hud_script: Script = load("res://scripts/city_hud.gd")
 	if city_hud_script == null:
 		push_error("City HUD script could not be loaded for group-gather guard tests.")
@@ -110,6 +116,7 @@ func _run_social_validation_tests() -> void:
 		return
 	city_hud.free()
 
+	print("SOCIAL_TEST_STAGE: hud_guards_complete")
 	var saved_topics: Dictionary = social._realtime_topics.duplicate(true)
 	var saved_join_refs: Dictionary = social._realtime_join_refs.duplicate(true)
 	var saved_ready_topics: Dictionary = social._realtime_ready_topics.duplicate(true)
@@ -213,7 +220,8 @@ func _run_social_validation_tests() -> void:
 	social._realtime_join_refs = saved_join_refs
 	social._realtime_ready_topics = saved_ready_topics
 
-	if not social.is_valid_player_code("AB12CD34EF"):
+	print("SOCIAL_TEST_STAGE: realtime_retry_checks_complete")
+	if not social.is_valid_player_code("AB12CD34EF"): 
 		push_error("A valid ten-character player code was rejected.")
 		quit(1)
 		return
@@ -242,6 +250,7 @@ func _run_social_validation_tests() -> void:
 		quit(1)
 		return
 
+	print("SOCIAL_TEST_STAGE: id_validation_complete")
 	social.set_realtime_player_code("bad-code")
 	if not social._realtime_player_code.is_empty() or social._realtime_topics.has("chat:invites:BAD-CODE"):
 		push_error("An invalid player identity created a realtime invitation subscription.")
@@ -258,6 +267,7 @@ func _run_social_validation_tests() -> void:
 		quit(1)
 		return
 
+	print("SOCIAL_TEST_STAGE: player_code_checks_complete")
 	social.subscribe_group_chat("group-a")
 	if social._realtime_group_id != "group-a" or not social._realtime_topics.has("chat:group:group-a"):
 		push_error("The initial group subscription was not registered.")
@@ -274,6 +284,7 @@ func _run_social_validation_tests() -> void:
 		quit(1)
 		return
 
+	print("SOCIAL_TEST_STAGE: group_subscription_checks_complete")
 	social.subscribe_direct_chat("conversation-a")
 	if social._realtime_direct_id != "conversation-a" or not social._realtime_topics.has("chat:direct:conversation-a"):
 		push_error("The initial direct conversation subscription was not registered.")
@@ -290,7 +301,8 @@ func _run_social_validation_tests() -> void:
 		quit(1)
 		return
 
-	if social.open_direct_conversation("bad-code"):
+	print("SOCIAL_TEST_STAGE: direct_subscription_checks_complete")
+	if social.open_direct_conversation("bad-code"): 
 		push_error("Invalid player code was accepted for direct conversation.")
 		quit(1)
 		return
@@ -315,6 +327,7 @@ func _run_social_validation_tests() -> void:
 		quit(1)
 		return
 
+	print("SOCIAL_TEST_STAGE: chat_input_checks_complete")
 	var invitation_script: Script = load("res://scripts/invitation_overlay.gd")
 	var invitation_overlay: Control = invitation_script.new()
 	root.add_child(invitation_overlay)
@@ -467,5 +480,6 @@ func _run_social_validation_tests() -> void:
 		return
 	dedupe_overlay.free()
 
+	print("SOCIAL_TEST_STAGE: invitation_lifecycle_complete")
 	print("Social chat input and invitation lifecycle validation tests passed.")
 	quit(0)
