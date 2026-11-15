@@ -22,6 +22,18 @@ func _run_social_validation_tests() -> void:
 		quit(1)
 		return
 	var expiry_probe: Control = invitation_overlay_script.new()
+	if not is_equal_approx(expiry_probe.get_panel_width_for_viewport(360.0), 314.0):
+		push_error("The invitation panel width changed unexpectedly on a standard 360px phone screen.")
+		quit(1)
+		return
+	if not is_equal_approx(expiry_probe.get_panel_width_for_viewport(320.0), 296.0):
+		push_error("The invitation panel did not shrink to preserve margins on a 320px phone screen.")
+		quit(1)
+		return
+	if not is_equal_approx(expiry_probe.get_panel_width_for_viewport(240.0), 216.0):
+		push_error("The invitation panel did not adapt to a narrow 240px viewport.")
+		quit(1)
+		return
 	var known_created_at := "2026-11-16T10:00:00"
 	var known_created_timestamp := float(Time.get_unix_time_from_datetime_string(known_created_at))
 	var anchored_deadline: float = expiry_probe.resolve_invitation_expiry({"created_at": known_created_at}, known_created_timestamp + 10.0)
