@@ -149,6 +149,22 @@ func _run_social_validation_tests() -> void:
 		push_error("The group gather button remained available inside a private apartment.")
 		quit(1)
 		return
+
+	var online_invite_friends: Array = city_hud.get_online_group_invite_friends([
+		{"player_code":"AB12CD34EF", "display_name":"متصل", "is_online":true},
+		{"player_code":"CD34EF56GH", "display_name":"غير متصل", "is_online":false},
+		{"player_code":"EF56GH78JK", "display_name":"حالة متصلة", "status":"online"},
+		{"player_code":"GH78JK90LM", "display_name":"غير معروف"}
+	])
+	if online_invite_friends.size() != 2:
+		push_error("The group invite picker did not restrict its results to explicitly online friends.")
+		quit(1)
+		return
+	if str(online_invite_friends[0].get("player_code", "")) != "AB12CD34EF" or str(online_invite_friends[1].get("player_code", "")) != "EF56GH78JK":
+		push_error("The group invite picker returned an offline or unknown-presence friend.")
+		quit(1)
+		return
+
 	var deferred_invite := {"expires_at": 200.0}
 	if not city_hud.resolve_deferred_invitation_acceptance(deferred_invite, true, 199.0):
 		push_error("A still-valid queued invitation acceptance was changed.")
