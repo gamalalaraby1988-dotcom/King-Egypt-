@@ -123,7 +123,9 @@ func _show_next() -> void:
 	if _response_pending or not _current.is_empty() or _queue.is_empty():
 		return
 	_current = _queue.pop_front()
-	_remaining_seconds = maxf(0.0, float(_current.get("_remaining_seconds", float(_current.get("expires_at", 0.0)) - float(Time.get_unix_time_from_system()))))
+	# Recompute from the absolute deadline whenever an invitation becomes current.
+	# Cached frame-time values may be stale after the app resumes from background.
+	_remaining_seconds = maxf(0.0, float(_current.get("expires_at", 0.0)) - float(Time.get_unix_time_from_system()))
 	if _remaining_seconds <= 0.0:
 		var expired_item := _current.duplicate(true)
 		_current.clear()
