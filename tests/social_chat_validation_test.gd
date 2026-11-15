@@ -69,6 +69,7 @@ func _run_social_validation_tests() -> void:
 
 	# Channel-level close/error must retry only the current join, never a stale ref.
 	var saved_topic_retries: Dictionary = social._realtime_topic_retry_seconds.duplicate(true)
+	var saved_topic_retry_attempts: Dictionary = social._realtime_topic_retry_attempts.duplicate(true)
 	social._realtime_topics = {"chat:direct:retry": true}
 	social._realtime_join_refs = {"chat:direct:retry": "active-ref"}
 	social._realtime_ready_topics = {"chat:direct:retry": true}
@@ -104,7 +105,27 @@ func _run_social_validation_tests() -> void:
 	social._realtime_topics = {"chat:direct:joined": true}
 	social._realtime_join_refs = {"chat:direct:joined": "ci-join-ref"}
 	social._realtime_ready_topics = {"chat:direct:joined": true}
+		# Stop retrying after the configured limit instead of looping forever.
+	social._realtime_topics = {"chat:direct:retry-limit": true}
+	social._realtime_join_refs = {"chat:direct:retry-limit": "retry-ref-1"}
+	social._realtime_ready_topics = {}
+	social._realtime_topic_retry_seconds = {}
+	social._realtime_topic_retry_attempts = {}
+	for attempt in range(social.MAX_REALTIME_TOPIC_RETRIES):
+		social._schedule_realtime_topic_retry("chat:direct:retry-limit", "retry-ref-%d" % (attempt + 1))
+		if not social._realtime_topic_retry_seconds.has("chat:direct:retry-limit"):
+			push_error("A realtime channel retry stopped before reaching its configured limit.")
+			quit(1)
+			return
+		social._take_due_realtime_topic_retries(REALTIME_TOPIC_RETRY_DELAY)
+		social._realtime_join_refs["chat:direct:retry-limit"] = "retry-ref-%d" % (attempt + 2)
+	social._schedule_realtime_topic_retry("chat:direct:retry-limit", "retry-ref-%d" % (social.MAX_REALTIME_TOPIC_RETRIES + 1))
+	if social._realtime_topic_retry_seconds.has("chat:direct:retry-limit") or social._realtime_topic_retry_attempts.has("chat:direct:retry-limit"):
+		push_error("A realtime channel continued retrying after the configured limit.")
+		quit(1)
+		return
 	social._realtime_topic_retry_seconds = saved_topic_retries
+	social._realtime_topic_retry_attempts = saved_topic_retry_attempts
 	if social.is_realtime_topic_subscribed("chat:direct:unjoined") or social.is_realtime_topic_subscribed("chat:group:joined"):
 		push_error("An unjoined realtime topic was treated as an active subscription.")
 		quit(1)
