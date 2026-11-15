@@ -708,6 +708,7 @@ func _run_social_validation_tests() -> void:
 	)
 	invitation_overlay.enqueue_invitation({
 		"invite_id": "ci-late-tap-decline-invite",
+		"type": "group_invite",
 		"title": "Late tap decline invitation",
 		"expires_at": float(Time.get_unix_time_from_system()) + 60.0
 	})
