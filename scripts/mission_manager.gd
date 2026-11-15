@@ -78,6 +78,9 @@ var daily_chest_reward_day := ""
 var _key_was_down := false
 var _profile_session_uid := ""
 var _profile_session_generation := -1
+var _daily_chest_request_action := ""
+var _daily_chest_request_uid := ""
+var _daily_chest_request_generation := -1
 
 const MAX_CURRENCY_BALANCE := 2000000000
 
@@ -119,12 +122,14 @@ func _on_account_session_ready(user_id: String, generation: int, _profile_path: 
 	if not AccountDataSession.is_session_current(user_id, generation):
 		return
 	_reset_account_bound_activity_state()
+	_clear_daily_chest_request()
 	_profile_session_uid = user_id
 	_profile_session_generation = generation
 	_load_profile()
 
 func _on_account_session_invalidated(_previous_user_id: String, _generation: int) -> void:
 	_reset_account_bound_activity_state()
+	_clear_daily_chest_request()
 	_profile_session_uid = ""
 	_profile_session_generation = -1
 	player_level = 1
@@ -167,12 +172,32 @@ func _on_daily_chest_authenticated(_user_id: String, _email: String) -> void:
 	_refresh_daily_chest_status()
 
 func _refresh_daily_chest_status() -> void:
-	if AuthManager.is_authenticated():
-		SocialChatManager.get_daily_chest_status()
+	if not _has_active_profile_session():
+		return
+	if not AuthManager.is_session_current(_profile_session_uid, _profile_session_generation):
+		return
+	if SocialChatManager.get_daily_chest_status():
+		_track_daily_chest_request("daily_chest_status")
+
+func _track_daily_chest_request(action: String) -> void:
+	_daily_chest_request_action = action
+	_daily_chest_request_uid = _profile_session_uid
+	_daily_chest_request_generation = _profile_session_generation
+
+func _clear_daily_chest_request() -> void:
+	_daily_chest_request_action = ""
+	_daily_chest_request_uid = ""
+	_daily_chest_request_generation = -1
+
+func _daily_chest_request_is_current(action: String) -> bool:
+	return action == _daily_chest_request_action and _has_active_profile_session() and AccountDataSession.is_session_current(_daily_chest_request_uid, _daily_chest_request_generation) and _profile_session_uid == _daily_chest_request_uid and _profile_session_generation == _daily_chest_request_generation
 
 func _on_daily_chest_rpc_completed(action: String, data: Variant) -> void:
 	if action != "daily_chest_status" and action != "daily_chest_claim":
 		return
+	if not _daily_chest_request_is_current(action):
+		return
+	_clear_daily_chest_request()
 	if not data is Dictionary:
 		_on_daily_chest_rpc_failed(action, "استجابة صندوق المكافأة غير صالحة.")
 		return
@@ -244,19 +269,23 @@ func _on_daily_chest_rpc_completed(action: String, data: Variant) -> void:
 func _on_daily_chest_rpc_failed(action: String, message: String) -> void:
 	if action != "daily_chest_status" and action != "daily_chest_claim":
 		return
+	if not _daily_chest_request_is_current(action):
+		return
+	_clear_daily_chest_request()
 	if selected_activity_kind == "daily_chest" and is_instance_valid(status_label):
 		status_label.text = message
 		if is_instance_valid(accept_button):
 			accept_button.disabled = false
 
 func _claim_daily_chest_reward() -> void:
-	if not AuthManager.is_authenticated():
+	if not _has_active_profile_session() or not AuthManager.is_session_current(_profile_session_uid, _profile_session_generation):
 		status_label.text = "سجّل الدخول أولًا لاستلام مكافأتك اليومية."
 		accept_button.disabled = true
 		return
 	accept_button.disabled = true
 	status_label.text = "جارٍ التحقق من استحقاقك للمكافأة..."
-	SocialChatManager.claim_daily_chest_reward()
+	if SocialChatManager.claim_daily_chest_reward():
+		_track_daily_chest_request("daily_chest_claim")
 
 func _refresh_navigation_language() -> void:
 	if is_instance_valid(navigation_cancel_button):
