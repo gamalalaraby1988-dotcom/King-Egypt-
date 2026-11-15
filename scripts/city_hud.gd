@@ -787,15 +787,7 @@ func _refresh_group_invite_friends(friends: Array) -> void:
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 8)
 		group_invite_list.add_child(row)
-		var avatar := TextureRect.new()
-		avatar.name = "FriendAvatar"
-		avatar.custom_minimum_size = Vector2(42, 42)
-		avatar.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
-		avatar.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		var avatar_texture: Variant = friend.get("avatar_texture", null)
-		if avatar_texture is Texture2D:
-			avatar.texture = avatar_texture
-		row.add_child(avatar)
+		row.add_child(_build_friend_character_portrait(friend))
 		var name_column := VBoxContainer.new()
 		name_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(name_column)
@@ -819,6 +811,60 @@ func _refresh_group_invite_friends(friends: Array) -> void:
 			invite.text = "مُرسلة"
 		invite.pressed.connect(_send_group_invite_from_list.bind(code))
 		row.add_child(invite)
+
+
+func get_friend_character_scene_path(friend: Dictionary) -> String:
+	# Only render a character scene shipped inside the game; never accept image URLs,
+	# arbitrary file paths, or texture payloads from a friend-list response.
+	var character_id := str(friend.get("selected_character_id", friend.get("character_id", ""))).strip_edges()
+	var id_pattern := RegEx.new()
+	if id_pattern.compile("^[a-z]{2}_[mf]_[a-z]+$") != OK or id_pattern.search(character_id) == null:
+		return ""
+	var scene_path := "res://assets/characters/%s/character.tscn" % character_id
+	return scene_path if ResourceLoader.exists(scene_path) else ""
+
+
+func _build_friend_character_portrait(friend: Dictionary) -> Control:
+	var scene_path := get_friend_character_scene_path(friend)
+	if scene_path.is_empty():
+		var fallback := CenterContainer.new()
+		fallback.name = "FriendCharacterPortraitFallback"
+		fallback.custom_minimum_size = Vector2(52, 52)
+		var silhouette := Label.new()
+		silhouette.text = "👤"
+		silhouette.add_theme_font_size_override("font_size", 28)
+		fallback.add_child(silhouette)
+		return fallback
+
+	var portrait := SubViewportContainer.new()
+	portrait.name = "FriendCharacterPortrait"
+	portrait.custom_minimum_size = Vector2(52, 52)
+	portrait.stretch = true
+	var viewport := SubViewport.new()
+	viewport.name = "FriendCharacterPortraitViewport"
+	viewport.size = Vector2i(104, 104)
+	viewport.transparent_bg = true
+	viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	portrait.add_child(viewport)
+
+	var world := Node3D.new()
+	world.name = "PortraitWorld"
+	viewport.add_child(world)
+	var camera := Camera3D.new()
+	camera.position = Vector3(0, 1.12, -3.2)
+	camera.look_at(Vector3(0, 1.0, 0), Vector3.UP)
+	camera.current = true
+	world.add_child(camera)
+	var light := DirectionalLight3D.new()
+	light.rotation_degrees = Vector3(-24, -18, 0)
+	light.light_energy = 1.25
+	world.add_child(light)
+	var packed := load(scene_path) as PackedScene
+	if packed != null:
+		var character := packed.instantiate() as Node3D
+		if character != null:
+			world.add_child(character)
+	return portrait
 
 
 func _send_group_invite_from_list(player_code: String) -> void:
