@@ -91,8 +91,8 @@ func _run_social_validation_tests() -> void:
 		push_error("The invitation panel scroll container does not preserve vertical-only compact content scrolling.")
 		quit(1)
 		return
-	var accept_button := compact_overlay.get_node_or_null("UnifiedInvitationPanel/InvitationContentScroll/VBoxContainer/HBoxContainer/AcceptInvitationButton")
-	var decline_button := compact_overlay.get_node_or_null("UnifiedInvitationPanel/InvitationContentScroll/VBoxContainer/HBoxContainer/DeclineInvitationButton")
+	var accept_button := compact_overlay.find_child("AcceptInvitationButton", true, false)
+	var decline_button := compact_overlay.find_child("DeclineInvitationButton", true, false)
 	if not accept_button is Button or not decline_button is Button:
 		push_error("The invitation panel action buttons could not be found for touch-target validation.")
 		quit(1)
