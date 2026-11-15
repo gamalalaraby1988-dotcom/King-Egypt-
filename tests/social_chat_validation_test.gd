@@ -200,17 +200,27 @@ func _run_social_validation_tests() -> void:
 		"title": "Queued invitation",
 		"expires_at": float(Time.get_unix_time_from_system()) + 60.0
 	})
+	invitation_overlay.enqueue_invitation({
+		"invite_id": "ci-queued-expired",
+		"title": "Queued invitation that expires during response",
+		"expires_at": float(Time.get_unix_time_from_system()) + 1.0
+	})
 	# Simulate the accept/decline handler starting its RPC before the active
-	# invitation is removed; the queued item must remain hidden until the reply.
+	# invitation is removed; queued items must stay hidden and keep expiring.
 	invitation_overlay.call("set_response_pending", true)
 	invitation_overlay.call("_finish_current", true)
-	if invitation_overlay.get_pending_invitation_count() != 1 or not invitation_overlay._current.is_empty():
-		push_error("A queued invitation became actionable while the previous response was pending.")
+	if invitation_overlay.get_pending_invitation_count() != 2 or not invitation_overlay._current.is_empty():
+		push_error("Queued invitations became actionable while the previous response was pending.")
+		quit(1)
+		return
+	invitation_overlay.call("_tick", 2.0)
+	if expired_count[0] != 2 or invitation_overlay.get_pending_invitation_count() != 1 or not invitation_overlay._current.is_empty():
+		push_error("A queued invitation did not expire while the previous response was pending.")
 		quit(1)
 		return
 	invitation_overlay.call("set_response_pending", false)
 	if invitation_overlay.get_pending_invitation_count() != 1 or str(invitation_overlay.get_current_invitation().get("invite_id", "")) != "ci-account-b-invite":
-		push_error("The next invitation was not shown after the pending response completed.")
+		push_error("The next unexpired invitation was not shown after the pending response completed.")
 		quit(1)
 		return
 	invitation_overlay.clear_pending_invitations()
