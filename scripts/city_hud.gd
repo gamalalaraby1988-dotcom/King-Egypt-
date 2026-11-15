@@ -1059,8 +1059,7 @@ func _open_social_chat_panel() -> void:
 	if is_instance_valid(social_chat_dock_button):
 		social_chat_dock_button.text = "💬"
 	if AuthManager.is_authenticated():
-		SocialChatManager.list_chat_group_invites()
-	if is_instance_valid(social_chat_input):
+		if is_instance_valid(social_chat_input):
 		social_chat_input.grab_focus()
 
 
@@ -1116,6 +1115,7 @@ func _on_social_operation_completed(action: String, data: Variant) -> void:
 				empty_label.text = "لا يوجد أصدقاء بعد"
 				social_friends_box.add_child(empty_label)
 			social_chat_status.text = "تم تحميل قائمة الأصدقاء من الخادم."
+			SocialChatManager.get_chat_group()
 		"friend_request":
 			social_chat_status.text = "نتيجة طلب الصداقة: " + str(data)
 			if str(data) == "sent":
