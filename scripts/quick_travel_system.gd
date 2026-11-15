@@ -147,7 +147,8 @@ func _fit_menu_to_viewport() -> void:
 	if not is_instance_valid(menu_panel) or not is_instance_valid(menu_title):
 		return
 	var viewport := get_viewport()
-	if not is_instance_valid(viewport):
+	# قد يبقى المرجع موجودًا أثناء إزالة نافذة العرض أو تبديل المشهد؛ لا تقرأ أبعادها حينها.
+	if not is_instance_valid(viewport) or viewport.is_queued_for_deletion() or not viewport.is_inside_tree():
 		return
 	var viewport_size := viewport.get_visible_rect().size
 	# لا نفرض حدًا أدنى أكبر من الشاشة؛ هذا يمنع قص النافذة في الشاشات الصغيرة أو الوضع الأفقي.
