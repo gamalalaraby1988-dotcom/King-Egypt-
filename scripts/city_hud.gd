@@ -1865,7 +1865,9 @@ func _submit_group_invitation_response(invitation: Dictionary, accepted: bool) -
 	# Only one invitation response may own the shared RPC slot. Expired queued
 	# invitations are serialized here instead of being silently lost.
 	var invite_id := str(invitation.get("invite_id", "")).strip_edges()
-	if invite_id.is_empty():
+	# Validate again at the final RPC boundary so legacy/local UI paths cannot
+	# submit malformed identifiers even if they bypass realtime payload checks.
+	if not SocialChatManager.is_valid_invite_id(invite_id):
 		return
 	if not _pending_group_invite_response_id.is_empty():
 		if invite_id == _pending_group_invite_response_id:
