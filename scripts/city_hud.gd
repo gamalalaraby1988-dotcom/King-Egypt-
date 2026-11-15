@@ -1879,8 +1879,9 @@ func _continue_deferred_group_invite_responses() -> void:
 		return
 	if not _deferred_group_invite_responses.is_empty():
 		var next_response: Dictionary = _deferred_group_invite_responses.pop_front()
+		var next_invitation: Dictionary = next_response.get("invitation", {})
 		_submit_group_invitation_response(
-			next_response.get("invitation", {}),
+			next_invitation,
 			bool(next_response.get("accepted", false))
 		)
 		return
