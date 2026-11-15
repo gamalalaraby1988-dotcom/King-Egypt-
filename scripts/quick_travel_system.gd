@@ -9,6 +9,7 @@ const STONE := Color(0.70, 0.61, 0.46)
 const DARK := Color(0.055, 0.105, 0.12)
 
 var city: Node3D
+var connected_viewport: Viewport
 var player: CharacterBody3D
 var menu_layer: CanvasLayer
 var menu_panel: PanelContainer
@@ -46,11 +47,18 @@ func _ready() -> void:
 		return
 	player = city.get_node_or_null("Player") as CharacterBody3D
 	_create_menu()
-	var viewport := get_viewport()
-	if is_instance_valid(viewport) and not viewport.size_changed.is_connected(_fit_menu_to_viewport):
-		viewport.size_changed.connect(_fit_menu_to_viewport)
+	connected_viewport = get_viewport()
+	if is_instance_valid(connected_viewport) and not connected_viewport.size_changed.is_connected(_fit_menu_to_viewport):
+		connected_viewport.size_changed.connect(_fit_menu_to_viewport)
 	_fit_menu_to_viewport()
 	_create_beach_portal()
+
+func _exit_tree() -> void:
+	# افصل إشارة تغيير الحجم صراحة عند إزالة النظام أو تبديل مشهد المدينة.
+	if is_instance_valid(connected_viewport) and connected_viewport.size_changed.is_connected(_fit_menu_to_viewport):
+		connected_viewport.size_changed.disconnect(_fit_menu_to_viewport)
+	connected_viewport = null
+	_close_menu()
 
 func _process(_delta: float) -> void:
 	# لا تستخدم مراجع المدينة أو اللاعب بعد خروجها من المشهد أو بدء حذفها.
