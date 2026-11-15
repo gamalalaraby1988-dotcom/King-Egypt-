@@ -84,6 +84,26 @@ func _run_auth_session_tests() -> void:
 		quit(1)
 		return
 
+	var achievement_script: Script = load("res://scripts/achievement_manager.gd")
+	var achievement_manager: Node = achievement_script.new()
+	root.add_child(achievement_manager)
+	await process_frame
+	var expected_achievement_path := "user://accounts/00000000-0000-4000-8000-000000000001/achievements.cfg"
+	if achievement_manager._save_path != expected_achievement_path:
+		push_error("Achievement progress did not use the active account's private save path.")
+		quit(1)
+		return
+	achievement_manager.walked_meters = 12.5
+	achievement_manager._save_state()
+	if not FileAccess.file_exists(expected_achievement_path):
+		push_error("Account-scoped achievement progress was not saved.")
+		quit(1)
+		return
+	var achievement_file_before_signout := FileAccess.get_file_as_bytes(expected_achievement_path)
+	var legacy_achievement_path := "user://kings_city_achievements.cfg"
+	var legacy_achievement_existed := FileAccess.file_exists(legacy_achievement_path)
+	var legacy_achievement_snapshot := FileAccess.get_file_as_bytes(legacy_achievement_path) if legacy_achievement_existed else PackedByteArray()
+
 	var mission_manager_script: Script = load("res://scripts/mission_manager.gd")
 	var mission_manager: Node = mission_manager_script.new()
 	mission_manager.owned_outfits = ["default", "ci_previous_account_outfit"]
@@ -106,6 +126,24 @@ func _run_auth_session_tests() -> void:
 	social._pending_user_id = "00000000-0000-4000-8000-000000000001"
 	social._pending_session_generation = auth.get_session_generation()
 	auth.clear_session()
+	if not achievement_manager._save_path.is_empty() or achievement_manager.walked_meters != 0.0:
+		push_error("Achievement progress retained the previous account after sign-out.")
+		quit(1)
+		return
+	achievement_manager.walked_meters = 999.0
+	achievement_manager._save_state()
+	if FileAccess.get_file_as_bytes(expected_achievement_path) != achievement_file_before_signout:
+		push_error("Achievement manager wrote previous-account data after sign-out.")
+		quit(1)
+		return
+	if FileAccess.file_exists(legacy_achievement_path) != legacy_achievement_existed:
+		push_error("Achievement manager created or removed the legacy shared progress file.")
+		quit(1)
+		return
+	if legacy_achievement_existed and FileAccess.get_file_as_bytes(legacy_achievement_path) != legacy_achievement_snapshot:
+		push_error("Achievement manager modified the legacy shared progress file.")
+		quit(1)
+		return
 	if not social._pending_action.is_empty() or not social._pending_user_id.is_empty() or social._pending_session_generation != -1:
 		push_error("Pending social RPC retained the signed-out account session.")
 		quit(1)
@@ -140,6 +178,9 @@ func _run_auth_session_tests() -> void:
 		quit(1)
 		return
 
+	achievement_manager.free()
+	achievement_manager = null
+	achievement_script = null
 	mission_manager.free()
 	mission_manager = null
 	mission_manager_script = null
