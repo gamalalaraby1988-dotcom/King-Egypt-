@@ -437,34 +437,17 @@ func get_daily_task_progress(day_id: String, task_id: String) -> int:
 	var day_progress: Dictionary = daily_task_progress.get(day_id, {})
 	return int(day_progress.get(task_id, 0))
 
-func get_outfit_price(outfit_id: String) -> int:
-	return int(OUTFIT_PRICES.get(outfit_id, -1))
+func get_outfit_price(_outfit_id: String) -> int:
+	# الملابس ليست نظامًا معتمدًا في اللعبة؛ أبقِ بيانات النسخ القديمة محفوظة فقط.
+	return -1
 
 func get_owned_outfits() -> Array:
-	return owned_outfits.duplicate()
+	# لا تعرض خزانة أو ملكيات أزياء؛ لا نحذف بيانات الأرشيف القديمة من الملف.
+	return []
 
-func purchase_outfit(outfit_id: String) -> bool:
-	# واجهة الشراء لا ترسل السعر؛ المرجع الوحيد هو جدول الأسعار داخل اللعبة.
-	if not OUTFIT_PRICES.has(outfit_id) or owned_outfits.has(outfit_id):
-		return false
-	var price: int = int(OUTFIT_PRICES[outfit_id])
-	var next_owned := owned_outfits.duplicate()
-	next_owned.append(outfit_id)
-	var receipt_id := "purchase_outfit_%s" % outfit_id
-	if reward_receipts.has(receipt_id) or WalletManager.has_transaction(receipt_id):
-		return false
-	var next_receipts := reward_receipts.duplicate(true)
-	next_receipts[receipt_id] = Time.get_datetime_string_from_system(true)
-	var updates := {
-		"owned_outfits": next_owned,
-		"reward_receipts": next_receipts
-	}
-	if not WalletManager.purchase_once(receipt_id, "money", price, "Purchase outfit: " + outfit_id, updates):
-		return false
-	money = WalletManager.get_balance("money")
-	owned_outfits = next_owned
-	reward_receipts = next_receipts
-	return true
+func purchase_outfit(_outfit_id: String) -> bool:
+	# شراء الأزياء معطل نهائيًا وفق قرار اعتماد الشخصيات الجاهزة ذات الزي الثابت.
+	return false
 
 func _save_profile() -> bool:
 	var config := ConfigFile.new()
