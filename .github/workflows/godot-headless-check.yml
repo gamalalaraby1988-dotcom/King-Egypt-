@@ -75,7 +75,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          "$GODOT_BIN" --headless --path . --script res://tests/wallet_manager_test.gd 2>&1 | tee godot-wallet-tests.log
+          "$GODOT_BIN" --headless --path . --script res://tests/wallet_manager_test.gd -- --wallet-test 2>&1 | tee godot-wallet-tests.log
           if grep -E "SCRIPT ERROR:|Parse Error:|ERROR:" godot-wallet-tests.log; then
             echo "Wallet transaction tests reported errors."
             exit 1
