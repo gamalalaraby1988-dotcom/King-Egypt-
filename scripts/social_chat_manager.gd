@@ -17,7 +17,9 @@ var _realtime_topics: Dictionary = {}
 var _realtime_join_refs: Dictionary = {}
 var _realtime_ready_topics: Dictionary = {}
 var _realtime_topic_retry_seconds: Dictionary = {}
+var _realtime_topic_retry_attempts: Dictionary = {}
 const REALTIME_TOPIC_RETRY_DELAY := 2.0
+const MAX_REALTIME_TOPIC_RETRIES := 3
 var _realtime_ref := 0
 var _realtime_heartbeat_elapsed := 0.0
 var _realtime_retry_elapsed := 0.0
@@ -55,6 +57,7 @@ func _on_auth_session_changed(_previous_user_id: String, _current_user_id: Strin
 	_realtime_join_refs.clear()
 	_realtime_ready_topics.clear()
 	_realtime_topic_retry_seconds.clear()
+	_realtime_topic_retry_attempts.clear()
 	_realtime_last_token = ""
 	_realtime_session_user_id = ""
 	_realtime_session_generation = -1
@@ -285,6 +288,7 @@ func _process(delta: float) -> void:
 		_realtime_join_refs.clear()
 		_realtime_ready_topics.clear()
 		_realtime_topic_retry_seconds.clear()
+	_realtime_topic_retry_attempts.clear()
 		_realtime_last_token = ""
 		_realtime_session_user_id = ""
 		_realtime_session_generation = -1
@@ -303,6 +307,7 @@ func _process(delta: float) -> void:
 		_realtime_join_refs.clear()
 		_realtime_ready_topics.clear()
 		_realtime_topic_retry_seconds.clear()
+	_realtime_topic_retry_attempts.clear()
 		_realtime_player_code = ""
 		_realtime_group_id = ""
 		_realtime_direct_id = ""
@@ -431,6 +436,7 @@ func _subscribe_realtime_topic(topic: String) -> void:
 func _leave_realtime_topic(topic: String) -> void:
 	_realtime_topics.erase(topic)
 	_realtime_topic_retry_seconds.erase(topic)
+	_realtime_topic_retry_attempts.erase(topic)
 	_realtime_ready_topics.erase(topic)
 	if _realtime_join_refs.has(topic) and _realtime_connected:
 		_send_realtime_frame("realtime:" + topic, "phx_leave", {}, str(_realtime_join_refs[topic]))
@@ -476,6 +482,13 @@ func _schedule_realtime_topic_retry(topic: String, failed_join_ref: String) -> v
 		return
 	_realtime_join_refs.erase(topic)
 	_realtime_ready_topics.erase(topic)
+	var attempts := int(_realtime_topic_retry_attempts.get(topic, 0)) + 1
+	if attempts > MAX_REALTIME_TOPIC_RETRIES:
+		_realtime_topic_retry_seconds.erase(topic)
+		_realtime_topic_retry_attempts.erase(topic)
+		realtime_status_changed.emit("تعذر استعادة القناة بعد عدة محاولات: " + topic)
+		return
+	_realtime_topic_retry_attempts[topic] = attempts
 	_realtime_topic_retry_seconds[topic] = REALTIME_TOPIC_RETRY_DELAY
 
 
@@ -527,6 +540,7 @@ func _handle_realtime_packet(packet: PackedByteArray) -> void:
 		elif payload is Dictionary and str(payload.get("status", "")) == "ok":
 			if is_realtime_join_ack_current(topic, reply_join_ref):
 				_realtime_topic_retry_seconds.erase(topic)
+				_realtime_topic_retry_attempts.erase(topic)
 				_realtime_ready_topics[topic] = true
 				realtime_status_changed.emit("القنوات اللحظية جاهزة")
 		return
