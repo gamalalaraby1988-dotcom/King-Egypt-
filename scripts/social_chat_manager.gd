@@ -49,6 +49,31 @@ func block_player(player_code: String) -> bool:
 		return false
 	return _rpc("block_test_player", {"p_player_code": clean_code}, "block_player")
 
+func list_blocked_players() -> bool:
+	return _rpc("list_my_test_blocked_players", {}, "blocked_list")
+
+func unblock_player(player_code: String) -> bool:
+	var clean_code := player_code.strip_edges().to_upper()
+	if not is_valid_player_code(clean_code):
+		operation_failed.emit("unblock_player", "رمز اللاعب غير صالح.")
+		return false
+	return _rpc("unblock_my_test_player", {"p_player_code": clean_code}, "unblock_player")
+
+func report_player(player_code: String, reason: String, details: String) -> bool:
+	var clean_code := player_code.strip_edges().to_upper()
+	var clean_details := details.strip_edges()
+	if not is_valid_player_code(clean_code) or clean_details.length() > 300:
+		operation_failed.emit("report_player", "بيانات البلاغ غير صالحة.")
+		return false
+	if not ["harassment", "spam", "inappropriate_name", "cheating", "other"].has(reason):
+		operation_failed.emit("report_player", "اختر سببًا صحيحًا للبلاغ.")
+		return false
+	return _rpc("report_my_test_player", {
+		"p_player_code": clean_code,
+		"p_reason": reason,
+		"p_details": clean_details
+	}, "report_player")
+
 func open_direct_conversation(player_code: String) -> bool:
 	return _rpc("open_test_direct_conversation", {"p_player_code": player_code}, "direct_open")
 
