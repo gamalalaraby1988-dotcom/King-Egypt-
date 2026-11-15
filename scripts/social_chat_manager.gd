@@ -288,7 +288,7 @@ func _process(delta: float) -> void:
 		_realtime_join_refs.clear()
 		_realtime_ready_topics.clear()
 		_realtime_topic_retry_seconds.clear()
-	_realtime_topic_retry_attempts.clear()
+		_realtime_topic_retry_attempts.clear()
 		_realtime_last_token = ""
 		_realtime_session_user_id = ""
 		_realtime_session_generation = -1
@@ -307,7 +307,7 @@ func _process(delta: float) -> void:
 		_realtime_join_refs.clear()
 		_realtime_ready_topics.clear()
 		_realtime_topic_retry_seconds.clear()
-	_realtime_topic_retry_attempts.clear()
+		_realtime_topic_retry_attempts.clear()
 		_realtime_player_code = ""
 		_realtime_group_id = ""
 		_realtime_direct_id = ""
