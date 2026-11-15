@@ -344,6 +344,21 @@ func _run_social_validation_tests() -> void:
 		push_error("A late accept tap was emitted after the invitation deadline.")
 		quit(1)
 		return
+	var declined_count := [0]
+	invitation_overlay.invitation_declined.connect(func(_item: Dictionary) -> void:
+		declined_count[0] += 1
+	)
+	invitation_overlay.enqueue_invitation({
+		"invite_id": "ci-late-tap-decline-invite",
+		"title": "Late tap decline invitation",
+		"expires_at": float(Time.get_unix_time_from_system()) + 60.0
+	})
+	invitation_overlay._current["expires_at"] = float(Time.get_unix_time_from_system()) - 1.0
+	invitation_overlay.call("_finish_current", false)
+	if declined_count[0] != 0 or expired_count[0] != 5 or invitation_overlay.get_pending_invitation_count() != 0 or invitation_overlay._panel.visible:
+		push_error("A late decline tap was emitted after the invitation deadline.")
+		quit(1)
+		return
 	invitation_overlay.clear_pending_invitations()
 	if invitation_overlay.get_pending_invitation_count() != 0 or not invitation_overlay._current.is_empty() or invitation_overlay._panel.visible:
 		push_error("A previous account's active or queued invitation survived account cleanup.")
