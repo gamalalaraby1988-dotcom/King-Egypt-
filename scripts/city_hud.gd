@@ -1233,11 +1233,11 @@ func _on_social_realtime_event(topic: String, event_name: String, payload: Dicti
 	if event_name != "chat_message" and event_name != "direct_message":
 		return
 	var should_show := false
-	if topic == "chat:public:messages" and social_chat_channel == "العامة":
+	if topic == "chat:public:messages" and social_chat_channel == "العامة" and social_chat_panel.visible:
 		should_show = true
-	elif topic.begins_with("chat:group:") and social_chat_channel == "المجموعة":
+	elif topic.begins_with("chat:group:") and social_chat_channel == "المجموعة" and social_chat_panel.visible:
 		should_show = true
-	elif topic.begins_with("chat:direct:") and topic == "chat:direct:" + selected_friend_conversation_id and social_chat_channel == "الأصدقاء":
+	elif topic.begins_with("chat:direct:") and topic == "chat:direct:" + selected_friend_conversation_id and social_chat_channel == "الأصدقاء" and social_chat_panel.visible:
 		should_show = true
 	if not should_show or not is_instance_valid(social_chat_log):
 		if is_instance_valid(social_chat_dock_button):
