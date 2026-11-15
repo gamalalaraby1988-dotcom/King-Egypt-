@@ -377,10 +377,12 @@ func initialize_achievement_totals_if_missing(legacy_totals: Dictionary) -> bool
 	return true
 
 func get_achievement_totals() -> Dictionary:
+	if not _has_active_profile_session():
+		return {"jobs": 0, "missions": 0, "daily_claims": 0}
 	return achievement_totals.duplicate(true)
 
 func has_reward_receipt(reward_id: String) -> bool:
-	return reward_receipts.has(reward_id)
+	return _has_active_profile_session() and reward_receipts.has(reward_id)
 
 func complete_activity_once(activity_id: String, activity_kind: String, money_amount: int = 0, xp_amount: int = 0, chips_amount: int = 0) -> bool:
 	if not _has_active_profile_session():
@@ -486,6 +488,8 @@ func spend_money_once(transaction_id: String, amount: int) -> bool:
 	return true
 
 func get_daily_task_progress(day_id: String, task_id: String) -> int:
+	if not _has_active_profile_session():
+		return 0
 	var day_progress: Dictionary = daily_task_progress.get(day_id, {})
 	return int(day_progress.get(task_id, 0))
 
