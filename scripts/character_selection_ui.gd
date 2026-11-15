@@ -32,6 +32,8 @@ var detail_status: Label
 var preview_title: Label
 var preview_viewport: SubViewport
 var player: Node3D
+var preview_character: Node3D
+var preview_world: Node3D
 
 func _ready() -> void:
 	layer = 45
@@ -113,15 +115,33 @@ func _build_screen() -> void:
 	gender_row.add_child(women)
 
 	var body := HBoxContainer.new()
+	body.name = "SelectionBody"
 	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	body.add_theme_constant_override("separation", 12)
+	body.add_theme_constant_override("separation", 14)
 	layout.add_child(body)
 
+	# القائمة على اليسار.
+	var list_panel := PanelContainer.new()
+	list_panel.name = "CharacterListPanel"
+	list_panel.custom_minimum_size = Vector2(340, 0)
+	list_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	list_panel.size_flags_stretch_ratio = 1.0
+	list_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	list_panel.add_theme_stylebox_override("panel", _style(Color("#151e2b"), Color("#806b43"), 2))
+	body.add_child(list_panel)
+	var list_layout := VBoxContainer.new()
+	list_layout.add_theme_constant_override("separation", 8)
+	list_panel.add_child(list_layout)
+	var list_heading := Label.new()
+	list_heading.text = "الشخصيات الجاهزة"
+	list_heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	list_heading.add_theme_color_override("font_color", Color("#e8c46b"))
+	list_layout.add_child(list_heading)
 	var scroll := ScrollContainer.new()
-	scroll.custom_minimum_size = Vector2(300, 0)
-	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.name = "CharacterCardsScroll"
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	body.add_child(scroll)
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	list_layout.add_child(scroll)
 	cards_box = GridContainer.new()
 	cards_box.columns = 2
 	cards_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -129,69 +149,73 @@ func _build_screen() -> void:
 	cards_box.add_theme_constant_override("v_separation", 8)
 	scroll.add_child(cards_box)
 
+	# المعاينة والبيانات على اليمين.
+	var preview_panel := PanelContainer.new()
+	preview_panel.name = "SelectedCharacterPreviewPanel"
+	preview_panel.custom_minimum_size = Vector2(360, 0)
+	preview_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	preview_panel.size_flags_stretch_ratio = 1.15
+	preview_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	preview_panel.add_theme_stylebox_override("panel", _style(Color("#151e2b"), Color("#c49a45"), 2))
+	body.add_child(preview_panel)
 	var preview_column := VBoxContainer.new()
-	preview_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	preview_column.size_flags_stretch_ratio = 1.25
-	preview_column.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	body.add_child(preview_column)
+	preview_column.add_theme_constant_override("separation", 8)
+	preview_panel.add_child(preview_column)
 	preview_title = Label.new()
 	preview_title.text = "معاينة الشخصية"
 	preview_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	preview_title.add_theme_font_size_override("font_size", 18)
+	preview_title.add_theme_font_size_override("font_size", 22)
 	preview_title.add_theme_color_override("font_color", Color("#e8c46b"))
 	preview_column.add_child(preview_title)
 	preview_viewport = SubViewport.new()
 	preview_viewport.name = "CharacterPreviewViewport"
-	preview_viewport.size = Vector2i(420, 520)
+	preview_viewport.size = Vector2i(520, 620)
 	preview_viewport.own_world_3d = true
 	preview_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	preview_viewport.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	preview_viewport.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var viewport_container := SubViewportContainer.new()
+	viewport_container.name = "SelectedCharacter3DPreview"
 	viewport_container.stretch = true
 	viewport_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	viewport_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	viewport_container.add_child(preview_viewport)
 	preview_column.add_child(viewport_container)
 	_build_preview_world()
-
-	var details := VBoxContainer.new()
-	details.custom_minimum_size = Vector2(220, 0)
-	details.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	details.add_theme_constant_override("separation", 12)
-	body.add_child(details)
 	detail_name = Label.new()
 	detail_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	detail_name.add_theme_font_size_override("font_size", 26)
 	detail_name.add_theme_color_override("font_color", Color("#f1d17b"))
-	details.add_child(detail_name)
+	preview_column.add_child(detail_name)
 	detail_country = Label.new()
 	detail_country.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	details.add_child(detail_country)
+	preview_column.add_child(detail_country)
 	var rarity := Label.new()
-	rarity.text = "★  شخصية جاهزة"
+	rarity.text = "★  شخصية جاهزة — زي ثابت"
 	rarity.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	rarity.add_theme_color_override("font_color", Color("#e8c46b"))
-	details.add_child(rarity)
+	preview_column.add_child(rarity)
 	detail_status = Label.new()
 	detail_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	detail_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	details.add_child(detail_status)
+	preview_column.add_child(detail_status)
 	var note := Label.new()
-	note.text = "هذه معاينة للاختيار فقط. لا يتم حفظ الشخصية أو تغيير نموذج اللاعب قبل ربط الأصول النهائية وخدمة الملف الشخصي على الخادم."
+	note.text = "المعاينة مؤقتة حتى تسليم نماذج الشخصيات النهائية وربط الحفظ الآمن بملف اللاعب على الخادم."
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	note.add_theme_color_override("font_color", Color("#d4c9ae"))
-	details.add_child(note)
+	preview_column.add_child(note)
 	var select_button := Button.new()
+	select_button.name = "ConfirmCharacterSelection"
 	select_button.text = "تأكيد الاختيار"
 	select_button.disabled = true
-	select_button.tooltip_text = "يتفعّل بعد تجهيز النماذج النهائية وربط اختيار الشخصية بالخادم."
+	select_button.tooltip_text = "يتفعّل بعد تسليم النماذج النهائية وربط selected_character_id بخدمة الملف الشخصي."
 	select_button.custom_minimum_size = Vector2(0, 52)
-	details.add_child(select_button)
+	preview_column.add_child(select_button)
 	var close_bottom := Button.new()
 	close_bottom.text = "إغلاق"
 	close_bottom.pressed.connect(func(): overlay.visible = false)
-	details.add_child(close_bottom)
+	preview_column.add_child(close_bottom)
 
 	_refresh_cards()
 	_refresh_details()
@@ -200,28 +224,42 @@ func _build_preview_world() -> void:
 	var world := Node3D.new()
 	world.name = "PreviewWorld"
 	preview_viewport.add_child(world)
-	var environment := WorldEnvironment.new()
+	var environment_node := WorldEnvironment.new()
 	var env := Environment.new()
 	env.background_mode = Environment.BG_SKY
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	env.ambient_light_color = Color("#9da8bb")
 	env.ambient_light_energy = 0.8
-	environment.environment = env
-	world.add_child(environment)
+	environment_node.environment = env
+	world.add_child(environment_node)
 	var light := DirectionalLight3D.new()
 	light.rotation_degrees = Vector3(-28, -25, 0)
 	light.light_energy = 1.4
 	world.add_child(light)
-	var avatar_scene := load(AVATAR_SCENE) as PackedScene
-	if avatar_scene:
-		var avatar := avatar_scene.instantiate() as Node3D
-		avatar.name = "PreviewAvatarPlaceholder"
-		world.add_child(avatar)
 	var camera := Camera3D.new()
 	camera.position = Vector3(0, 1.25, 4.8)
 	camera.look_at(Vector3(0, 1.0, 0), Vector3.UP)
 	camera.current = true
 	world.add_child(camera)
+	preview_world = world
+
+func _load_preview_character(character: Dictionary) -> void:
+	if is_instance_valid(preview_character):
+		preview_character.queue_free()
+		preview_character = null
+	var character_id := str(character.id)
+	var final_path := "res://assets/characters/%s/character.tscn" % character_id
+	var scene_path := final_path if ResourceLoader.exists(final_path) else PLACEHOLDER_AVATAR_SCENE
+	var packed := load(scene_path) as PackedScene
+	if packed == null:
+		push_warning("مشهد معاينة الشخصية غير متاح: " + scene_path)
+		return
+	preview_character = packed.instantiate() as Node3D
+	if preview_character == null:
+		push_warning("مشهد الشخصية يجب أن يكون Node3D: " + scene_path)
+		return
+	preview_character.name = "Preview_" + character_id
+	preview_world.add_child(preview_character)
 
 func _open_screen() -> void:
 	overlay.visible = true
@@ -268,6 +306,7 @@ func _refresh_details() -> void:
 	detail_country.text = "%s  %s" % [str(character.flag), str(character.country)]
 	detail_status.text = str(character.status)
 	preview_title.text = "معاينة %s" % str(character.name)
+	_load_preview_character(character)
 
 func _find_character(character_id: String) -> Dictionary:
 	for character in CHARACTERS:
