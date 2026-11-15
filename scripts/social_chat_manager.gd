@@ -121,7 +121,13 @@ func _process(delta: float) -> void:
 	if not AuthManager.is_authenticated():
 		if _realtime_socket != null and _realtime_socket.get_ready_state() != WebSocketPeer.STATE_CLOSED:
 			_realtime_socket.close()
+		_realtime_socket = null
 		_realtime_connected = false
+		_realtime_topics.clear()
+		_realtime_join_refs.clear()
+		_realtime_player_code = ""
+		_realtime_group_id = ""
+		_realtime_direct_id = ""
 		return
 	if _realtime_socket == null:
 		_realtime_retry_elapsed += delta
