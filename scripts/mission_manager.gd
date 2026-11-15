@@ -542,6 +542,8 @@ func _find_nearest_interior_exit(city_root: Node) -> Node3D:
 func _interaction_action_key(target: Node3D) -> String:
 	if target.is_in_group("interior_exit_interactables"):
 		return "interaction_enter"
+	if target.has_method("get_daily_reward_chest_data"):
+		return "interaction_talk"
 	if target.has_method("get_job_data"):
 		return "interaction_job"
 	if target.has_method("get_mission_data"):
@@ -575,6 +577,8 @@ func _update_interaction_hud() -> void:
 			display_name = str(nearest_interactable.get_job_data().get("title", CityLanguage.translate("interaction_job_name")))
 		elif nearest_building:
 			display_name = str(nearest_interactable.get("building_title"))
+		elif nearest_interactable.has_method("get_daily_reward_chest_data"):
+			display_name = str(nearest_interactable.get_daily_reward_chest_data().get("title", "صندوق المكافأة"))
 		elif nearest_interactable.has_method("get_animal_rental_data"):
 			display_name = CityLanguage.translate("interaction_animal_staff")
 		elif nearest_interactable.has_method("get_interaction_data"):
@@ -623,6 +627,9 @@ func open_interactable(target: Node3D) -> void:
 	if target.has_method("is_shop_owner") and target.is_shop_owner() and is_instance_valid(shop_manager):
 		shop_manager.open_shop()
 		return
+	if target.has_method("get_daily_reward_chest_data"):
+		open_daily_reward_chest(target)
+		return
 	if target.has_method("get_animal_rental_data"):
 		open_animal_rental(target)
 		return
@@ -642,6 +649,20 @@ func open_interactable(target: Node3D) -> void:
 		status_label.text = CityLanguage.translate("service_npc_dialogue_status")
 		accept_button.visible = false
 		panel.visible = true
+
+
+func open_daily_reward_chest(chest: Node3D) -> void:
+	if not is_instance_valid(chest) or not chest.has_method("get_daily_reward_chest_data"):
+		return
+	var data: Dictionary = chest.get_daily_reward_chest_data()
+	active_mission = null
+	animal_selector.visible = false
+	title_label.text = str(data.get("title", "صندوق المكافأة الفرعوني"))
+	description_label.text = str(data.get("description", ""))
+	reward_label.text = "المكافأة اليومية ستظهر هنا بعد ربط التحقق الخادمي."
+	status_label.text = "الصندوق ظاهر في المدينة؛ الاستلام لم يُفعّل بعد."
+	accept_button.visible = false
+	panel.visible = true
 
 func open_animal_rental(staff: Node3D) -> void:
 	selected_animal_staff = staff
