@@ -11,7 +11,7 @@ func _run_wallet_tests() -> void:
 		quit(1)
 		return
 
-	if wallet.profile_path == wallet.profile_path:
+	if wallet.profile_path == "user://kings_city_profile.cfg":
 		push_error("Wallet test is pointing at the real player profile.")
 		quit(1)
 		return
