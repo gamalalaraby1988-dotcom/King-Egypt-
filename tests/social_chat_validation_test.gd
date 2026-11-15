@@ -111,15 +111,15 @@ func _run_social_validation_tests() -> void:
 	social._realtime_ready_topics = {}
 	social._realtime_topic_retry_seconds = {}
 	social._realtime_topic_retry_attempts = {}
-	for attempt in range(social.MAX_REALTIME_TOPIC_RETRIES):
+	for attempt in range(3):
 		social._schedule_realtime_topic_retry("chat:direct:retry-limit", "retry-ref-%d" % (attempt + 1))
 		if not social._realtime_topic_retry_seconds.has("chat:direct:retry-limit"):
 			push_error("A realtime channel retry stopped before reaching its configured limit.")
 			quit(1)
 			return
-		social._take_due_realtime_topic_retries(social.REALTIME_TOPIC_RETRY_DELAY)
+		social._take_due_realtime_topic_retries(2.0)
 		social._realtime_join_refs["chat:direct:retry-limit"] = "retry-ref-%d" % (attempt + 2)
-	social._schedule_realtime_topic_retry("chat:direct:retry-limit", "retry-ref-%d" % (social.MAX_REALTIME_TOPIC_RETRIES + 1))
+	social._schedule_realtime_topic_retry("chat:direct:retry-limit", "retry-ref-%d" % 4)
 	if social._realtime_topic_retry_seconds.has("chat:direct:retry-limit") or social._realtime_topic_retry_attempts.has("chat:direct:retry-limit"):
 		push_error("A realtime channel continued retrying after the configured limit.")
 		quit(1)
