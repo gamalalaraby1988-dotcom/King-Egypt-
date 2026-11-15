@@ -9,6 +9,9 @@ var interior_return_transform: Transform3D
 var interior_loading_layer: CanvasLayer
 var interior_loading_label: Label
 var interior_exit_button: Button
+var interior_quick_travel_layer: CanvasLayer
+var interior_quick_travel_panel: PanelContainer
+var interior_quick_travel_buttons: Array[Button] = []
 var interior_transition_busy := false
 var interior_loading_message_key := "interior_loading"
 var interior_hidden_world_states: Dictionary = {}
@@ -309,7 +312,72 @@ func _create_interior_transition_ui() -> void:
 	interior_exit_button.offset_bottom = -20
 	interior_exit_button.pressed.connect(return_from_building_interior)
 	interior_loading_layer.add_child(interior_exit_button)
+	_create_interior_quick_travel_ui()
 	CityLanguage.language_changed.connect(_refresh_interior_ui_language)
+
+func _create_interior_quick_travel_ui() -> void:
+	interior_quick_travel_layer = CanvasLayer.new()
+	interior_quick_travel_layer.name = "InteriorQuickTravel"
+	interior_quick_travel_layer.layer = 31
+	add_child(interior_quick_travel_layer)
+	interior_quick_travel_panel = PanelContainer.new()
+	interior_quick_travel_panel.name = "QuickTravelPanel"
+	interior_quick_travel_panel.set_anchors_preset(Control.PRESET_CENTER_RIGHT)
+	interior_quick_travel_panel.position = Vector2(-330, -220)
+	interior_quick_travel_panel.custom_minimum_size = Vector2(300, 440)
+	interior_quick_travel_panel.visible = false
+	interior_quick_travel_layer.add_child(interior_quick_travel_panel)
+	var content := VBoxContainer.new()
+	content.add_theme_constant_override("separation", 10)
+	interior_quick_travel_panel.add_child(content)
+	var heading := Label.new()
+	heading.text = "𓂀  التنقل السريع 𓂀"
+	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	heading.add_theme_font_size_override("font_size", 22)
+	heading.add_theme_color_override("font_color", Color(0.88, 0.68, 0.30))
+	content.add_child(heading)
+	var entries := [
+		["⛺  المخيم", true],
+		["🏠  الشقة", false],
+		["𓉐  قمة الملوك", false],
+		["⚜  الميدان", false],
+		["⛵  السفينة", false],
+		["🚪  الخروج خارج المبنى", true]
+	]
+	for index in range(entries.size()):
+		var entry: Array = entries[index]
+		var travel_button := Button.new()
+		travel_button.text = str(entry[0])
+		travel_button.custom_minimum_size = Vector2(270, 48)
+		travel_button.disabled = not bool(entry[1])
+		travel_button.pressed.connect(_on_interior_quick_travel_selected.bind(index))
+		content.add_child(travel_button)
+		interior_quick_travel_buttons.append(travel_button)
+	var note := Label.new()
+	note.text = "بعض الوجهات ستُفعّل عند اكتمال مواقعها وأنظمتها."
+	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	note.add_theme_font_size_override("font_size", 12)
+	content.add_child(note)
+
+func show_interior_quick_travel_menu() -> void:
+	if interior_transition_busy or not is_instance_valid(interior_root) or not is_instance_valid(interior_quick_travel_panel):
+		return
+	interior_quick_travel_panel.visible = true
+
+func _hide_interior_quick_travel_menu() -> void:
+	if is_instance_valid(interior_quick_travel_panel):
+		interior_quick_travel_panel.visible = false
+
+func _on_interior_quick_travel_selected(index: int) -> void:
+	if index == 0:
+		_hide_interior_quick_travel_menu()
+		await return_from_building_interior(Vector3(60.0, 0.15, 68.0))
+	elif index == 5:
+		_hide_interior_quick_travel_menu()
+		await return_from_building_interior()
+	else:
+		return
 
 func _refresh_interior_ui_language() -> void:
 	if is_instance_valid(interior_loading_label):
@@ -324,7 +392,7 @@ func _show_interior_loading(show_exit: bool = false, message_key: String = "inte
 	var backdrop := interior_loading_layer.get_node_or_null("LoadingBackdrop") as ColorRect
 	if is_instance_valid(backdrop):
 		backdrop.visible = not show_exit
-	interior_exit_button.visible = show_exit
+	interior_exit_button.visible = false
 	_refresh_interior_ui_language()
 
 func _hide_interior_loading() -> void:
@@ -432,6 +500,7 @@ func _create_building_interior(building_title: String) -> void:
 	interior_root.add_child(title)
 	_create_interior_furnishings(interior_root, building_title)
 	_create_interior_staff(interior_root, building_title)
+	_create_interior_exit_marker(interior_root)
 	var light := OmniLight3D.new()
 	light.position = Vector3(0, 4.2, 0)
 	light.light_color = Color(1.0, 0.82, 0.57)
@@ -468,6 +537,13 @@ func _create_interior_furnishings(root: Node3D, building_title: String) -> void:
 		_create_box(root, "GenericWaitingBench", Vector3(3.2, 0.55, 0.8), Vector3(0, 0.28, 2.5), Color(0.34, 0.25, 0.16), true)
 
 
+func _create_interior_exit_marker(root: Node3D) -> void:
+	var exit_marker := Node3D.new()
+	exit_marker.name = "ApartmentExitInteraction"
+	exit_marker.position = Vector3(0, 0, 5.7)
+	exit_marker.add_to_group("interior_exit_interactables")
+	root.add_child(exit_marker)
+
 func _create_interior_staff(root: Node3D, building_title: String) -> void:
 	# موظف محلي داخل كل مبنى؛ يستخدم نظام التفاعل الحالي دون إنشاء نظام مكافآت جديد.
 	var staff := Node3D.new()
@@ -482,7 +558,7 @@ func _create_interior_staff(root: Node3D, building_title: String) -> void:
 	staff.position = Vector3(0, 0, -0.7)
 	root.add_child(staff)
 
-func return_from_building_interior() -> void:
+func return_from_building_interior(destination: Vector3 = Vector3(0.0, -9999.0, 0.0)) -> void:
 	if interior_transition_busy or not is_instance_valid(interior_root):
 		return
 	interior_transition_busy = true
@@ -497,6 +573,8 @@ func return_from_building_interior() -> void:
 	_set_city_world_hidden(false)
 	if is_instance_valid(body) and not body.is_queued_for_deletion():
 		body.global_transform = interior_return_transform
+		if destination.y > -9000.0:
+			body.global_position = destination
 		body.velocity = Vector3.ZERO
 		body.set_physics_process(true)
 	if is_instance_valid(interior_root):
@@ -505,6 +583,7 @@ func return_from_building_interior() -> void:
 	interior_player = null
 	interior_transition_busy = false
 	_hide_interior_loading()
+	_hide_interior_quick_travel_menu()
 	var manager := get_node_or_null("MissionManager")
 	if is_instance_valid(manager) and manager.has_method("_update_interaction_target"):
 		manager._update_interaction_target()
