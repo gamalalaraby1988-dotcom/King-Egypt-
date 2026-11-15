@@ -504,7 +504,7 @@ func _update_interaction_target() -> void:
 		nearest_interactable = null
 		nearest_building = null
 		return
-	if not is_instance_valid(player):
+	if not is_instance_valid(player) or player.is_queued_for_deletion() or not player.is_inside_tree():
 		nearest_interactable = null
 		nearest_building = null
 		return
@@ -514,7 +514,7 @@ func _update_interaction_target() -> void:
 	var best: Node3D = null
 	var best_distance := INF
 	for candidate in get_tree().get_nodes_in_group(group_name):
-		if not is_instance_valid(candidate) or candidate.is_queued_for_deletion() or not candidate is Node3D:
+		if not is_instance_valid(candidate) or candidate.is_queued_for_deletion() or not candidate.is_inside_tree() or not candidate is Node3D:
 			continue
 		var radius_value: Variant = candidate.get("interaction_radius")
 		var allowed_distance := float(radius_value) if radius_value != null else 4.5
