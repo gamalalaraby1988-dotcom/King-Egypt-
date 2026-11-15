@@ -1,7 +1,7 @@
 extends Node
 ## واجهة الملف الشخصي وإعدادات اللعب الأساسية، تحفظ محليًا.
 
-const SAVE_PATH := "user://kings_city_profile.cfg"
+const SETTINGS_PATH := "user://kings_city_settings.cfg"
 var mission_manager: Node
 var player: Node3D
 var panel: PanelContainer
@@ -16,8 +16,32 @@ var root_control: Control
 
 func _ready() -> void:
 	_build_ui()
+	if not AccountDataSession.session_ready.is_connected(_on_account_session_ready):
+		AccountDataSession.session_ready.connect(_on_account_session_ready)
+	if not AccountDataSession.session_invalidated.is_connected(_on_account_session_invalidated):
+		AccountDataSession.session_invalidated.connect(_on_account_session_invalidated)
 	_load_settings()
+	if AccountDataSession.is_ready():
+		_on_account_session_ready(AccountDataSession.get_user_id(), AccountDataSession.get_generation(), AccountDataSession.get_profile_path())
 	_apply_settings()
+
+func _exit_tree() -> void:
+	if AccountDataSession.session_ready.is_connected(_on_account_session_ready):
+		AccountDataSession.session_ready.disconnect(_on_account_session_ready)
+	if AccountDataSession.session_invalidated.is_connected(_on_account_session_invalidated):
+		AccountDataSession.session_invalidated.disconnect(_on_account_session_invalidated)
+
+func _on_account_session_ready(user_id: String, generation: int, profile_path: String) -> void:
+	if not AccountDataSession.is_session_current(user_id, generation) or profile_path.is_empty():
+		return
+	_load_profile_name(profile_path)
+
+func _on_account_session_invalidated(_previous_user_id: String, _generation: int) -> void:
+	if is_instance_valid(name_input):
+		name_input.text = "لاعب جديد"
+		name_input.editable = false
+	if is_instance_valid(name_change_status):
+		name_change_status.text = "سجّل الدخول لعرض اسم حسابك وتغييره."
 
 func _build_ui() -> void:
 	var layer := CanvasLayer.new()
@@ -116,19 +140,13 @@ func _update_layout() -> void:
 	panel.position = (view - panel_size) * 0.5
 
 func _load_settings() -> void:
+	# إعدادات الصوت والجودة واللغة إعدادات للجهاز، وليست بيانات لاعب.
 	var config := ConfigFile.new()
-	if config.load(SAVE_PATH) != OK:
-		name_input.text = "لاعب جديد"
+	if config.load(SETTINGS_PATH) != OK:
 		language_select.select(0)
-		if FileAccess.file_exists(SAVE_PATH):
-			name_input.editable = false
-			name_change_status.text = "تعذر قراءة بيانات الاسم؛ لا يمكن التحقق من حق التغيير اليومي بأمان."
-		else:
-			_update_name_change_status(config)
+		if FileAccess.file_exists(SETTINGS_PATH):
+			info_label.text = "تعذر قراءة إعدادات الجهاز؛ تم استخدام القيم الافتراضية."
 		return
-	var saved_name: Variant = config.get_value("profile", "player_name", "لاعب جديد")
-	name_input.text = str(saved_name).strip_edges().substr(0, 24) if saved_name is String else "لاعب جديد"
-	_update_name_change_status(config)
 	var saved_volume: Variant = config.get_value("settings", "volume", 80)
 	var volume_value := float(saved_volume) if saved_volume is int or saved_volume is float else 80.0
 	volume_slider.value = clampf(volume_value, 0.0, 100.0) if is_finite(volume_value) else 80.0
@@ -140,50 +158,89 @@ func _load_settings() -> void:
 	language_select.select({"auto": 0, "ar": 1, "en": 2}.get(saved_language, 0))
 	CityLanguage.set_language(saved_language)
 
-func _save_settings() -> void:
-	var config := ConfigFile.new()
-	var load_error := config.load(SAVE_PATH)
-	if load_error != OK and FileAccess.file_exists(SAVE_PATH):
-		info_label.text = "ملف اللاعب موجود لكنه غير قابل للقراءة؛ أُوقفت كتابة الإعدادات لحماية الرصيد والبيانات."
+func _load_profile_name(profile_path: String) -> void:
+	if not AccountDataSession.is_ready() or profile_path != AccountDataSession.get_profile_path():
 		return
-	var old_name_value: Variant = config.get_value("profile", "player_name", "لاعب جديد")
-	var old_name := str(old_name_value).strip_edges() if old_name_value is String else "لاعب جديد"
-	var requested_name := name_input.text.strip_edges()
-	if requested_name.is_empty():
-		requested_name = old_name if not old_name.is_empty() else "لاعب"
-	requested_name = requested_name.substr(0, 24)
-	var name_changed := requested_name != old_name
-	var today := Time.get_date_string_from_system()
-	var last_change_value: Variant = config.get_value("profile", "player_name_change_date", "")
-	var last_change_date := str(last_change_value) if last_change_value is String else ""
-	var name_change_blocked := false
-	if name_changed and last_change_date == today:
-		name_input.text = old_name
-		name_change_blocked = true
-		requested_name = old_name
-		name_changed = false
-	config.set_value("profile", "player_name", requested_name)
-	if name_changed:
-		config.set_value("profile", "player_name_change_date", today)
-	config.set_value("settings", "volume", int(volume_slider.value))
-	config.set_value("settings", "quality", quality_select.selected)
+	var config := ConfigFile.new()
+	var load_error := config.load(profile_path)
+	if load_error != OK and FileAccess.file_exists(profile_path):
+		name_input.editable = false
+		name_change_status.text = "تعذر قراءة ملف الحساب؛ تم إيقاف تعديل الاسم لحماية البيانات."
+		return
+	var saved_name: Variant = config.get_value("profile", "player_name", "لاعب جديد")
+	name_input.text = str(saved_name).strip_edges().substr(0, 24) if saved_name is String else "لاعب جديد"
+	_update_name_change_status(config)
+
+func _save_settings() -> void:
+	# احفظ تفضيلات الجهاز في ملف منفصل عن بيانات الحساب والمحفظة.
+	var settings := ConfigFile.new()
+	var settings_error := settings.load(SETTINGS_PATH)
+	if settings_error != OK and FileAccess.file_exists(SETTINGS_PATH):
+		info_label.text = "تعذر قراءة إعدادات الجهاز؛ لم يتم استبدال الملف."
+		return
+	settings.set_value("settings", "volume", int(volume_slider.value))
+	settings.set_value("settings", "quality", quality_select.selected)
 	var language_modes := ["auto", "ar", "en"]
 	var selected_language: String = language_modes[clampi(language_select.selected, 0, 2)]
-	config.set_value("settings", "language", selected_language)
-	var error := config.save(SAVE_PATH)
-	if error != OK:
-		info_label.text = "تعذر حفظ الإعدادات؛ لم يتم اعتماد تغيير اللغة. رمز الخطأ: %s" % error
+	settings.set_value("settings", "language", selected_language)
+	var settings_save_error := settings.save(SETTINGS_PATH)
+	if settings_save_error != OK:
+		info_label.text = "تعذر حفظ إعدادات الجهاز. رمز الخطأ: %s" % settings_save_error
 		return
+
+	var name_change_blocked := false
+	if AccountDataSession.is_ready():
+		var profile_path := AccountDataSession.get_profile_path()
+		var profile := ConfigFile.new()
+		var profile_error := profile.load(profile_path)
+		if profile_error != OK and FileAccess.file_exists(profile_path):
+			info_label.text = "تم حفظ إعدادات الجهاز، لكن تعذر قراءة ملف الحساب؛ لم يتم تعديل الاسم أو بيانات المحفظة."
+			return
+		var old_name_value: Variant = profile.get_value("profile", "player_name", "لاعب جديد")
+		var old_name := str(old_name_value).strip_edges() if old_name_value is String else "لاعب جديد"
+		var requested_name := name_input.text.strip_edges()
+		if requested_name.is_empty():
+			requested_name = old_name if not old_name.is_empty() else "لاعب"
+		requested_name = requested_name.substr(0, 24)
+		var name_changed := requested_name != old_name
+		var today := Time.get_date_string_from_system()
+		var last_change_value: Variant = profile.get_value("profile", "player_name_change_date", "")
+		var last_change_date := str(last_change_value) if last_change_value is String else ""
+		if name_changed and last_change_date == today:
+			name_input.text = old_name
+			name_change_blocked = true
+			requested_name = old_name
+			name_changed = false
+		if name_changed:
+			profile.set_value("profile", "player_name", requested_name)
+			profile.set_value("profile", "player_name_change_date", today)
+			if not AccountDataSession.is_session_current(AccountDataSession.get_user_id(), AccountDataSession.get_generation()):
+				info_label.text = "تغير الحساب أثناء الحفظ؛ أُوقف تعديل الاسم."
+				return
+			var balances: Dictionary = WalletManager.get_balances()
+			if not WalletManager.save_profile_update(profile, int(balances.get("money", 0)), int(balances.get("chips", 0))):
+				info_label.text = "تعذر حفظ الاسم داخل ملف الحساب؛ لم يتم تغيير بيانات المحفظة."
+				return
+		_update_name_change_status(profile)
+	else:
+		name_input.editable = false
+		name_change_status.text = "سجّل الدخول لحفظ اسم اللاعب الخاص بحسابك."
+
 	CityLanguage.set_language(selected_language)
 	_apply_settings()
 	_refresh_info()
 	if name_change_blocked:
 		info_label.text += "\nيمكن تغيير اسم اللاعب مرة واحدة فقط في اليوم. حاول مرة أخرى غدًا؛ تم حفظ بقية الإعدادات دون تغيير الاسم."
-	info_label.text += "\nتم حفظ الإعدادات محليًا."
-	_update_name_change_status(config)
+	info_label.text += "\nتم حفظ إعدادات الجهاز محليًا."
+	if not AccountDataSession.is_ready():
+		info_label.text += "\nلم يتم حفظ اسم اللاعب لعدم وجود حساب نشط."
 
 func _update_name_change_status(config: ConfigFile) -> void:
 	if not is_instance_valid(name_change_status):
+		return
+	if not AccountDataSession.is_ready():
+		name_input.editable = false
+		name_change_status.text = "سجّل الدخول لعرض اسم حسابك وتغييره."
 		return
 	var last_change_value: Variant = config.get_value("profile", "player_name_change_date", "")
 	var last_change_date := str(last_change_value) if last_change_value is String else ""
