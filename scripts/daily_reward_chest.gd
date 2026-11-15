@@ -6,6 +6,7 @@ extends Node3D
 
 func _ready() -> void:
 	add_to_group("city_interactables")
+	add_to_group("daily_reward_chests")
 	_build_chest()
 
 func get_daily_reward_chest_data() -> Dictionary:
