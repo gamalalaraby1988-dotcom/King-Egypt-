@@ -1038,7 +1038,10 @@ func _build_social_chat_panel() -> void:
 	var close := Button.new()
 	close.text = "✕"
 	close.custom_minimum_size = Vector2(38, 36)
-	close.pressed.connect(func(): social_chat_panel.visible = false)
+	close.pressed.connect(func():
+		social_chat_panel.visible = false
+		_apartment_invite_mode = false
+	)
 	header.add_child(close)
 
 	var channels := HBoxContainer.new()
