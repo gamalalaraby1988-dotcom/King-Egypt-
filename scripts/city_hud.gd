@@ -46,6 +46,7 @@ var group_invite_list: VBoxContainer
 var group_invite_status: Label
 var group_invite_button: Button
 var _group_invite_friends_cache: Array = []
+var _pending_group_invite_code := ""
 var group_status_label: Label
 var group_members_box: VBoxContainer
 var group_chat_popup: PanelContainer
@@ -819,10 +820,14 @@ func _send_group_invite_from_list(player_code: String) -> void:
 	if _group_contains(code) or pending_group_invites.has(code):
 		group_invite_status.text = "هذا الصديق عضو بالفعل أو أُرسلت له دعوة."
 		return
-	if not SocialChatManager.invite_chat_group_member(code):
-		group_invite_status.text = "تعذر إرسال الدعوة الآن."
-		return
 	pending_group_invites.append(code)
+	_pending_group_invite_code = code
+	if not SocialChatManager.invite_chat_group_member(code):
+		pending_group_invites.erase(code)
+		_pending_group_invite_code = ""
+		group_invite_status.text = "تعذر إرسال الدعوة الآن."
+		_refresh_group_invite_friends(_group_invite_friends_cache)
+		return
 	group_invite_status.text = "جارٍ إرسال الدعوة إلى الصديق..."
 	_refresh_group_invite_friends(_group_invite_friends_cache)
 	_refresh_group_popup()
@@ -1766,6 +1771,7 @@ func _on_social_operation_completed(action: String, data: Variant) -> void:
 		"group_invite":
 			social_chat_status.text = "نتيجة دعوة المجموعة: " + str(data)
 			group_invite_status.text = "تم إرسال طلب الدعوة إلى الخادم." if str(data) == "sent" else "رد الخادم: " + str(data)
+			_pending_group_invite_code = ""
 			SocialChatManager.get_chat_group()
 		"group_invite_response":
 			social_chat_status.text = "نتيجة الرد على الدعوة: " + str(data)
@@ -1804,9 +1810,9 @@ func _on_social_operation_completed(action: String, data: Variant) -> void:
 func _on_social_operation_failed(action: String, message: String) -> void:
 	if action == "group_invite":
 		group_invite_status.text = "تعذر إرسال الدعوة: " + message
-		for pending_code in pending_group_invites.duplicate():
-			if _group_invite_friends_cache.any(func(friend): return str(friend.get("player_code", "")).to_upper() == pending_code):
-				pending_group_invites.erase(pending_code)
+		if not _pending_group_invite_code.is_empty():
+			pending_group_invites.erase(_pending_group_invite_code)
+			_pending_group_invite_code = ""
 		_refresh_group_invite_friends(_group_invite_friends_cache)
 		_refresh_group_popup()
 	if action == "group_invite_response":
