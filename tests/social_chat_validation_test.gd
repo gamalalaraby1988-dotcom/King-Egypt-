@@ -101,6 +101,38 @@ func _run_social_validation_tests() -> void:
 		push_error("Invitation accept/decline touch targets are smaller than the 44px mobile target.")
 		quit(1)
 		return
+	var meeting_invite_accepted := [0]
+	compact_overlay.invitation_accepted.connect(func(_item: Dictionary) -> void:
+		meeting_invite_accepted[0] += 1
+	)
+	compact_overlay.call("enqueue_invitation", {
+		"invite_id": "550e8400-e29b-41d4-a716-446655440101",
+		"type": "group_meeting_invite",
+		"title": "دعوة للتجمع",
+		"expires_at": float(Time.get_unix_time_from_system()) + 25.0
+	})
+	await process_frame
+	if not accept_button.disabled or not decline_button.disabled:
+		push_error("An invitation without a server response flow exposed active accept/decline buttons.")
+		quit(1)
+		return
+	compact_overlay.call("_finish_current", true)
+	if meeting_invite_accepted[0] != 0 or compact_overlay.call("get_pending_invitation_count") != 1:
+		push_error("An unsupported group-meeting invitation was incorrectly accepted or dismissed.")
+		quit(1)
+		return
+	compact_overlay.call("clear_pending_invitations")
+	compact_overlay.call("enqueue_invitation", {
+		"invite_id": "550e8400-e29b-41d4-a716-446655440102",
+		"type": "group_invite",
+		"title": "دعوة للمجموعة",
+		"expires_at": float(Time.get_unix_time_from_system()) + 25.0
+	})
+	await process_frame
+	if accept_button.disabled or decline_button.disabled:
+		push_error("A group invitation with a verified response flow was incorrectly disabled.")
+		quit(1)
+		return
 	compact_overlay.queue_free()
 	await process_frame
 	var dedupe_overlay: Control = invitation_overlay_script.new()
