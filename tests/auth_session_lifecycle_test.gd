@@ -28,6 +28,11 @@ func _run_auth_session_tests() -> void:
 	auth.session_changed.emit("", "00000000-0000-4000-8000-000000000001", first_generation)
 	var data_session := root.get_node_or_null("AccountDataSession")
 	var wallet := root.get_node_or_null("WalletManager")
+	var social := root.get_node_or_null("SocialChatManager")
+	if social == null or not social._request_session_is_current("00000000-0000-4000-8000-000000000001", first_generation):
+		push_error("Social RPC did not recognize the active account session.")
+		quit(1)
+		return
 	if data_session == null or wallet == null or not data_session.is_ready() or not wallet.initialized:
 		push_error("Account data session did not activate the authenticated profile.")
 		quit(1)
@@ -52,6 +57,10 @@ func _run_auth_session_tests() -> void:
 		push_error("A stale session generation was accepted.")
 		quit(1)
 		return
+	if social._request_session_is_current("00000000-0000-4000-8000-000000000001", first_generation):
+		push_error("Social RPC accepted a response from a stale account generation.")
+		quit(1)
+		return
 	if not auth.is_session_current("00000000-0000-4000-8000-000000000001", auth.get_session_generation()):
 		push_error("The current session was rejected after generation advance.")
 		quit(1)
@@ -62,6 +71,10 @@ func _run_auth_session_tests() -> void:
 		quit(1)
 		return
 	auth.session_changed.emit("00000000-0000-4000-8000-000000000001", "00000000-0000-4000-8000-000000000001", auth.get_session_generation())
+	if not social._request_session_is_current("00000000-0000-4000-8000-000000000001", auth.get_session_generation()):
+		push_error("Social RPC rejected the rebound current account session.")
+		quit(1)
+		return
 	if not data_session.is_ready() or not wallet.initialized:
 		push_error("Account data session did not rebind after a valid generation change.")
 		quit(1)
