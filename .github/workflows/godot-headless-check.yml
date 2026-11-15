@@ -35,16 +35,16 @@ jobs:
       - name: Check out approved working branch
         uses: actions/checkout@v4
 
-      - name: Install Godot 4.7 stable
+      - name: Install Godot 4.7.2
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/godot"
           curl --fail --location --retry 3 \
-            "https://github.com/godotengine/godot/releases/download/4.7-stable/Godot_v4.7-stable_linux.x86_64.zip" \
+            "https://github.com/godotengine/godot/releases/download/4.7.2-stable/Godot_v4.7.2-stable_linux.x86_64.zip" \
             --output "$RUNNER_TEMP/godot/godot.zip"
           unzip -q "$RUNNER_TEMP/godot/godot.zip" -d "$RUNNER_TEMP/godot"
-          GODOT_BIN="$(find "$RUNNER_TEMP/godot" -maxdepth 2 -type f -name 'Godot_*_linux.x86_64' -print -quit)"
+          GODOT_BIN="$(find "$RUNNER_TEMP/godot" -maxdepth 2 -type f -name 'Godot_v4.7.2-stable_linux.x86_64' -print -quit)"
           test -n "$GODOT_BIN"
           chmod +x "$GODOT_BIN"
           echo "GODOT_BIN=$GODOT_BIN" >> "$GITHUB_ENV"
@@ -70,6 +70,26 @@ jobs:
             exit 1
           fi
 
+      - name: Run wallet transaction tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$GODOT_BIN" --headless --path . --script res://tests/wallet_manager_test.gd 2>&1 | tee godot-wallet-tests.log
+          if grep -E "SCRIPT ERROR:|Parse Error:|ERROR:" godot-wallet-tests.log; then
+            echo "Wallet transaction tests reported errors."
+            exit 1
+          fi
+
+      - name: Run auth session lifecycle tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$GODOT_BIN" --headless --path . --script res://tests/auth_session_lifecycle_test.gd 2>&1 | tee godot-auth-session-tests.log
+          if grep -E "SCRIPT ERROR:|Parse Error:|ERROR:" godot-auth-session-tests.log; then
+            echo "Auth session lifecycle tests reported errors."
+            exit 1
+          fi
+
       - name: Start main scene headlessly
         shell: bash
         run: |
@@ -89,5 +109,7 @@ jobs:
             godot-import.log
             godot-startup.log
             godot-social-tests.log
+            godot-wallet-tests.log
+            godot-auth-session-tests.log
           if-no-files-found: ignore
           retention-days: 14
