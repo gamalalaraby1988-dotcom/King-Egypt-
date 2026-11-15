@@ -378,9 +378,16 @@ func list_chat_group_invites() -> bool:
 
 
 func set_realtime_player_code(player_code: String) -> void:
-	_realtime_player_code = player_code.strip_edges().to_upper()
+	var clean_code := player_code.strip_edges().to_upper()
+	if clean_code == _realtime_player_code:
+		return
 	if not _realtime_player_code.is_empty():
-		_subscribe_realtime_topic("chat:invites:" + _realtime_player_code)
+		_leave_realtime_topic("chat:invites:" + _realtime_player_code)
+	_realtime_player_code = ""
+	if not is_valid_player_code(clean_code):
+		return
+	_realtime_player_code = clean_code
+	_subscribe_realtime_topic("chat:invites:" + _realtime_player_code)
 
 
 func subscribe_group_chat(group_id: String) -> void:
