@@ -37,6 +37,22 @@ func _run_invitation_overlay_tests() -> void:
 		push_error("A future creation timestamp incorrectly extended the invitation lifetime.")
 		quit(1)
 		return
+	var old_created_at := Time.get_datetime_string_from_unix_time(int(expiry_reference - 20.0))
+	var creation_anchored_expiry := float(overlay.call("resolve_invitation_expiry", {
+		"created_at": old_created_at,
+		"expires_at": expiry_reference + 90.0
+	}, expiry_reference))
+	if not is_equal_approx(creation_anchored_expiry, expiry_reference + 10.0):
+		push_error("A valid earlier creation timestamp did not preserve the original 30-second invitation window.")
+		quit(1)
+		return
+	var malformed_created_expiry := float(overlay.call("resolve_invitation_expiry", {
+		"created_at": "not-a-timestamp"
+	}, expiry_reference))
+	if not is_equal_approx(malformed_created_expiry, expiry_reference + 30.0):
+		push_error("A malformed creation timestamp did not fall back to the local 30-second cap.")
+		quit(1)
+		return
 
 	var expired_ids: Array[String] = []
 	var accepted_ids: Array[String] = []
