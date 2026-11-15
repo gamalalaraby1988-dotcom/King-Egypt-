@@ -1,0 +1,71 @@
+extends SceneTree
+
+func _initialize() -> void:
+	call_deferred("_run_invitation_overlay_tests")
+
+func _run_invitation_overlay_tests() -> void:
+	var overlay_script := load("res://scripts/invitation_overlay.gd") as Script
+	if overlay_script == null:
+		push_error("Unified invitation overlay script did not load.")
+		quit(1)
+		return
+	var overlay := Control.new()
+	overlay.set_script(overlay_script)
+	root.add_child(overlay)
+	await process_frame
+
+	var expired_ids: Array[String] = []
+	var accepted_ids: Array[String] = []
+	overlay.connect("invitation_expired", func(item: Dictionary) -> void:
+		expired_ids.append(str(item.get("invite_id", "")))
+	)
+	overlay.connect("invitation_accepted", func(item: Dictionary) -> void:
+		accepted_ids.append(str(item.get("invite_id", "")))
+	)
+
+	var now := float(Time.get_unix_time_from_system())
+	overlay.call("enqueue_invitation", {
+		"invite_id": "group-1",
+		"type": "group_invite",
+		"title": "دعوة مجموعة",
+		"body": "اختبار",
+		"expires_at": now + 30.0
+})
+	overlay.call("enqueue_invitation", {
+		"invite_id": "apartment-1",
+		"type": "apartment_invite",
+		"title": "دعوة شقة",
+		"body": "اختبار",
+		"expires_at": now + 60.0
+})
+	if str(overlay.call("get_current_invitation").get("invite_id", "")) != "group-1":
+		push_error("The first invitation was not displayed first.")
+		quit(1)
+		return
+	if int(overlay.call("get_pending_invitation_count")) != 2:
+		push_error("The unified invitation queue did not retain both invitations.")
+		quit(1)
+		return
+
+	overlay.call("_tick", 31.0)
+	if expired_ids != ["group-1"]:
+		push_error("The first invitation did not expire after its 30-second window.")
+		quit(1)
+		return
+	if str(overlay.call("get_current_invitation").get("invite_id", "")) != "apartment-1":
+		push_error("The next invitation did not appear after the first expired.")
+		quit(1)
+		return
+
+	overlay.call("_finish_current", true)
+	if accepted_ids != ["apartment-1"]:
+		push_error("The unified invitation accept action was not emitted.")
+		quit(1)
+		return
+	if int(overlay.call("get_pending_invitation_count")) != 0:
+		push_error("The invitation queue was not cleared after completion.")
+		quit(1)
+		return
+
+	print("Unified invitation overlay queue and 30-second expiry tests passed.")
+	quit(0)
