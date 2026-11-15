@@ -79,6 +79,20 @@ func _run_social_validation_tests() -> void:
 		quit(1)
 		return
 	expiry_probe.free()
+	var compact_overlay: Control = invitation_overlay_script.new()
+	root.add_child(compact_overlay)
+	await process_frame
+	var content_scroll := compact_overlay.get_node_or_null("UnifiedInvitationPanel/InvitationContentScroll")
+	if not content_scroll is ScrollContainer:
+		push_error("The invitation panel did not create its compact-height scroll container.")
+		quit(1)
+		return
+	if content_scroll.horizontal_scroll_mode != ScrollContainer.SCROLL_MODE_DISABLED or content_scroll.vertical_scroll_mode != ScrollContainer.SCROLL_MODE_AUTO:
+		push_error("The invitation panel scroll container does not preserve vertical-only compact content scrolling.")
+		quit(1)
+		return
+	compact_overlay.queue_free()
+	await process_frame
 	var dedupe_overlay: Control = invitation_overlay_script.new()
 	var expired_invitation_ids: Array[String] = []
 	dedupe_overlay.invitation_expired.connect(func(invitation: Dictionary) -> void:
