@@ -106,8 +106,8 @@ func _run_invitation_overlay_tests() -> void:
 		push_error("The next invitation appeared before the server response completed.")
 		quit(1)
 		return
-	if int(overlay.call("get_pending_invitation_count")) != 1:
-		push_error("The queued invitation was not retained while the decline response was pending.")
+	if int(overlay.call("get_pending_invitation_count")) != 2:
+		push_error("Both queued invitations were not retained while the decline response was pending.")
 		quit(1)
 		return
 	overlay.call("_tick", 11.0)
