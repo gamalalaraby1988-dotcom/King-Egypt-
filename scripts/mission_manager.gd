@@ -118,11 +118,13 @@ func _exit_tree() -> void:
 func _on_account_session_ready(user_id: String, generation: int, _profile_path: String) -> void:
 	if not AccountDataSession.is_session_current(user_id, generation):
 		return
+	_reset_account_bound_activity_state()
 	_profile_session_uid = user_id
 	_profile_session_generation = generation
 	_load_profile()
 
 func _on_account_session_invalidated(_previous_user_id: String, _generation: int) -> void:
+	_reset_account_bound_activity_state()
 	_profile_session_uid = ""
 	_profile_session_generation = -1
 	player_level = 1
@@ -144,6 +146,19 @@ func _on_account_session_invalidated(_previous_user_id: String, _generation: int
 
 func _has_active_profile_session() -> bool:
 	return AccountDataSession.is_session_current(_profile_session_uid, _profile_session_generation) and WalletManager.initialized
+
+func _reset_account_bound_activity_state() -> void:
+	# لا تسمح باستمرار مهمة أو عملية تأجير من حساب سابق داخل جلسة الحساب التالي.
+	active_mission = null
+	active_job = null
+	active_job_target = Vector3.ZERO
+	active_job_reward = {}
+	job_running = false
+	mission_running = false
+	active_target = Vector3.ZERO
+	selected_activity_kind = "mission"
+	active_rental_transaction_id = ""
+	selected_animal_staff = null
 
 func _profile_save_path() -> String:
 	return AccountDataSession.get_profile_path() if _has_active_profile_session() else ""
