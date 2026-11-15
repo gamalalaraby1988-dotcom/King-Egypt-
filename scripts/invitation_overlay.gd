@@ -122,13 +122,17 @@ func _build_ui() -> void:
 	actions.add_theme_constant_override("separation", 8)
 	column.add_child(actions)
 	var accept := Button.new()
+	accept.name = "AcceptInvitationButton"
 	accept.text = "قبول"
 	accept.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	accept.custom_minimum_size.y = 44.0
 	accept.pressed.connect(_finish_current.bind(true))
 	actions.add_child(accept)
 	var decline := Button.new()
+	decline.name = "DeclineInvitationButton"
 	decline.text = "رفض"
 	decline.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	decline.custom_minimum_size.y = 44.0
 	decline.pressed.connect(_finish_current.bind(false))
 	actions.add_child(decline)
 
