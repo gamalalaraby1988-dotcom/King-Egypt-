@@ -236,7 +236,7 @@ func _build_preview_world() -> void:
 	world.add_child(light)
 	var camera := Camera3D.new()
 	camera.position = Vector3(0, 1.25, 4.8)
-	camera.look_at(Vector3(0, 1.0, 0), Vector3.UP)
+	camera.look_at_from_position(Vector3(0, 1.25, 4.8), Vector3(0, 1.0, 0), Vector3.UP)
 	camera.current = true
 	world.add_child(camera)
 	preview_world = world
