@@ -18,6 +18,8 @@ var balances: Dictionary = {"money": 0, "chips": 0, "gems": 0}
 var receipts: Dictionary = {}
 var ledger: Array = []
 var initialized := false
+var _session_user_id := ""
+var _session_generation := -1
 
 func _ready() -> void:
 	var raw_args := OS.get_cmdline_args()
@@ -35,7 +37,41 @@ func _ready() -> void:
 		temp_path = "user://ci_wallet_fixture_%s.wallet.tmp" % suffix
 		backup_path = "user://ci_wallet_fixture_%s.backup.cfg" % suffix
 		test_storage_enabled = true
+		initialize_wallet()
+		return
+	if not AccountDataSession.session_ready.is_connected(_on_account_session_ready):
+		AccountDataSession.session_ready.connect(_on_account_session_ready)
+	if not AccountDataSession.session_invalidated.is_connected(_on_account_session_invalidated):
+		AccountDataSession.session_invalidated.connect(_on_account_session_invalidated)
+	if AccountDataSession.is_ready():
+		_on_account_session_ready(AccountDataSession.get_user_id(), AccountDataSession.get_generation(), AccountDataSession.get_profile_path())
+
+func _on_account_session_ready(user_id: String, generation: int, account_profile_path: String) -> void:
+	if not AuthManager.is_session_current(user_id, generation) or not AccountDataSession.is_session_current(user_id, generation):
+		return
+	_session_user_id = user_id
+	_session_generation = generation
+	profile_path = account_profile_path
+	temp_path = account_profile_path + ".tmp"
+	backup_path = account_profile_path + ".backup"
+	balances = {"money": 0, "chips": 0, "gems": 0}
+	receipts = {}
+	ledger = []
+	initialized = false
 	initialize_wallet()
+
+func _on_account_session_invalidated(_previous_user_id: String, _generation: int) -> void:
+	initialized = false
+	_session_user_id = ""
+	_session_generation = -1
+	balances = {"money": 0, "chips": 0, "gems": 0}
+	receipts = {}
+	ledger = []
+
+func _can_access_profile() -> bool:
+	if test_storage_enabled:
+		return true
+	return initialized and AccountDataSession.is_session_current(_session_user_id, _session_generation) and AuthManager.is_session_current(_session_user_id, _session_generation)
 
 func default_profile_unchanged_after_test() -> bool:
 	var exists_now := FileAccess.file_exists(DEFAULT_PROFILE_PATH)
@@ -88,7 +124,7 @@ func initialize_wallet() -> bool:
 	return _persist_wallet(config)
 
 func get_balance(currency: String) -> int:
-	if not initialized or not CURRENCIES.has(currency):
+	if not _can_access_profile() or not CURRENCIES.has(currency):
 		return 0
 	_refresh_legacy_balances()
 	return int(balances[currency])
@@ -110,7 +146,7 @@ func _refresh_legacy_balances() -> void:
 
 func save_profile_update(config: ConfigFile, money_value: int, chips_value: int) -> bool:
 	# حفظ بيانات اللاعب وتغيير أرصدته وسجل المحفظة في الملف الذري نفسه.
-	if not initialized or not _valid_amount(money_value) or not _valid_amount(chips_value):
+	if not _can_access_profile() or not _valid_amount(money_value) or not _valid_amount(chips_value):
 		return false
 	var next_balances := balances.duplicate(true)
 	var next_ledger := ledger.duplicate(true)
@@ -155,7 +191,7 @@ func has_transaction(transaction_id: String) -> bool:
 
 func purchase_once(transaction_id: String, currency: String, amount: int, reason: String, profile_updates: Dictionary = {}) -> bool:
 	# يطبق الخصم وتحديث الملكية/الإيصال في الملف نفسه؛ لا توجد ملكية دون خصم ناجح.
-	if not initialized or transaction_id.strip_edges().is_empty() or not CURRENCIES.has(currency):
+	if not _can_access_profile() or transaction_id.strip_edges().is_empty() or not CURRENCIES.has(currency):
 		return false
 	if amount < 0 or amount > MAX_BALANCE or receipts.has(transaction_id):
 		return false
