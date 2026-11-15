@@ -30,6 +30,16 @@ func _ready() -> void:
 	add_child(_http)
 	_http.request_completed.connect(_on_request_completed)
 
+func get_my_display_name() -> bool:
+	return _rpc("get_my_test_display_name", {}, "display_name_get")
+
+func change_my_display_name(new_name: String) -> bool:
+	var clean_name := new_name.strip_edges()
+	if clean_name.is_empty() or clean_name.length() > 24:
+		operation_failed.emit("display_name_change", "الاسم يجب أن يكون من 1 إلى 24 حرفًا.")
+		return false
+	return _rpc("change_my_test_display_name", {"p_new_display_name": clean_name}, "display_name_change")
+
 func list_friends() -> bool:
 	return _rpc("list_test_friends", {}, "friends_list")
 
