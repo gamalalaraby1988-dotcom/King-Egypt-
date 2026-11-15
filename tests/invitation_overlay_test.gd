@@ -25,6 +25,7 @@ func _run_invitation_overlay_tests() -> void:
 	)
 	overlay.connect("invitation_declined", func(item: Dictionary) -> void:
 		declined_ids.append(str(item.get("invite_id", "")))
+		overlay.call("set_response_pending", true)
 	)
 
 	var now := float(Time.get_unix_time_from_system())
@@ -94,10 +95,20 @@ func _run_invitation_overlay_tests() -> void:
 		quit(1)
 		return
 	current_invitation = overlay.call("get_current_invitation")
+	if not current_invitation.is_empty():
+		push_error("The next invitation appeared before the server response completed.")
+		quit(1)
+		return
+	if int(overlay.call("get_pending_invitation_count")) != 1:
+		push_error("The queued invitation was not retained while the decline response was pending.")
+		quit(1)
+		return
+	overlay.call("set_response_pending", false)
+	current_invitation = overlay.call("get_current_invitation")
 	if str(current_invitation.get("invite_id", "")) != "apartment-after-decline":
-		push_error("The next invitation did not appear after declining the active invitation.")
+		push_error("The next invitation did not appear after the decline response completed.")
 		quit(1)
 		return
 
-	print("Unified invitation queue, accept, decline, and 30-second expiry tests passed.")
+	print("Unified invitation queue, accept, decline, response serialization, and 30-second expiry tests passed.")
 	quit(0)
