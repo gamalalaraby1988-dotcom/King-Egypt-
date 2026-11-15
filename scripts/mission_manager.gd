@@ -42,7 +42,6 @@ var owned_outfits: Array = ["default"]
 
 const VALID_OUTFIT_IDS := ["default", "men_formal", "women_formal", "urban_casual", "sport"]
 const OUTFIT_PRICES := {"men_formal": 500, "women_formal": 500, "urban_casual": 300, "sport": 250}
-const LEGACY_STORE_PATH := "user://kings_city_store.cfg"
 var target_marker: MeshInstance3D
 var daily_activities: Node
 var achievement_manager: Node
@@ -566,22 +565,9 @@ func _load_profile() -> void:
 		daily_task_events = saved_daily_events if saved_daily_events is Dictionary else {}
 		achievement_stats_initialized = bool(config.get_value("profile", "achievement_stats_initialized", false))
 	var saved_owned: Variant = config.get_value("profile", "owned_outfits") if error == OK and config.has_section_key("profile", "owned_outfits") else null
-	var needs_profile_save := false
-	if saved_owned is Array:
-		owned_outfits = _sanitize_owned_outfits(saved_owned)
-	else:
-		# ترحيل ملكيات النسخ السابقة من ملف المتجر القديم دون فقدانها.
-		var legacy := ConfigFile.new()
-		if legacy.load(LEGACY_STORE_PATH) == OK:
-			var legacy_owned = legacy.get_value("store", "owned_outfits", ["default"])
-			owned_outfits = _sanitize_owned_outfits(legacy_owned if legacy_owned is Array else ["default"])
-		else:
-			owned_outfits = ["default"]
-		needs_profile_save = true
-
-	if needs_profile_save:
-		if not _save_profile():
-			push_warning("تعذر حفظ بيانات اللاعب بعد ترحيل الملكيات القديمة.")
+	# Never import the unscoped legacy store file into a newly authenticated UID.
+	# Legacy outfit data remains untouched for a separately approved reconciliation.
+	owned_outfits = _sanitize_owned_outfits(saved_owned) if saved_owned is Array else ["default"]
 
 func _safe_profile_int(value: Variant, fallback: int, minimum: int = 0) -> int:
 	if not (value is int or value is float) or not is_finite(float(value)):
