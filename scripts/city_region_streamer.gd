@@ -11,6 +11,10 @@ var _region_instance: Node3D
 var _check_elapsed := 0.0
 
 func configure(target_player: Node3D, scene: PackedScene) -> void:
+	# عند تبديل اللاعب أو مشهد المنطقة، حرّر المحتوى القديم قبل اعتماد الإعداد الجديد.
+	if player != target_player or region_scene != scene:
+		_unload_region()
+		_check_elapsed = 0.0
 	player = target_player
 	region_scene = scene
 
