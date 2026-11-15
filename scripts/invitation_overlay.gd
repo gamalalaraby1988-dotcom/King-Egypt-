@@ -165,6 +165,17 @@ func _finish_current(accepted: bool) -> void:
 		invitation_declined.emit(finished_item)
 	_show_next()
 
+func clear_pending_invitations() -> void:
+	# Invitations belong to the authenticated recipient; discard them silently
+	# when the account changes so another player never sees stale requests.
+	_queue.clear()
+	_current.clear()
+	_remaining_seconds = 0.0
+	if is_instance_valid(_panel):
+		_panel.visible = false
+	_update_timer_display()
+
+
 func get_current_invitation() -> Dictionary:
 	return _current.duplicate(true)
 
