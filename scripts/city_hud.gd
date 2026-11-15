@@ -1635,6 +1635,10 @@ func _on_social_operation_completed(action: String, data: Variant) -> void:
 				group_members = [{"player_id":"local_leader", "display_name":"أنت", "is_leader":true}]
 				if is_instance_valid(social_group_create_button):
 					social_group_create_button.visible = (social_chat_channel == "المجموعة")
+				if is_instance_valid(social_group_invite_button):
+					social_group_invite_button.visible = false
+				if social_chat_channel == "المجموعة" and is_instance_valid(social_chat_log):
+					social_chat_log.clear()
 				social_chat_status.text = "لا توجد مجموعة متصلة. أنشئ مجموعتك للبدء."
 			else:
 				if is_instance_valid(social_group_create_button):
