@@ -100,6 +100,34 @@ func _run_auth_session_tests() -> void:
 		quit(1)
 		return
 	var achievement_file_before_signout := FileAccess.get_file_as_bytes(expected_achievement_path)
+
+	# Switch to a second authenticated UID and verify its achievement file is isolated.
+	auth._advance_session_generation()
+	auth._authenticated_user_id = "00000000-0000-4000-8000-000000000002"
+	auth._authenticated_email = "ci-session-b@example.invalid"
+	auth.session_changed.emit("00000000-0000-4000-8000-000000000001", "00000000-0000-4000-8000-000000000002", auth.get_session_generation())
+	var second_achievement_path := "user://accounts/00000000-0000-4000-8000-000000000002/achievements.cfg"
+	if achievement_manager._save_path != second_achievement_path or achievement_manager.walked_meters != 0.0:
+		push_error("A second account inherited achievement progress from the first account.")
+		quit(1)
+		return
+	achievement_manager.walked_meters = 3.5
+	achievement_manager._save_state()
+	if not FileAccess.file_exists(second_achievement_path):
+		push_error("Second account achievement progress was not saved separately.")
+		quit(1)
+		return
+
+	# Return to the first UID and verify its own progress is restored, not account B's.
+	auth._advance_session_generation()
+	auth._authenticated_user_id = "00000000-0000-4000-8000-000000000001"
+	auth._authenticated_email = "ci-session-a@example.invalid"
+	auth.session_changed.emit("00000000-0000-4000-8000-000000000002", "00000000-0000-4000-8000-000000000001", auth.get_session_generation())
+	if achievement_manager._save_path != expected_achievement_path or achievement_manager.walked_meters != 12.5:
+		push_error("Returning to the first account did not restore its own achievement progress.")
+		quit(1)
+		return
+	var achievement_file_before_signout := FileAccess.get_file_as_bytes(expected_achievement_path)
 	var legacy_achievement_path := "user://kings_city_achievements.cfg"
 	var legacy_achievement_existed := FileAccess.file_exists(legacy_achievement_path)
 	var legacy_achievement_snapshot := FileAccess.get_file_as_bytes(legacy_achievement_path) if legacy_achievement_existed else PackedByteArray()
