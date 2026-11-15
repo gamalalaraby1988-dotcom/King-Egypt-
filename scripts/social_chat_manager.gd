@@ -36,9 +36,15 @@ func list_friends() -> bool:
 func send_friend_request(player_code: String) -> bool:
 	return _rpc("send_test_friend_request", {"p_player_code": player_code}, "friend_request")
 
+static func is_valid_player_code(player_code: String) -> bool:
+	var validator := RegEx.new()
+	if validator.compile("^[A-Z0-9]{10}$") != OK:
+		return false
+	return validator.search(player_code.strip_edges().to_upper()) != null
+
 func block_player(player_code: String) -> bool:
 	var clean_code := player_code.strip_edges().to_upper()
-	if not clean_code.matches("^[A-Z0-9]{10}$"):
+	if not is_valid_player_code(clean_code):
 		operation_failed.emit("block_player", "رمز اللاعب غير صالح.")
 		return false
 	return _rpc("block_test_player", {"p_player_code": clean_code}, "block_player")
