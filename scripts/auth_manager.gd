@@ -15,6 +15,8 @@ const VERIFY_ENDPOINT := SUPABASE_URL + "/auth/v1/verify"
 const REFRESH_ENDPOINT := SUPABASE_URL + "/auth/v1/token?grant_type=refresh_token"
 
 var _http: HTTPRequest
+var _refresh_timer: Timer
+var _session_expires_at := 0
 var _pending_action := ""
 var _pending_email := ""
 var _access_token := ""
@@ -28,6 +30,11 @@ func _ready() -> void:
 	_http.timeout = 20.0
 	add_child(_http)
 	_http.request_completed.connect(_on_request_completed)
+	_refresh_timer = Timer.new()
+	_refresh_timer.name = "AuthSessionRefreshTimer"
+	_refresh_timer.one_shot = true
+	add_child(_refresh_timer)
+	_refresh_timer.timeout.connect(refresh_session)
 
 func request_email_otp(email: String) -> bool:
 	var normalized_email := email.strip_edges().to_lower()
@@ -111,6 +118,19 @@ func refresh_session() -> bool:
 func is_authenticated() -> bool:
 	return not _access_token.is_empty() and not _authenticated_user_id.is_empty()
 
+func _schedule_session_refresh(response_data: Dictionary) -> void:
+	var expires_in := int(response_data.get("expires_in", 0))
+	if expires_in <= 0:
+		_session_expires_at = 0
+		_refresh_timer.stop()
+		return
+	_session_expires_at = int(Time.get_unix_time_from_system()) + expires_in
+	# Refresh one minute before expiry.
+	_refresh_timer.start(float(maxi(1, expires_in - 60)))
+
+func get_session_expires_at() -> int:
+	return _session_expires_at
+
 func get_access_token() -> String:
 	return _access_token
 
@@ -125,6 +145,8 @@ func clear_session() -> void:
 	if not _pending_action.is_empty():
 		_http.cancel_request()
 		_clear_pending()
+	_refresh_timer.stop()
+	_session_expires_at = 0
 	_access_token = ""
 	_refresh_token = ""
 	_authenticated_user_id = ""
@@ -187,6 +209,7 @@ func _on_request_completed(
 		_refresh_token = refresh
 		_authenticated_user_id = user_id
 		_authenticated_email = user_email
+		_schedule_session_refresh(parsed)
 		authenticated.emit(user_id, user_email)
 		return
 
@@ -205,6 +228,7 @@ func _on_request_completed(
 		_access_token = refreshed_access
 		_refresh_token = refreshed_token
 		_authenticated_email = str(refreshed_user.get("email", _authenticated_email))
+		_schedule_session_refresh(parsed)
 		session_refreshed.emit()
 
 func _safe_auth_error(parsed: Variant) -> String:
