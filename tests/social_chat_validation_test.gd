@@ -16,28 +16,28 @@ func _run_social_validation_tests() -> void:
 		push_error("Unified invitation overlay script could not be loaded.")
 		quit(1)
 		return
-	var invitation_overlay: Control = invitation_overlay_script.new()
+	var dedupe_overlay: Control = invitation_overlay_script.new()
 	var expired_invitation_ids: Array[String] = []
-	invitation_overlay.invitation_expired.connect(func(invitation: Dictionary) -> void:
+	dedupe_overlay.invitation_expired.connect(func(invitation: Dictionary) -> void:
 		expired_invitation_ids.append(str(invitation.get("invite_id", "")))
 	)
 	var duplicate_expired_invitation := {
 		"invite_id": "550e8400-e29b-41d4-a716-446655440099",
 		"expires_at": 1.0
 	}
-	invitation_overlay.enqueue_invitation(duplicate_expired_invitation)
-	invitation_overlay.enqueue_invitation(duplicate_expired_invitation)
+	dedupe_overlay.enqueue_invitation(duplicate_expired_invitation)
+	dedupe_overlay.enqueue_invitation(duplicate_expired_invitation)
 	if expired_invitation_ids.size() != 1:
 		push_error("A repeated realtime delivery re-emitted the same expired invitation.")
 		quit(1)
 		return
-	invitation_overlay.clear_pending_invitations()
-	invitation_overlay.enqueue_invitation(duplicate_expired_invitation)
+	dedupe_overlay.clear_pending_invitations()
+	dedupe_overlay.enqueue_invitation(duplicate_expired_invitation)
 	if expired_invitation_ids.size() != 2:
 		push_error("Invitation deduplication state was not cleared for a new account session.")
 		quit(1)
 		return
-	invitation_overlay.free()
+	dedupe_overlay.free()
 
 	var city_hud_script: Script = load("res://scripts/city_hud.gd")
 	if city_hud_script == null:
@@ -378,7 +378,7 @@ func _run_social_validation_tests() -> void:
 		quit(1)
 		return
 	var expired_count := [0]
-	invitation_overlay.invitation_expired.connect(func(_item: Dictionary) -> void:
+	dedupe_overlay.invitation_expired.connect(func(_item: Dictionary) -> void:
 		expired_count[0] += 1
 	)
 	invitation_overlay.enqueue_invitation({
@@ -460,12 +460,12 @@ func _run_social_validation_tests() -> void:
 		push_error("A late decline tap was emitted after the invitation deadline.")
 		quit(1)
 		return
-	invitation_overlay.clear_pending_invitations()
+	dedupe_overlay.clear_pending_invitations()
 	if invitation_overlay.get_pending_invitation_count() != 0 or not invitation_overlay._current.is_empty() or invitation_overlay._panel.visible:
 		push_error("A previous account's active or queued invitation survived account cleanup.")
 		quit(1)
 		return
-	invitation_overlay.free()
+	dedupe_overlay.free()
 
 	print("Social chat input and invitation lifecycle validation tests passed.")
 	quit(0)
