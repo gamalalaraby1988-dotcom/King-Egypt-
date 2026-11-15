@@ -13,10 +13,17 @@ func _run_social_validation_tests() -> void:
 
 	var saved_topics: Dictionary = social._realtime_topics.duplicate(true)
 	var saved_join_refs: Dictionary = social._realtime_join_refs.duplicate(true)
+	var saved_ready_topics: Dictionary = social._realtime_ready_topics.duplicate(true)
 	social._realtime_topics = {"chat:direct:joined": true}
 	social._realtime_join_refs = {"chat:direct:joined": "ci-join-ref"}
+	social._realtime_ready_topics = {}
+	if social.is_realtime_topic_subscribed("chat:direct:joined"):
+		push_error("A pending realtime join was treated as ready before server acknowledgement.")
+		quit(1)
+		return
+	social._realtime_ready_topics = {"chat:direct:joined": true}
 	if not social.is_realtime_topic_subscribed("chat:direct:joined"):
-		push_error("A successfully joined realtime topic was not recognized.")
+		push_error("A server-acknowledged realtime topic was not recognized.")
 		quit(1)
 		return
 	if social.is_realtime_topic_subscribed("chat:direct:unjoined") or social.is_realtime_topic_subscribed("chat:group:joined"):
@@ -25,6 +32,7 @@ func _run_social_validation_tests() -> void:
 		return
 	social._realtime_topics = saved_topics
 	social._realtime_join_refs = saved_join_refs
+	social._realtime_ready_topics = saved_ready_topics
 
 	if not social.is_valid_player_code("AB12CD34EF"):
 		push_error("A valid ten-character player code was rejected.")
