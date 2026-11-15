@@ -175,10 +175,16 @@ func _finish_current(accepted: bool) -> void:
 	var finished_item := _current.duplicate(true)
 	_current.clear()
 	_panel.visible = false
-	if accepted:
-		invitation_accepted.emit(finished_item)
+	# A tap can race the frame timer (or arrive immediately after resume).
+	# Never emit an accept/decline for an invitation whose absolute deadline
+	# has already passed; the server remains the final authority as well.
+	if float(finished_item.get("expires_at", 0.0)) <= float(Time.get_unix_time_from_system()):
+		invitation_expired.emit(finished_item)
 	else:
-		invitation_declined.emit(finished_item)
+		if accepted:
+			invitation_accepted.emit(finished_item)
+		else:
+			invitation_declined.emit(finished_item)
 	_show_next()
 
 func set_response_pending(pending: bool) -> void:
