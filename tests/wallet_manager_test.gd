@@ -96,6 +96,24 @@ func _run_wallet_tests() -> void:
 		push_error("Vehicle with unapproved price was purchasable.")
 		quit(1)
 		return
+	if vehicle_store.purchase_vehicle("horus_2030"):
+		push_error("Horus 2030 purchase was enabled before unified economy approval.")
+		quit(1)
+		return
+	var vehicle_catalog: Dictionary = vehicle_store.get_catalog()
+	if int(vehicle_catalog.get("horus_2030", {}).get("price", 0)) != -1:
+		push_error("Horus 2030 still exposes an unapproved purchase price.")
+		quit(1)
+		return
+	for color_id in vehicle_store.get_horus_colors():
+		if int(vehicle_store.get_horus_colors()[color_id].get("price", 0)) != -1:
+			push_error("An unapproved Horus color price is still exposed.")
+			quit(1)
+			return
+	if vehicle_store.purchase_horus_color("obsidian_gold"):
+		push_error("Horus color purchase was enabled before unified economy approval.")
+		quit(1)
+		return
 
-	print("Wallet transaction tests passed.")
+	print("Wallet transaction and purchase-gating tests passed.")
 	quit(0)
