@@ -156,6 +156,25 @@ func _run_social_validation_tests() -> void:
 		push_error("A supported male/female roster ID did not resolve to the in-game character preview scene.")
 		quit(1)
 		return
+	var avatar_scene: PackedScene = load("res://scenes/characters/avatar_visual.tscn") as PackedScene
+	if avatar_scene == null:
+		push_error("The in-game character preview scene could not be loaded.")
+		quit(1)
+		return
+	var male_avatar := avatar_scene.instantiate()
+	male_avatar.call("apply_character_identity", "eg_m_adam")
+	if str(male_avatar.get("current_outfit")) != "men_formal" or str(male_avatar.get("current_hairstyle")) != "short":
+		push_error("A male roster identity did not apply its approved in-game character preset.")
+		quit(1)
+		return
+	male_avatar.free()
+	var female_avatar := avatar_scene.instantiate()
+	female_avatar.call("apply_character_identity", "eg_f_layan")
+	if str(female_avatar.get("current_outfit")) != "women_formal" or str(female_avatar.get("current_hairstyle")) != "long":
+		push_error("A female roster identity did not apply its approved in-game character preset.")
+		quit(1)
+		return
+	female_avatar.free()
 	if city_hud.get_friend_character_scene_path({"selected_character_id":"xx_m_unknown"}) != "":
 		push_error("An unknown character ID was allowed to resolve to a portrait scene.")
 		quit(1)
