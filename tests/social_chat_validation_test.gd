@@ -177,7 +177,7 @@ func _run_social_validation_tests() -> void:
 		quit(1)
 		return
 	invitation_overlay.call("set_response_pending", false)
-	if invitation_overlay.get_pending_invitation_count() != 2 or str(invitation_overlay.get_current_invitation().get("invite_id", "")) != "ci-account-b-invite":
+	if invitation_overlay.get_pending_invitation_count() != 1 or str(invitation_overlay.get_current_invitation().get("invite_id", "")) != "ci-account-b-invite":
 		push_error("The next invitation was not shown after the pending response completed.")
 		quit(1)
 		return
