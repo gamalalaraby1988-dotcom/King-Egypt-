@@ -87,7 +87,22 @@ func _run_auth_session_tests() -> void:
 	mission_manager.daily_chest_server_claimed = true
 	mission_manager.daily_chest_reward_day = "2099-01-01"
 
+	# Seed account-bound realtime state and prove sign-out clears every subscription.
+	social._realtime_topics = {
+		"chat:public:messages": true,
+		"chat:group:ci-group": true,
+		"chat:direct:ci-direct": true,
+		"chat:invites:ABCDEFGHIJ": true
+	}
+	social._realtime_join_refs = {"chat:group:ci-group": "ci-ref"}
+	social._realtime_player_code = "ABCDEFGHIJ"
+	social._realtime_group_id = "ci-group"
+	social._realtime_direct_id = "ci-direct"
 	auth.clear_session()
+	if not social._realtime_topics.is_empty() or not social._realtime_join_refs.is_empty() or not social._realtime_player_code.is_empty() or not social._realtime_group_id.is_empty() or not social._realtime_direct_id.is_empty():
+		push_error("Realtime subscriptions or account identity survived sign-out.")
+		quit(1)
+		return
 	mission_manager._on_account_session_invalidated("00000000-0000-4000-8000-000000000001", auth.get_session_generation())
 	if mission_manager.owned_outfits != ["default"] or mission_manager.daily_chest_reward_configured or mission_manager.daily_chest_server_claimed or not mission_manager.daily_chest_reward_day.is_empty():
 		push_error("Mission state from the previous account remained after session invalidation.")
