@@ -60,6 +60,7 @@ var friend_search_input: LineEdit
 var selected_friend_code := ""
 var selected_friend_conversation_id := ""
 var social_group_create_button: Button
+var social_group_invite_button: Button
 
 const GROUP_MAX_MEMBERS := 4
 const GROUP_CHAT_MAX_LENGTH := 300
@@ -1006,12 +1007,12 @@ func _build_social_chat_panel() -> void:
 	social_group_create_button.pressed.connect(_create_social_group)
 	social_group_create_button.visible = false
 	conversation.add_child(social_group_create_button)
-	var invite_group_button := Button.new()
-	invite_group_button.text = "دعوة الصديق المحدد للمجموعة"
-	invite_group_button.pressed.connect(_invite_selected_friend_to_group)
-	invite_group_button.visible = false
-	invite_group_button.name = "InviteSelectedFriendToGroup"
-	conversation.add_child(invite_group_button)
+	social_group_invite_button = Button.new()
+	social_group_invite_button.name = "InviteSelectedFriendToGroup"
+	social_group_invite_button.text = "دعوة الصديق المحدد للمجموعة"
+	social_group_invite_button.pressed.connect(_invite_selected_friend_to_group)
+	social_group_invite_button.visible = false
+	conversation.add_child(social_group_invite_button)
 	social_chat_log = RichTextLabel.new()
 	social_chat_log.bbcode_enabled = true
 	social_chat_log.scroll_following = true
@@ -1046,14 +1047,12 @@ func _open_social_chat_panel() -> void:
 	social_chat_panel.visible = true
 	if AuthManager.is_authenticated():
 		_refresh_social_friends()
-		SocialChatManager.get_chat_group()
 	if is_instance_valid(social_chat_input):
 		social_chat_input.grab_focus()
 
 
 func _on_social_authenticated(_user_id: String, _email: String) -> void:
 	_refresh_social_friends()
-	SocialChatManager.get_chat_group()
 
 
 func _refresh_social_friends() -> void:
@@ -1076,6 +1075,8 @@ func _on_social_friend_selected(player_code: String) -> void:
 	selected_friend_conversation_id = ""
 	social_chat_log.clear()
 	social_chat_status.text = "جارٍ فتح محادثة الصديق..."
+	if is_instance_valid(social_group_invite_button):
+		social_group_invite_button.visible = (social_chat_channel == "المجموعة")
 	SocialChatManager.open_direct_conversation(player_code)
 
 
@@ -1151,7 +1152,10 @@ func _on_social_operation_completed(action: String, data: Variant) -> void:
 			else:
 				if is_instance_valid(social_group_create_button):
 					social_group_create_button.visible = false
+				if is_instance_valid(social_group_invite_button):
+					social_group_invite_button.visible = (social_chat_channel == "المجموعة" and not selected_friend_code.is_empty())
 				social_chat_status.text = "تم تحميل أعضاء المجموعة من الخادم."
+				SocialChatManager.read_chat_messages("group")
 			_refresh_group_popup()
 		"group_invite":
 			social_chat_status.text = "نتيجة دعوة المجموعة: " + str(data)
@@ -1196,11 +1200,14 @@ func _select_social_chat_channel(channel: String) -> void:
 		social_chat_status.text = "جارٍ تحميل المجموعة ورسائلها..."
 		if is_instance_valid(social_group_create_button):
 			social_group_create_button.visible = group_members.size() <= 1
+		if is_instance_valid(social_group_invite_button):
+			social_group_invite_button.visible = not selected_friend_code.is_empty()
 		SocialChatManager.get_chat_group()
-		SocialChatManager.read_chat_messages("group")
 	else:
 		if is_instance_valid(social_group_create_button):
 			social_group_create_button.visible = false
+		if is_instance_valid(social_group_invite_button):
+			social_group_invite_button.visible = false
 		social_chat_status.text = "جارٍ تحميل الدردشة العامة..."
 		SocialChatManager.read_chat_messages("public")
 
