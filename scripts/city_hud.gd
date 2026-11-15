@@ -1890,16 +1890,28 @@ func _submit_group_invitation_response(invitation: Dictionary, accepted: bool) -
 	SocialChatManager.respond_chat_group_invite(invite_id, accepted)
 
 
+func resolve_deferred_invitation_acceptance(invitation: Dictionary, accepted: bool, now: float) -> bool:
+	if not accepted:
+		return false
+	# A queued acceptance must not outlive the invitation's absolute deadline.
+	# Missing deadlines fail closed; the server remains the final authority.
+	var expires_at := float(invitation.get("expires_at", 0.0))
+	return expires_at > now
+
+
 func _continue_deferred_group_invite_responses() -> void:
 	if not _pending_group_invite_response_id.is_empty():
 		return
 	if not _deferred_group_invite_responses.is_empty():
 		var next_response: Dictionary = _deferred_group_invite_responses.pop_front()
 		var next_invitation: Dictionary = next_response.get("invitation", {})
-		_submit_group_invitation_response(
+		var requested_acceptance := bool(next_response.get("accepted", false))
+		var safe_acceptance := resolve_deferred_invitation_acceptance(
 			next_invitation,
-			bool(next_response.get("accepted", false))
+			requested_acceptance,
+			float(Time.get_unix_time_from_system())
 		)
+		_submit_group_invitation_response(next_invitation, safe_acceptance)
 		return
 	if is_instance_valid(invitation_overlay):
 		invitation_overlay.call("set_response_pending", false)
