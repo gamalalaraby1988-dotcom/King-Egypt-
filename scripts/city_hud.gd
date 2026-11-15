@@ -58,7 +58,6 @@ var group_follow_enabled := false
 var group_follow_button: Button
 var group_meeting_point_button: Button
 var group_move_button: Button
-var group_member_markers: Dictionary = {}
 
 var social_chat_panel: PanelContainer
 var social_chat_log: RichTextLabel
@@ -145,12 +144,6 @@ func _ready() -> void:
 	_refresh_wallet()
 
 
-func _exit_tree() -> void:
-	# العلامات مضافة إلى المشهد الرئيسي، لذا يجب تنظيفها عند إزالة واجهة المدينة.
-	for marker_value in group_member_markers.values():
-		if is_instance_valid(marker_value):
-			marker_value.queue_free()
-	group_member_markers.clear()
 
 func _process(_delta: float) -> void:
 	if not is_instance_valid(mission_manager) and is_instance_valid(main_scene):
@@ -1050,7 +1043,6 @@ func _remove_group_member(player_id: String) -> void:
 	for i in range(group_members.size() - 1, 0, -1):
 		if str(group_members[i].get("player_id", "")) == player_id:
 			group_members.remove_at(i)
-			_remove_group_member_marker(player_id)
 			group_member_removed.emit(player_id)
 			break
 	if group_members.size() <= 1:
@@ -1059,14 +1051,6 @@ func _remove_group_member(player_id: String) -> void:
 			group_follow_enabled = false
 			group_follow_mode_requested.emit(false)
 	_refresh_group_popup()
-
-
-func _remove_group_member_marker(player_id: String) -> void:
-	var marker_value: Variant = group_member_markers.get(player_id, null)
-	if is_instance_valid(marker_value):
-		marker_value.queue_free()
-	group_member_markers.erase(player_id)
-
 
 
 func _toggle_group_follow_mode() -> void:
@@ -1084,60 +1068,9 @@ func _toggle_group_follow_mode() -> void:
 		group_meeting_status.text = "تم طلب متابعة تحرك القائد. يبدأ التحرك الفعلي بعد مزامنة الخادم." if group_follow_enabled else "تم إيقاف متابعة تحرك القائد."
 
 
-func receive_group_member_positions(member_positions: Array) -> void:
-	# تستدعى بعد تحقق الخادم من عضوية كل لاعب؛ لا تنشئ شخصيات لعب حقيقية من بيانات غير موثوقة.
-	if not is_instance_valid(main_scene) or not main_scene.is_inside_tree():
-		return
-	var active_ids: Array[String] = []
-	for entry in member_positions:
-		if not entry is Dictionary:
-			continue
-		var player_id := str(entry.get("player_id", "")).strip_edges()
-		if player_id.is_empty() or player_id.length() > 64 or player_id == "local_leader":
-			continue
-		if active_ids.has(player_id) or not _group_contains(player_id):
-			continue
-		var position_value: Variant = entry.get("position", null)
-		if not position_value is Vector3:
-			continue
-		var world_position: Vector3 = position_value
-		if not world_position.is_finite():
-			continue
-		if active_ids.size() >= GROUP_MAX_MEMBERS - 1:
-			break
-		active_ids.append(player_id)
-		var marker: Node3D = group_member_markers.get(player_id)
-		if not is_instance_valid(marker) or marker.is_queued_for_deletion():
-			group_member_markers.erase(player_id)
-			marker = Node3D.new()
-			marker.name = "GroupMember_" + player_id.validate_node_name()
-			var icon := MeshInstance3D.new()
-			var mesh := SphereMesh.new()
-			mesh.radius = 0.28
-			mesh.height = 0.56
-			icon.mesh = mesh
-			var material := StandardMaterial3D.new()
-			material.albedo_color = Color(0.15, 0.85, 0.55)
-			material.emission_enabled = true
-			material.emission = Color(0.05, 0.45, 0.25)
-			icon.material_override = material
-			marker.add_child(icon)
-			var name_tag := Label3D.new()
-			name_tag.text = str(entry.get("display_name", "عضو المجموعة")).strip_edges().substr(0, 24)
-			name_tag.position.y = 0.8
-			name_tag.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-			name_tag.font_size = 24
-			marker.add_child(name_tag)
-			main_scene.add_child(marker)
-			group_member_markers[player_id] = marker
-		var name_tag := marker.get_node_or_null("Label3D") as Label3D
-		if is_instance_valid(name_tag):
-			var clean_name := str(entry.get("display_name", "عضو المجموعة")).strip_edges().substr(0, 24)
-			name_tag.text = clean_name if not clean_name.is_empty() else "عضو المجموعة"
-		marker.global_position = world_position + Vector3(0, 0.4, 0)
-	for old_id in group_member_markers.keys():
-		if not active_ids.has(str(old_id)):
-			_remove_group_member_marker(str(old_id))
+func receive_group_member_positions(_member_positions: Array) -> void:
+	# لا نعرض علامات أو دبوسًا مستقلًا لأعضاء المجموعة؛ التجمع مرتبط بموقع القائد الحالي.
+	pass
 
 
 func receive_group_move_order(target_position: Vector3) -> void:
@@ -1565,10 +1498,6 @@ func _on_social_account_session_changed(_previous_user_id: String, current_user_
 	_apartment_invite_mode = false
 	group_meeting_position = Vector3.ZERO
 	group_follow_enabled = false
-	for marker_value in group_member_markers.values():
-		if is_instance_valid(marker_value):
-			marker_value.queue_free()
-	group_member_markers.clear()
 	if is_instance_valid(invitation_overlay):
 		invitation_overlay.call("clear_pending_invitations")
 	if is_instance_valid(blocked_players_box):
