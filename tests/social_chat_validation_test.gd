@@ -206,6 +206,14 @@ func _run_social_validation_tests() -> void:
 			push_error("The unsupported gather action still exposes an unused local signal.")
 			quit(1)
 			return
+	if not city_hud.can_receive_social_invitation_event("group_invite"):
+		push_error("A supported group invitation event was rejected.")
+		quit(1)
+		return
+	if city_hud.can_receive_social_invitation_event("group_meeting_invite") or city_hud.can_receive_social_invitation_event("apartment_invite"):
+		push_error("An unsupported gather or apartment invitation event was allowed into the invitation overlay.")
+		quit(1)
+		return
 	city_hud.group_meeting_status.free()
 	city_hud.group_meeting_status = null
 
