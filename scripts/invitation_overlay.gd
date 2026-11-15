@@ -95,13 +95,7 @@ func enqueue_invitation(invitation: Dictionary) -> void:
 	if invite_id.is_empty() or _contains_invitation(invite_id):
 		return
 	item["invite_id"] = invite_id
-	var expiry := float(item.get("expires_at", 0.0))
-	if expiry <= 0.0:
-		var created_at := str(item.get("created_at", ""))
-		if created_at.length() >= 19:
-			expiry = float(Time.get_unix_time_from_datetime_string(created_at.substr(0, 19))) + INVITATION_DURATION_SECONDS
-		if expiry <= 0.0:
-			expiry = float(Time.get_unix_time_from_system()) + INVITATION_DURATION_SECONDS
+	var expiry := resolve_invitation_expiry(item, float(Time.get_unix_time_from_system()))
 	item["expires_at"] = expiry
 	var now := float(Time.get_unix_time_from_system())
 	if expiry <= now:
@@ -110,6 +104,23 @@ func enqueue_invitation(invitation: Dictionary) -> void:
 	item["_remaining_seconds"] = expiry - now
 	_queue.append(item)
 	_show_next()
+
+func resolve_invitation_expiry(invitation: Dictionary, now: float) -> float:
+	var created_deadline := 0.0
+	var created_at := str(invitation.get("created_at", ""))
+	if created_at.length() >= 19:
+		var created_timestamp := float(Time.get_unix_time_from_datetime_string(created_at.substr(0, 19)))
+		if created_timestamp > 0.0 and created_timestamp <= now:
+			created_deadline = created_timestamp + INVITATION_DURATION_SECONDS
+	# A supplied server deadline may shorten an invitation, but must never
+	# extend the approved 30-second lifetime. Without a trustworthy creation
+	# timestamp, start the local cap at receipt time.
+	var maximum_deadline := created_deadline if created_deadline > 0.0 else now + INVITATION_DURATION_SECONDS
+	var supplied_deadline := float(invitation.get("expires_at", 0.0))
+	if supplied_deadline > 0.0:
+		return minf(supplied_deadline, maximum_deadline)
+	return maximum_deadline
+
 
 func _contains_invitation(invite_id: String) -> bool:
 	if not _current.is_empty() and str(_current.get("invite_id", "")) == invite_id:
