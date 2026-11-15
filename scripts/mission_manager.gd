@@ -71,6 +71,10 @@ var animal_selector: OptionButton
 var selected_animal_staff: Node3D = null
 # معرف ثابت طوال نافذة التأجير الحالية؛ يمنع تكرار الخصم بسبب النقر المزدوج.
 var active_rental_transaction_id: String = ""
+var daily_reward_chest: Node3D = null
+var daily_chest_reward_configured := false
+var daily_chest_server_claimed := false
+var daily_chest_reward_day := ""
 
 var _key_was_down := false
 
@@ -82,10 +86,120 @@ func _ready() -> void:
 	_create_target_marker()
 	_load_profile()
 	CityLanguage.language_changed.connect(_refresh_navigation_language)
+	if not SocialChatManager.operation_completed.is_connected(_on_daily_chest_rpc_completed):
+		SocialChatManager.operation_completed.connect(_on_daily_chest_rpc_completed)
+	if not SocialChatManager.operation_failed.is_connected(_on_daily_chest_rpc_failed):
+		SocialChatManager.operation_failed.connect(_on_daily_chest_rpc_failed)
+	if AuthManager.is_authenticated():
+		_refresh_daily_chest_status()
+	elif not AuthManager.authenticated.is_connected(_on_daily_chest_authenticated):
+		AuthManager.authenticated.connect(_on_daily_chest_authenticated)
 
 func _exit_tree() -> void:
 	if CityLanguage.language_changed.is_connected(_refresh_navigation_language):
 		CityLanguage.language_changed.disconnect(_refresh_navigation_language)
+	if SocialChatManager.operation_completed.is_connected(_on_daily_chest_rpc_completed):
+		SocialChatManager.operation_completed.disconnect(_on_daily_chest_rpc_completed)
+	if SocialChatManager.operation_failed.is_connected(_on_daily_chest_rpc_failed):
+		SocialChatManager.operation_failed.disconnect(_on_daily_chest_rpc_failed)
+	if AuthManager.authenticated.is_connected(_on_daily_chest_authenticated):
+		AuthManager.authenticated.disconnect(_on_daily_chest_authenticated)
+
+
+func _on_daily_chest_authenticated(_user_id: String, _email: String) -> void:
+	_refresh_daily_chest_status()
+
+func _refresh_daily_chest_status() -> void:
+	if AuthManager.is_authenticated():
+		SocialChatManager.get_daily_chest_status()
+
+func _on_daily_chest_rpc_completed(action: String, data: Variant) -> void:
+	if action != "daily_chest_status" and action != "daily_chest_claim":
+		return
+	if not data is Dictionary:
+		_on_daily_chest_rpc_failed(action, "استجابة صندوق المكافأة غير صالحة.")
+		return
+	var result: Dictionary = data
+	var result_status := str(result.get("status", ""))
+	if action == "daily_chest_status":
+		daily_chest_reward_configured = bool(result.get("reward_configured", false))
+		daily_chest_server_claimed = result_status == "claimed"
+		daily_chest_reward_day = str(result.get("reward_day", ""))
+		if not is_instance_valid(daily_reward_chest):
+			daily_reward_chest = get_tree().get_first_node_in_group("daily_reward_chests") as Node3D
+		var local_receipt_id := "daily_chest_" + daily_chest_reward_day
+		var local_receipt_saved := not daily_chest_reward_day.is_empty() and has_reward_receipt(local_receipt_id)
+		if is_instance_valid(daily_reward_chest):
+			daily_reward_chest.visible = not (daily_chest_server_claimed and local_receipt_saved)
+		if selected_activity_kind == "daily_chest" and panel.visible:
+			accept_button.visible = true
+			if daily_chest_server_claimed and local_receipt_saved:
+				status_label.text = "استلمت مكافأة الصندوق اليوم."
+				accept_button.text = "تم استلام مكافأة اليوم"
+				accept_button.disabled = true
+			elif daily_chest_server_claimed:
+				status_label.text = "الاستلام محفوظ على الخادم؛ اضغط لاستعادة المكافأة على هذا الجهاز."
+				accept_button.text = "استعادة المكافأة"
+				accept_button.disabled = false
+			elif daily_chest_reward_configured:
+				status_label.text = "الصندوق متاح لك اليوم."
+				accept_button.text = "استلام المكافأة"
+				accept_button.disabled = false
+			else:
+				status_label.text = "الصندوق جاهز، لكن قيمة المكافأة لم تُعتمد بعد."
+				accept_button.text = "المكافأة قيد التجهيز"
+				accept_button.disabled = true
+		return
+
+	if result_status == "claimed" or result_status == "already_claimed":
+		var reward_day := str(result.get("reward_day", ""))
+		if reward_day.is_empty():
+			_on_daily_chest_rpc_failed(action, "لم يحدد الخادم يوم المكافأة.")
+			return
+		var reward_id := "daily_chest_" + reward_day
+		var cash_reward := maxi(0, int(result.get("reward_cash", 0)))
+		var chips_reward := maxi(0, int(result.get("reward_chips", 0)))
+		var xp_reward := maxi(0, int(result.get("reward_xp", 0)))
+		var saved := grant_reward_once(reward_id, cash_reward, xp_reward, chips_reward)
+		if not saved and not has_reward_receipt(reward_id):
+			status_label.text = "حُفظ الاستلام على الخادم، لكن تعذر حفظه محليًا. حاول الاستعادة مرة أخرى."
+			accept_button.disabled = false
+			return
+		daily_chest_server_claimed = true
+		daily_chest_reward_day = reward_day
+		if not is_instance_valid(daily_reward_chest):
+			daily_reward_chest = get_tree().get_first_node_in_group("daily_reward_chests") as Node3D
+		if is_instance_valid(daily_reward_chest):
+			daily_reward_chest.visible = false
+		reward_label.text = "المكافأة: %d نقدًا | %d رقائق | %d خبرة" % [cash_reward, chips_reward, xp_reward]
+		status_label.text = "تم استلام مكافأة الصندوق وحفظها."
+		accept_button.text = "تم استلام مكافأة اليوم"
+		accept_button.disabled = true
+		return
+	if result_status == "reward_not_configured":
+		daily_chest_reward_configured = false
+		status_label.text = "لم تُحدد قيمة المكافأة بعد؛ لم يتم صرف شيء."
+		accept_button.disabled = true
+	else:
+		status_label.text = "تعذر استلام المكافأة: " + result_status
+		accept_button.disabled = false
+
+func _on_daily_chest_rpc_failed(action: String, message: String) -> void:
+	if action != "daily_chest_status" and action != "daily_chest_claim":
+		return
+	if selected_activity_kind == "daily_chest" and is_instance_valid(status_label):
+		status_label.text = message
+		if is_instance_valid(accept_button):
+			accept_button.disabled = false
+
+func _claim_daily_chest_reward() -> void:
+	if not AuthManager.is_authenticated():
+		status_label.text = "سجّل الدخول أولًا لاستلام مكافأتك اليومية."
+		accept_button.disabled = true
+		return
+	accept_button.disabled = true
+	status_label.text = "جارٍ التحقق من استحقاقك للمكافأة..."
+	SocialChatManager.claim_daily_chest_reward()
 
 func _refresh_navigation_language() -> void:
 	if is_instance_valid(navigation_cancel_button):
@@ -654,14 +768,21 @@ func open_interactable(target: Node3D) -> void:
 func open_daily_reward_chest(chest: Node3D) -> void:
 	if not is_instance_valid(chest) or not chest.has_method("get_daily_reward_chest_data"):
 		return
-	var data: Dictionary = chest.get_daily_reward_chest_data()
+	daily_reward_chest = chest
+	selected_activity_kind = "daily_chest"
 	active_mission = null
 	animal_selector.visible = false
-	title_label.text = str(data.get("title", "صندوق المكافأة الفرعوني"))
-	description_label.text = str(data.get("description", ""))
-	reward_label.text = "المكافأة اليومية ستظهر هنا بعد ربط التحقق الخادمي."
-	status_label.text = "الصندوق ظاهر في المدينة؛ الاستلام لم يُفعّل بعد."
-	accept_button.visible = false
+	title_label.text = "صندوق المكافأة الفرعوني اليومي"
+	description_label.text = "افتح الصندوق لاستلام مكافأتك اليومية. يختفي بعد الاستلام من عالمك وحدك."
+	reward_label.text = "تُصرف المكافأة بعد التحقق من الخادم."
+	accept_button.visible = true
+	accept_button.text = "استلام المكافأة"
+	accept_button.disabled = true
+	if AuthManager.is_authenticated():
+		status_label.text = "جارٍ التحقق من حالة مكافأتك..." 
+		SocialChatManager.get_daily_chest_status()
+	else:
+		status_label.text = "سجّل الدخول أولًا لاستلام مكافأتك اليومية."
 	panel.visible = true
 
 func open_animal_rental(staff: Node3D) -> void:
@@ -869,7 +990,9 @@ func _close_interior_preview() -> void:
 	panel.visible = false
 
 func _accept_selected_activity() -> void:
-	if selected_activity_kind == "animal_rental":
+	if selected_activity_kind == "daily_chest":
+		_claim_daily_chest_reward()
+	elif selected_activity_kind == "animal_rental":
 		_rent_selected_animal()
 	elif selected_activity_kind == "job":
 		_accept_job()
