@@ -1,6 +1,6 @@
 extends CanvasLayer
 ## Temporary TEST-project email OTP panel.
-## It verifies Auth only; it deliberately does not link a player identity.
+## Auth verification is followed by an explicit allowlisted test-player provisioning step.
 
 var _email_input: LineEdit
 var _otp_input: LineEdit
@@ -9,6 +9,8 @@ var _send_button: Button
 var _verify_button: Button
 var _enter_button: Button
 var _otp_available := false
+var _player_ready := false
+var _provisioning := false
 
 func _ready() -> void:
 	layer = 80
@@ -16,6 +18,8 @@ func _ready() -> void:
 	AuthManager.otp_sent.connect(_on_otp_sent)
 	AuthManager.authenticated.connect(_on_authenticated)
 	AuthManager.authentication_failed.connect(_on_authentication_failed)
+	AuthManager.test_player_account_ready.connect(_on_test_player_account_ready)
+	AuthManager.test_player_account_failed.connect(_on_test_player_account_failed)
 
 func _build_ui() -> void:
 	var backdrop := ColorRect.new()
@@ -29,7 +33,7 @@ func _build_ui() -> void:
 	backdrop.add_child(center)
 
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(420, 390)
+	panel.custom_minimum_size = Vector2(420, 430)
 	center.add_child(panel)
 
 	var content := VBoxContainer.new()
@@ -86,11 +90,10 @@ func _build_ui() -> void:
 	_status_label.text = "هذه شاشة اختبار؛ لن يتم ربط الحساب قبل التحقق."
 	_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_status_label.add_theme_color_override("font_color", Color(0.88, 0.82, 0.66))
 	content.add_child(_status_label)
 
 	_enter_button = Button.new()
-	_enter_button.text = "الدخول إلى المدينة"
+	_enter_button.text = "تجهيز حساب اللاعب التجريبي"
 	_enter_button.custom_minimum_size = Vector2(0, 48)
 	_enter_button.visible = false
 	_enter_button.pressed.connect(_enter_city)
@@ -122,11 +125,38 @@ func _on_authenticated(_user_id: String, email: String) -> void:
 	_verify_button.disabled = true
 	_email_input.editable = false
 	_otp_input.editable = false
-	_status_label.text = "تم التحقق من البريد بنجاح: " + email + "\nحساب اللاعب لم يُربط بعد. يمكنك دخول المدينة بوضع الاختبار."
+	_status_label.text = "تم التحقق من البريد بنجاح: " + email + "\nاضغط تجهيز حساب اللاعب لإكمال الربط."
+	_enter_button.text = "تجهيز حساب اللاعب التجريبي"
+	_enter_button.disabled = false
 	_enter_button.visible = true
 
 func _enter_city() -> void:
+	if not _player_ready:
+		if _provisioning:
+			return
+		_provisioning = true
+		_enter_button.disabled = true
+		_status_label.text = "تم التحقق من البريد. جارٍ تجهيز وربط حساب اللاعب على الخادم..."
+		if not AuthManager.ensure_my_test_player_account():
+			_provisioning = false
+			_enter_button.disabled = false
+		return
 	visible = false
+
+func _on_test_player_account_ready(_test_account_id: String, player_code: String, created: bool) -> void:
+	_provisioning = false
+	_player_ready = true
+	_enter_button.disabled = false
+	_enter_button.text = "الدخول إلى المدينة"
+	var result_text := "تم تجهيز حساب اللاعب وربطه بنجاح. رمز اللاعب: " + player_code
+	if not created:
+		result_text = "حساب اللاعب مربوط بالفعل. رمز اللاعب: " + player_code
+	_status_label.text = result_text
+
+func _on_test_player_account_failed(message: String) -> void:
+	_provisioning = false
+	_enter_button.disabled = false
+	_status_label.text = message + "\nيمكنك المحاولة مرة أخرى بعد التأكد من الاتصال."
 
 func _on_authentication_failed(message: String) -> void:
 	_send_button.disabled = false
