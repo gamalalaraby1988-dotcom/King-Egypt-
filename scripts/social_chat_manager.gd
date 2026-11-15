@@ -451,6 +451,10 @@ func _send_realtime_frame(topic: String, event_name: String, payload: Dictionary
 	_realtime_socket.send_text(JSON.stringify(frame))
 
 
+func is_realtime_topic_subscribed(topic: String) -> bool:
+	return not topic.is_empty() and _realtime_topics.has(topic) and _realtime_join_refs.has(topic)
+
+
 func _handle_realtime_packet(packet: PackedByteArray) -> void:
 	if not _realtime_session_is_current():
 		return
@@ -470,6 +474,9 @@ func _handle_realtime_packet(packet: PackedByteArray) -> void:
 		_realtime_join_refs.erase(topic)
 		return
 	if event_name == "broadcast" and payload is Dictionary:
+		# Ignore packets for channels this session has not successfully joined.
+		if not is_realtime_topic_subscribed(topic):
+			return
 		var broadcast_event := str(payload.get("event", ""))
 		var broadcast_payload: Variant = payload.get("payload", {})
 		if broadcast_payload is Dictionary:
