@@ -65,7 +65,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          "$GODOT_BIN" --headless --path . --script res://tests/social_chat_validation_test.gd 2>&1 | tee godot-social-tests.log
+          timeout --signal=TERM --kill-after=10s 180s "$GODOT_BIN" --headless --path . --script res://tests/social_chat_validation_test.gd 2>&1 | tee godot-social-tests.log
           if grep -E "SCRIPT ERROR:|Parse Error:|ERROR:" godot-social-tests.log; then
             echo "Social input validation tests reported errors."
             exit 1
