@@ -1516,10 +1516,11 @@ func _on_social_operation_completed(action: String, data: Variant) -> void:
 				var ordered_chat: Array = data.duplicate()
 				ordered_chat.reverse()
 				for item in ordered_chat:
-					if item is Dictionary:
-						var sender_name := "أنت" if bool(item.get("sender_is_me", false)) else str(item.get("sender_name", "لاعب"))
+					if not item is Dictionary:
+						continue
+					var sender_name := "أنت" if bool(item.get("sender_is_me", false)) else str(item.get("sender_name", "لاعب"))
 					var safe_body := str(item.get("body", "")).replace("[", "(").replace("]", ")")
-						social_chat_log.append_text("[color=gold][" + sender_name + "][/color] " + safe_body + "\n")
+					social_chat_log.append_text("[color=gold][" + sender_name + "][/color] " + safe_body + "\n")
 			social_chat_status.text = "المحادثة متصلة بالخادم."
 		_:
 			social_chat_status.text = "اكتملت العملية: " + action
