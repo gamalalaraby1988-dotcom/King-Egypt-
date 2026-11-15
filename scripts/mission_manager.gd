@@ -531,6 +531,9 @@ func _update_interaction_target() -> void:
 	nearest_interactable = best
 	nearest_building = best if is_instance_valid(best) and best.has_method("get_mission_data") else null
 	nearest_arcade_seat = null
+	if is_instance_valid(player) and player.has_meta("arcade_seat_active") and not bool(player.get("sitting")):
+		player.remove_meta("arcade_seat_active")
+		player.remove_meta("arcade_seat_name")
 	if is_instance_valid(city_root) and is_instance_valid(city_root.get("interior_root")) and not inside_ship:
 		var active_arcade := is_instance_valid(player) and player.has_meta("arcade_seat_active")
 		if not active_arcade:
