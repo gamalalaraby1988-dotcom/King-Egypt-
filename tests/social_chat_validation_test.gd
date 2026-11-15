@@ -40,6 +40,12 @@ func _run_social_validation_tests() -> void:
 			push_error("The invitation panel or its horizontal margins escaped the viewport after a portrait/landscape size change.")
 			quit(1)
 			return
+	for viewport_height in [20.0, 180.0, 240.0, 320.0, 360.0, 800.0, 1280.0]:
+		var vertical_layout: Vector2 = expiry_probe.get_panel_vertical_layout(viewport_height)
+		if vertical_layout.x < 0.0 or vertical_layout.y < 0.0 or vertical_layout.x + vertical_layout.y > viewport_height:
+			push_error("The invitation panel escaped the viewport height after switching to landscape orientation.")
+			quit(1)
+			return
 	var known_created_at := "2026-11-16T10:00:00"
 	var known_created_timestamp := float(Time.get_unix_time_from_datetime_string(known_created_at))
 	var anchored_deadline: float = expiry_probe.resolve_invitation_expiry({"created_at": known_created_at}, known_created_timestamp + 10.0)
