@@ -725,6 +725,15 @@ func can_submit_group_invitation_response(pending_invite_id: String, invite_id: 
 	return pending_invite_id.strip_edges().is_empty() and SocialChatManager.is_valid_invite_id(invite_id)
 
 
+func can_accept_social_invitation_payload(topic: String, player_code: String, invite_id: String) -> bool:
+	var normalized_code := player_code.strip_edges().to_upper()
+	return (
+		SocialChatManager.is_valid_player_code(normalized_code)
+		and topic == "chat:invites:" + normalized_code
+		and SocialChatManager.is_valid_invite_id(invite_id.strip_edges())
+	)
+
+
 func _update_group_gather_visibility() -> void:
 	if not is_instance_valid(group_meeting_point_button):
 		return
@@ -1745,12 +1754,12 @@ func _on_social_realtime_status(status: String) -> void:
 func _on_social_realtime_event(topic: String, event_name: String, payload: Dictionary) -> void:
 	if event_name == "group_invite" or event_name == "group_meeting_invite" or event_name == "apartment_invite":
 		# Accept invitations only from the private topic bound to this player's verified code.
-		if not SocialChatManager.is_valid_player_code(local_player_code) or topic != "chat:invites:" + local_player_code:
+		var incoming_invite_id := str(payload.get("invite_id", payload.get("id", ""))).strip_edges()
+		if not can_accept_social_invitation_payload(topic, local_player_code, incoming_invite_id):
 			return
 		var invitation := payload.duplicate(true)
 		invitation["type"] = event_name
-		if not invitation.has("invite_id"):
-			invitation["invite_id"] = str(invitation.get("id", ""))
+		invitation["invite_id"] = incoming_invite_id
 		if event_name == "group_invite":
 			invitation["title"] = "دعوة للانضمام إلى المجموعة"
 			invitation["body"] = "دعاك %s للانضمام إلى مجموعته." % str(payload.get("inviter_name", "لاعب"))
