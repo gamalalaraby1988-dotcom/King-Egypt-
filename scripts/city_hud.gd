@@ -1380,6 +1380,8 @@ func _on_social_account_session_changed(_previous_user_id: String, current_user_
 	pending_group_invites.clear()
 	_pending_group_invite_response_id = ""
 	_apartment_invite_mode = false
+	if is_instance_valid(invitation_overlay):
+		invitation_overlay.call("clear_pending_invitations")
 	group_members.clear()
 	group_members.append({"player_id": "local_leader", "display_name": "أنت", "is_leader": true})
 	_friend_buttons.clear()
