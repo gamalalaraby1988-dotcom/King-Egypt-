@@ -105,7 +105,7 @@ func _run_social_validation_tests() -> void:
 	social._realtime_topics = {"chat:direct:joined": true}
 	social._realtime_join_refs = {"chat:direct:joined": "ci-join-ref"}
 	social._realtime_ready_topics = {"chat:direct:joined": true}
-		# Stop retrying after the configured limit instead of looping forever.
+	# Stop retrying after the configured limit instead of looping forever.
 	social._realtime_topics = {"chat:direct:retry-limit": true}
 	social._realtime_join_refs = {"chat:direct:retry-limit": "retry-ref-1"}
 	social._realtime_ready_topics = {}
