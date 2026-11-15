@@ -1850,8 +1850,11 @@ func _submit_group_invitation_response(invitation: Dictionary, accepted: bool) -
 
 
 func _respond_to_social_group_invite(invite_id: String, accepted: bool) -> void:
-	_pending_group_invite_response_id = invite_id
-	SocialChatManager.respond_chat_group_invite(invite_id, accepted)
+	# Keep legacy invite cards on the same serialized response path as the unified overlay.
+	_submit_group_invitation_response({
+		"invite_id": invite_id,
+		"type": "group_invite"
+	}, accepted)
 
 
 func _remove_social_invite_card(invite_id: String) -> void:
