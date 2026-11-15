@@ -33,6 +33,23 @@ func _run_social_validation_tests() -> void:
 		push_error("The group gather button remained available inside a private apartment.")
 		quit(1)
 		return
+	var deferred_invite := {"expires_at": 200.0}
+	if not city_hud.resolve_deferred_invitation_acceptance(deferred_invite, true, 199.0):
+		push_error("A still-valid queued invitation acceptance was changed.")
+		quit(1)
+		return
+	if city_hud.resolve_deferred_invitation_acceptance(deferred_invite, true, 200.0):
+		push_error("An expired queued invitation acceptance was not downgraded to decline.")
+		quit(1)
+		return
+	if city_hud.resolve_deferred_invitation_acceptance({}, true, 100.0):
+		push_error("A queued acceptance without a verified expiry deadline was allowed.")
+		quit(1)
+		return
+	if city_hud.resolve_deferred_invitation_acceptance(deferred_invite, false, 199.0):
+		push_error("A queued decline was incorrectly converted into acceptance.")
+		quit(1)
+		return
 	var first_invite_id := "550e8400-e29b-41d4-a716-446655440000"
 	var second_invite_id := "550e8400-e29b-41d4-a716-446655440001"
 	if not city_hud.can_submit_group_invitation_response("", first_invite_id):
