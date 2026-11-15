@@ -557,9 +557,13 @@ func _update_interaction_hud() -> void:
 		return
 	var city_root := get_tree().current_scene
 	if is_instance_valid(city_root) and is_instance_valid(city_root.get("interior_root")):
-		_update_interaction_target()
 		if is_instance_valid(nearest_interactable):
-			open_interactable(nearest_interactable)
+			interact_button.text = CityLanguage.translate("interaction_enter")
+			prompt_label.text = "عند الباب — اضغط زر التفاعل لفتح التنقل السريع"
+			interact_button.visible = true
+		else:
+			interact_button.visible = false
+			prompt_label.text = ""
 		return
 	if is_instance_valid(player) and player.has_method("is_riding_animal") and player.is_riding_animal():
 		prompt_label.text = CityLanguage.translate("interaction_riding_prompt")
@@ -588,6 +592,11 @@ func _update_interaction_hud() -> void:
 
 func interact() -> void:
 	_update_interaction_target()
+	var city_root := get_tree().current_scene
+	if is_instance_valid(city_root) and is_instance_valid(city_root.get("interior_root")):
+		if is_instance_valid(nearest_interactable):
+			open_interactable(nearest_interactable)
+		return
 	if is_instance_valid(player) and player.has_method("is_riding_animal") and player.is_riding_animal():
 		player.end_animal_ride()
 		prompt_label.text = CityLanguage.translate("interaction_dismounted")
