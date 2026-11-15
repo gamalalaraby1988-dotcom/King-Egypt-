@@ -459,6 +459,10 @@ func _send_realtime_frame(topic: String, event_name: String, payload: Dictionary
 	_realtime_socket.send_text(JSON.stringify(frame))
 
 
+func is_realtime_join_ack_current(topic: String, join_ref: String) -> bool:
+	return not topic.is_empty() and not join_ref.is_empty() and _realtime_topics.has(topic) and str(_realtime_join_refs.get(topic, "")) == join_ref
+
+
 func is_realtime_topic_subscribed(topic: String) -> bool:
 	return not topic.is_empty() and _realtime_topics.has(topic) and _realtime_join_refs.has(topic) and _realtime_ready_topics.has(topic)
 
@@ -478,8 +482,7 @@ func _handle_realtime_packet(packet: PackedByteArray) -> void:
 			realtime_status_changed.emit("رفض الخادم قناة: " + topic)
 		elif payload is Dictionary and str(payload.get("status", "")) == "ok":
 			var reply_join_ref := str(parsed.get("join_ref", ""))
-			var active_join_ref := str(_realtime_join_refs.get(topic, ""))
-			if not active_join_ref.is_empty() and reply_join_ref == active_join_ref and _realtime_topics.has(topic):
+			if is_realtime_join_ack_current(topic, reply_join_ref):
 				_realtime_ready_topics[topic] = true
 				realtime_status_changed.emit("القنوات اللحظية جاهزة")
 		return
