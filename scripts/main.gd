@@ -24,7 +24,6 @@ const INTERIOR_WORLD_POSITION := Vector3(1000.0, 0.0, 1000.0)
 var _city_material_cache: Dictionary = {}
 var _city_box_mesh_cache: Dictionary = {}
 var _city_collision_shape_cache: Dictionary = {}
-var arcade_nearby_seat: Node3D = null
 
 func _ready() -> void:
 	_create_ground()
@@ -42,7 +41,6 @@ func _ready() -> void:
 
 
 func _process(_delta: float) -> void:
-	_update_arcade_seat_interaction()
 	# المركبات تخص مساحة المدينة؛ أخفِ أدواتها طوال الانتقال أو الوجود داخل مبنى.
 	if interior_transition_busy:
 		if is_instance_valid(vehicle_interaction_button):
@@ -57,8 +55,9 @@ func _process(_delta: float) -> void:
 	if vehicle_occupied and (not is_instance_valid(city_vehicle) or not is_instance_valid(get_node_or_null("Player"))):
 		_recover_vehicle_occupancy()
 	if vehicle_occupied:
+		# زر الخروج أثناء قيادة السيارة هو زر التفاعل العام في MissionManager.
 		if is_instance_valid(vehicle_interaction_button):
-			vehicle_interaction_button.visible = true
+			vehicle_interaction_button.visible = false
 		if is_instance_valid(vehicle_summon_button):
 			vehicle_summon_button.visible = false
 		return
@@ -173,8 +172,6 @@ func _summon_player_vehicle() -> void:
 
 func _toggle_vehicle_use() -> void:
 	if is_instance_valid(interior_root):
-		if not interior_transition_busy and (player_has_active_arcade_seat() or is_instance_valid(arcade_nearby_seat)):
-			_toggle_arcade_seat()
 		return
 	if interior_transition_busy:
 		return
@@ -284,43 +281,7 @@ func _exit_player_vehicle() -> void:
 		vehicle_interaction_button.text = "ركوب السيارة" if CityLanguage.get_language() == "ar" else "Enter vehicle"
 		vehicle_interaction_button.visible = player.global_position.distance_squared_to(city_vehicle.global_position) <= 25.0
 
-func player_has_active_arcade_seat() -> bool:
-	var player := get_node_or_null("Player") as CharacterBody3D
-	return is_instance_valid(player) and player.has_meta("arcade_seat_active")
-
-
-func _update_arcade_seat_interaction() -> void:
-	if not is_instance_valid(vehicle_interaction_button):
-		return
-	var player := get_node_or_null("Player") as CharacterBody3D
-	if not is_instance_valid(player) or interior_transition_busy or not is_instance_valid(interior_root) or vehicle_occupied:
-		if interior_transition_busy or not is_instance_valid(interior_root):
-			vehicle_interaction_button.visible = false
-		arcade_nearby_seat = null
-		return
-	if player.has_meta("arcade_seat_active") and not bool(player.get("sitting")):
-		player.remove_meta("arcade_seat_active")
-		player.remove_meta("arcade_seat_name")
-	if player.has_meta("arcade_seat_active"):
-		vehicle_interaction_button.text = "القيام من الماكينة" if CityLanguage.get_language() == "ar" else "Stand up"
-		vehicle_interaction_button.visible = true
-		return
-	var nearest: Node3D = null
-	var nearest_distance_squared := 12.25
-	for candidate in get_tree().get_nodes_in_group("arcade_machine_seats"):
-		if not is_instance_valid(candidate) or candidate.is_queued_for_deletion():
-			continue
-		var distance_squared := player.global_position.distance_squared_to(candidate.global_position)
-		if distance_squared <= nearest_distance_squared:
-			nearest = candidate
-			nearest_distance_squared = distance_squared
-	arcade_nearby_seat = nearest
-	vehicle_interaction_button.visible = is_instance_valid(nearest)
-	if is_instance_valid(nearest):
-		vehicle_interaction_button.text = "الجلوس واللعب" if CityLanguage.get_language() == "ar" else "Sit and play"
-
-
-func _toggle_arcade_seat() -> void:
+func _toggle_arcade_seat(seat: Node3D = null) -> void:
 	var player := get_node_or_null("Player") as CharacterBody3D
 	if not is_instance_valid(player) or not is_instance_valid(interior_root) or vehicle_occupied:
 		return
@@ -337,22 +298,19 @@ func _toggle_arcade_seat() -> void:
 		if is_instance_valid(active_seat):
 			player.global_position = active_seat.global_position + Vector3(0, 0.0, 1.15)
 		player.velocity = Vector3.ZERO
-		vehicle_interaction_button.visible = false
 		return
-	if not is_instance_valid(arcade_nearby_seat) or player.global_position.distance_squared_to(arcade_nearby_seat.global_position) > 12.25:
+	if not is_instance_valid(seat) or seat.is_queued_for_deletion() or player.global_position.distance_squared_to(seat.global_position) > 12.25:
 		return
 	if bool(player.get("animal_riding")) or bool(player.get("sitting")):
 		return
 	player.set_mobile_move(Vector2.ZERO)
 	player.set_mobile_sprint(false)
 	player.velocity = Vector3.ZERO
-	player.global_position = arcade_nearby_seat.global_position
-	player.global_rotation.y = arcade_nearby_seat.global_rotation.y
+	player.global_position = seat.global_position
+	player.global_rotation.y = seat.global_rotation.y
 	player.set("sitting", true)
 	player.set_meta("arcade_seat_active", true)
-	player.set_meta("arcade_seat_name", str(arcade_nearby_seat.get_meta("machine_name", "ماكينة VIP")))
-	vehicle_interaction_button.text = "القيام من الماكينة" if CityLanguage.get_language() == "ar" else "Stand up"
-	vehicle_interaction_button.visible = true
+	player.set_meta("arcade_seat_name", str(seat.get_meta("machine_name", "ماكينة VIP")))
 
 
 func _create_interior_transition_ui() -> void:

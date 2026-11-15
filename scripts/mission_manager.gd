@@ -5,6 +5,7 @@ var player: Node3D
 var buildings: Array[Node3D] = []
 var nearest_building: Node3D = null
 var nearest_interactable: Node3D = null
+var nearest_arcade_seat: Node3D = null
 var interact_button: Button
 var active_mission: Node3D = null
 var active_job: Node3D = null
@@ -529,6 +530,18 @@ func _update_interaction_target() -> void:
 			best = candidate
 	nearest_interactable = best
 	nearest_building = best if is_instance_valid(best) and best.has_method("get_mission_data") else null
+	nearest_arcade_seat = null
+	if is_instance_valid(city_root) and is_instance_valid(city_root.get("interior_root")) and not inside_ship:
+		var active_arcade := is_instance_valid(player) and player.has_meta("arcade_seat_active")
+		if not active_arcade:
+			var nearest_seat_distance := 12.25
+			for seat in get_tree().get_nodes_in_group("arcade_machine_seats"):
+				if not is_instance_valid(seat) or seat.is_queued_for_deletion():
+					continue
+				var seat_distance := player.global_position.distance_squared_to(seat.global_position)
+				if seat_distance <= nearest_seat_distance:
+					nearest_arcade_seat = seat
+					nearest_seat_distance = seat_distance
 
 func _interaction_action_key(target: Node3D) -> String:
 	if target.has_method("get_quick_travel_data"):
@@ -546,7 +559,21 @@ func _interaction_action_key(target: Node3D) -> String:
 func _update_interaction_hud() -> void:
 	if not is_instance_valid(interact_button) or not is_instance_valid(prompt_label):
 		return
-	if is_instance_valid(player) and player.has_method("is_riding_animal") and player.is_riding_animal():
+	var city_root := get_tree().current_scene
+	var vehicle_occupied := is_instance_valid(city_root) and bool(city_root.get("vehicle_occupied"))
+	if vehicle_occupied:
+		prompt_label.text = "أنت داخل السيارة"
+		interact_button.text = "النزول من السيارة"
+		interact_button.visible = true
+	elif is_instance_valid(player) and player.has_meta("arcade_seat_active"):
+		prompt_label.text = "أنت جالس أمام ماكينة الألعاب"
+		interact_button.text = "القيام من الماكينة"
+		interact_button.visible = true
+	elif is_instance_valid(nearest_arcade_seat):
+		prompt_label.text = "اقتربت من ماكينة ألعاب"
+		interact_button.text = "الجلوس واللعب"
+		interact_button.visible = true
+	elif is_instance_valid(player) and player.has_method("is_riding_animal") and player.is_riding_animal():
 		prompt_label.text = CityLanguage.translate("interaction_riding_prompt")
 		interact_button.text = CityLanguage.translate("interaction_dismount")
 		interact_button.visible = true
@@ -575,6 +602,24 @@ func _update_interaction_hud() -> void:
 
 func interact() -> void:
 	_update_interaction_target()
+	var city_root := get_tree().current_scene
+	if is_instance_valid(city_root) and bool(city_root.get("vehicle_occupied")):
+		if city_root.has_method("_exit_player_vehicle"):
+			city_root.call("_exit_player_vehicle")
+		_update_interaction_hud()
+		return
+	if is_instance_valid(player) and player.has_meta("arcade_seat_active"):
+		if is_instance_valid(city_root) and city_root.has_method("_toggle_arcade_seat"):
+			city_root.call("_toggle_arcade_seat")
+		_update_interaction_target()
+		_update_interaction_hud()
+		return
+	if is_instance_valid(nearest_arcade_seat):
+		if is_instance_valid(city_root) and city_root.has_method("_toggle_arcade_seat"):
+			city_root.call("_toggle_arcade_seat", nearest_arcade_seat)
+		_update_interaction_target()
+		_update_interaction_hud()
+		return
 	if is_instance_valid(player) and player.has_method("is_riding_animal") and player.is_riding_animal():
 		player.end_animal_ride()
 		prompt_label.text = CityLanguage.translate("interaction_dismounted")
