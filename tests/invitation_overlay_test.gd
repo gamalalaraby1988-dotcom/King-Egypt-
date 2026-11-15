@@ -158,7 +158,7 @@ func _run_invitation_overlay_tests() -> void:
 	overlay.set("_queue", queued_items)
 	overlay.call("_tick", 0.0)
 	overlay.call("set_response_pending", false)
-	if expired_ids != ["group-1", "apartment-after-decline"]:
+	if expired_ids != ["group-1", "apartment-1", "apartment-after-decline"]:
 		push_error("An invitation that expired while waiting for the server response was not discarded.")
 		quit(1)
 		return
