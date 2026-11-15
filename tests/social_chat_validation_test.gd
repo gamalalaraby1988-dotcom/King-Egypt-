@@ -141,6 +141,28 @@ func _run_social_validation_tests() -> void:
 		push_error("Invitation overlay did not retain the active test invitation.")
 		quit(1)
 		return
+	invitation_overlay.enqueue_invitation({
+		"invite_id": "ci-account-a-invite",
+		"title": "Duplicate invitation",
+		"expires_at": float(Time.get_unix_time_from_system()) + 60.0
+	})
+	if invitation_overlay.get_pending_invitation_count() != 1:
+		push_error("A duplicate active invitation was added to the queue.")
+		quit(1)
+		return
+	var expired_count := [0]
+	invitation_overlay.invitation_expired.connect(func(_item: Dictionary) -> void:
+		expired_count[0] += 1
+	)
+	invitation_overlay.enqueue_invitation({
+		"invite_id": "ci-already-expired",
+		"title": "Expired invitation",
+		"expires_at": float(Time.get_unix_time_from_system()) - 1.0
+	})
+	if expired_count[0] != 1 or invitation_overlay.get_pending_invitation_count() != 1:
+		push_error("An already-expired invitation was queued instead of being rejected.")
+		quit(1)
+		return
 	invitation_overlay.clear_pending_invitations()
 	if invitation_overlay.get_pending_invitation_count() != 0 or not invitation_overlay._current.is_empty() or invitation_overlay._panel.visible:
 		push_error("A previous account's active or queued invitation survived account cleanup.")
