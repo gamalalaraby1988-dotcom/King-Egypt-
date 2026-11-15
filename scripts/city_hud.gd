@@ -1402,7 +1402,15 @@ func _on_social_operation_completed(action: String, data: Variant) -> void:
 					display_name_status.text = "تم تغيير الاسم بنجاح. التغيير التالي بعد منتصف الليل بتوقيت مصر."
 				else:
 					var code := str(result.get("error_code", "unknown"))
-					display_name_status.text = "لم يتم تغيير الاسم: " + code
+					var messages := {
+						"daily_limit_reached": "لقد غيّرت اسمك اليوم بالفعل. يمكنك تغييره مجددًا بعد منتصف الليل بتوقيت مصر.",
+						"name_unchanged": "هذا هو اسمك الحالي بالفعل.",
+						"display_name_taken": "هذا الاسم مستخدم من لاعب آخر. اختر اسمًا مختلفًا.",
+						"invalid_display_name": "الاسم غير صالح. استخدم من 1 إلى 24 حرفًا.",
+						"authentication_required": "انتهت جلسة الدخول. سجّل الدخول مجددًا.",
+						"test_account_not_linked": "حساب اللاعب غير مربوط بعد. أعد تجهيز حساب الاختبار."
+					}
+					display_name_status.text = str(messages.get(code, "لم يتم تغيير الاسم. حاول مرة أخرى."))
 			else:
 				display_name_status.text = "تعذر تأكيد تغيير الاسم من الخادم."
 		"friend_request":
