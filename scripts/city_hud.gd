@@ -1051,7 +1051,7 @@ func _send_friend_request_from_search() -> void:
 	if not is_instance_valid(friend_search_input):
 		return
 	var code := friend_search_input.text.strip_edges().to_upper()
-	if not code.is_valid_filename() or code.length() != 10:
+	if code.length() != 10:
 		social_chat_status.text = "أدخل رمز اللاعب المكوّن من 10 أحرف."
 		return
 	SocialChatManager.send_friend_request(code)
@@ -1077,7 +1077,7 @@ func _on_social_operation_completed(action: String, data: Variant) -> void:
 					var code := str(friend.get("player_code", ""))
 					var display_name := str(friend.get("display_name", "صديق"))
 					var friend_button := Button.new()
-					friend_button.text = display_name.substr(0, 18) + "\\n" + code
+					friend_button.text = display_name.substr(0, 18) + "\n" + code
 					friend_button.custom_minimum_size.y = 48
 					friend_button.pressed.connect(_on_social_friend_selected.bind(code))
 					social_friends_box.add_child(friend_button)
@@ -1102,8 +1102,6 @@ func _on_social_operation_completed(action: String, data: Variant) -> void:
 		"direct_read":
 			social_chat_log.clear()
 			if data is Array:
-				for row in data.duplicate():
-					pass
 				var ordered: Array = data.duplicate()
 				ordered.reverse()
 				for item in ordered:
