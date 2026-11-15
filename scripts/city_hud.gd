@@ -862,9 +862,9 @@ func _build_friend_character_portrait(friend: Dictionary) -> Control:
 	viewport.add_child(world)
 	var camera := Camera3D.new()
 	camera.position = Vector3(0, 1.12, -3.2)
-	camera.look_at(Vector3(0, 1.0, 0), Vector3.UP)
 	camera.current = true
 	world.add_child(camera)
+	camera.call_deferred("look_at", Vector3(0, 1.0, 0), Vector3.UP)
 	var light := DirectionalLight3D.new()
 	light.rotation_degrees = Vector3(-24, -18, 0)
 	light.light_energy = 1.25
