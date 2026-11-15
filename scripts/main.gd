@@ -663,9 +663,9 @@ func _apply_apartment_design(root: Node3D) -> void:
 		Color(0.66, 0.78, 0.68),
 		Color(0.83, 0.57, 0.30)
 	]
-	var fabric := fabric_colors[apartment_design_index]
-	var wood := wood_colors[apartment_design_index]
-	var gold := gold_colors[apartment_design_index]
+	var fabric: Color = fabric_colors[apartment_design_index]
+	var wood: Color = wood_colors[apartment_design_index]
+	var gold: Color = gold_colors[apartment_design_index]
 	for item in root.find_children("*", "MeshInstance3D", true, false):
 		if item.is_in_group("apartment_fabric"):
 			item.material_override = _material(fabric)
