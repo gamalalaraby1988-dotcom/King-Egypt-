@@ -86,7 +86,14 @@ func _run_invitation_overlay_tests() -> void:
 		"invite_id": "apartment-after-decline",
 		"type": "apartment_invite",
 		"title": "دعوة شقة",
-		"body": "اختبار ترتيب الطابور",
+		"body": "اختبار انتهاء المهلة أثناء انتظار الرد",
+		"expires_at": decline_now + 1.0
+	})
+	overlay.call("enqueue_invitation", {
+		"invite_id": "group-after-wait",
+		"type": "group_invite",
+		"title": "دعوة مجموعة",
+		"body": "اختبار متابعة الطابور بعد حذف الدعوة المنتهية",
 		"expires_at": decline_now + 60.0
 	})
 	overlay.call("_finish_current", false)
@@ -103,12 +110,17 @@ func _run_invitation_overlay_tests() -> void:
 		push_error("The queued invitation was not retained while the decline response was pending.")
 		quit(1)
 		return
+	overlay.call("_tick", 2.0)
 	overlay.call("set_response_pending", false)
+	if expired_ids != ["group-1", "apartment-after-decline"]:
+		push_error("An invitation that expired while waiting for the server response was not discarded.")
+		quit(1)
+		return
 	current_invitation = overlay.call("get_current_invitation")
-	if str(current_invitation.get("invite_id", "")) != "apartment-after-decline":
-		push_error("The next invitation did not appear after the decline response completed.")
+	if str(current_invitation.get("invite_id", "")) != "group-after-wait":
+		push_error("The queue did not advance past an expired invitation after the server response completed.")
 		quit(1)
 		return
 
-	print("Unified invitation queue, accept, decline, response serialization, and 30-second expiry tests passed.")
+	print("Unified invitation queue, accept, decline, response serialization, and expiry tests passed.")
 	quit(0)
