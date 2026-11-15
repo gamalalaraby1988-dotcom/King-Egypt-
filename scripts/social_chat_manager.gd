@@ -30,6 +30,12 @@ func _ready() -> void:
 	add_child(_http)
 	_http.request_completed.connect(_on_request_completed)
 
+func get_daily_chest_status() -> bool:
+	return _rpc("get_my_test_daily_chest_status", {}, "daily_chest_status")
+
+func claim_daily_chest_reward() -> bool:
+	return _rpc("claim_my_test_daily_chest", {}, "daily_chest_claim")
+
 func get_my_display_name() -> bool:
 	return _rpc("get_my_test_display_name", {}, "display_name_get")
 
