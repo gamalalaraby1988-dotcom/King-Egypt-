@@ -150,6 +150,19 @@ func _run_social_validation_tests() -> void:
 		quit(1)
 		return
 
+	if city_hud.get_friend_character_scene_path({"selected_character_id":"https://example.com/avatar.png"}) != "":
+		push_error("The friend portrait resolver accepted an external image URL.")
+		quit(1)
+		return
+	if city_hud.get_friend_character_scene_path({"selected_character_id":"../../outside"}) != "":
+		push_error("The friend portrait resolver accepted a path traversal value.")
+		quit(1)
+		return
+	if city_hud.get_friend_character_scene_path({"avatar_texture":null}) != "":
+		push_error("The friend portrait resolver accepted a texture without an in-game character ID.")
+		quit(1)
+		return
+
 	var online_invite_friends: Array = city_hud.get_online_group_invite_friends([
 		{"player_code":"AB12CD34EF", "display_name":"متصل", "is_online":true},
 		{"player_code":"CD34EF56GH", "display_name":"غير متصل", "is_online":false},
