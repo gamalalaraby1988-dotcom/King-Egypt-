@@ -1598,11 +1598,16 @@ func _on_social_operation_completed(action: String, data: Variant) -> void:
 			else:
 				social_chat_status.text = "تعذر إنشاء المجموعة."
 		"chat_identity":
+			local_player_code = ""
 			if data is Array and not data.is_empty() and data[0] is Dictionary:
 				var identity: Dictionary = data[0]
-				local_player_code = str(identity.get("player_code", "")).strip_edges().to_upper()
-				SocialChatManager.set_realtime_player_code(local_player_code)
-				SocialChatManager.check_moderator_access()
+				var candidate_code := str(identity.get("player_code", "")).strip_edges().to_upper()
+				if SocialChatManager.is_valid_player_code(candidate_code):
+					local_player_code = candidate_code
+					SocialChatManager.set_realtime_player_code(local_player_code)
+				else:
+					social_chat_status.text = "تعذر التحقق من رمز اللاعب؛ ستظل بقية بيانات التواصل قيد التحميل."
+			SocialChatManager.check_moderator_access()
 		"moderator_check":
 			var allowed := data is bool and data
 			if is_instance_valid(moderation_button):
@@ -1681,7 +1686,28 @@ func _on_social_operation_failed(action: String, message: String) -> void:
 		if is_instance_valid(display_name_status):
 			display_name_status.text = "تعذر تنفيذ العملية: " + message
 		return
-	social_chat_status.text = "تعذر تنفيذ " + action + ": " + message
+	if is_instance_valid(social_chat_status):
+		social_chat_status.text = "تعذر تنفيذ " + action + ": " + message
+	# Keep the account hydration chain sequential, but do not let one failed
+	# endpoint prevent independent friends/group data from loading.
+	if not AuthManager.is_authenticated():
+		return
+	match action:
+		"chat_identity":
+			local_player_code = ""
+			SocialChatManager.check_moderator_access()
+		"moderator_check":
+			if is_instance_valid(moderation_button):
+				moderation_button.visible = false
+			SocialChatManager.list_chat_group_invites()
+		"chat_invites":
+			SocialChatManager.list_friends()
+		"friends_list":
+			SocialChatManager.get_chat_group()
+		"group_info":
+			SocialChatManager.subscribe_group_chat("")
+			group_members = [{"player_id": "local_leader", "display_name": "أنت", "is_leader": true}]
+			_refresh_group_popup()
 
 
 func _on_social_realtime_status(status: String) -> void:
