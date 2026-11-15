@@ -195,6 +195,12 @@ func _run_auth_session_tests() -> void:
 		push_error("Achievement progress retained the previous account after sign-out.")
 		quit(1)
 		return
+	achievement_manager._check_all()
+	achievement_manager.record_job_completed("ci_after_signout")
+	if not achievement_manager.unlocked.is_empty() or achievement_manager.totals != {"jobs": 0, "missions": 0, "daily_claims": 0}:
+		push_error("Achievement manager exposed or updated account progress after sign-out.")
+		quit(1)
+		return
 	achievement_manager.walked_meters = 999.0
 	achievement_manager._save_state()
 	if FileAccess.get_file_as_bytes(expected_achievement_path) != achievement_file_before_signout:
