@@ -39,9 +39,16 @@ var wing_colors := {
 func _ready() -> void:
 	set_process_unhandled_key_input(true)
 	city = get_parent() as Node3D
+	# قد يُضاف النظام مؤقتًا إلى مشهد غير مكتمل؛ لا تتابع التهيئة دون مدينة صالحة.
+	if not is_instance_valid(city) or city.is_queued_for_deletion() or not city.is_inside_tree():
+		set_process(false)
+		set_process_unhandled_key_input(false)
+		return
 	player = city.get_node_or_null("Player") as CharacterBody3D
 	_create_menu()
-	get_viewport().size_changed.connect(_fit_menu_to_viewport)
+	var viewport := get_viewport()
+	if is_instance_valid(viewport) and not viewport.size_changed.is_connected(_fit_menu_to_viewport):
+		viewport.size_changed.connect(_fit_menu_to_viewport)
 	_fit_menu_to_viewport()
 	_create_beach_portal()
 
