@@ -275,10 +275,18 @@ func _process(delta: float) -> void:
 		_realtime_socket.close()
 		_realtime_socket = null
 		_realtime_connected = false
+		# A stale socket must not replay topics or identities after reconnecting.
+		_realtime_topics.clear()
 		_realtime_join_refs.clear()
 		_realtime_last_token = ""
 		_realtime_session_user_id = ""
 		_realtime_session_generation = -1
+		_realtime_player_code = ""
+		_realtime_group_id = ""
+		_realtime_direct_id = ""
+		_realtime_heartbeat_elapsed = 0.0
+		_realtime_retry_elapsed = 0.0
+		realtime_status_changed.emit("تم إلغاء اشتراكات جلسة منتهية")
 	if not AuthManager.is_authenticated():
 		if _realtime_socket != null and _realtime_socket.get_ready_state() != WebSocketPeer.STATE_CLOSED:
 			_realtime_socket.close()
