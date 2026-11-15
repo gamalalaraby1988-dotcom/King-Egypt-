@@ -49,6 +49,13 @@ var group_meeting_point_button: Button
 var group_move_button: Button
 var group_member_markers: Dictionary = {}
 
+var social_chat_panel: PanelContainer
+var social_chat_log: RichTextLabel
+var social_chat_input: LineEdit
+var social_chat_status: Label
+var social_chat_channel := "العامة"
+var social_chat_unread := false
+
 const GROUP_MAX_MEMBERS := 4
 const GROUP_CHAT_MAX_LENGTH := 300
 
@@ -77,6 +84,7 @@ func _ready() -> void:
 	_build_player_interaction_popup()
 	_build_group_popup()
 	_build_group_chat_popup()
+	_build_social_chat_panel()
 	_refresh_wallet()
 
 
@@ -206,6 +214,9 @@ func _on_button_pressed(section: String) -> void:
 
 func _open_section(section: String) -> void:
 	if not SECTIONS.has(section):
+		return
+	if section == "chat" or section == "social":
+		_open_social_chat_panel()
 		return
 	if section == "phone":
 		_open_vehicle_store_phone()
@@ -859,6 +870,180 @@ func _show_group_meeting_marker(position: Vector3) -> void:
 	label.font_size = 32
 	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	marker.add_child(label)
+
+
+func _build_social_chat_panel() -> void:
+	# نافذة موحدة وثابتة على يمين الشاشة؛ تترك مساحة المدينة وأزرار الحركة ظاهرة.
+	var dock := Button.new()
+	dock.name = "PersistentSocialChatButton"
+	dock.text = "💬"
+	dock.tooltip_text = "فتح الأصدقاء والمحادثات"
+	dock.custom_minimum_size = Vector2(54, 54)
+	dock.anchor_left = 1.0
+	dock.anchor_right = 1.0
+	dock.anchor_top = 0.48
+	dock.anchor_bottom = 0.48
+	dock.offset_left = -68
+	dock.offset_right = -12
+	dock.offset_top = -27
+	dock.offset_bottom = 27
+	dock.pressed.connect(_open_social_chat_panel)
+	root.add_child(dock)
+
+	social_chat_panel = PanelContainer.new()
+	social_chat_panel.name = "FriendsAndChatPanel"
+	social_chat_panel.anchor_left = 1.0
+	social_chat_panel.anchor_right = 1.0
+	social_chat_panel.anchor_top = 0.06
+	social_chat_panel.anchor_bottom = 0.94
+	social_chat_panel.offset_left = -360
+	social_chat_panel.offset_right = -8
+	social_chat_panel.visible = false
+	social_chat_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	var panel_style := StyleBoxFlat.new()
+	panel_style.bg_color = Color(0.035, 0.055, 0.075, 0.97)
+	panel_style.border_color = Color(0.72, 0.55, 0.25, 0.95)
+	panel_style.set_border_width_all(2)
+	panel_style.set_corner_radius_all(16)
+	panel_style.content_margin_left = 10
+	panel_style.content_margin_right = 10
+	panel_style.content_margin_top = 10
+	panel_style.content_margin_bottom = 10
+	social_chat_panel.add_theme_stylebox_override("panel", panel_style)
+	root.add_child(social_chat_panel)
+
+	var layout := VBoxContainer.new()
+	layout.add_theme_constant_override("separation", 7)
+	social_chat_panel.add_child(layout)
+	var header := HBoxContainer.new()
+	layout.add_child(header)
+	var heading := Label.new()
+	heading.text = "𓂀 الأصدقاء والمحادثات"
+	heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	heading.add_theme_color_override("font_color", Color(0.92, 0.76, 0.42))
+	header.add_child(heading)
+	var close := Button.new()
+	close.text = "✕"
+	close.custom_minimum_size = Vector2(38, 36)
+	close.pressed.connect(func(): social_chat_panel.visible = false)
+	header.add_child(close)
+
+	var channels := HBoxContainer.new()
+	channels.add_theme_constant_override("separation", 3)
+	layout.add_child(channels)
+	for channel in ["العامة", "القريبون", "الأصدقاء", "الفريق", "الشقة"]:
+		var channel_button := Button.new()
+		channel_button.text = channel
+		channel_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		channel_button.custom_minimum_size.y = 38
+		channel_button.add_theme_font_size_override("font_size", 11)
+		channel_button.pressed.connect(_select_social_chat_channel.bind(channel))
+		channels.add_child(channel_button)
+
+	var body := HBoxContainer.new()
+	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	body.add_theme_constant_override("separation", 6)
+	layout.add_child(body)
+	var friends_column := VBoxContainer.new()
+	friends_column.custom_minimum_size.x = 104
+	friends_column.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	body.add_child(friends_column)
+	var friends_heading := Label.new()
+	friends_heading.text = "👥 الأصدقاء"
+	friends_heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	friends_column.add_child(friends_heading)
+	var friend_search := LineEdit.new()
+	friend_search.name = "FriendSearchInput"
+	friend_search.placeholder_text = "اسم / ID"
+	friend_search.add_theme_font_size_override("font_size", 11)
+	friends_column.add_child(friend_search)
+	var friends_scroll := ScrollContainer.new()
+	friends_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	friends_column.add_child(friends_scroll)
+	var friends_placeholder := Label.new()
+	friends_placeholder.name = "FriendsListPlaceholder"
+	friends_placeholder.text = "قائمة الأصدقاء\nستظهر بعد\nالاتصال بالخادم"
+	friends_placeholder.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	friends_placeholder.add_theme_font_size_override("font_size", 11)
+	friends_scroll.add_child(friends_placeholder)
+
+	var conversation := VBoxContainer.new()
+	conversation.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	conversation.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	body.add_child(conversation)
+	social_chat_status = Label.new()
+	social_chat_status.text = "غير متصل بالخادم — عرض تجريبي للواجهة"
+	social_chat_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	social_chat_status.add_theme_font_size_override("font_size", 10)
+	social_chat_status.add_theme_color_override("font_color", Color(0.95, 0.72, 0.35))
+	conversation.add_child(social_chat_status)
+	social_chat_log = RichTextLabel.new()
+	social_chat_log.bbcode_enabled = true
+	social_chat_log.scroll_following = true
+	social_chat_log.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	social_chat_log.text = "[color=gray]لا توجد رسائل متصلة بعد. ستظهر الرسائل عند ربط القناة بالخادم.[/color]"
+	conversation.add_child(social_chat_log)
+	social_chat_input = LineEdit.new()
+	social_chat_input.placeholder_text = "اكتب رسالة..."
+	social_chat_input.add_theme_font_size_override("font_size", 12)
+	social_chat_input.text_submitted.connect(_submit_social_chat_message)
+	conversation.add_child(social_chat_input)
+	var send := Button.new()
+	send.text = "إرسال"
+	send.custom_minimum_size.y = 38
+	send.pressed.connect(func(): _submit_social_chat_message(social_chat_input.text))
+	conversation.add_child(send)
+
+	var emoji_row := HBoxContainer.new()
+	emoji_row.add_theme_constant_override("separation", 3)
+	layout.add_child(emoji_row)
+	for emoji in ["😀", "😂", "😍", "❤️", "👍", "🎉", "👑"]:
+		var emoji_button := Button.new()
+		emoji_button.text = emoji
+		emoji_button.custom_minimum_size = Vector2(38, 34)
+		emoji_button.pressed.connect(_insert_social_chat_emoji.bind(emoji))
+		emoji_row.add_child(emoji_button)
+
+
+func _open_social_chat_panel() -> void:
+	if not is_instance_valid(social_chat_panel):
+		return
+	social_chat_panel.visible = true
+	if is_instance_valid(social_chat_input):
+		social_chat_input.grab_focus()
+
+
+func _select_social_chat_channel(channel: String) -> void:
+	if not ["العامة", "القريبون", "الأصدقاء", "الفريق", "الشقة"].has(channel):
+		return
+	social_chat_channel = channel
+	if is_instance_valid(social_chat_log):
+		social_chat_log.clear()
+		social_chat_log.append_text("[color=gray]قناة %s — لا يوجد اتصال خادمي نشط حتى الآن.[/color]" % channel)
+	if is_instance_valid(social_chat_status):
+		social_chat_status.text = "القناة: %s | غير متصلة بالخادم" % channel
+
+
+func _insert_social_chat_emoji(emoji: String) -> void:
+	if not is_instance_valid(social_chat_input):
+		return
+	social_chat_input.text += emoji
+	social_chat_input.caret_column = social_chat_input.text.length()
+	social_chat_input.grab_focus()
+
+
+func _submit_social_chat_message(raw_message: String) -> void:
+	var message := raw_message.strip_edges()
+	if message.is_empty():
+		return
+	if message.length() > GROUP_CHAT_MAX_LENGTH:
+		message = message.substr(0, GROUP_CHAT_MAX_LENGTH)
+	# لا نعرض الرسالة كمرسلة؛ لا يوجد بعد عميل RPC/Realtime موصول بهذه القناة.
+	if is_instance_valid(social_chat_status):
+		social_chat_status.text = "لم تُرسل الرسالة: الاتصال بالخادم لم يُفعّل بعد."
+	if is_instance_valid(social_chat_input):
+		social_chat_input.text = message
 
 
 func _build_group_chat_popup() -> void:
