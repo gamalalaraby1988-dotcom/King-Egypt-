@@ -5,12 +5,14 @@ extends Node
 
 signal otp_sent(email: String)
 signal authenticated(user_id: String, email: String)
+signal session_refreshed()
 signal authentication_failed(message: String)
 
 const SUPABASE_URL := "https://unwrlvyjrtdwobcktetd.supabase.co"
 const SUPABASE_PUBLISHABLE_KEY := "sb_publishable_BrWeMmhyOpL73Uca40Ug0Q_8Zgw55si"
 const OTP_ENDPOINT := SUPABASE_URL + "/auth/v1/otp"
 const VERIFY_ENDPOINT := SUPABASE_URL + "/auth/v1/verify"
+const REFRESH_ENDPOINT := SUPABASE_URL + "/auth/v1/token?grant_type=refresh_token"
 
 var _http: HTTPRequest
 var _pending_action := ""
@@ -83,6 +85,29 @@ func verify_email_otp(email: String, otp: String) -> bool:
 		return false
 	return true
 
+func refresh_session() -> bool:
+	if not is_authenticated() or _refresh_token.is_empty():
+		authentication_failed.emit("لا توجد جلسة صالحة لتجديدها. سجّل الدخول مرة أخرى.")
+		return false
+	if not _pending_action.is_empty() or _http.get_http_client_status() != HTTPClient.STATUS_DISCONNECTED:
+		authentication_failed.emit("هناك طلب تسجيل دخول قيد التنفيذ.")
+		return false
+
+	_pending_action = "refresh_session"
+	_pending_email = _authenticated_email
+	var payload := {"refresh_token": _refresh_token}
+	var error := _http.request(
+		REFRESH_ENDPOINT,
+		_get_headers(),
+		HTTPClient.METHOD_POST,
+		JSON.stringify(payload)
+	)
+	if error != OK:
+		_clear_pending()
+		authentication_failed.emit("تعذر بدء تجديد الجلسة. حاول مرة أخرى.")
+		return false
+	return true
+
 func is_authenticated() -> bool:
 	return not _access_token.is_empty() and not _authenticated_user_id.is_empty()
 
@@ -131,6 +156,11 @@ func _on_request_completed(
 
 	var parsed: Variant = JSON.parse_string(response_text)
 	if response_code < 200 or response_code >= 300:
+		if action == "refresh_session" and response_code in [400, 401]:
+			clear_session()
+			authentication_failed.emit(_safe_auth_error(parsed))
+			return
+	if response_code < 200 or response_code >= 300:
 		authentication_failed.emit(_safe_auth_error(parsed))
 		return
 	if not parsed is Dictionary:
@@ -158,6 +188,24 @@ func _on_request_completed(
 		_authenticated_user_id = user_id
 		_authenticated_email = user_email
 		authenticated.emit(user_id, user_email)
+		return
+
+	if action == "refresh_session":
+		var refreshed_access := str(parsed.get("access_token", ""))
+		var refreshed_token := str(parsed.get("refresh_token", ""))
+		var refreshed_user: Variant = parsed.get("user", {})
+		if refreshed_access.is_empty() or refreshed_token.is_empty() or not refreshed_user is Dictionary:
+			authentication_failed.emit("استجابة تجديد الجلسة غير مكتملة.")
+			return
+		var refreshed_user_id := str(refreshed_user.get("id", ""))
+		if refreshed_user_id.is_empty() or refreshed_user_id != _authenticated_user_id:
+			clear_session()
+			authentication_failed.emit("تعذر مطابقة هوية الحساب بعد تجديد الجلسة. سجّل الدخول مرة أخرى.")
+			return
+		_access_token = refreshed_access
+		_refresh_token = refreshed_token
+		_authenticated_email = str(refreshed_user.get("email", _authenticated_email))
+		session_refreshed.emit()
 
 func _safe_auth_error(parsed: Variant) -> String:
 	if parsed is Dictionary:
