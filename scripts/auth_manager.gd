@@ -5,6 +5,7 @@ extends Node
 
 signal otp_sent(email: String)
 signal authenticated(user_id: String, email: String)
+signal session_changed(previous_user_id: String, current_user_id: String, generation: int)
 signal session_refreshed()
 signal test_player_account_ready(test_account_id: String, player_code: String, created: bool)
 signal test_player_account_failed(message: String)
@@ -30,6 +31,9 @@ var _access_token := ""
 var _refresh_token := ""
 var _authenticated_user_id := ""
 var _authenticated_email := ""
+var _session_generation := 0
+var _provision_user_id := ""
+var _provision_session_generation := -1
 
 func _ready() -> void:
 	_http = HTTPRequest.new()
@@ -139,6 +143,8 @@ func ensure_my_test_player_account() -> bool:
 		test_player_account_failed.emit("طلب تجهيز حساب اللاعب قيد التنفيذ.")
 		return false
 	_provision_pending = true
+	_provision_user_id = _authenticated_user_id
+	_provision_session_generation = _session_generation
 	var headers := _get_headers()
 	headers.append("Authorization: Bearer " + _access_token)
 	var error := _provision_http.request(ENSURE_TEST_PLAYER_ENDPOINT, headers, HTTPClient.METHOD_POST, "{}")
@@ -150,6 +156,12 @@ func ensure_my_test_player_account() -> bool:
 
 func get_test_account_id() -> String:
 	return _test_account_id
+
+func get_session_generation() -> int:
+	return _session_generation
+
+func is_session_current(user_id: String, generation: int) -> bool:
+	return is_authenticated() and not user_id.is_empty() and user_id == _authenticated_user_id and generation == _session_generation
 
 func get_player_code() -> String:
 	return _player_code
@@ -180,6 +192,8 @@ func get_authenticated_email() -> String:
 	return _authenticated_email
 
 func clear_session() -> void:
+	var previous_user_id := _authenticated_user_id
+	_advance_session_generation()
 	# Prevent an in-flight OTP response from restoring a session after local sign-out.
 	if not _pending_action.is_empty():
 		_http.cancel_request()
@@ -192,9 +206,16 @@ func clear_session() -> void:
 	_authenticated_email = ""
 	_test_account_id = ""
 	_player_code = ""
+	if previous_user_id != "":
+		session_changed.emit(previous_user_id, "", _session_generation)
+
+func _advance_session_generation() -> void:
+	_session_generation += 1
 	if is_instance_valid(_provision_http) and _provision_pending:
 		_provision_http.cancel_request()
-		_provision_pending = false
+	_provision_pending = false
+	_provision_user_id = ""
+	_provision_session_generation = -1
 
 func _get_headers() -> PackedStringArray:
 	return PackedStringArray([
@@ -253,6 +274,8 @@ func _on_request_completed(
 		if user_id.is_empty():
 			authentication_failed.emit("تعذر تأكيد هوية الحساب.")
 			return
+		var previous_user_id := _authenticated_user_id
+		_advance_session_generation()
 		_test_account_id = ""
 		_player_code = ""
 		_access_token = access
@@ -260,6 +283,7 @@ func _on_request_completed(
 		_authenticated_user_id = user_id
 		_authenticated_email = user_email
 		_schedule_session_refresh(parsed)
+		session_changed.emit(previous_user_id, user_id, _session_generation)
 		authenticated.emit(user_id, user_email)
 		return
 
@@ -283,8 +307,12 @@ func _on_request_completed(
 		session_refreshed.emit()
 
 func _on_provision_request_completed(result: int, response_code: int, _response_headers: PackedStringArray, body: PackedByteArray) -> void:
+	var request_user_id := _provision_user_id
+	var request_generation := _provision_session_generation
 	_provision_pending = false
-	if not is_authenticated():
+	_provision_user_id = ""
+	_provision_session_generation = -1
+	if not is_session_current(request_user_id, request_generation):
 		return
 	if result != HTTPRequest.RESULT_SUCCESS:
 		test_player_account_failed.emit("تعذر الاتصال بخدمة تجهيز حساب اللاعب.")
