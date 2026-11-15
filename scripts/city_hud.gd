@@ -31,6 +31,9 @@ var player_status_label: Label
 var player_avatar_label: Label
 var player_action_status: Label
 var player_block_button: Button
+var player_report_reason: OptionButton
+var player_report_details: LineEdit
+var blocked_players_box: VBoxContainer
 var player_primary_action_button: Button
 var selected_player_is_friend := false
 var selected_player_id := ""
@@ -425,8 +428,8 @@ func _build_player_interaction_popup() -> void:
 	player_popup.anchor_bottom = 0.5
 	player_popup.offset_left = -190
 	player_popup.offset_right = 190
-	player_popup.offset_top = -190
-	player_popup.offset_bottom = 190
+	player_popup.offset_top = -235
+	player_popup.offset_bottom = 235
 	player_popup.visible = false
 	player_popup.mouse_filter = Control.MOUSE_FILTER_STOP
 	var panel_style := StyleBoxFlat.new()
@@ -488,8 +491,18 @@ func _build_player_interaction_popup() -> void:
 	player_block_button.text = "حظر اللاعب"
 	player_block_button.pressed.connect(_on_player_block)
 	content.add_child(player_block_button)
+	player_report_reason = OptionButton.new()
+	player_report_reason.add_item("مضايقة أو إساءة", 0)
+	player_report_reason.add_item("رسائل مزعجة / سبام", 1)
+	player_report_reason.add_item("اسم غير مناسب", 2)
+	player_report_reason.add_item("غش أو استغلال", 3)
+	player_report_reason.add_item("سبب آخر", 4)
+	content.add_child(player_report_reason)
+	player_report_details = LineEdit.new()
+	player_report_details.placeholder_text = "تفاصيل إضافية (اختياري)"
+	content.add_child(player_report_details)
 	var report := Button.new()
-	report.text = "⚠ تقديم بلاغ"
+	report.text = "⚠ إرسال البلاغ"
 	report.pressed.connect(_on_player_report)
 	content.add_child(report)
 	player_action_status = Label.new()
@@ -560,7 +573,11 @@ func _on_player_report() -> void:
 		player_action_status.text = "تعذر تجهيز البلاغ: رمز اللاعب غير متاح."
 		return
 	player_report_requested.emit(selected_player_id)
-	player_action_status.text = "تم تجهيز البلاغ للمراجعة؛ حفظه وإرساله يحتاج خادم الإشراف."
+	var reasons := ["harassment", "spam", "inappropriate_name", "cheating", "other"]
+	var reason := reasons[player_report_reason.selected] if is_instance_valid(player_report_reason) else "other"
+	var details := player_report_details.text if is_instance_valid(player_report_details) else ""
+	SocialChatManager.report_player(selected_player_id, reason, details)
+	player_action_status.text = "جارٍ إرسال البلاغ إلى خادم الإشراف..."
 
 
 func _build_group_popup() -> void:
@@ -1016,6 +1033,23 @@ func _build_social_chat_panel() -> void:
 	friends_placeholder.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	friends_placeholder.add_theme_font_size_override("font_size", 11)
 	social_friends_box.add_child(friends_placeholder)
+	var blocked_heading := Label.new()
+	blocked_heading.text = "🚫 المحظورون"
+	blocked_heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	friends_column.add_child(blocked_heading)
+	var blocked_refresh := Button.new()
+	blocked_refresh.text = "تحديث المحظورين"
+	blocked_refresh.pressed.connect(_refresh_blocked_players)
+	friends_column.add_child(blocked_refresh)
+	var blocked_scroll := ScrollContainer.new()
+	blocked_scroll.custom_minimum_size.y = 76
+	friends_column.add_child(blocked_scroll)
+	blocked_players_box = VBoxContainer.new()
+	blocked_players_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	blocked_scroll.add_child(blocked_players_box)
+	var blocked_placeholder := Label.new()
+	blocked_placeholder.text = "لا توجد بيانات"
+	blocked_players_box.add_child(blocked_placeholder)
 
 	var conversation := VBoxContainer.new()
 	conversation.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -1088,6 +1122,12 @@ func _on_social_authenticated(_user_id: String, _email: String) -> void:
 func _refresh_social_friends() -> void:
 	if AuthManager.is_authenticated():
 		SocialChatManager.list_friends()
+		_refresh_blocked_players()
+
+
+func _refresh_blocked_players() -> void:
+	if AuthManager.is_authenticated():
+		SocialChatManager.list_blocked_players()
 
 
 func _send_friend_request_from_search() -> void:
@@ -1113,6 +1153,38 @@ func _on_social_friend_selected(player_code: String) -> void:
 
 func _on_social_operation_completed(action: String, data: Variant) -> void:
 	match action:
+		"blocked_list":
+			for child in blocked_players_box.get_children():
+				child.queue_free()
+			if data is Array:
+				for blocked in data:
+					if not blocked is Dictionary:
+						continue
+					var code := str(blocked.get("player_code", ""))
+					var display_name := str(blocked.get("display_name", "لاعب"))
+					var unblock_button := Button.new()
+					unblock_button.text = "إلغاء: " + display_name.substr(0, 12)
+					unblock_button.pressed.connect(func():
+						SocialChatManager.unblock_player(code)
+					)
+					blocked_players_box.add_child(unblock_button)
+			if blocked_players_box.get_child_count() == 0:
+				var empty_blocked := Label.new()
+				empty_blocked.text = "قائمة الحظر فارغة"
+				blocked_players_box.add_child(empty_blocked)
+		"unblock_player":
+			social_chat_status.text = "نتيجة إلغاء الحظر: " + str(data)
+			if str(data) == "unblocked":
+				_refresh_blocked_players()
+		"report_player":
+			player_action_status.text = "نتيجة البلاغ: " + str(data)
+			if str(data) == "report_submitted":
+				player_popup.visible = false
+		"block_player":
+			player_action_status.text = "نتيجة الحظر: " + str(data)
+			if str(data) == "blocked":
+				player_popup.visible = false
+				_refresh_blocked_players()
 		"friends_list":
 			for child in social_friends_box.get_children():
 				child.queue_free()
@@ -1133,10 +1205,6 @@ func _on_social_operation_completed(action: String, data: Variant) -> void:
 				social_friends_box.add_child(empty_label)
 			social_chat_status.text = "تم تحميل قائمة الأصدقاء من الخادم."
 			SocialChatManager.get_chat_group()
-		"block_player":
-			player_action_status.text = "نتيجة الحظر: " + str(data)
-			if str(data) == "blocked":
-				player_popup.visible = false
 		"friend_request":
 			social_chat_status.text = "نتيجة طلب الصداقة: " + str(data)
 			if str(data) == "sent":
