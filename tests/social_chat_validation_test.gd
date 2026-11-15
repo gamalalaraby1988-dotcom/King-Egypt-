@@ -189,7 +189,7 @@ func _run_social_validation_tests() -> void:
 	var portrait_world := portrait_viewport.get_child(0) as Node3D
 	var portrait_character := portrait_world.get_child(2) as Node3D
 	if portrait_viewport.size != Vector2i(104, 104) or portrait_character == null or str(portrait_character.get("current_outfit")) != "men_formal":
-		push_error("The male friend portrait viewport did not render the selected in-game character preset.")
+		push_error("Male portrait diagnostic: viewport_size=%s, world_children=%s, character=%s, outfit=%s, hairstyle=%s" % [str(portrait_viewport.size), str(portrait_world.get_children().map(func(node): return node.name)), str(portrait_character), str(portrait_character.get("current_outfit")) if portrait_character != null else "null", str(portrait_character.get("current_hairstyle")) if portrait_character != null else "null"])
 		quit(1)
 		return
 	male_portrait.free()
