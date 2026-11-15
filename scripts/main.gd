@@ -23,6 +23,7 @@ var interior_hidden_world_states: Dictionary = {}
 var city_vehicle: CharacterBody3D = null
 var vehicle_interaction_button: Button = null
 var vehicle_summon_button: Button = null
+var showroom_layer: CanvasLayer = null
 var vehicle_occupied := false
 var _vehicle_key_was_down := false
 var _player_saved_collision_layer := 1
@@ -89,7 +90,11 @@ func _process(_delta: float) -> void:
 			vehicle_interaction_button.visible = false
 		if is_instance_valid(vehicle_summon_button):
 			vehicle_summon_button.visible = false
+		if is_instance_valid(showroom_layer):
+			showroom_layer.visible = false
 		return
+	if is_instance_valid(showroom_layer):
+		showroom_layer.visible = true
 	if vehicle_occupied and (not is_instance_valid(city_vehicle) or not is_instance_valid(get_node_or_null("Player"))):
 		_recover_vehicle_occupancy()
 	if vehicle_occupied:
@@ -129,7 +134,7 @@ func _create_player_vehicle() -> void:
 	add_child(layer)
 
 	# معرض المركبات منفصل عن الاستدعاء والملكية؛ لا ينفذ شراء أو يغيّر المركبة المختارة.
-	var showroom_layer := CanvasLayer.new()
+	showroom_layer = CanvasLayer.new()
 	showroom_layer.name = "VehicleShowroomUI"
 	showroom_layer.set_script(load("res://scripts/vehicle_showroom_ui.gd"))
 	add_child(showroom_layer)
