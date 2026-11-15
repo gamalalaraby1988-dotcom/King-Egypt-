@@ -150,6 +150,16 @@ func _run_social_validation_tests() -> void:
 		quit(1)
 		return
 
+	var male_portrait_scene := city_hud.get_friend_character_scene_path({"selected_character_id":"eg_m_adam"})
+	var female_portrait_scene := city_hud.get_friend_character_scene_path({"selected_character_id":"eg_f_layan"})
+	if male_portrait_scene != "res://scenes/characters/avatar_visual.tscn" or female_portrait_scene != "res://scenes/characters/avatar_visual.tscn":
+		push_error("A supported male/female roster ID did not resolve to the in-game character preview scene.")
+		quit(1)
+		return
+	if city_hud.get_friend_character_scene_path({"selected_character_id":"xx_m_unknown"}) != "":
+		push_error("An unknown character ID was allowed to resolve to a portrait scene.")
+		quit(1)
+		return
 	if city_hud.get_friend_character_scene_path({"selected_character_id":"https://example.com/avatar.png"}) != "":
 		push_error("The friend portrait resolver accepted an external image URL.")
 		quit(1)
