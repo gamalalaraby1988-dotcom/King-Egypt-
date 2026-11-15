@@ -88,7 +88,7 @@ func _run_social_validation_tests() -> void:
 		push_error("A realtime channel retry fired before its backoff elapsed.")
 		quit(1)
 		return
-	var due_retries := social._take_due_realtime_topic_retries(1.1)
+	var due_retries: Array[String] = social._take_due_realtime_topic_retries(1.1)
 	if due_retries.size() != 1 or due_retries[0] != "chat:direct:retry":
 		push_error("A failed active realtime channel was not scheduled for retry.")
 		quit(1)
@@ -131,7 +131,7 @@ func _run_social_validation_tests() -> void:
 		"chat:direct:removed": 0.0,
 		"chat:direct:active": 0.0
 	}
-	var ignored_retries := social._take_due_realtime_topic_retries(0.0)
+	var ignored_retries: Array[String] = social._take_due_realtime_topic_retries(0.0)
 	if not ignored_retries.is_empty() or not social._realtime_topic_retry_seconds.is_empty():
 		push_error("Obsolete or already-joined realtime topics were retried.")
 		quit(1)
