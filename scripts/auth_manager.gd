@@ -6,6 +6,8 @@ extends Node
 signal otp_sent(email: String)
 signal authenticated(user_id: String, email: String)
 signal session_refreshed()
+signal test_player_account_ready(test_account_id: String, player_code: String, created: bool)
+signal test_player_account_failed(message: String)
 signal authentication_failed(message: String)
 
 const SUPABASE_URL := "https://unwrlvyjrtdwobcktetd.supabase.co"
@@ -13,8 +15,13 @@ const SUPABASE_PUBLISHABLE_KEY := "sb_publishable_BrWeMmhyOpL73Uca40Ug0Q_8Zgw55s
 const OTP_ENDPOINT := SUPABASE_URL + "/auth/v1/otp"
 const VERIFY_ENDPOINT := SUPABASE_URL + "/auth/v1/verify"
 const REFRESH_ENDPOINT := SUPABASE_URL + "/auth/v1/token?grant_type=refresh_token"
+const ENSURE_TEST_PLAYER_ENDPOINT := SUPABASE_URL + "/rest/v1/rpc/ensure_my_test_player_account"
 
 var _http: HTTPRequest
+var _provision_http: HTTPRequest
+var _provision_pending := false
+var _test_account_id := ""
+var _player_code := ""
 var _refresh_timer: Timer
 var _session_expires_at := 0
 var _pending_action := ""
@@ -30,6 +37,11 @@ func _ready() -> void:
 	_http.timeout = 20.0
 	add_child(_http)
 	_http.request_completed.connect(_on_request_completed)
+	_provision_http = HTTPRequest.new()
+	_provision_http.name = "SupabaseTestPlayerProvisionHTTPRequest"
+	_provision_http.timeout = 20.0
+	add_child(_provision_http)
+	_provision_http.request_completed.connect(_on_provision_request_completed)
 	_refresh_timer = Timer.new()
 	_refresh_timer.name = "AuthSessionRefreshTimer"
 	_refresh_timer.one_shot = true
@@ -115,6 +127,33 @@ func refresh_session() -> bool:
 		return false
 	return true
 
+func ensure_my_test_player_account() -> bool:
+	# Explicit call only; the server allowlist must authorize this Auth UID.
+	if not is_authenticated():
+		test_player_account_failed.emit("سجّل الدخول وتحقق من بريدك أولًا.")
+		return false
+	if not _test_account_id.is_empty():
+		test_player_account_ready.emit(_test_account_id, _player_code, false)
+		return true
+	if _provision_pending or _provision_http.get_http_client_status() != HTTPClient.STATUS_DISCONNECTED:
+		test_player_account_failed.emit("طلب تجهيز حساب اللاعب قيد التنفيذ.")
+		return false
+	_provision_pending = true
+	var headers := _get_headers()
+	headers.append("Authorization: Bearer " + _access_token)
+	var error := _provision_http.request(ENSURE_TEST_PLAYER_ENDPOINT, headers, HTTPClient.METHOD_POST, "{}")
+	if error != OK:
+		_provision_pending = false
+		test_player_account_failed.emit("تعذر بدء تجهيز حساب اللاعب. حاول مرة أخرى.")
+		return false
+	return true
+
+func get_test_account_id() -> String:
+	return _test_account_id
+
+func get_player_code() -> String:
+	return _player_code
+
 func is_authenticated() -> bool:
 	return not _access_token.is_empty() and not _authenticated_user_id.is_empty()
 
@@ -151,6 +190,11 @@ func clear_session() -> void:
 	_refresh_token = ""
 	_authenticated_user_id = ""
 	_authenticated_email = ""
+	_test_account_id = ""
+	_player_code = ""
+	if is_instance_valid(_provision_http) and _provision_pending:
+		_provision_http.cancel_request()
+		_provision_pending = false
 
 func _get_headers() -> PackedStringArray:
 	return PackedStringArray([
@@ -230,6 +274,37 @@ func _on_request_completed(
 		_authenticated_email = str(refreshed_user.get("email", _authenticated_email))
 		_schedule_session_refresh(parsed)
 		session_refreshed.emit()
+
+func _on_provision_request_completed(result: int, response_code: int, _response_headers: PackedStringArray, body: PackedByteArray) -> void:
+	_provision_pending = false
+	if not is_authenticated():
+		return
+	if result != HTTPRequest.RESULT_SUCCESS:
+		test_player_account_failed.emit("تعذر الاتصال بخدمة تجهيز حساب اللاعب.")
+		return
+	var response_text := body.get_string_from_utf8()
+	var parsed: Variant = JSON.parse_string(response_text)
+	if response_code < 200 or response_code >= 300:
+		if parsed is Dictionary and str(parsed.get("message", "")).contains("test_provisioning_not_enabled"):
+			test_player_account_failed.emit("حساب الاختبار غير مفعّل للتجهيز بعد. لم يتم إنشاء أي حساب.")
+		elif response_code == 401:
+			test_player_account_failed.emit("انتهت جلسة الدخول. سجّل الدخول مجددًا.")
+		else:
+			test_player_account_failed.emit("رفض الخادم تجهيز حساب اللاعب. لم يتم إنشاء حساب.")
+		return
+	if not parsed is Array or parsed.is_empty() or not parsed[0] is Dictionary:
+		test_player_account_failed.emit("استجابة تجهيز حساب اللاعب غير صالحة.")
+		return
+	var account_data: Dictionary = parsed[0]
+	var account_id := str(account_data.get("test_account_id", ""))
+	var code := str(account_data.get("player_code", ""))
+	var was_created: bool = account_data.get("created", false) == true
+	if account_id.is_empty() or code.length() != 10 or not code.is_valid_identifier():
+		test_player_account_failed.emit("بيانات هوية اللاعب المستلمة غير مكتملة.")
+		return
+	_test_account_id = account_id
+	_player_code = code
+	test_player_account_ready.emit(_test_account_id, _player_code, was_created)
 
 func _safe_auth_error(parsed: Variant) -> String:
 	if parsed is Dictionary:
