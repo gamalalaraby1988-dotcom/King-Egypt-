@@ -25,7 +25,9 @@ func _process(delta: float) -> void:
 		return
 	_check_elapsed = 0.0
 
+	# لا نحتفظ بتفاصيل المنطقة إذا اختفى اللاعب أو أُلغي مشهدها المصدر.
 	if not is_instance_valid(player) or region_scene == null:
+		_unload_region()
 		return
 
 	var distance_squared := global_position.distance_squared_to(player.global_position)
