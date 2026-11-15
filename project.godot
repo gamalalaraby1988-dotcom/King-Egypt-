@@ -8,6 +8,7 @@ config/features=PackedStringArray("4.7", "GL Compatibility")
 config/description="مشروع مدينة ثلاثية الأبعاد قابل للتطوير"
 
 [autoload]
+AuthManager="*res://scripts/auth_manager.gd"
 CityLanguage="*res://scripts/city_language.gd"
 WalletManager="*res://scripts/wallet_manager.gd"
 VehicleStoreManager="*res://scripts/vehicle_store_manager.gd"
