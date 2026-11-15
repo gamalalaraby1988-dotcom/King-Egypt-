@@ -932,7 +932,7 @@ func receive_group_move_order(target_position: Vector3) -> void:
 	group_meeting_position = target_position
 	_show_group_meeting_marker(target_position)
 	if is_instance_valid(group_meeting_status):
-		group_meeting_status.text = "القائد بدأ التحرك إلى نقطة التجمع. اتبع العلامة على الخريطة."
+		group_meeting_status.text = "القائد بدأ التحرك إلى نقطة التجمع. اتبع علامة التجمع داخل المدينة."
 
 
 func _set_group_meeting_point_here() -> void:
