@@ -174,7 +174,7 @@ func _toggle_vehicle_use() -> void:
 	var player := get_node_or_null("Player") as CharacterBody3D
 	if not is_instance_valid(player) or not is_instance_valid(city_vehicle):
 		return
-	if player.global_position.distance_to(city_vehicle.global_position) > 5.0:
+	if player.global_position.distance_squared_to(city_vehicle.global_position) > 25.0:
 		return
 	if player.get("animal_riding") == true or player.get("sitting") == true:
 		return
@@ -272,7 +272,7 @@ func _exit_player_vehicle() -> void:
 	_set_mobile_hud_active(true)
 	if is_instance_valid(vehicle_interaction_button):
 		vehicle_interaction_button.text = "ركوب السيارة" if CityLanguage.get_language() == "ar" else "Enter vehicle"
-		vehicle_interaction_button.visible = player.global_position.distance_to(city_vehicle.global_position) <= 5.0
+		vehicle_interaction_button.visible = player.global_position.distance_squared_to(city_vehicle.global_position) <= 25.0
 
 func _create_interior_transition_ui() -> void:
 	interior_loading_layer = CanvasLayer.new()
