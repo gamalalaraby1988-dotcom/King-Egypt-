@@ -67,7 +67,21 @@ func _run_auth_session_tests() -> void:
 		quit(1)
 		return
 
+	var mission_manager := root.get_node_or_null("MissionManager")
+	if mission_manager == null:
+		push_error("MissionManager autoload did not initialize.")
+		quit(1)
+		return
+	mission_manager.owned_outfits = ["default", "ci_previous_account_outfit"]
+	mission_manager.daily_chest_reward_configured = true
+	mission_manager.daily_chest_server_claimed = true
+	mission_manager.daily_chest_reward_day = "2099-01-01"
+
 	auth.clear_session()
+	if mission_manager.owned_outfits != ["default"] or mission_manager.daily_chest_reward_configured or mission_manager.daily_chest_server_claimed or not mission_manager.daily_chest_reward_day.is_empty():
+		push_error("Mission state from the previous account remained after session invalidation.")
+		quit(1)
+		return
 	if auth.is_authenticated():
 		push_error("clear_session did not clear authentication.")
 		quit(1)
