@@ -176,8 +176,9 @@ func _refresh_daily_chest_status() -> void:
 		return
 	if not AuthManager.is_session_current(_profile_session_uid, _profile_session_generation):
 		return
-	if SocialChatManager.get_daily_chest_status():
-		_track_daily_chest_request("daily_chest_status")
+	_track_daily_chest_request("daily_chest_status")
+	if not SocialChatManager.get_daily_chest_status() and _daily_chest_request_action == "daily_chest_status":
+		_clear_daily_chest_request()
 
 func _track_daily_chest_request(action: String) -> void:
 	_daily_chest_request_action = action
@@ -284,8 +285,9 @@ func _claim_daily_chest_reward() -> void:
 		return
 	accept_button.disabled = true
 	status_label.text = "جارٍ التحقق من استحقاقك للمكافأة..."
-	if SocialChatManager.claim_daily_chest_reward():
-		_track_daily_chest_request("daily_chest_claim")
+	_track_daily_chest_request("daily_chest_claim")
+	if not SocialChatManager.claim_daily_chest_reward() and _daily_chest_request_action == "daily_chest_claim":
+		_clear_daily_chest_request()
 
 func _refresh_navigation_language() -> void:
 	if is_instance_valid(navigation_cancel_button):
