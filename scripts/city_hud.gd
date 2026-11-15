@@ -649,7 +649,7 @@ func _build_group_popup() -> void:
 	group_meeting_status = Label.new()
 	group_meeting_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	group_meeting_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	group_meeting_status.text = "لم يتم تحديد مكان تجمع بعد."
+	group_meeting_status.text = "التجمع يتم عند موقع القائد الحالي داخل المدينة؛ لا توجد نقطة مستقلة."
 	box.add_child(group_meeting_status)
 	group_follow_button = Button.new()
 	group_follow_button.name = "GroupFollowLeaderButton"
@@ -842,20 +842,6 @@ func _toggle_group_follow_mode() -> void:
 		group_meeting_status.text = "تم طلب متابعة تحرك القائد. يبدأ التحرك الفعلي بعد مزامنة الخادم." if group_follow_enabled else "تم إيقاف متابعة تحرك القائد."
 
 
-func _start_group_move_to_meeting_point() -> void:
-	if not _is_local_group_leader():
-		group_meeting_status.text = "هذا الأمر متاح لقائد المجموعة فقط."
-		return
-	if group_members.size() <= 1:
-		group_meeting_status.text = "أضف أعضاء إلى المجموعة أولًا."
-		return
-	if group_meeting_position == Vector3.ZERO:
-		group_meeting_status.text = "حدد مكان التجمع أولًا."
-		return
-	group_leader_move_requested.emit(group_meeting_position)
-	group_meeting_status.text = "تم تجهيز أمر التحرك إلى نقطة التجمع. سيصل للأعضاء عبر الخادم."
-
-
 func receive_group_member_positions(member_positions: Array) -> void:
 	# تستدعى بعد تحقق الخادم من عضوية كل لاعب؛ لا تنشئ شخصيات لعب حقيقية من بيانات غير موثوقة.
 	if not is_instance_valid(main_scene) or not main_scene.is_inside_tree():
@@ -920,22 +906,6 @@ func receive_group_move_order(target_position: Vector3) -> void:
 	group_meeting_position = target_position
 	if is_instance_valid(group_meeting_status):
 		group_meeting_status.text = "القائد دعا المجموعة للتجمع عند موقعه الحالي داخل المدينة."
-
-
-func _set_group_meeting_point_here() -> void:
-	if not _is_local_group_leader():
-		group_meeting_status.text = "تحديد مكان التجمع متاح لقائد المجموعة فقط."
-		return
-	if group_members.size() <= 1:
-		group_meeting_status.text = "أضف عضوًا إلى المجموعة أولًا لتحديد مكان تجمع."
-		return
-	var player := main_scene.get_node_or_null("Player") as Node3D if is_instance_valid(main_scene) else null
-	if not is_instance_valid(player):
-		group_meeting_status.text = "تعذر تحديد موقعك الحالي."
-		return
-	group_meeting_position = player.global_position
-	group_meeting_point_requested.emit(group_meeting_position)
-	group_meeting_status.text = "موقعك الحالي هو موقع تجمع المجموعة؛ لا توجد نقطة أو علامة مستقلة."
 
 
 func receive_group_meeting_point(position: Vector3, leader_name: String = "قائد المجموعة") -> void:
