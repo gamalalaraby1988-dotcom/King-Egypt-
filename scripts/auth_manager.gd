@@ -249,6 +249,8 @@ func _on_request_completed(
 		if user_id.is_empty():
 			authentication_failed.emit("تعذر تأكيد هوية الحساب.")
 			return
+		_test_account_id = ""
+		_player_code = ""
 		_access_token = access
 		_refresh_token = refresh
 		_authenticated_user_id = user_id
@@ -299,7 +301,9 @@ func _on_provision_request_completed(result: int, response_code: int, _response_
 	var account_id := str(account_data.get("test_account_id", ""))
 	var code := str(account_data.get("player_code", ""))
 	var was_created: bool = account_data.get("created", false) == true
-	if account_id.is_empty() or code.length() != 10 or not code.is_valid_identifier():
+	var code_pattern := RegEx.new()
+	code_pattern.compile("^[A-Z0-9]{10}$")
+	if account_id.is_empty() or code_pattern.search(code) == null:
 		test_player_account_failed.emit("بيانات هوية اللاعب المستلمة غير مكتملة.")
 		return
 	_test_account_id = account_id
