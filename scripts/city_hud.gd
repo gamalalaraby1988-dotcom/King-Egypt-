@@ -55,6 +55,10 @@ var social_chat_input: LineEdit
 var social_chat_status: Label
 var social_chat_channel := "العامة"
 var social_chat_unread := false
+var social_friends_box: VBoxContainer
+var friend_search_input: LineEdit
+var selected_friend_code := ""
+var selected_friend_conversation_id := ""
 
 const GROUP_MAX_MEMBERS := 4
 const GROUP_CHAT_MAX_LENGTH := 300
@@ -85,6 +89,14 @@ func _ready() -> void:
 	_build_group_popup()
 	_build_group_chat_popup()
 	_build_social_chat_panel()
+	if not SocialChatManager.operation_completed.is_connected(_on_social_operation_completed):
+		SocialChatManager.operation_completed.connect(_on_social_operation_completed)
+	if not SocialChatManager.operation_failed.is_connected(_on_social_operation_failed):
+		SocialChatManager.operation_failed.connect(_on_social_operation_failed)
+	if AuthManager.is_authenticated():
+		_refresh_social_friends()
+	else:
+		AuthManager.authenticated.connect(_on_social_authenticated)
 	_refresh_wallet()
 
 
@@ -953,20 +965,30 @@ func _build_social_chat_panel() -> void:
 	friends_heading.text = "👥 الأصدقاء"
 	friends_heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	friends_column.add_child(friends_heading)
-	var friend_search := LineEdit.new()
-	friend_search.name = "FriendSearchInput"
-	friend_search.placeholder_text = "اسم / ID"
-	friend_search.add_theme_font_size_override("font_size", 11)
-	friends_column.add_child(friend_search)
+	friend_search_input = LineEdit.new()
+	friend_search_input.name = "FriendSearchInput"
+	friend_search_input.placeholder_text = "رمز اللاعب (10)"
+	friend_search_input.add_theme_font_size_override("font_size", 11)
+	friends_column.add_child(friend_search_input)
+	var add_friend_button := Button.new()
+	add_friend_button.text = "إرسال طلب"
+	add_friend_button.pressed.connect(_send_friend_request_from_search)
+	friends_column.add_child(add_friend_button)
+	var refresh_friends_button := Button.new()
+	refresh_friends_button.text = "تحديث"
+	refresh_friends_button.pressed.connect(_refresh_social_friends)
+	friends_column.add_child(refresh_friends_button)
 	var friends_scroll := ScrollContainer.new()
 	friends_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	friends_column.add_child(friends_scroll)
+	social_friends_box = VBoxContainer.new()
+	social_friends_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	friends_scroll.add_child(social_friends_box)
 	var friends_placeholder := Label.new()
-	friends_placeholder.name = "FriendsListPlaceholder"
-	friends_placeholder.text = "قائمة الأصدقاء\nستظهر بعد\nالاتصال بالخادم"
+	friends_placeholder.text = "سجّل الدخول لعرض الأصدقاء"
 	friends_placeholder.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	friends_placeholder.add_theme_font_size_override("font_size", 11)
-	friends_scroll.add_child(friends_placeholder)
+	social_friends_box.add_child(friends_placeholder)
 
 	var conversation := VBoxContainer.new()
 	conversation.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -1010,19 +1032,117 @@ func _open_social_chat_panel() -> void:
 	if not is_instance_valid(social_chat_panel):
 		return
 	social_chat_panel.visible = true
+	if AuthManager.is_authenticated():
+		_refresh_social_friends()
 	if is_instance_valid(social_chat_input):
 		social_chat_input.grab_focus()
+
+
+func _on_social_authenticated(_user_id: String, _email: String) -> void:
+	_refresh_social_friends()
+
+
+func _refresh_social_friends() -> void:
+	if AuthManager.is_authenticated():
+		SocialChatManager.list_friends()
+
+
+func _send_friend_request_from_search() -> void:
+	if not is_instance_valid(friend_search_input):
+		return
+	var code := friend_search_input.text.strip_edges().to_upper()
+	if not code.is_valid_filename() or code.length() != 10:
+		social_chat_status.text = "أدخل رمز اللاعب المكوّن من 10 أحرف."
+		return
+	SocialChatManager.send_friend_request(code)
+
+
+func _on_social_friend_selected(player_code: String) -> void:
+	selected_friend_code = player_code
+	selected_friend_conversation_id = ""
+	social_chat_log.clear()
+	social_chat_status.text = "جارٍ فتح محادثة الصديق..."
+	SocialChatManager.open_direct_conversation(player_code)
+
+
+func _on_social_operation_completed(action: String, data: Variant) -> void:
+	match action:
+		"friends_list":
+			for child in social_friends_box.get_children():
+				child.queue_free()
+			if data is Array:
+				for friend in data:
+					if not friend is Dictionary:
+						continue
+					var code := str(friend.get("player_code", ""))
+					var display_name := str(friend.get("display_name", "صديق"))
+					var friend_button := Button.new()
+					friend_button.text = display_name.substr(0, 18) + "\\n" + code
+					friend_button.custom_minimum_size.y = 48
+					friend_button.pressed.connect(_on_social_friend_selected.bind(code))
+					social_friends_box.add_child(friend_button)
+			if social_friends_box.get_child_count() == 0:
+				var empty_label := Label.new()
+				empty_label.text = "لا يوجد أصدقاء بعد"
+				social_friends_box.add_child(empty_label)
+			social_chat_status.text = "تم تحميل قائمة الأصدقاء من الخادم."
+		"friend_request":
+			social_chat_status.text = "نتيجة طلب الصداقة: " + str(data)
+			if str(data) == "sent":
+				friend_search_input.clear()
+				_refresh_social_friends()
+		"direct_open":
+			if data is Array and not data.is_empty() and data[0] is Dictionary:
+				var result: Dictionary = data[0]
+				if bool(result.get("success", false)):
+					selected_friend_conversation_id = str(result.get("conversation_id", ""))
+					SocialChatManager.read_direct_messages(selected_friend_conversation_id)
+				else:
+					social_chat_status.text = "تعذر فتح المحادثة: " + str(result.get("error_code", "unknown"))
+		"direct_read":
+			social_chat_log.clear()
+			if data is Array:
+				for row in data.duplicate():
+					pass
+				var ordered: Array = data.duplicate()
+				ordered.reverse()
+				for item in ordered:
+					if not item is Dictionary:
+						continue
+					var sender := "أنت" if bool(item.get("sender_is_me", false)) else "الصديق"
+					var body := str(item.get("body", "")).replace("[", "(").replace("]", ")")
+					social_chat_log.append_text("[color=gold][" + sender + "][/color] " + body + "\\n")
+			social_chat_status.text = "محادثة الأصدقاء متصلة."
+		"direct_send":
+			if data is Array and not data.is_empty() and data[0] is Dictionary and bool(data[0].get("success", false)):
+				social_chat_input.clear()
+				SocialChatManager.read_direct_messages(selected_friend_conversation_id)
+			else:
+				social_chat_status.text = "لم تُرسل الرسالة؛ تحقق من الصداقة والاتصال."
+		_:
+			social_chat_status.text = "اكتملت العملية: " + action
+
+
+func _on_social_operation_failed(action: String, message: String) -> void:
+	social_chat_status.text = "تعذر تنفيذ " + action + ": " + message
 
 
 func _select_social_chat_channel(channel: String) -> void:
 	if not ["الأصدقاء", "المجموعة", "العامة"].has(channel):
 		return
 	social_chat_channel = channel
+	selected_friend_conversation_id = ""
 	if is_instance_valid(social_chat_log):
 		social_chat_log.clear()
-		social_chat_log.append_text("[color=gray]قناة %s — لا يوجد اتصال خادمي نشط حتى الآن.[/color]" % channel)
-	if is_instance_valid(social_chat_status):
-		social_chat_status.text = "القناة: %s | غير متصلة بالخادم — القنوات نفسها متاحة داخل الشقة" % channel
+	if channel == "الأصدقاء":
+		_refresh_social_friends()
+		social_chat_status.text = "اختر صديقًا من القائمة لفتح محادثته الخاصة."
+	elif channel == "المجموعة":
+		social_chat_status.text = "دردشة المجموعة تنتظر ربط خدمة المجموعات بالخادم."
+		social_chat_log.append_text("[color=gray]رسائل المجموعة غير متصلة حاليًا.[/color]")
+	else:
+		social_chat_status.text = "الدردشة العامة تنتظر إنشاء قناة عامة آمنة على الخادم."
+		social_chat_log.append_text("[color=gray]الرسائل العامة غير متصلة حاليًا.[/color]")
 
 
 func _insert_social_chat_emoji(emoji: String) -> void:
@@ -1039,11 +1159,15 @@ func _submit_social_chat_message(raw_message: String) -> void:
 		return
 	if message.length() > GROUP_CHAT_MAX_LENGTH:
 		message = message.substr(0, GROUP_CHAT_MAX_LENGTH)
-	# لا نعرض الرسالة كمرسلة؛ لا يوجد بعد عميل RPC/Realtime موصول بهذه القناة.
-	if is_instance_valid(social_chat_status):
-		social_chat_status.text = "لم تُرسل الرسالة: الاتصال بالخادم لم يُفعّل بعد."
-	if is_instance_valid(social_chat_input):
-		social_chat_input.text = message
+	if social_chat_channel == "الأصدقاء":
+		if selected_friend_conversation_id.is_empty():
+			social_chat_status.text = "اختر صديقًا أولًا لفتح محادثته."
+			return
+		SocialChatManager.send_direct_message(selected_friend_conversation_id, message)
+	elif social_chat_channel == "المجموعة":
+		social_chat_status.text = "لم تُرسل الرسالة: اتصال دردشة المجموعة لم يُفعّل بعد."
+	else:
+		social_chat_status.text = "لم تُرسل الرسالة: اتصال الدردشة العامة لم يُفعّل بعد."
 
 
 func _build_group_chat_popup() -> void:
