@@ -359,6 +359,11 @@ func _create_interior_quick_travel_ui() -> void:
 	note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	note.add_theme_font_size_override("font_size", 12)
 	content.add_child(note)
+	var close_menu_button := Button.new()
+	close_menu_button.text = "إغلاق"
+	close_menu_button.custom_minimum_size = Vector2(270, 42)
+	close_menu_button.pressed.connect(_hide_interior_quick_travel_menu)
+	content.add_child(close_menu_button)
 
 func show_interior_quick_travel_menu() -> void:
 	if interior_transition_busy or not is_instance_valid(interior_root) or not is_instance_valid(interior_quick_travel_panel):
