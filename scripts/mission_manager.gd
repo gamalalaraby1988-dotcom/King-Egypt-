@@ -78,13 +78,17 @@ var daily_chest_reward_day := ""
 
 var _key_was_down := false
 
-const SAVE_PATH := "user://kings_city_profile.cfg"
 const MAX_CURRENCY_BALANCE := 2000000000
 
 func _ready() -> void:
 	_build_ui()
 	_create_target_marker()
-	_load_profile()
+	if not AccountDataSession.session_ready.is_connected(_on_account_session_ready):
+		AccountDataSession.session_ready.connect(_on_account_session_ready)
+	if not AccountDataSession.session_invalidated.is_connected(_on_account_session_invalidated):
+		AccountDataSession.session_invalidated.connect(_on_account_session_invalidated)
+	if AccountDataSession.is_ready():
+		_on_account_session_ready(AccountDataSession.get_user_id(), AccountDataSession.get_generation(), AccountDataSession.get_profile_path())
 	CityLanguage.language_changed.connect(_refresh_navigation_language)
 	if not SocialChatManager.operation_completed.is_connected(_on_daily_chest_rpc_completed):
 		SocialChatManager.operation_completed.connect(_on_daily_chest_rpc_completed)
@@ -96,6 +100,10 @@ func _ready() -> void:
 		AuthManager.authenticated.connect(_on_daily_chest_authenticated)
 
 func _exit_tree() -> void:
+	if AccountDataSession.session_ready.is_connected(_on_account_session_ready):
+		AccountDataSession.session_ready.disconnect(_on_account_session_ready)
+	if AccountDataSession.session_invalidated.is_connected(_on_account_session_invalidated):
+		AccountDataSession.session_invalidated.disconnect(_on_account_session_invalidated)
 	if CityLanguage.language_changed.is_connected(_refresh_navigation_language):
 		CityLanguage.language_changed.disconnect(_refresh_navigation_language)
 	if SocialChatManager.operation_completed.is_connected(_on_daily_chest_rpc_completed):
@@ -105,6 +113,39 @@ func _exit_tree() -> void:
 	if AuthManager.authenticated.is_connected(_on_daily_chest_authenticated):
 		AuthManager.authenticated.disconnect(_on_daily_chest_authenticated)
 
+
+
+var _profile_session_uid := ""
+var _profile_session_generation := -1
+
+func _on_account_session_ready(user_id: String, generation: int, _profile_path: String) -> void:
+	if not AccountDataSession.is_session_current(user_id, generation):
+		return
+	_profile_session_uid = user_id
+	_profile_session_generation = generation
+	_load_profile()
+
+func _on_account_session_invalidated(_previous_user_id: String, _generation: int) -> void:
+	_profile_session_uid = ""
+	_profile_session_generation = -1
+	player_level = 1
+	xp = 0
+	money = 0
+	chips = 0
+	completed_missions = {}
+	completed_jobs = {}
+	reward_receipts = {}
+	achievement_totals = {"jobs": 0, "missions": 0, "daily_claims": 0}
+	achievement_events = {}
+	achievement_stats_initialized = false
+	daily_task_progress = {}
+	daily_task_events = {}
+
+func _has_active_profile_session() -> bool:
+	return AccountDataSession.is_session_current(_profile_session_uid, _profile_session_generation) and WalletManager.initialized
+
+func _profile_save_path() -> String:
+	return AccountDataSession.get_profile_path() if _has_active_profile_session() else ""
 
 func _on_daily_chest_authenticated(_user_id: String, _email: String) -> void:
 	_refresh_daily_chest_status()
@@ -220,6 +261,8 @@ func _notification(what: int) -> void:
 		_save_profile()
 
 func grant_reward_once(reward_id: String, money_amount: int = 0, xp_amount: int = 0, chips_amount: int = 0) -> bool:
+	if not _has_active_profile_session():
+		return false
 	# يسجل الإيصال والمحفظة في ملف واحد؛ تكرار نفس المعرف لا يصرف المكافأة مجددًا.
 	if reward_id.is_empty() or money_amount < 0 or xp_amount < 0 or chips_amount < 0 or money + money_amount > MAX_CURRENCY_BALANCE or chips + chips_amount > MAX_CURRENCY_BALANCE or reward_receipts.has(reward_id):
 		return false
@@ -233,8 +276,8 @@ func grant_reward_once(reward_id: String, money_amount: int = 0, xp_amount: int 
 	var next_receipts := reward_receipts.duplicate(true)
 	next_receipts[reward_id] = Time.get_datetime_string_from_system()
 	var config := ConfigFile.new()
-	var load_error := config.load(SAVE_PATH)
-	if load_error != OK and FileAccess.file_exists(SAVE_PATH):
+	var load_error := config.load(_profile_save_path())
+	if load_error != OK and FileAccess.file_exists(_profile_save_path()):
 		push_warning("ملف اللاعب موجود لكنه غير قابل للقراءة؛ أُوقفت إضافة المكافأة لحماية البيانات.")
 		return false
 	config.set_value("profile", "player_level", next_level)
@@ -262,6 +305,8 @@ func grant_reward_once(reward_id: String, money_amount: int = 0, xp_amount: int 
 	return true
 
 func record_achievement_event_once(event_id: String, stat_key: String) -> bool:
+	if not _has_active_profile_session():
+		return false
 	# عدادات الإنجازات ومعرّفات أحداثها تحفظ داخل ملف اللاعب نفسه.
 	# هذا يجعل تسجيل التقدم قابلًا لإعادة المحاولة دون مضاعفة العداد.
 	if event_id.is_empty() or not ["jobs", "missions", "daily_claims"].has(stat_key):
@@ -273,8 +318,8 @@ func record_achievement_event_once(event_id: String, stat_key: String) -> bool:
 	next_totals[stat_key] = int(next_totals.get(stat_key, 0)) + 1
 	next_events[event_id] = Time.get_datetime_string_from_system()
 	var config := ConfigFile.new()
-	var load_error := config.load(SAVE_PATH)
-	if load_error != OK and FileAccess.file_exists(SAVE_PATH):
+	var load_error := config.load(_profile_save_path())
+	if load_error != OK and FileAccess.file_exists(_profile_save_path()):
 		push_warning("ملف اللاعب غير قابل للقراءة؛ لم يتم تسجيل تقدم الإنجاز.")
 		return false
 	config.set_value("profile", "player_level", player_level)
@@ -300,12 +345,14 @@ func record_achievement_event_once(event_id: String, stat_key: String) -> bool:
 	return true
 
 func initialize_achievement_totals_if_missing(legacy_totals: Dictionary) -> bool:
+	if not _has_active_profile_session():
+		return false
 	if achievement_stats_initialized:
 		return true
 	var migrated := {"jobs": maxi(0, int(legacy_totals.get("jobs", 0))), "missions": maxi(0, int(legacy_totals.get("missions", 0))), "daily_claims": maxi(0, int(legacy_totals.get("daily_claims", 0)))}
 	var config := ConfigFile.new()
-	var load_error := config.load(SAVE_PATH)
-	if load_error != OK and FileAccess.file_exists(SAVE_PATH):
+	var load_error := config.load(_profile_save_path())
+	if load_error != OK and FileAccess.file_exists(_profile_save_path()):
 		push_warning("تعذر ترحيل عدادات الإنجازات لأن ملف اللاعب غير قابل للقراءة.")
 		return false
 	config.set_value("profile", "player_level", player_level)
@@ -335,6 +382,8 @@ func has_reward_receipt(reward_id: String) -> bool:
 	return reward_receipts.has(reward_id)
 
 func complete_activity_once(activity_id: String, activity_kind: String, money_amount: int = 0, xp_amount: int = 0, chips_amount: int = 0) -> bool:
+	if not _has_active_profile_session():
+		return false
 	# حفظ إكمال النشاط وإيصال المكافأة والمحفظة في ملف واحد يمنع إعادة الصرف بعد إعادة التشغيل.
 	if activity_id.is_empty() or money_amount < 0 or xp_amount < 0 or chips_amount < 0 or money + money_amount > MAX_CURRENCY_BALANCE or chips + chips_amount > MAX_CURRENCY_BALANCE:
 		return false
@@ -381,8 +430,8 @@ func complete_activity_once(activity_id: String, activity_kind: String, money_am
 		next_daily_progress[today_key] = today_progress
 		next_daily_events[daily_event_id] = Time.get_datetime_string_from_system()
 	var config := ConfigFile.new()
-	var load_error := config.load(SAVE_PATH)
-	if load_error != OK and FileAccess.file_exists(SAVE_PATH):
+	var load_error := config.load(_profile_save_path())
+	if load_error != OK and FileAccess.file_exists(_profile_save_path()):
 		push_warning("ملف اللاعب غير قابل للقراءة؛ لم يُعتمد إكمال النشاط أو مكافأته.")
 		return false
 	config.set_value("profile", "player_level", next_level)
@@ -418,6 +467,8 @@ func complete_activity_once(activity_id: String, activity_kind: String, money_am
 
 
 func spend_money_once(transaction_id: String, amount: int) -> bool:
+	if not _has_active_profile_session():
+		return false
 	# تأجير الخدمات المدفوعة يستخدم إيصال المحفظة نفسه لمنع الخصم المكرر.
 	if transaction_id.strip_edges().is_empty() or amount <= 0 or amount > MAX_CURRENCY_BALANCE:
 		return false
@@ -450,9 +501,11 @@ func purchase_outfit(_outfit_id: String) -> bool:
 	return false
 
 func _save_profile() -> bool:
+	if not _has_active_profile_session():
+		return false
 	var config := ConfigFile.new()
-	var load_error := config.load(SAVE_PATH)
-	if load_error != OK and FileAccess.file_exists(SAVE_PATH):
+	var load_error := config.load(_profile_save_path())
+	if load_error != OK and FileAccess.file_exists(_profile_save_path()):
 		push_warning("ملف اللاعب غير قابل للقراءة؛ لم تتم الكتابة فوقه.")
 		return false
 	config.set_value("profile", "player_level", player_level)
@@ -474,9 +527,11 @@ func _save_profile() -> bool:
 	return true
 
 func _load_profile() -> void:
+	if not _has_active_profile_session():
+		return
 	var config := ConfigFile.new()
-	var error := config.load(SAVE_PATH)
-	if error != OK and FileAccess.file_exists(SAVE_PATH):
+	var error := config.load(_profile_save_path())
+	if error != OK and FileAccess.file_exists(_profile_save_path()):
 		push_warning("تعذر قراءة ملف اللاعب؛ تم إيقاف الترحيل لتجنب فقدان البيانات.")
 		return
 	if error == OK:
