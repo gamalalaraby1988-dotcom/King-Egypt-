@@ -930,9 +930,8 @@ func receive_group_move_order(target_position: Vector3) -> void:
 			group_meeting_status.text = "تعذر استقبال موقع التجمع؛ الإحداثيات غير صالحة."
 		return
 	group_meeting_position = target_position
-	_show_group_meeting_marker(target_position)
 	if is_instance_valid(group_meeting_status):
-		group_meeting_status.text = "القائد بدأ التحرك إلى نقطة التجمع. اتبع علامة التجمع داخل المدينة."
+		group_meeting_status.text = "القائد دعا المجموعة للتجمع عند موقعه الحالي داخل المدينة."
 
 
 func _set_group_meeting_point_here() -> void:
@@ -958,9 +957,8 @@ func receive_group_meeting_point(position: Vector3, leader_name: String = "قا�
 			group_meeting_status.text = "تعذر استقبال نقطة التجمع؛ الإحداثيات غير صالحة."
 		return
 	group_meeting_position = position
-	_show_group_meeting_marker(position)
 	if is_instance_valid(group_meeting_status):
-		group_meeting_status.text = "مكان تجمع المجموعة حدده: %s" % leader_name.strip_edges().substr(0, 24)
+		group_meeting_status.text = "موقع القائد الحالي للتجمع: %s" % leader_name.strip_edges().substr(0, 24)
 
 
 func _show_group_meeting_marker(position: Vector3) -> void:
