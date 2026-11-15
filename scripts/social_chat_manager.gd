@@ -35,6 +35,13 @@ func _ready() -> void:
 		AuthManager.session_changed.connect(_on_auth_session_changed)
 
 func _on_auth_session_changed(_previous_user_id: String, _current_user_id: String, _generation: int) -> void:
+	# Cancel in-flight RPC work before releasing its account/session ownership.
+	if not _pending_action.is_empty():
+		_pending_action = ""
+		_pending_user_id = ""
+		_pending_session_generation = -1
+		if is_instance_valid(_http) and _http.get_http_client_status() != HTTPClient.STATUS_DISCONNECTED:
+			_http.cancel_request()
 	# Never carry a prior account's realtime subscriptions into a new identity.
 	if _realtime_socket != null:
 		if _realtime_socket.get_ready_state() != WebSocketPeer.STATE_CLOSED:
