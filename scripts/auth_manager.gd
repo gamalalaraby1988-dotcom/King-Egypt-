@@ -32,7 +32,7 @@ func request_email_otp(email: String) -> bool:
 	if not _is_valid_email(normalized_email):
 		authentication_failed.emit("يرجى إدخال بريد إلكتروني صحيح.")
 		return false
-	if _http.get_http_client_status() != HTTPClient.STATUS_DISCONNECTED or not _pending_action.is_empty():
+	if not _pending_action.is_empty():
 		authentication_failed.emit("هناك طلب تسجيل دخول قيد التنفيذ.")
 		return false
 
