@@ -47,6 +47,22 @@ func _run_social_validation_tests() -> void:
 		push_error("A malformed group invitation UUID passed the HUD response guard.")
 		quit(1)
 		return
+	if not city_hud.can_accept_social_invitation_payload("chat:invites:AB12CD34EF", "AB12CD34EF", first_invite_id):
+		push_error("A valid private invitation topic and UUID were rejected.")
+		quit(1)
+		return
+	if city_hud.can_accept_social_invitation_payload("chat:invites:OTHER12345", "AB12CD34EF", first_invite_id):
+		push_error("An invitation from another player's private topic was accepted.")
+		quit(1)
+		return
+	if city_hud.can_accept_social_invitation_payload("chat:invites:AB12CD34EF", "bad-code", first_invite_id):
+		push_error("An invitation with an invalid local player code was accepted.")
+		quit(1)
+		return
+	if city_hud.can_accept_social_invitation_payload("chat:invites:AB12CD34EF", "AB12CD34EF", "not-a-uuid"):
+		push_error("An invitation with a malformed id was accepted into the HUD.")
+		quit(1)
+		return
 	city_hud.free()
 
 	var saved_topics: Dictionary = social._realtime_topics.duplicate(true)
