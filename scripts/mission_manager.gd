@@ -500,8 +500,12 @@ func _process(_delta: float) -> void:
 func _update_interaction_target() -> void:
 	# لا تفحص تفاعلات المدينة أثناء الانتقال أو أثناء وجود اللاعب داخل مبنى.
 	var city_root := get_tree().current_scene
-	if is_instance_valid(city_root) and (bool(city_root.get("interior_transition_busy")) or is_instance_valid(city_root.get("interior_root"))):
+	if is_instance_valid(city_root) and bool(city_root.get("interior_transition_busy")):
 		nearest_interactable = null
+		nearest_building = null
+		return
+	if is_instance_valid(city_root) and is_instance_valid(city_root.get("interior_root")):
+		nearest_interactable = _find_nearest_interior_exit(city_root)
 		nearest_building = null
 		return
 	var previous_target := nearest_interactable
@@ -523,7 +527,21 @@ func _update_interaction_target() -> void:
 	nearest_interactable = best
 	nearest_building = best if is_instance_valid(best) and best.has_method("get_mission_data") else null
 
+func _find_nearest_interior_exit(city_root: Node) -> Node3D:
+	var best: Node3D = null
+	var best_distance := INF
+	for candidate in get_tree().get_nodes_in_group("interior_exit_interactables"):
+		if not is_instance_valid(candidate) or candidate.is_queued_for_deletion() or not candidate is Node3D:
+			continue
+		var distance := player.global_position.distance_to(candidate.global_position)
+		if distance <= 4.5 and distance < best_distance:
+			best = candidate
+			best_distance = distance
+	return best
+
 func _interaction_action_key(target: Node3D) -> String:
+	if target.is_in_group("interior_exit_interactables"):
+		return "interaction_enter"
 	if target.has_method("get_job_data"):
 		return "interaction_job"
 	if target.has_method("get_mission_data"):
@@ -536,6 +554,12 @@ func _interaction_action_key(target: Node3D) -> String:
 
 func _update_interaction_hud() -> void:
 	if not is_instance_valid(interact_button) or not is_instance_valid(prompt_label):
+		return
+	var city_root := get_tree().current_scene
+	if is_instance_valid(city_root) and is_instance_valid(city_root.get("interior_root")):
+		_update_interaction_target()
+		if is_instance_valid(nearest_interactable):
+			open_interactable(nearest_interactable)
 		return
 	if is_instance_valid(player) and player.has_method("is_riding_animal") and player.is_riding_animal():
 		prompt_label.text = CityLanguage.translate("interaction_riding_prompt")
@@ -581,6 +605,11 @@ func open_interactable(target: Node3D) -> void:
 	var allowed_distance := float(radius_value) if radius_value != null else 4.5
 	if player.global_position.distance_to(target.global_position) > clampf(allowed_distance, 0.5, 4.8) + 0.65:
 		_update_interaction_target()
+		return
+	if target.is_in_group("interior_exit_interactables"):
+		var city_root := get_tree().current_scene
+		if is_instance_valid(city_root) and city_root.has_method("show_interior_quick_travel_menu"):
+			city_root.show_interior_quick_travel_menu()
 		return
 	if target.has_method("is_shop_owner") and target.is_shop_owner() and is_instance_valid(shop_manager):
 		shop_manager.open_shop()
