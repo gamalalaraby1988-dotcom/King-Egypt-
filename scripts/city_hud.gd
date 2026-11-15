@@ -144,10 +144,6 @@ func _exit_tree() -> void:
 		if is_instance_valid(marker_value):
 			marker_value.queue_free()
 	group_member_markers.clear()
-	if is_instance_valid(main_scene):
-		var meeting_marker := main_scene.get_node_or_null("GroupMeetingMarker")
-		if is_instance_valid(meeting_marker):
-			meeting_marker.queue_free()
 
 func _process(_delta: float) -> void:
 	if not is_instance_valid(mission_manager) and is_instance_valid(main_scene):
@@ -816,7 +812,6 @@ func _remove_group_member(player_id: String) -> void:
 			group_member_removed.emit(player_id)
 			break
 	if group_members.size() <= 1:
-		_clear_group_meeting_marker()
 		group_meeting_position = Vector3.ZERO
 		if group_follow_enabled:
 			group_follow_enabled = false
@@ -830,13 +825,6 @@ func _remove_group_member_marker(player_id: String) -> void:
 		marker_value.queue_free()
 	group_member_markers.erase(player_id)
 
-
-func _clear_group_meeting_marker() -> void:
-	if not is_instance_valid(main_scene):
-		return
-	var marker := main_scene.get_node_or_null("GroupMeetingMarker")
-	if is_instance_valid(marker):
-		marker.queue_free()
 
 
 func _toggle_group_follow_mode() -> void:
