@@ -64,6 +64,9 @@ func _process(_delta: float) -> void:
 	# لا تستخدم مراجع المدينة أو اللاعب بعد خروجها من المشهد أو بدء حذفها.
 	if not is_instance_valid(city) or city.is_queued_for_deletion() or not city.is_inside_tree():
 		_close_menu()
+		# لا تكرر فحص مدينة انتهى عمر مشهدها، ولا تستقبل Escape بعد تعطّل النظام.
+		set_process(false)
+		set_process_unhandled_key_input(false)
 		return
 	if not is_instance_valid(player) or player.is_queued_for_deletion() or not player.is_inside_tree():
 		player = city.get_node_or_null("Player") as CharacterBody3D
