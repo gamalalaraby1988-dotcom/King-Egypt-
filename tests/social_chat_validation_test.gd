@@ -11,6 +11,34 @@ func _run_social_validation_tests() -> void:
 		quit(1)
 		return
 
+	var invitation_overlay_script: Script = load("res://scripts/invitation_overlay.gd")
+	if invitation_overlay_script == null:
+		push_error("Unified invitation overlay script could not be loaded.")
+		quit(1)
+		return
+	var invitation_overlay: Control = invitation_overlay_script.new()
+	var expired_invitation_ids: Array[String] = []
+	invitation_overlay.invitation_expired.connect(func(invitation: Dictionary) -> void:
+		expired_invitation_ids.append(str(invitation.get("invite_id", "")))
+	)
+	var duplicate_expired_invitation := {
+		"invite_id": "550e8400-e29b-41d4-a716-446655440099",
+		"expires_at": 1.0
+	}
+	invitation_overlay.enqueue_invitation(duplicate_expired_invitation)
+	invitation_overlay.enqueue_invitation(duplicate_expired_invitation)
+	if expired_invitation_ids.size() != 1:
+		push_error("A repeated realtime delivery re-emitted the same expired invitation.")
+		quit(1)
+		return
+	invitation_overlay.clear_pending_invitations()
+	invitation_overlay.enqueue_invitation(duplicate_expired_invitation)
+	if expired_invitation_ids.size() != 2:
+		push_error("Invitation deduplication state was not cleared for a new account session.")
+		quit(1)
+		return
+	invitation_overlay.free()
+
 	var city_hud_script: Script = load("res://scripts/city_hud.gd")
 	if city_hud_script == null:
 		push_error("City HUD script could not be loaded for group-gather guard tests.")
