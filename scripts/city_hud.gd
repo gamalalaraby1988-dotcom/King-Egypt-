@@ -1661,7 +1661,7 @@ func _on_social_operation_completed(action: String, data: Variant) -> void:
 			social_chat_status.text = "نتيجة الرد على الدعوة: " + str(data)
 			if str(data) == "accepted" or str(data) == "declined":
 				_remove_social_invite_card(_pending_group_invite_response_id)
-				_pending_group_invite_response_id = ""
+			_pending_group_invite_response_id = ""
 			if is_instance_valid(invitation_overlay):
 				invitation_overlay.call("set_response_pending", false)
 			if str(data) == "accepted":
