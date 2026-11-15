@@ -26,11 +26,6 @@ var _realtime_group_id := ""
 var _realtime_direct_id := ""
 
 func _ready() -> void:
-	_http = HTTPRequest.new()
-	_http.name = "SocialRpcHTTPRequest"
-	_http.timeout = 20.0
-	add_child(_http)
-	_http.request_completed.connect(_on_request_completed)
 	if not AuthManager.session_changed.is_connected(_on_auth_session_changed):
 		AuthManager.session_changed.connect(_on_auth_session_changed)
 
@@ -40,8 +35,11 @@ func _on_auth_session_changed(_previous_user_id: String, _current_user_id: Strin
 		_pending_action = ""
 		_pending_user_id = ""
 		_pending_session_generation = -1
-		if is_instance_valid(_http) and _http.get_http_client_status() != HTTPClient.STATUS_DISCONNECTED:
-			_http.cancel_request()
+		var previous_request := _http
+		_http = null
+		if is_instance_valid(previous_request):
+			previous_request.cancel_request()
+			previous_request.queue_free()
 	# Never carry a prior account's realtime subscriptions into a new identity.
 	if _realtime_socket != null:
 		if _realtime_socket.get_ready_state() != WebSocketPeer.STATE_CLOSED:
@@ -166,12 +164,23 @@ func _rpc(function_name: String, payload: Dictionary, action: String) -> bool:
 	if not AuthManager.is_authenticated():
 		operation_failed.emit(action, "سجّل الدخول أولًا.")
 		return false
-	if not _pending_action.is_empty() or _http.get_http_client_status() != HTTPClient.STATUS_DISCONNECTED:
+	if not _pending_action.is_empty() or is_instance_valid(_http):
 		operation_failed.emit(action, "هناك طلب اجتماعي آخر قيد التنفيذ.")
 		return false
+	var request_user_id := AuthManager.get_authenticated_user_id()
+	var request_generation := AuthManager.get_session_generation()
+	if not _request_session_is_current(request_user_id, request_generation):
+		operation_failed.emit(action, "انتهت جلسة الحساب؛ سجّل الدخول مرة أخرى.")
+		return false
+	var request := HTTPRequest.new()
+	request.name = "SocialRpcHTTPRequest"
+	request.timeout = 20.0
+	add_child(request)
+	_http = request
 	_pending_action = action
-	_pending_user_id = AuthManager.get_authenticated_user_id()
-	_pending_session_generation = AuthManager.get_session_generation()
+	_pending_user_id = request_user_id
+	_pending_session_generation = request_generation
+	request.request_completed.connect(_on_request_completed.bind(action, request_user_id, request_generation, request))
 	var headers := PackedStringArray([
 		"apikey: " + SUPABASE_PUBLISHABLE_KEY,
 		"Authorization: Bearer " + AuthManager.get_access_token(),
@@ -179,21 +188,29 @@ func _rpc(function_name: String, payload: Dictionary, action: String) -> bool:
 		"Accept: application/json"
 	])
 	var endpoint := SUPABASE_URL + "/rest/v1/rpc/" + function_name
-	var error := _http.request(endpoint, headers, HTTPClient.METHOD_POST, JSON.stringify(payload))
+	var error := request.request(endpoint, headers, HTTPClient.METHOD_POST, JSON.stringify(payload))
 	if error != OK:
-		_pending_action = ""
+		if _http == request:
+			_http = null
+			_pending_action = ""
+			_pending_user_id = ""
+			_pending_session_generation = -1
+		request.queue_free()
 		operation_failed.emit(action, "تعذر بدء الاتصال بالخادم.")
 		return false
 	return true
 
-func _on_request_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
-	var action := _pending_action
-	var request_user_id := _pending_user_id
-	var request_generation := _pending_session_generation
-	_pending_action = ""
-	_pending_user_id = ""
-	_pending_session_generation = -1
-	if action.is_empty():
+func _on_request_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray, action: String, request_user_id: String, request_generation: int, request: HTTPRequest) -> void:
+	var owns_pending_slot := _http == request
+	if owns_pending_slot:
+		_http = null
+		_pending_action = ""
+		_pending_user_id = ""
+		_pending_session_generation = -1
+	if is_instance_valid(request):
+		request.queue_free()
+	# Request identity is immutable; an old callback can never inherit a newer account's pending metadata.
+	if not owns_pending_slot or action.is_empty():
 		return
 	# A response from an account that signed out or switched identity is discarded.
 	if not _request_session_is_current(request_user_id, request_generation):
