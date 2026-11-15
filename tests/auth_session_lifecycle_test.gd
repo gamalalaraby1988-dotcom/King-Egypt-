@@ -126,6 +126,25 @@ func _run_auth_session_tests() -> void:
 	auth._authenticated_user_id = "00000000-0000-4000-8000-000000000002"
 	auth._authenticated_email = "ci-session-b@example.invalid"
 	auth.session_changed.emit("00000000-0000-4000-8000-000000000001", "00000000-0000-4000-8000-000000000002", auth.get_session_generation())
+	# A delayed callback from A must not consume or overwrite B's active RPC slot.
+	var stale_rpc_request := HTTPRequest.new()
+	var current_rpc_request := HTTPRequest.new()
+	root.add_child(stale_rpc_request)
+	root.add_child(current_rpc_request)
+	social._http = current_rpc_request
+	social._pending_action = "friends_list"
+	social._pending_user_id = "00000000-0000-4000-8000-000000000002"
+	social._pending_session_generation = auth.get_session_generation()
+	social._on_request_completed(HTTPRequest.RESULT_SUCCESS, 200, PackedStringArray(), "{}".to_utf8_buffer(), "daily_chest_claim", "00000000-0000-4000-8000-000000000001", first_generation, stale_rpc_request)
+	if social._http != current_rpc_request or social._pending_action != "friends_list" or social._pending_user_id != "00000000-0000-4000-8000-000000000002":
+		push_error("A delayed RPC callback from account A consumed account B's active request.")
+		quit(1)
+		return
+	social._http = null
+	social._pending_action = ""
+	social._pending_user_id = ""
+	social._pending_session_generation = -1
+	current_rpc_request.queue_free()
 	var second_achievement_path := "user://accounts/00000000-0000-4000-8000-000000000002/achievements.cfg"
 	if achievement_manager._save_path != second_achievement_path or achievement_manager.walked_meters != 0.0:
 		push_error("A second account inherited achievement progress from the first account.")
