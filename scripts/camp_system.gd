@@ -19,11 +19,12 @@ func _process(delta: float) -> void:
 	_distance_check_elapsed = 0.0
 	if not is_instance_valid(player):
 		return
-	var distance := global_position.distance_to(player.global_position)
+	# مقارنة المسافة المربعة كافية لحدود التحميل/التفريغ، دون حساب جذر تربيعي دوري.
+	var distance_squared := global_position.distance_squared_to(player.global_position)
 	if not is_instance_valid(_camp_content):
-		if distance <= load_distance:
+		if distance_squared <= load_distance * load_distance:
 			_build_camp()
-	elif distance >= unload_distance:
+	elif distance_squared >= unload_distance * unload_distance:
 		_camp_content.queue_free()
 		_camp_content = null
 

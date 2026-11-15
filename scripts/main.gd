@@ -66,7 +66,8 @@ func _process(_delta: float) -> void:
 	var player := get_node_or_null("Player") as CharacterBody3D
 	if not is_instance_valid(player):
 		return
-	var close_enough := player.global_position.distance_to(city_vehicle.global_position) <= 5.0
+	# فحص قرب المركبة يحدث باستمرار؛ قارن المسافة المربعة لتجنب الجذر التربيعي كل إطار.
+	var close_enough := player.global_position.distance_squared_to(city_vehicle.global_position) <= 25.0
 	if is_instance_valid(vehicle_interaction_button):
 		vehicle_interaction_button.visible = close_enough
 		vehicle_interaction_button.text = "ركوب السيارة" if CityLanguage.get_language() == "ar" else "Enter vehicle"
