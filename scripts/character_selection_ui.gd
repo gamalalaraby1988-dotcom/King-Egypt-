@@ -4,26 +4,26 @@ extends CanvasLayer
 
 const AVATAR_SCENE := "res://scenes/characters/avatar_visual.tscn"
 const CHARACTERS := [
-	{"id":"adam","name":"آدم","country":"مصر","flag":"🇪🇬","gender":"male","tier":"متاح مبدئيًا","status":"مجاني مقترح"},
-	{"id":"omar","name":"عمر","country":"مصر","flag":"🇪🇬","gender":"male","tier":"متاح مبدئيًا","status":"مجاني مقترح"},
-	{"id":"leon","name":"ليون","country":"إيطاليا","flag":"🇮🇹","gender":"male","tier":"متاح مبدئيًا","status":"التصنيف المالي غير معتمد"},
-	{"id":"alex","name":"أليكس","country":"فرنسا","flag":"🇫🇷","gender":"male","tier":"متاح مبدئيًا","status":"التصنيف المالي غير معتمد"},
-	{"id":"matheus","name":"ماتيوس","country":"البرازيل","flag":"🇧🇷","gender":"male","tier":"متاح مبدئيًا","status":"التصنيف المالي غير معتمد"},
-	{"id":"ren","name":"رين","country":"اليابان","flag":"🇯🇵","gender":"male","tier":"متاح مبدئيًا","status":"التصنيف المالي غير معتمد"},
-	{"id":"lucas","name":"لوكاس","country":"الولايات المتحدة","flag":"🇺🇸","gender":"male","tier":"متاح مبدئيًا","status":"التصنيف المالي غير معتمد"},
-	{"id":"amir","name":"أمير","country":"تركيا","flag":"🇹🇷","gender":"male","tier":"متاح مبدئيًا","status":"التصنيف المالي غير معتمد"},
-	{"id":"layan","name":"ليان","country":"مصر","flag":"🇪🇬","gender":"female","tier":"متاح مبدئيًا","status":"مجاني مقترح"},
-	{"id":"nour","name":"نور","country":"مصر","flag":"🇪🇬","gender":"female","tier":"متاح مبدئيًا","status":"التصنيف المالي غير معتمد"},
-	{"id":"sofia","name":"صوفيا","country":"إيطاليا","flag":"🇮🇹","gender":"female","tier":"متاح مبدئيًا","status":"التصنيف المالي غير معتمد"},
-	{"id":"emma","name":"إيما","country":"فرنسا","flag":"🇫🇷","gender":"female","tier":"متاح مبدئيًا","status":"التصنيف المالي غير معتمد"},
-	{"id":"isabella","name":"إيزابيلا","country":"البرازيل","flag":"🇧🇷","gender":"female","tier":"متاح مبدئيًا","status":"التصنيف المالي غير معتمد"},
-	{"id":"aika","name":"آيكا","country":"اليابان","flag":"🇯🇵","gender":"female","tier":"متاح مبدئيًا","status":"التصنيف المالي غير معتمد"},
-	{"id":"olivia","name":"أوليفيا","country":"الولايات المتحدة","flag":"🇺🇸","gender":"female","tier":"متاح مبدئيًا","status":"التصنيف المالي غير معتمد"},
-	{"id":"eileen","name":"إيلين","country":"تركيا","flag":"🇹🇷","gender":"female","tier":"متاح مبدئيًا","status":"التصنيف المالي غير معتمد"}
+	{"id":"eg_m_adam","name":"آدم","country":"مصر","flag":"🇪🇬","gender":"male","tier":"متاح مبدئيًا","status":"مجاني مقترح"},
+	{"id":"eg_m_omar","name":"عمر","country":"مصر","flag":"🇪🇬","gender":"male","tier":"متاح مبدئيًا","status":"مجاني مقترح"},
+	{"id":"it_m_leon","name":"ليون","country":"إيطاليا","flag":"🇮🇹","gender":"male","tier":"متاح مبدئيًا","status":"التصنيف المالي غير معتمد"},
+	{"id":"fr_m_alex","name":"أليكس","country":"فرنسا","flag":"🇫🇷","gender":"male","tier":"متاح مبدئيًا","status":"التصنيف المالي غير معتمد"},
+	{"id":"br_m_matheus","name":"ماتيوس","country":"البرازيل","flag":"🇧🇷","gender":"male","tier":"متاح مبدئيًا","status":"التصنيف المالي غير معتمد"},
+	{"id":"jp_m_ren","name":"رين","country":"اليابان","flag":"🇯🇵","gender":"male","tier":"متاح مبدئيًا","status":"التصنيف المالي غير معتمد"},
+	{"id":"us_m_lucas","name":"لوكاس","country":"الولايات المتحدة","flag":"🇺🇸","gender":"male","tier":"متاح مبدئيًا","status":"التصنيف المالي غير معتمد"},
+	{"id":"tr_m_amir","name":"أمير","country":"تركيا","flag":"🇹🇷","gender":"male","tier":"متاح مبدئيًا","status":"التصنيف المالي غير معتمد"},
+	{"id":"eg_f_layan","name":"ليان","country":"مصر","flag":"🇪🇬","gender":"female","tier":"متاح مبدئيًا","status":"مجاني مقترح"},
+	{"id":"eg_f_nour","name":"نور","country":"مصر","flag":"🇪🇬","gender":"female","tier":"متاح مبدئيًا","status":"التصنيف المالي غير معتمد"},
+	{"id":"it_f_sofia","name":"صوفيا","country":"إيطاليا","flag":"🇮🇹","gender":"female","tier":"متاح مبدئيًا","status":"التصنيف المالي غير معتمد"},
+	{"id":"fr_f_emma","name":"إيما","country":"فرنسا","flag":"🇫🇷","gender":"female","tier":"متاح مبدئيًا","status":"التصنيف المالي غير معتمد"},
+	{"id":"br_f_isabella","name":"إيزابيلا","country":"البرازيل","flag":"🇧🇷","gender":"female","tier":"متاح مبدئيًا","status":"التصنيف المالي غير معتمد"},
+	{"id":"jp_f_aika","name":"آيكا","country":"اليابان","flag":"🇯🇵","gender":"female","tier":"متاح مبدئيًا","status":"التصنيف المالي غير معتمد"},
+	{"id":"us_f_olivia","name":"أوليفيا","country":"الولايات المتحدة","flag":"🇺🇸","gender":"female","tier":"متاح مبدئيًا","status":"التصنيف المالي غير معتمد"},
+	{"id":"tr_f_eileen","name":"إيلين","country":"تركيا","flag":"🇹🇷","gender":"female","tier":"متاح مبدئيًا","status":"التصنيف المالي غير معتمد"}
 ]
 
 var selected_gender := "male"
-var selected_id := "adam"
+var selected_id := "eg_m_adam"
 var overlay: Control
 var cards_box: GridContainer
 var detail_name: Label
