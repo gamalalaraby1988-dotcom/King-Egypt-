@@ -21,6 +21,8 @@ var _realtime_retry_elapsed := 0.0
 var _realtime_retry_delay := 2.0
 var _realtime_connected := false
 var _realtime_last_token := ""
+var _realtime_session_user_id := ""
+var _realtime_session_generation := -1
 var _realtime_player_code := ""
 var _realtime_group_id := ""
 var _realtime_direct_id := ""
@@ -49,6 +51,8 @@ func _on_auth_session_changed(_previous_user_id: String, _current_user_id: Strin
 	_realtime_topics.clear()
 	_realtime_join_refs.clear()
 	_realtime_last_token = ""
+	_realtime_session_user_id = ""
+	_realtime_session_generation = -1
 	_realtime_player_code = ""
 	_realtime_group_id = ""
 	_realtime_direct_id = ""
@@ -58,6 +62,9 @@ func _on_auth_session_changed(_previous_user_id: String, _current_user_id: Strin
 
 func _request_session_is_current(user_id: String, generation: int) -> bool:
 	return not user_id.is_empty() and AuthManager.is_session_current(user_id, generation)
+
+func _realtime_session_is_current() -> bool:
+	return _request_session_is_current(_realtime_session_user_id, _realtime_session_generation)
 
 func get_daily_chest_status() -> bool:
 	return _rpc("get_my_test_daily_chest_status", {}, "daily_chest_status")
@@ -264,6 +271,14 @@ func read_chat_messages(channel: String) -> bool:
 	}, "chat_read")
 
 func _process(delta: float) -> void:
+	if _realtime_socket != null and not _realtime_session_is_current():
+		_realtime_socket.close()
+		_realtime_socket = null
+		_realtime_connected = false
+		_realtime_join_refs.clear()
+		_realtime_last_token = ""
+		_realtime_session_user_id = ""
+		_realtime_session_generation = -1
 	if not AuthManager.is_authenticated():
 		if _realtime_socket != null and _realtime_socket.get_ready_state() != WebSocketPeer.STATE_CLOSED:
 			_realtime_socket.close()
@@ -328,6 +343,12 @@ func connect_realtime() -> void:
 func _connect_realtime_socket() -> void:
 	if not AuthManager.is_authenticated():
 		return
+	var socket_user_id := AuthManager.get_authenticated_user_id()
+	var socket_generation := AuthManager.get_session_generation()
+	if not _request_session_is_current(socket_user_id, socket_generation):
+		return
+	_realtime_session_user_id = socket_user_id
+	_realtime_session_generation = socket_generation
 	_realtime_socket = WebSocketPeer.new()
 	var endpoint := SUPABASE_URL.replace("https://", "wss://") + "/realtime/v1/websocket?apikey=" + SUPABASE_PUBLISHABLE_KEY.uri_encode() + "&vsn=1.0.0"
 	var error := _realtime_socket.connect_to_url(endpoint)
@@ -416,6 +437,8 @@ func _send_realtime_frame(topic: String, event_name: String, payload: Dictionary
 
 
 func _handle_realtime_packet(packet: PackedByteArray) -> void:
+	if not _realtime_session_is_current():
+		return
 	var parsed: Variant = JSON.parse_string(packet.get_string_from_utf8())
 	if not parsed is Dictionary:
 		return
