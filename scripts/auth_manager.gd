@@ -220,7 +220,9 @@ func _on_request_completed(
 		authentication_failed.emit("تعذر الاتصال بخدمة تسجيل الدخول.")
 		return
 
-	var parsed: Variant = JSON.parse_string(response_text)
+	var response_json := JSON.new()
+	var parse_error := response_json.parse(response_text)
+	var parsed: Variant = response_json.data if parse_error == OK else null
 	if response_code < 200 or response_code >= 300:
 		if action == "refresh_session" and response_code in [400, 401]:
 			clear_session()
@@ -229,7 +231,9 @@ func _on_request_completed(
 	if response_code < 200 or response_code >= 300:
 		authentication_failed.emit(_safe_auth_error(parsed))
 		return
-	if not parsed is Dictionary:
+	if parse_error != OK or not parsed is Dictionary:
+		if action == "refresh_session":
+			clear_session()
 		authentication_failed.emit("استجابة تسجيل الدخول غير صالحة.")
 		return
 
@@ -264,7 +268,8 @@ func _on_request_completed(
 		var refreshed_token := str(parsed.get("refresh_token", ""))
 		var refreshed_user: Variant = parsed.get("user", {})
 		if refreshed_access.is_empty() or refreshed_token.is_empty() or not refreshed_user is Dictionary:
-			authentication_failed.emit("استجابة تجديد الجلسة غير مكتملة.")
+			clear_session()
+			authentication_failed.emit("انتهت الجلسة أو تعذر تجديدها. سجّل الدخول مرة أخرى.")
 			return
 		var refreshed_user_id := str(refreshed_user.get("id", ""))
 		if refreshed_user_id.is_empty() or refreshed_user_id != _authenticated_user_id:
