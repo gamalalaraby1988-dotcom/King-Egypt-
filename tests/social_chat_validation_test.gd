@@ -36,5 +36,25 @@ func _run_social_validation_tests() -> void:
 		quit(1)
 		return
 
-	print("Social chat input validation tests passed.")
+	var invitation_script: Script = load("res://scripts/invitation_overlay.gd")
+	var invitation_overlay: Control = invitation_script.new()
+	root.add_child(invitation_overlay)
+	invitation_overlay.enqueue_invitation({
+		"invite_id": "ci-account-a-invite",
+		"title": "CI invitation",
+		"body": "Account A invitation",
+		"expires_at": float(Time.get_unix_time_from_system()) + 60.0
+	})
+	if invitation_overlay.get_pending_invitation_count() != 1:
+		push_error("Invitation overlay did not retain the active test invitation.")
+		quit(1)
+		return
+	invitation_overlay.clear_pending_invitations()
+	if invitation_overlay.get_pending_invitation_count() != 0 or not invitation_overlay._current.is_empty() or invitation_overlay._panel.visible:
+		push_error("A previous account's active or queued invitation survived account cleanup.")
+		quit(1)
+		return
+	invitation_overlay.free()
+
+	print("Social chat input and invitation lifecycle validation tests passed.")
 	quit(0)
