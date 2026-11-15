@@ -9,6 +9,7 @@ signal group_invite_requested(player_id: String)
 signal group_member_removed(player_id: String)
 signal group_chat_message_submitted(message: String)
 signal group_meeting_point_requested(position: Vector3)
+signal group_gather_invite_requested(position: Vector3)
 signal group_follow_mode_requested(enabled: bool)
 signal group_leader_move_requested(target_position: Vector3)
 
@@ -69,6 +70,8 @@ var social_invites_box: VBoxContainer
 var social_chat_dock_button: Button
 var _seen_realtime_message_ids: Dictionary = {}
 var _pending_group_invite_response_id := ""
+var invitation_overlay: Control
+var _apartment_invite_mode := false
 var moderation_button: Button
 var moderation_panel: PanelContainer
 var moderation_reports_box: VBoxContainer
@@ -107,6 +110,7 @@ func _ready() -> void:
 	_build_group_popup()
 	_build_group_chat_popup()
 	_build_social_chat_panel()
+	_build_invitation_overlay()
 	_build_moderation_panel()
 	if not SocialChatManager.operation_completed.is_connected(_on_social_operation_completed):
 		SocialChatManager.operation_completed.connect(_on_social_operation_completed)
@@ -138,6 +142,7 @@ func _process(_delta: float) -> void:
 	if not is_instance_valid(mission_manager) and is_instance_valid(main_scene):
 		mission_manager = main_scene.get_node_or_null("MissionManager")
 	_refresh_wallet()
+	_update_group_gather_visibility()
 
 func _build() -> void:
 	root = Control.new()
@@ -628,9 +633,9 @@ func _build_group_popup() -> void:
 	box.add_child(chat_button)
 	group_meeting_point_button = Button.new()
 	group_meeting_point_button.name = "SetGroupMeetingPointButton"
-	group_meeting_point_button.text = "📍 تحديد مكان التجمع هنا"
+	group_meeting_point_button.text = "📣 دعوة للتجمع"
 	group_meeting_point_button.custom_minimum_size.y = 44
-	group_meeting_point_button.pressed.connect(_set_group_meeting_point_here)
+	group_meeting_point_button.pressed.connect(_request_group_gather_invite)
 	box.add_child(group_meeting_point_button)
 	group_meeting_status = Label.new()
 	group_meeting_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -643,12 +648,6 @@ func _build_group_popup() -> void:
 	group_follow_button.custom_minimum_size.y = 44
 	group_follow_button.pressed.connect(_toggle_group_follow_mode)
 	box.add_child(group_follow_button)
-	group_move_button = Button.new()
-	group_move_button.name = "StartGroupMoveButton"
-	group_move_button.text = "📍 بدء التحرك إلى نقطة التجمع"
-	group_move_button.custom_minimum_size.y = 44
-	group_move_button.pressed.connect(_start_group_move_to_meeting_point)
-	box.add_child(group_move_button)
 	var close := Button.new()
 	close.text = "إغلاق"
 	close.pressed.connect(func(): group_popup.visible = false)
@@ -691,9 +690,7 @@ func _refresh_group_popup() -> void:
 	var local_is_leader := _is_local_group_leader()
 	var has_other_members := group_members.size() > 1
 	if is_instance_valid(group_meeting_point_button):
-		group_meeting_point_button.visible = local_is_leader and has_other_members
-	if is_instance_valid(group_move_button):
-		group_move_button.visible = local_is_leader and has_other_members
+		group_meeting_point_button.visible = local_is_leader and has_other_members and not _is_inside_private_apartment()
 	if is_instance_valid(group_follow_button):
 		group_follow_button.visible = not local_is_leader and has_other_members
 	if (local_is_leader or not has_other_members) and group_follow_enabled:
@@ -701,6 +698,35 @@ func _refresh_group_popup() -> void:
 		group_follow_mode_requested.emit(false)
 		if is_instance_valid(group_follow_button):
 			group_follow_button.text = "🚶 التحرك مع القائد"
+
+
+func _is_inside_private_apartment() -> bool:
+	return is_instance_valid(main_scene) and main_scene.has_method("is_player_inside_private_apartment") and bool(main_scene.call("is_player_inside_private_apartment"))
+
+
+func _update_group_gather_visibility() -> void:
+	if not is_instance_valid(group_meeting_point_button):
+		return
+	group_meeting_point_button.visible = _is_local_group_leader() and group_members.size() > 1 and not _is_inside_private_apartment()
+
+
+func _request_group_gather_invite() -> void:
+	if not _is_local_group_leader():
+		group_meeting_status.text = "دعوة التجمع متاحة لقائد المجموعة فقط."
+		return
+	if group_members.size() < 2:
+		group_meeting_status.text = "تحتاج المجموعة إلى القائد وعضو واحد على الأقل."
+		return
+	if _is_inside_private_apartment():
+		group_meeting_status.text = "لا يمكن إرسال دعوة التجمع من داخل الشقة."
+		_update_group_gather_visibility()
+		return
+	var player := main_scene.get_node_or_null("Player") as Node3D if is_instance_valid(main_scene) else null
+	if not is_instance_valid(player):
+		group_meeting_status.text = "تعذر تحديد موقع القائد الحالي."
+		return
+	group_gather_invite_requested.emit(player.global_position)
+	group_meeting_status.text = "لم تُرسل الدعوة بعد: خدمة التجمع بين الأجهزة لم تُربط بالخادم حتى الآن."
 
 
 func _is_local_group_leader() -> bool:
@@ -939,6 +965,20 @@ func _show_group_meeting_marker(position: Vector3) -> void:
 	marker.add_child(label)
 
 
+func _build_invitation_overlay() -> void:
+	var overlay_script := load("res://scripts/invitation_overlay.gd") as Script
+	if overlay_script == null:
+		push_warning("تعذر تحميل نافذة الدعوات الموحدة.")
+		return
+	invitation_overlay = Control.new()
+	invitation_overlay.name = "UnifiedInvitationOverlay"
+	invitation_overlay.set_script(overlay_script)
+	root.add_child(invitation_overlay)
+	invitation_overlay.connect("invitation_accepted", Callable(self, "_on_invitation_accepted"))
+	invitation_overlay.connect("invitation_declined", Callable(self, "_on_invitation_declined"))
+	invitation_overlay.connect("invitation_expired", Callable(self, "_on_invitation_expired"))
+
+
 func _build_social_chat_panel() -> void:
 	# نافذة موحدة وثابتة على يمين الشاشة؛ تترك مساحة المدينة وأزرار الحركة ظاهرة.
 	social_chat_dock_button = Button.new()
@@ -969,7 +1009,7 @@ func _build_social_chat_panel() -> void:
 	social_chat_panel.visible = false
 	social_chat_panel.mouse_filter = Control.MOUSE_FILTER_STOP
 	var panel_style := StyleBoxFlat.new()
-	panel_style.bg_color = Color(0.035, 0.055, 0.075, 0.97)
+	panel_style.bg_color = Color(0.035, 0.055, 0.075, 0.84)
 	panel_style.border_color = Color(0.72, 0.55, 0.25, 0.95)
 	panel_style.set_border_width_all(2)
 	panel_style.set_corner_radius_all(16)
@@ -1295,6 +1335,17 @@ func _open_social_chat_panel() -> void:
 	if is_instance_valid(social_chat_input):
 		social_chat_input.grab_focus()
 
+
+func open_apartment_invite_picker() -> void:
+	if not _is_inside_private_apartment():
+		social_chat_status.text = "دعوة زيارة الشقة متاحة من داخل الشقة فقط."
+		return
+	_apartment_invite_mode = true
+	_open_social_chat_panel()
+	social_chat_status.text = "اختر صديقًا من القائمة لإعداد دعوة زيارة الشقة."
+	_refresh_social_friends()
+
+
 func _on_social_authenticated(_user_id: String, _email: String) -> void:
 	SocialChatManager.connect_realtime()
 	SocialChatManager.get_realtime_identity()
@@ -1322,6 +1373,10 @@ func _send_friend_request_from_search() -> void:
 
 
 func _on_social_friend_selected(player_code: String) -> void:
+	if _apartment_invite_mode:
+		_apartment_invite_mode = false
+		social_chat_status.text = "تم اختيار الصديق، لكن لم تُرسل دعوة: خدمة دعوات الشقق الخادمية غير موجودة بعد."
+		return
 	social_chat_channel = "الأصدقاء"
 	selected_friend_code = player_code
 	selected_friend_conversation_id = ""
@@ -1540,8 +1595,22 @@ func _on_social_realtime_status(status: String) -> void:
 
 
 func _on_social_realtime_event(topic: String, event_name: String, payload: Dictionary) -> void:
-	if event_name == "group_invite":
-		_add_social_group_invite_card(payload)
+	if event_name == "group_invite" or event_name == "group_meeting_invite" or event_name == "apartment_invite":
+		var invitation := payload.duplicate(true)
+		invitation["type"] = event_name
+		if not invitation.has("invite_id"):
+			invitation["invite_id"] = str(invitation.get("id", ""))
+		if event_name == "group_invite":
+			invitation["title"] = "دعوة للانضمام إلى المجموعة"
+			invitation["body"] = "دعاك %s للانضمام إلى مجموعته." % str(payload.get("inviter_name", "لاعب"))
+		elif event_name == "group_meeting_invite":
+			invitation["title"] = "دعوة للتجمع"
+			invitation["body"] = "قائد المجموعة يدعوك للتجمع في موقعه الحالي."
+		else:
+			invitation["title"] = "دعوة لزيارة شقة"
+			invitation["body"] = "دعاك %s لزيارة شقته." % str(payload.get("host_name", "لاعب"))
+		if is_instance_valid(invitation_overlay):
+			invitation_overlay.call("enqueue_invitation", invitation)
 		if is_instance_valid(social_chat_dock_button):
 			social_chat_dock_button.text = "💬 🔴"
 		return
@@ -1569,43 +1638,49 @@ func _on_social_realtime_event(topic: String, event_name: String, payload: Dicti
 
 
 func _refresh_social_invite_cards(data: Variant) -> void:
-	if not is_instance_valid(social_invites_box):
-		return
-	for child in social_invites_box.get_children():
-		child.queue_free()
+	if is_instance_valid(social_invites_box):
+		for child in social_invites_box.get_children():
+			child.queue_free()
+		social_invites_box.visible = false
 	if data is Array:
 		for invite in data:
 			if invite is Dictionary:
 				_add_social_group_invite_card(invite)
-	social_invites_box.visible = social_invites_box.get_child_count() > 0
 
 
 func _add_social_group_invite_card(invite: Dictionary) -> void:
-	if not is_instance_valid(social_invites_box):
+	if not is_instance_valid(invitation_overlay):
 		return
-	var invite_id := str(invite.get("invite_id", ""))
-	if invite_id.is_empty():
-		return
-	for child in social_invites_box.get_children():
-		if child.has_meta("invite_id") and str(child.get_meta("invite_id")) == invite_id:
-			return
-	var card := HBoxContainer.new()
-	card.set_meta("invite_id", invite_id)
-	social_invites_box.add_child(card)
-	social_invites_box.visible = true
-	var label := Label.new()
-	label.text = "دعوة مجموعة من " + str(invite.get("inviter_name", "لاعب"))
-	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	label.add_theme_font_size_override("font_size", 10)
-	card.add_child(label)
-	var accept := Button.new()
-	accept.text = "قبول"
-	accept.pressed.connect(_respond_to_social_group_invite.bind(invite_id, true))
-	card.add_child(accept)
-	var decline := Button.new()
-	decline.text = "رفض"
-	decline.pressed.connect(_respond_to_social_group_invite.bind(invite_id, false))
-	card.add_child(decline)
+	var item := invite.duplicate(true)
+	item["type"] = "group_invite"
+	item["title"] = "دعوة للانضمام إلى المجموعة"
+	item["body"] = "دعاك %s للانضمام إلى مجموعته." % str(invite.get("inviter_name", "لاعب"))
+	invitation_overlay.call("enqueue_invitation", item)
+
+
+func _on_invitation_accepted(invitation: Dictionary) -> void:
+	var kind := str(invitation.get("type", ""))
+	if kind == "group_invite":
+		_pending_group_invite_response_id = str(invitation.get("invite_id", ""))
+		SocialChatManager.respond_chat_group_invite(_pending_group_invite_response_id, true)
+	else:
+		social_chat_status.text = "القبول غير متاح: لم تُربط خدمة هذا النوع من الدعوات بالخادم بعد."
+
+
+func _on_invitation_declined(invitation: Dictionary) -> void:
+	var kind := str(invitation.get("type", ""))
+	if kind == "group_invite":
+		_pending_group_invite_response_id = str(invitation.get("invite_id", ""))
+		SocialChatManager.respond_chat_group_invite(_pending_group_invite_response_id, false)
+	else:
+		social_chat_status.text = "تم رفض الدعوة."
+
+
+func _on_invitation_expired(invitation: Dictionary) -> void:
+	if str(invitation.get("type", "")) == "group_invite":
+		_pending_group_invite_response_id = str(invitation.get("invite_id", ""))
+		SocialChatManager.respond_chat_group_invite(_pending_group_invite_response_id, false)
+		social_chat_status.text = "انتهت صلاحية دعوة المجموعة بعد 30 ثانية."
 
 
 func _respond_to_social_group_invite(invite_id: String, accepted: bool) -> void:
