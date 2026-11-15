@@ -61,6 +61,9 @@ var selected_friend_code := ""
 var selected_friend_conversation_id := ""
 var social_group_create_button: Button
 var social_group_invite_button: Button
+var social_invites_box: VBoxContainer
+var social_chat_dock_button: Button
+var _seen_realtime_message_ids: Dictionary = {}
 
 const GROUP_MAX_MEMBERS := 4
 const GROUP_CHAT_MAX_LENGTH := 300
@@ -95,8 +98,12 @@ func _ready() -> void:
 		SocialChatManager.operation_completed.connect(_on_social_operation_completed)
 	if not SocialChatManager.operation_failed.is_connected(_on_social_operation_failed):
 		SocialChatManager.operation_failed.connect(_on_social_operation_failed)
+	if not SocialChatManager.realtime_event.is_connected(_on_social_realtime_event):
+		SocialChatManager.realtime_event.connect(_on_social_realtime_event)
+	if not SocialChatManager.realtime_status_changed.is_connected(_on_social_realtime_status):
+		SocialChatManager.realtime_status_changed.connect(_on_social_realtime_status)
 	if AuthManager.is_authenticated():
-		_refresh_social_friends()
+		_on_social_authenticated("", "")
 	else:
 		AuthManager.authenticated.connect(_on_social_authenticated)
 	_refresh_wallet()
@@ -888,7 +895,8 @@ func _show_group_meeting_marker(position: Vector3) -> void:
 
 func _build_social_chat_panel() -> void:
 	# نافذة موحدة وثابتة على يمين الشاشة؛ تترك مساحة المدينة وأزرار الحركة ظاهرة.
-	var dock := Button.new()
+	social_chat_dock_button = Button.new()
+	var dock := social_chat_dock_button
 	dock.name = "PersistentSocialChatButton"
 	dock.text = "💬"
 	dock.tooltip_text = "فتح الأصدقاء والمحادثات"
@@ -1002,6 +1010,9 @@ func _build_social_chat_panel() -> void:
 	social_chat_status.add_theme_font_size_override("font_size", 10)
 	social_chat_status.add_theme_color_override("font_color", Color(0.95, 0.72, 0.35))
 	conversation.add_child(social_chat_status)
+	social_invites_box = VBoxContainer.new()
+	social_invites_box.name = "PendingGroupInvitations"
+	conversation.add_child(social_invites_box)
 	social_group_create_button = Button.new()
 	social_group_create_button.text = "إنشاء مجموعة (حتى 4 لاعبين)"
 	social_group_create_button.pressed.connect(_create_social_group)
@@ -1045,14 +1056,17 @@ func _open_social_chat_panel() -> void:
 	if not is_instance_valid(social_chat_panel):
 		return
 	social_chat_panel.visible = true
+	if is_instance_valid(social_chat_dock_button):
+		social_chat_dock_button.text = "💬"
 	if AuthManager.is_authenticated():
-		_refresh_social_friends()
+		SocialChatManager.list_chat_group_invites()
 	if is_instance_valid(social_chat_input):
 		social_chat_input.grab_focus()
 
 
 func _on_social_authenticated(_user_id: String, _email: String) -> void:
-	_refresh_social_friends()
+	SocialChatManager.connect_realtime()
+	SocialChatManager.get_realtime_identity()
 
 
 func _refresh_social_friends() -> void:
@@ -1071,6 +1085,7 @@ func _send_friend_request_from_search() -> void:
 
 
 func _on_social_friend_selected(player_code: String) -> void:
+	social_chat_channel = "الأصدقاء"
 	selected_friend_code = player_code
 	selected_friend_conversation_id = ""
 	social_chat_log.clear()
@@ -1111,6 +1126,7 @@ func _on_social_operation_completed(action: String, data: Variant) -> void:
 				var result: Dictionary = data[0]
 				if bool(result.get("success", false)):
 					selected_friend_conversation_id = str(result.get("conversation_id", ""))
+					SocialChatManager.subscribe_direct_chat(selected_friend_conversation_id)
 					SocialChatManager.read_direct_messages(selected_friend_conversation_id)
 				else:
 					social_chat_status.text = "تعذر فتح المحادثة: " + str(result.get("error_code", "unknown"))
@@ -1138,12 +1154,23 @@ func _on_social_operation_completed(action: String, data: Variant) -> void:
 				SocialChatManager.get_chat_group()
 			else:
 				social_chat_status.text = "تعذر إنشاء المجموعة."
+		"chat_identity":
+			if data is Array and not data.is_empty() and data[0] is Dictionary:
+				var identity: Dictionary = data[0]
+				SocialChatManager.set_realtime_player_code(str(identity.get("player_code", "")))
+				SocialChatManager.list_chat_group_invites()
+		"chat_invites":
+			_refresh_social_invite_cards(data)
+			SocialChatManager.list_friends()
 		"group_info":
 			group_members.clear()
+			var active_group_id := ""
 			if data is Array:
 				for member in data:
 					if member is Dictionary:
+						active_group_id = str(member.get("group_id", active_group_id))
 						group_members.append({"player_id": str(member.get("player_code", "")), "display_name": str(member.get("display_name", "لاعب")), "is_leader": bool(member.get("is_leader", false))})
+			SocialChatManager.subscribe_group_chat(active_group_id)
 			if group_members.is_empty():
 				group_members = [{"player_id":"local_leader", "display_name":"أنت", "is_leader":true}]
 				if is_instance_valid(social_group_create_button):
@@ -1160,6 +1187,11 @@ func _on_social_operation_completed(action: String, data: Variant) -> void:
 		"group_invite":
 			social_chat_status.text = "نتيجة دعوة المجموعة: " + str(data)
 			SocialChatManager.get_chat_group()
+		"group_invite_response":
+			social_chat_status.text = "نتيجة الرد على الدعوة: " + str(data)
+			if str(data) == "accepted":
+				SocialChatManager.get_chat_group()
+			SocialChatManager.list_chat_group_invites()
 		"chat_send":
 			if data is Array and not data.is_empty() and data[0] is Dictionary and bool(data[0].get("success", false)):
 				social_chat_input.clear()
@@ -1184,6 +1216,82 @@ func _on_social_operation_completed(action: String, data: Variant) -> void:
 
 func _on_social_operation_failed(action: String, message: String) -> void:
 	social_chat_status.text = "تعذر تنفيذ " + action + ": " + message
+
+
+func _on_social_realtime_status(status: String) -> void:
+	if is_instance_valid(social_chat_status):
+		social_chat_status.text = status
+
+
+func _on_social_realtime_event(topic: String, event_name: String, payload: Dictionary) -> void:
+	if event_name == "group_invite":
+		_add_social_group_invite_card(payload)
+		if is_instance_valid(social_chat_dock_button):
+			social_chat_dock_button.text = "💬 🔴"
+		return
+	if event_name != "chat_message" and event_name != "direct_message":
+		return
+	var should_show := false
+	if topic == "chat:public:messages" and social_chat_channel == "العامة":
+		should_show = true
+	elif topic.begins_with("chat:group:") and social_chat_channel == "المجموعة":
+		should_show = true
+	elif topic.begins_with("chat:direct:") and topic == "chat:direct:" + selected_friend_conversation_id and social_chat_channel == "الأصدقاء":
+		should_show = true
+	if not should_show or not is_instance_valid(social_chat_log):
+		return
+	var message_id := str(payload.get("message_id", ""))
+	if not message_id.is_empty() and _seen_realtime_message_ids.has(message_id):
+		return
+	if not message_id.is_empty():
+		_seen_realtime_message_ids[message_id] = true
+	var sender := str(payload.get("sender_name", "لاعب"))
+	var safe_body := str(payload.get("body", "")).replace("[", "(").replace("]", ")")
+	social_chat_log.append_text("[color=gold][" + sender + "][/color] " + safe_body + "\n")
+
+
+func _refresh_social_invite_cards(data: Variant) -> void:
+	if not is_instance_valid(social_invites_box):
+		return
+	for child in social_invites_box.get_children():
+		child.queue_free()
+	if data is Array:
+		for invite in data:
+			if invite is Dictionary:
+				_add_social_group_invite_card(invite)
+	social_invites_box.visible = social_invites_box.get_child_count() > 0
+
+
+func _add_social_group_invite_card(invite: Dictionary) -> void:
+	if not is_instance_valid(social_invites_box):
+		return
+	var invite_id := str(invite.get("invite_id", ""))
+	if invite_id.is_empty():
+		return
+	for child in social_invites_box.get_children():
+		if child.has_meta("invite_id") and str(child.get_meta("invite_id")) == invite_id:
+			return
+	var card := HBoxContainer.new()
+	card.set_meta("invite_id", invite_id)
+	social_invites_box.add_child(card)
+	social_invites_box.visible = true
+	var label := Label.new()
+	label.text = "دعوة مجموعة من " + str(invite.get("inviter_name", "لاعب"))
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	label.add_theme_font_size_override("font_size", 10)
+	card.add_child(label)
+	var accept := Button.new()
+	accept.text = "قبول"
+	accept.pressed.connect(_respond_to_social_group_invite.bind(invite_id, true))
+	card.add_child(accept)
+	var decline := Button.new()
+	decline.text = "رفض"
+	decline.pressed.connect(_respond_to_social_group_invite.bind(invite_id, false))
+	card.add_child(decline)
+
+
+func _respond_to_social_group_invite(invite_id: String, accepted: bool) -> void:
+	SocialChatManager.respond_chat_group_invite(invite_id, accepted)
 
 
 func _select_social_chat_channel(channel: String) -> void:
