@@ -1831,7 +1831,7 @@ func _on_invitation_accepted(invitation: Dictionary) -> void:
 	if kind == "group_invite":
 		_submit_group_invitation_response(invitation, true)
 	else:
-		social_chat_status.text = "القبول غير متاح: لم تُربط خدمة هذا النوع من الدعوات بالخادم بعد."
+		social_chat_status.text = "تعذر قبول الدعوة: خدمة هذا النوع غير متاحة على الخادم حاليًا."
 
 
 func _on_invitation_declined(invitation: Dictionary) -> void:
@@ -1839,13 +1839,17 @@ func _on_invitation_declined(invitation: Dictionary) -> void:
 	if kind == "group_invite":
 		_submit_group_invitation_response(invitation, false)
 	else:
-		social_chat_status.text = "تم رفض الدعوة."
+		# Do not claim a server-side decline when this invitation type has no RPC.
+		social_chat_status.text = "لم يُسجَّل رفض الدعوة على الخادم؛ خدمة هذا النوع غير متاحة حاليًا."
 
 
 func _on_invitation_expired(invitation: Dictionary) -> void:
-	if str(invitation.get("type", "")) == "group_invite":
+	var kind := str(invitation.get("type", ""))
+	if kind == "group_invite":
 		_submit_group_invitation_response(invitation, false)
 		social_chat_status.text = "انتهت صلاحية دعوة المجموعة بعد 30 ثانية."
+	else:
+		social_chat_status.text = "انتهت مهلة الدعوة محليًا؛ لم يتوفر إجراء خادمي لهذا النوع."
 
 
 func _submit_group_invitation_response(invitation: Dictionary, accepted: bool) -> void:
