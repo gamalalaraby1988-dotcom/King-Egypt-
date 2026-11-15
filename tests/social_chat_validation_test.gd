@@ -24,22 +24,22 @@ func _run_social_validation_tests() -> void:
 	var expiry_probe: Control = invitation_overlay_script.new()
 	var known_created_at := "2026-11-16T10:00:00"
 	var known_created_timestamp := float(Time.get_unix_time_from_datetime_string(known_created_at))
-	var anchored_deadline := expiry_probe.resolve_invitation_expiry({"created_at": known_created_at}, known_created_timestamp + 10.0)
+	var anchored_deadline: float = expiry_probe.resolve_invitation_expiry({"created_at": known_created_at}, known_created_timestamp + 10.0)
 	if not is_equal_approx(anchored_deadline, known_created_timestamp + 30.0):
 		push_error("A server creation timestamp did not anchor the invitation to its original 30-second lifetime.")
 		quit(1)
 		return
-	var extended_deadline := expiry_probe.resolve_invitation_expiry({"created_at": known_created_at, "expires_at": known_created_timestamp + 90.0}, known_created_timestamp + 10.0)
+	var extended_deadline: float = expiry_probe.resolve_invitation_expiry({"created_at": known_created_at, "expires_at": known_created_timestamp + 90.0}, known_created_timestamp + 10.0)
 	if not is_equal_approx(extended_deadline, known_created_timestamp + 30.0):
 		push_error("A supplied invitation deadline extended the approved 30-second lifetime.")
 		quit(1)
 		return
-	var anchored_shortened_deadline := expiry_probe.resolve_invitation_expiry({"created_at": known_created_at, "expires_at": known_created_timestamp + 20.0}, known_created_timestamp + 10.0)
+	var anchored_shortened_deadline: float = expiry_probe.resolve_invitation_expiry({"created_at": known_created_at, "expires_at": known_created_timestamp + 20.0}, known_created_timestamp + 10.0)
 	if not is_equal_approx(anchored_shortened_deadline, known_created_timestamp + 20.0):
 		push_error("A shorter supplied invitation deadline was not respected.")
 		quit(1)
 		return
-	var receipt_deadline := expiry_probe.resolve_invitation_expiry({"expires_at": 2000.0}, 1000.0)
+	var receipt_deadline: float = expiry_probe.resolve_invitation_expiry({"expires_at": 2000.0}, 1000.0)
 	if not is_equal_approx(receipt_deadline, 1030.0):
 		push_error("An invitation without a trustworthy creation timestamp did not receive a 30-second receipt cap.")
 		quit(1)
