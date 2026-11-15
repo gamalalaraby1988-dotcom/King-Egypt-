@@ -11,6 +11,38 @@ func _run_social_validation_tests() -> void:
 		quit(1)
 		return
 
+	var city_hud_script: Script = load("res://scripts/city_hud.gd")
+	if city_hud_script == null:
+		push_error("City HUD script could not be loaded for group-gather guard tests.")
+		quit(1)
+		return
+	var city_hud: CanvasLayer = city_hud_script.new()
+	if not city_hud.can_show_group_gather_button(true, 2, false):
+		push_error("A group leader with another member outside an apartment should see the gather button.")
+		quit(1)
+		return
+	if city_hud.can_show_group_gather_button(false, 2, false):
+		push_error("A non-leader was allowed to see the group gather button.")
+		quit(1)
+		return
+	if city_hud.can_show_group_gather_button(true, 1, false):
+		push_error("A solo leader was allowed to see the group gather button.")
+		quit(1)
+		return
+	if city_hud.can_show_group_gather_button(true, 2, true):
+		push_error("The group gather button remained available inside a private apartment.")
+		quit(1)
+		return
+	if not city_hud.can_submit_group_invitation_response("", "invite-1"):
+		push_error("A valid first group invitation response was blocked.")
+		quit(1)
+		return
+	if city_hud.can_submit_group_invitation_response("invite-1", "invite-2") or city_hud.can_submit_group_invitation_response("", ""):
+		push_error("Overlapping or empty group invitation responses were allowed.")
+		quit(1)
+		return
+	city_hud.free()
+
 	var saved_topics: Dictionary = social._realtime_topics.duplicate(true)
 	var saved_join_refs: Dictionary = social._realtime_join_refs.duplicate(true)
 	var saved_ready_topics: Dictionary = social._realtime_ready_topics.duplicate(true)
