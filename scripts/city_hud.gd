@@ -876,7 +876,7 @@ func _build_friend_character_portrait(friend: Dictionary) -> Control:
 			world.add_child(character)
 			if scene_path == "res://scenes/characters/avatar_visual.tscn" and character.has_method("apply_character_identity"):
 				var character_id := str(friend.get("selected_character_id", friend.get("character_id", ""))).strip_edges()
-				character.call("apply_character_identity", character_id)
+				character.call_deferred("apply_character_identity", character_id)
 	return portrait
 
 
