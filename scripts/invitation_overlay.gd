@@ -79,9 +79,19 @@ func _build_ui() -> void:
 	_panel.add_theme_stylebox_override("panel", style)
 	add_child(_panel)
 
+	var scroll := ScrollContainer.new()
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.custom_minimum_size = Vector2.ZERO
+	_panel.add_child(scroll)
+
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 7)
-	_panel.add_child(column)
+	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	column.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.add_child(column)
 
 	_title_label = Label.new()
 	_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
