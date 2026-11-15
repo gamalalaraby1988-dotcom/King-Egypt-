@@ -56,6 +56,22 @@ func _run_social_validation_tests() -> void:
 		quit(1)
 		return
 
+	social.subscribe_direct_chat("conversation-a")
+	if social._realtime_direct_id != "conversation-a" or not social._realtime_topics.has("chat:direct:conversation-a"):
+		push_error("The initial direct conversation subscription was not registered.")
+		quit(1)
+		return
+	social.subscribe_direct_chat("conversation-b")
+	if social._realtime_direct_id != "conversation-b" or social._realtime_topics.has("chat:direct:conversation-a") or not social._realtime_topics.has("chat:direct:conversation-b"):
+		push_error("Switching direct conversations left the previous realtime topic subscribed.")
+		quit(1)
+		return
+	social.subscribe_direct_chat("")
+	if not social._realtime_direct_id.is_empty() or social._realtime_topics.has("chat:direct:conversation-b"):
+		push_error("Closing a direct conversation did not clear its realtime subscription.")
+		quit(1)
+		return
+
 	if social.open_direct_conversation("bad-code"):
 		push_error("Invalid player code was accepted for direct conversation.")
 		quit(1)
