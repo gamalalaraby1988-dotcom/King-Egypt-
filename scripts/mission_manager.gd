@@ -77,6 +77,8 @@ var daily_chest_server_claimed := false
 var daily_chest_reward_day := ""
 
 var _key_was_down := false
+var _profile_session_uid := ""
+var _profile_session_generation := -1
 
 const MAX_CURRENCY_BALANCE := 2000000000
 
@@ -113,10 +115,6 @@ func _exit_tree() -> void:
 	if AuthManager.authenticated.is_connected(_on_daily_chest_authenticated):
 		AuthManager.authenticated.disconnect(_on_daily_chest_authenticated)
 
-
-
-var _profile_session_uid := ""
-var _profile_session_generation := -1
 
 func _on_account_session_ready(user_id: String, generation: int, _profile_path: String) -> void:
 	if not AccountDataSession.is_session_current(user_id, generation):
