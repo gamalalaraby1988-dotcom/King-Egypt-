@@ -133,6 +133,20 @@ func _run_social_validation_tests() -> void:
 		quit(1)
 		return
 	var city_hud: CanvasLayer = city_hud_script.new()
+	var gather_scene := Node3D.new()
+	root.add_child(gather_scene)
+	city_hud.main_scene = gather_scene
+	city_hud.group_members.append({"player_id":"friend_test", "display_name":"صديق", "is_leader":false})
+	city_hud.receive_group_member_positions([{
+		"player_id":"friend_test",
+		"display_name":"صديق",
+		"position":Vector3(4, 0, 6)
+	}])
+	if not gather_scene.get_children().is_empty():
+		push_error("Group position updates created a standalone gathering marker instead of keeping gathering tied to the leader's current location.")
+		quit(1)
+		return
+	gather_scene.queue_free()
 	if not city_hud.can_show_group_gather_button(true, 2, false):
 		push_error("A group leader with another member outside an apartment should see the gather button.")
 		quit(1)
