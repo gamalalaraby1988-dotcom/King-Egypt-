@@ -97,5 +97,9 @@ func _run_auth_session_tests() -> void:
 		quit(1)
 		return
 
+	mission_manager.free()
+	mission_manager = null
+	mission_manager_script = null
+	await process_frame
 	print("Auth session generation and invalidation tests passed.")
 	quit(0)
