@@ -175,8 +175,10 @@ func _run_auth_session_tests() -> void:
 	mission_manager.achievement_totals = {"jobs": 7, "missions": 4, "daily_claims": 2}
 	mission_manager.reward_receipts = {"ci_private_reward": "claimed"}
 	mission_manager.daily_task_progress = {"2099-01-01": {"ci_task": 9}}
-	mission_manager.active_mission = Node3D.new()
-	mission_manager.active_job = Node3D.new()
+	var active_mission_fixture := Node3D.new()
+	var active_job_fixture := Node3D.new()
+	mission_manager.active_mission = active_mission_fixture
+	mission_manager.active_job = active_job_fixture
 	mission_manager.active_job_target = Vector3(1, 2, 3)
 	mission_manager.active_job_reward = {"money": 500}
 	mission_manager.job_running = true
@@ -251,6 +253,8 @@ func _run_auth_session_tests() -> void:
 		push_error("An active mission, job, or rental from the previous account survived session invalidation.")
 		quit(1)
 		return
+	active_mission_fixture.free()
+	active_job_fixture.free()
 	if mission_manager.owned_outfits != ["default"] or mission_manager.daily_chest_reward_configured or mission_manager.daily_chest_server_claimed or not mission_manager.daily_chest_reward_day.is_empty():
 		push_error("Mission state from the previous account remained after session invalidation.")
 		quit(1)
