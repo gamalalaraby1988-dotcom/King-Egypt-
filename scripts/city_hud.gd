@@ -1380,8 +1380,22 @@ func _on_social_account_session_changed(_previous_user_id: String, current_user_
 	pending_group_invites.clear()
 	_pending_group_invite_response_id = ""
 	_apartment_invite_mode = false
+	group_meeting_position = Vector3.ZERO
+	group_follow_enabled = false
+	for marker_value in group_member_markers.values():
+		if is_instance_valid(marker_value):
+			marker_value.queue_free()
+	group_member_markers.clear()
 	if is_instance_valid(invitation_overlay):
 		invitation_overlay.call("clear_pending_invitations")
+	if is_instance_valid(blocked_players_box):
+		for child in blocked_players_box.get_children():
+			child.queue_free()
+		var blocked_empty := Label.new()
+		blocked_empty.text = "سجّل الدخول لعرض قائمة الحظر"
+		blocked_players_box.add_child(blocked_empty)
+	if is_instance_valid(player_popup):
+		player_popup.visible = false
 	group_members.clear()
 	group_members.append({"player_id": "local_leader", "display_name": "أنت", "is_leader": true})
 	_friend_buttons.clear()
