@@ -932,7 +932,7 @@ func _build_social_chat_panel() -> void:
 	var channels := HBoxContainer.new()
 	channels.add_theme_constant_override("separation", 3)
 	layout.add_child(channels)
-	for channel in ["العامة", "القريبون", "الأصدقاء", "الفريق", "الشقة"]:
+	for channel in ["الأصدقاء", "المجموعة", "العامة"]:
 		var channel_button := Button.new()
 		channel_button.text = channel
 		channel_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -1015,14 +1015,14 @@ func _open_social_chat_panel() -> void:
 
 
 func _select_social_chat_channel(channel: String) -> void:
-	if not ["العامة", "القريبون", "الأصدقاء", "الفريق", "الشقة"].has(channel):
+	if not ["الأصدقاء", "المجموعة", "العامة"].has(channel):
 		return
 	social_chat_channel = channel
 	if is_instance_valid(social_chat_log):
 		social_chat_log.clear()
 		social_chat_log.append_text("[color=gray]قناة %s — لا يوجد اتصال خادمي نشط حتى الآن.[/color]" % channel)
 	if is_instance_valid(social_chat_status):
-		social_chat_status.text = "القناة: %s | غير متصلة بالخادم" % channel
+		social_chat_status.text = "القناة: %s | غير متصلة بالخادم — القنوات نفسها متاحة داخل الشقة" % channel
 
 
 func _insert_social_chat_emoji(emoji: String) -> void:
