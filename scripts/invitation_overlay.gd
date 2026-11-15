@@ -112,18 +112,15 @@ func enqueue_invitation(invitation: Dictionary) -> void:
 func resolve_invitation_expiry(invitation: Dictionary, now: float) -> float:
 	var created_deadline := 0.0
 	var created_at := str(invitation.get("created_at", "")).strip_edges()
-	if not created_at.is_empty():
-		if created_at.length() < 19:
-			return now
+	if created_at.length() >= 19:
 		var created_timestamp := float(Time.get_unix_time_from_datetime_string(created_at.substr(0, 19)))
-		# Reject malformed or future-dated creation times instead of granting
-		# an untrusted invitation a fresh 30-second lifetime.
-		if created_timestamp <= 0.0 or created_timestamp > now:
-			return now
-		created_deadline = created_timestamp + INVITATION_DURATION_SECONDS
+		# Only a valid timestamp at or before receipt can anchor expiry.
+		# Malformed or future timestamps fall back to receipt time.
+		if created_timestamp > 0.0 and created_timestamp <= now:
+			created_deadline = created_timestamp + INVITATION_DURATION_SECONDS
 	# A supplied server deadline may shorten an invitation, but must never
-	# extend the approved 30-second lifetime. If no creation time is supplied,
-	# the local cap starts when the invitation is received.
+	# extend the approved 30-second lifetime. If no trustworthy creation time
+	# is available, the local cap starts when the invitation is received.
 	var maximum_deadline := created_deadline if created_deadline > 0.0 else now + INVITATION_DURATION_SECONDS
 	var supplied_deadline := float(invitation.get("expires_at", 0.0))
 	if supplied_deadline > 0.0:
