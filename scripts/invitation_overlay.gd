@@ -26,19 +26,22 @@ func _ready() -> void:
 	resized.connect(_apply_panel_layout)
 	_apply_panel_layout()
 
+func get_panel_horizontal_margin(viewport_width: float) -> float:
+	return minf(12.0, maxf(0.0, viewport_width * 0.5))
+
 func get_panel_width_for_viewport(viewport_width: float) -> float:
-	return maxf(180.0, minf(314.0, viewport_width - 24.0))
+	var margin := get_panel_horizontal_margin(viewport_width)
+	return minf(314.0, maxf(0.0, viewport_width - margin * 2.0))
 
 func get_panel_layout_for_viewport(viewport_width: float) -> Vector2:
-	var panel_width := get_panel_width_for_viewport(viewport_width)
-	return Vector2(viewport_width - panel_width - 12.0, panel_width)
+	return Vector2(get_panel_horizontal_margin(viewport_width), get_panel_width_for_viewport(viewport_width))
 
 func _apply_panel_layout() -> void:
 	if not is_instance_valid(_panel):
 		return
 	var layout := get_panel_layout_for_viewport(get_viewport_rect().size.x)
-	_panel.offset_left = -layout.y - 12.0
-	_panel.offset_right = -12.0
+	_panel.offset_left = -layout.y - layout.x
+	_panel.offset_right = -layout.x
 	_panel.custom_minimum_size.x = layout.y
 
 func _build_ui() -> void:
