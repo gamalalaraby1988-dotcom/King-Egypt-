@@ -863,8 +863,8 @@ func _build_friend_character_portrait(friend: Dictionary) -> Control:
 	var camera := Camera3D.new()
 	camera.position = Vector3(0, 1.12, -3.2)
 	camera.current = true
+	camera.basis = Basis.looking_at(Vector3(0, 1.0, 0) - camera.position, Vector3.UP)
 	world.add_child(camera)
-	camera.call_deferred("look_at", Vector3(0, 1.0, 0), Vector3.UP)
 	var light := DirectionalLight3D.new()
 	light.rotation_degrees = Vector3(-24, -18, 0)
 	light.light_energy = 1.25
@@ -876,7 +876,7 @@ func _build_friend_character_portrait(friend: Dictionary) -> Control:
 			world.add_child(character)
 			if scene_path == "res://scenes/characters/avatar_visual.tscn" and character.has_method("apply_character_identity"):
 				var character_id := str(friend.get("selected_character_id", friend.get("character_id", ""))).strip_edges()
-				character.call_deferred("apply_character_identity", character_id)
+				character.apply_character_identity(character_id)
 	return portrait
 
 
