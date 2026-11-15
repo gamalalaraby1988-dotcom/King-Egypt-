@@ -210,15 +210,20 @@ func _make_material(color: Color) -> StandardMaterial3D:
 func open_for_gate(gate: Node3D) -> void:
 	if ship_transition_busy or not is_instance_valid(gate) or not is_instance_valid(player):
 		return
+	if gate.is_queued_for_deletion() or not gate.is_inside_tree() or not gate.has_method("get_quick_travel_data"):
+		return
+	if not player.is_inside_tree():
+		return
 	if not is_instance_valid(menu_layer) or not is_instance_valid(menu_panel) or not is_instance_valid(menu_list) or not is_instance_valid(menu_scroll):
 		return
 	var dim := menu_layer.get_node_or_null("Dim") as ColorRect
 	if not is_instance_valid(dim):
 		return
-	active_gate = gate
 	var data: Dictionary = gate.get_quick_travel_data()
-	var gate_id := str(data.get("gate_id", ""))
-	var location_id := str(data.get("location_id", "ship_exterior"))
+	var location_id := str(data.get("location_id", ""))
+	if location_id != "ship_exterior" and location_id != "ship_hall" and not wing_titles.has(location_id):
+		return
+	active_gate = gate
 	menu_title.text = "التنقل السريع"
 	menu_subtitle.text = "الموقع الحالي: %s" % _location_title(location_id)
 	for child in menu_list.get_children():
