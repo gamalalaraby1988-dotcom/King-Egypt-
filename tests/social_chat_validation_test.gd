@@ -177,6 +177,38 @@ func _run_social_validation_tests() -> void:
 		quit(1)
 		return
 	female_avatar.queue_free()
+	var male_portrait: Control = city_hud.call("_build_friend_character_portrait", {"selected_character_id":"eg_m_adam"}) as Control
+	if not male_portrait is SubViewportContainer:
+		push_error("A valid in-game male character did not produce a rendered viewport portrait.")
+		quit(1)
+		return
+	var portrait_viewport := male_portrait.get_child(0) as SubViewport
+	var portrait_world := portrait_viewport.get_child(0) as Node3D
+	var portrait_character := portrait_world.get_child(2) as Node3D
+	if portrait_viewport.size != Vector2i(104, 104) or portrait_character == null or str(portrait_character.get("current_outfit")) != "men_formal":
+		push_error("The male friend portrait viewport did not render the selected in-game character preset.")
+		quit(1)
+		return
+	male_portrait.free()
+	var female_portrait: Control = city_hud.call("_build_friend_character_portrait", {"character_id":"eg_f_layan"}) as Control
+	if not female_portrait is SubViewportContainer:
+		push_error("A valid in-game female character did not produce a rendered viewport portrait.")
+		quit(1)
+		return
+	var female_viewport := female_portrait.get_child(0) as SubViewport
+	var female_world := female_viewport.get_child(0) as Node3D
+	var female_character := female_world.get_child(2) as Node3D
+	if female_character == null or str(female_character.get("current_outfit")) != "women_formal":
+		push_error("The female friend portrait viewport did not render the selected in-game character preset.")
+		quit(1)
+		return
+	female_portrait.free()
+	var unknown_portrait: Control = city_hud.call("_build_friend_character_portrait", {"selected_character_id":"xx_m_unknown"}) as Control
+	if unknown_portrait is SubViewportContainer or unknown_portrait.name != "FriendCharacterPortraitFallback":
+		push_error("An unknown character did not receive the neutral in-game portrait fallback.")
+		quit(1)
+		return
+	unknown_portrait.free()
 	if city_hud.get_friend_character_scene_path({"selected_character_id":"xx_m_unknown"}) != "":
 		push_error("An unknown character ID was allowed to resolve to a portrait scene.")
 		quit(1)
