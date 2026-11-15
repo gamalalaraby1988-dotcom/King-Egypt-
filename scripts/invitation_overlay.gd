@@ -5,8 +5,11 @@ signal invitation_declined(invitation: Dictionary)
 signal invitation_expired(invitation: Dictionary)
 
 const INVITATION_DURATION_SECONDS := 30.0
+const MAX_SEEN_INVITATION_IDS := 512
 
 var _queue: Array[Dictionary] = []
+var _seen_invitation_ids: Dictionary = {}
+var _seen_invitation_order: Array[String] = []
 var _current: Dictionary = {}
 var _remaining_seconds := 0.0
 var _response_pending := false
@@ -94,6 +97,7 @@ func enqueue_invitation(invitation: Dictionary) -> void:
 	var invite_id := str(item.get("invite_id", item.get("id", ""))).strip_edges()
 	if invite_id.is_empty() or _contains_invitation(invite_id):
 		return
+	_remember_invitation_id(invite_id)
 	item["invite_id"] = invite_id
 	var expiry := resolve_invitation_expiry(item, float(Time.get_unix_time_from_system()))
 	item["expires_at"] = expiry
@@ -123,12 +127,15 @@ func resolve_invitation_expiry(invitation: Dictionary, now: float) -> float:
 
 
 func _contains_invitation(invite_id: String) -> bool:
-	if not _current.is_empty() and str(_current.get("invite_id", "")) == invite_id:
-		return true
-	for item in _queue:
-		if str(item.get("invite_id", "")) == invite_id:
-			return true
-	return false
+	return _seen_invitation_ids.has(invite_id)
+
+
+func _remember_invitation_id(invite_id: String) -> void:
+	_seen_invitation_ids[invite_id] = true
+	_seen_invitation_order.append(invite_id)
+	while _seen_invitation_order.size() > MAX_SEEN_INVITATION_IDS:
+		var oldest_id := _seen_invitation_order.pop_front()
+		_seen_invitation_ids.erase(oldest_id)
 
 func _show_next() -> void:
 	if _response_pending or not _current.is_empty() or _queue.is_empty():
@@ -208,6 +215,8 @@ func clear_pending_invitations() -> void:
 	# when the account changes so another player never sees stale requests.
 	_queue.clear()
 	_current.clear()
+	_seen_invitation_ids.clear()
+	_seen_invitation_order.clear()
 	_response_pending = false
 	_remaining_seconds = 0.0
 	if is_instance_valid(_panel):
