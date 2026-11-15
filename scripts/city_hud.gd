@@ -63,6 +63,7 @@ var social_chat_unread := false
 var social_friends_box: VBoxContainer
 var friend_search_input: LineEdit
 var selected_friend_code := ""
+var local_player_code := ""
 var selected_friend_conversation_id := ""
 var social_group_create_button: Button
 var social_group_invite_button: Button
@@ -142,6 +143,8 @@ func _process(_delta: float) -> void:
 	if not is_instance_valid(mission_manager) and is_instance_valid(main_scene):
 		mission_manager = main_scene.get_node_or_null("MissionManager")
 	_refresh_wallet()
+	if _apartment_invite_mode and not _is_inside_private_apartment():
+		_apartment_invite_mode = false
 	_update_group_gather_visibility()
 
 func _build() -> void:
@@ -733,7 +736,8 @@ func _is_local_group_leader() -> bool:
 	if group_members.is_empty():
 		return false
 	var leader: Dictionary = group_members[0]
-	return str(leader.get("player_id", "")) == "local_leader" and bool(leader.get("is_leader", false))
+	var leader_id := str(leader.get("player_id", ""))
+	return (leader_id == "local_leader" or (not local_player_code.is_empty() and leader_id == local_player_code)) and bool(leader.get("is_leader", false))
 
 
 func _request_group_invite(player_id: String) -> void:
@@ -1509,7 +1513,8 @@ func _on_social_operation_completed(action: String, data: Variant) -> void:
 		"chat_identity":
 			if data is Array and not data.is_empty() and data[0] is Dictionary:
 				var identity: Dictionary = data[0]
-				SocialChatManager.set_realtime_player_code(str(identity.get("player_code", "")))
+				local_player_code = str(identity.get("player_code", "")).strip_edges().to_upper()
+				SocialChatManager.set_realtime_player_code(local_player_code)
 				SocialChatManager.check_moderator_access()
 		"moderator_check":
 			var allowed := data is bool and data
