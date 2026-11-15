@@ -24,6 +24,9 @@ const INTERIOR_WORLD_POSITION := Vector3(1000.0, 0.0, 1000.0)
 var _city_material_cache: Dictionary = {}
 var _city_box_mesh_cache: Dictionary = {}
 var _city_collision_shape_cache: Dictionary = {}
+var arcade_seat_button: Button = null
+var arcade_seat_layer: CanvasLayer = null
+var arcade_nearby_seat: Node3D = null
 
 func _ready() -> void:
 	_create_ground()
@@ -38,9 +41,11 @@ func _ready() -> void:
 	_create_camp()
 	_create_interior_transition_ui()
 	_create_player_vehicle()
+	_create_arcade_seat_interaction()
 
 
 func _process(_delta: float) -> void:
+	_update_arcade_seat_interaction()
 	# المركبات تخص مساحة المدينة؛ أخفِ أدواتها طوال الانتقال أو الوجود داخل مبنى.
 	if interior_transition_busy or is_instance_valid(interior_root):
 		if is_instance_valid(vehicle_interaction_button):
@@ -274,6 +279,92 @@ func _exit_player_vehicle() -> void:
 		vehicle_interaction_button.text = "ركوب السيارة" if CityLanguage.get_language() == "ar" else "Enter vehicle"
 		vehicle_interaction_button.visible = player.global_position.distance_squared_to(city_vehicle.global_position) <= 25.0
 
+func _create_arcade_seat_interaction() -> void:
+	arcade_seat_layer = CanvasLayer.new()
+	arcade_seat_layer.name = "ArcadeSeatInteractionLayer"
+	arcade_seat_layer.layer = 22
+	add_child(arcade_seat_layer)
+	arcade_seat_button = Button.new()
+	arcade_seat_button.name = "ArcadeSeatInteractionButton"
+	arcade_seat_button.text = "الجلوس واللعب"
+	arcade_seat_button.custom_minimum_size = Vector2(220, 58)
+	arcade_seat_button.anchor_left = 0.5
+	arcade_seat_button.anchor_right = 0.5
+	arcade_seat_button.anchor_top = 1.0
+	arcade_seat_button.anchor_bottom = 1.0
+	arcade_seat_button.offset_left = -110
+	arcade_seat_button.offset_right = 110
+	arcade_seat_button.offset_top = -150
+	arcade_seat_button.offset_bottom = -92
+	arcade_seat_button.visible = false
+	arcade_seat_button.pressed.connect(_toggle_arcade_seat)
+	arcade_seat_layer.add_child(arcade_seat_button)
+
+
+func _update_arcade_seat_interaction() -> void:
+	if not is_instance_valid(arcade_seat_button):
+		return
+	var player := get_node_or_null("Player") as CharacterBody3D
+	if not is_instance_valid(player) or interior_transition_busy or not is_instance_valid(interior_root) or vehicle_occupied:
+		arcade_seat_button.visible = false
+		arcade_nearby_seat = null
+		return
+	if player.has_meta("arcade_seat_active") and not bool(player.get("sitting")):
+		player.remove_meta("arcade_seat_active")
+		player.remove_meta("arcade_seat_name")
+	if player.has_meta("arcade_seat_active"):
+		arcade_seat_button.text = "مغادرة الماكينة"
+		arcade_seat_button.visible = true
+		return
+	var nearest: Node3D = null
+	var nearest_distance_squared := 12.25
+	for candidate in get_tree().get_nodes_in_group("arcade_machine_seats"):
+		if not is_instance_valid(candidate) or candidate.is_queued_for_deletion():
+			continue
+		var distance_squared := player.global_position.distance_squared_to(candidate.global_position)
+		if distance_squared <= nearest_distance_squared:
+			nearest = candidate
+			nearest_distance_squared = distance_squared
+	arcade_nearby_seat = nearest
+	arcade_seat_button.visible = is_instance_valid(nearest)
+	if is_instance_valid(nearest):
+		arcade_seat_button.text = "الجلوس واللعب"
+
+
+func _toggle_arcade_seat() -> void:
+	var player := get_node_or_null("Player") as CharacterBody3D
+	if not is_instance_valid(player) or not is_instance_valid(interior_root) or vehicle_occupied:
+		return
+	if player.has_meta("arcade_seat_active"):
+		var seat_name := str(player.get_meta("arcade_seat_name", ""))
+		var active_seat: Node3D = null
+		for candidate in get_tree().get_nodes_in_group("arcade_machine_seats"):
+			if is_instance_valid(candidate) and str(candidate.get_meta("machine_name", "")) == seat_name:
+				active_seat = candidate
+				break
+		player.set("sitting", false)
+		player.remove_meta("arcade_seat_active")
+		player.remove_meta("arcade_seat_name")
+		if is_instance_valid(active_seat):
+			player.global_position = active_seat.global_position + Vector3(0, 0.0, 1.15)
+		player.velocity = Vector3.ZERO
+		arcade_seat_button.visible = false
+		return
+	if not is_instance_valid(arcade_nearby_seat) or player.global_position.distance_squared_to(arcade_nearby_seat.global_position) > 12.25:
+		return
+	if bool(player.get("animal_riding")) or bool(player.get("sitting")):
+		return
+	player.set_mobile_move(Vector2.ZERO)
+	player.set_mobile_sprint(false)
+	player.velocity = Vector3.ZERO
+	player.global_position = arcade_nearby_seat.global_position
+	player.global_rotation.y = arcade_nearby_seat.global_rotation.y
+	player.set("sitting", true)
+	player.set_meta("arcade_seat_active", true)
+	player.set_meta("arcade_seat_name", str(arcade_nearby_seat.get_meta("machine_name", "ماكينة VIP")))
+	arcade_seat_button.text = "مغادرة الماكينة"
+
+
 func _create_interior_transition_ui() -> void:
 	interior_loading_layer = CanvasLayer.new()
 	interior_loading_layer.name = "InteriorTransitionUI"
@@ -491,6 +582,22 @@ func _create_interior_furnishings(root: Node3D, building_title: String) -> void:
 			_create_box(root, machine_name + "_ScreenGoldFrame", Vector3(0.82, 0.08, 0.10), Vector3(machine_x, 1.79, machine_z + 0.45), Color(0.84, 0.66, 0.31))
 			_create_box(root, machine_name + "_ControlPanel", Vector3(0.72, 0.12, 0.30), Vector3(machine_x, 0.94, machine_z + 0.47), Color(0.30, 0.22, 0.13))
 			_create_box(root, machine_name + "_PedestalTrim", Vector3(1.00, 0.10, 0.86), Vector3(machine_x, 0.16, machine_z), Color(0.78, 0.59, 0.27))
+			# كرسي مستقل أمام كل ماكينة مع نقطة جلوس تفاعلية للاعب.
+			var seat_z := machine_z + 1.65
+			var seat_name := "VIPArcadeSeat_%d" % index
+			_create_box(root, seat_name + "_Cushion", Vector3(0.92, 0.18, 0.82), Vector3(machine_x, 0.58, seat_z), Color(0.12, 0.20, 0.20), false)
+			_create_box(root, seat_name + "_Back", Vector3(0.92, 0.95, 0.18), Vector3(machine_x, 1.08, seat_z + 0.34), Color(0.10, 0.16, 0.17), false)
+			_create_box(root, seat_name + "_GoldBase", Vector3(0.98, 0.10, 0.88), Vector3(machine_x, 0.12, seat_z), Color(0.78, 0.59, 0.27), false)
+			for leg_index in range(4):
+				var leg_x := -0.34 if leg_index % 2 == 0 else 0.34
+				var leg_z := -0.29 if leg_index < 2 else 0.29
+				_create_box(root, seat_name + "_Leg_%d" % leg_index, Vector3(0.10, 0.48, 0.10), Vector3(machine_x + leg_x, 0.30, seat_z + leg_z), Color(0.70, 0.52, 0.24), false)
+			var seat_anchor := Node3D.new()
+			seat_anchor.name = seat_name + "_InteractionPoint"
+			seat_anchor.position = Vector3(machine_x, 0.0, seat_z)
+			seat_anchor.add_to_group("arcade_machine_seats")
+			seat_anchor.set_meta("machine_name", "ماكينة VIP %d" % (index + 1))
+			root.add_child(seat_anchor)
 	elif building_title == "مركز التوظيف":
 		for index in range(3):
 			var x := -4.0 + float(index) * 4.0
