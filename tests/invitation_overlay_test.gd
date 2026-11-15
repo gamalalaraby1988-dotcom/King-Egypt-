@@ -53,7 +53,12 @@ func _run_invitation_overlay_tests() -> void:
 		quit(1)
 		return
 
-	overlay.call("_tick", 31.0)
+	# Simulate the app being suspended beyond the invitation deadline.
+	var suspended_now := float(Time.get_unix_time_from_system())
+	var active_after_suspend: Dictionary = overlay.get("_current")
+	active_after_suspend["expires_at"] = suspended_now - 1.0
+	overlay.set("_current", active_after_suspend)
+	overlay.call("_tick", 0.0)
 	if expired_ids != ["group-1"]:
 		push_error("The first invitation did not expire after its 30-second window.")
 		quit(1)
@@ -110,7 +115,14 @@ func _run_invitation_overlay_tests() -> void:
 		push_error("Both queued invitations were not retained while the decline response was pending.")
 		quit(1)
 		return
-	overlay.call("_tick", 11.0)
+	# Expire the first queued invitation by its wall-clock deadline while
+	# the server response is pending; frame delta is deliberately zero.
+	var queued_items: Array = overlay.get("_queue")
+	var queued_expired: Dictionary = queued_items[0]
+	queued_expired["expires_at"] = float(Time.get_unix_time_from_system()) - 1.0
+	queued_items[0] = queued_expired
+	overlay.set("_queue", queued_items)
+	overlay.call("_tick", 0.0)
 	overlay.call("set_response_pending", false)
 	if expired_ids != ["group-1", "apartment-after-decline"]:
 		push_error("An invitation that expired while waiting for the server response was not discarded.")
