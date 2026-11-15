@@ -130,10 +130,10 @@ func _ready() -> void:
 		SocialChatManager.realtime_event.connect(_on_social_realtime_event)
 	if not SocialChatManager.realtime_status_changed.is_connected(_on_social_realtime_status):
 		SocialChatManager.realtime_status_changed.connect(_on_social_realtime_status)
+	if not AuthManager.session_changed.is_connected(_on_social_account_session_changed):
+		AuthManager.session_changed.connect(_on_social_account_session_changed)
 	if AuthManager.is_authenticated():
-		_on_social_authenticated("", "")
-	else:
-		AuthManager.authenticated.connect(_on_social_authenticated)
+		_on_social_authenticated(AuthManager.get_authenticated_user_id(), AuthManager.get_authenticated_email())
 	_refresh_wallet()
 
 
@@ -1363,6 +1363,45 @@ func open_apartment_invite_picker() -> void:
 	_open_social_chat_panel()
 	social_chat_status.text = "اختر صديقًا من القائمة لإعداد دعوة زيارة الشقة."
 	_refresh_social_friends()
+
+
+func _on_social_account_session_changed(_previous_user_id: String, current_user_id: String, _generation: int) -> void:
+	# The social HUD is account-owned too: never leave the previous account's
+	# friends, group, unread counters, or moderation state visible after a switch.
+	selected_friend_code = ""
+	selected_friend_conversation_id = ""
+	_pending_direct_open_player_code = ""
+	local_player_code = ""
+	_direct_conversation_to_friend.clear()
+	_friend_to_conversation.clear()
+	_unread_direct_by_friend.clear()
+	_unread_group_messages = 0
+	_seen_realtime_message_ids.clear()
+	pending_group_invites.clear()
+	_pending_group_invite_response_id = ""
+	_apartment_invite_mode = false
+	group_members.clear()
+	group_members.append({"player_id": "local_leader", "display_name": "أنت", "is_leader": true})
+	_friend_buttons.clear()
+	_friend_base_labels.clear()
+	for child in social_friends_box.get_children():
+		child.queue_free()
+	for child in social_invites_box.get_children():
+		child.queue_free()
+	if is_instance_valid(social_chat_log):
+		social_chat_log.clear()
+	if is_instance_valid(social_chat_input):
+		social_chat_input.clear()
+	if is_instance_valid(moderation_button):
+		moderation_button.visible = false
+	if is_instance_valid(moderation_panel):
+		moderation_panel.visible = false
+	if is_instance_valid(social_chat_status):
+		social_chat_status.text = "جارٍ تجهيز بيانات الحساب..." if not current_user_id.is_empty() else "تم تسجيل الخروج."
+	_refresh_unread_indicators()
+	_refresh_group_popup()
+	if not current_user_id.is_empty() and AuthManager.is_authenticated():
+		_on_social_authenticated(current_user_id, AuthManager.get_authenticated_email())
 
 
 func _on_social_authenticated(_user_id: String, _email: String) -> void:
