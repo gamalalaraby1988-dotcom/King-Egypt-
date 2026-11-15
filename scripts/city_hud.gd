@@ -69,6 +69,10 @@ var social_invites_box: VBoxContainer
 var social_chat_dock_button: Button
 var _seen_realtime_message_ids: Dictionary = {}
 var _pending_group_invite_response_id := ""
+var moderation_button: Button
+var moderation_panel: PanelContainer
+var moderation_reports_box: VBoxContainer
+var moderation_status_label: Label
 
 const GROUP_MAX_MEMBERS := 4
 const GROUP_CHAT_MAX_LENGTH := 300
@@ -99,6 +103,7 @@ func _ready() -> void:
 	_build_group_popup()
 	_build_group_chat_popup()
 	_build_social_chat_panel()
+	_build_moderation_panel()
 	if not SocialChatManager.operation_completed.is_connected(_on_social_operation_completed):
 		SocialChatManager.operation_completed.connect(_on_social_operation_completed)
 	if not SocialChatManager.operation_failed.is_connected(_on_social_operation_failed):
@@ -1064,6 +1069,11 @@ func _build_social_chat_panel() -> void:
 	social_invites_box = VBoxContainer.new()
 	social_invites_box.name = "PendingGroupInvitations"
 	conversation.add_child(social_invites_box)
+	moderation_button = Button.new()
+	moderation_button.text = "🛡 لوحة الإشراف"
+	moderation_button.visible = false
+	moderation_button.pressed.connect(_open_moderation_panel)
+	conversation.add_child(moderation_button)
 	social_group_create_button = Button.new()
 	social_group_create_button.text = "إنشاء مجموعة (حتى 4 لاعبين)"
 	social_group_create_button.pressed.connect(_create_social_group)
@@ -1101,6 +1111,117 @@ func _build_social_chat_panel() -> void:
 		emoji_button.custom_minimum_size = Vector2(38, 34)
 		emoji_button.pressed.connect(_insert_social_chat_emoji.bind(emoji))
 		emoji_row.add_child(emoji_button)
+
+
+
+func _build_moderation_panel() -> void:
+	moderation_panel = PanelContainer.new()
+	moderation_panel.name = "SecureModerationPanel"
+	moderation_panel.anchor_left = 0.5
+	moderation_panel.anchor_right = 0.5
+	moderation_panel.anchor_top = 0.5
+	moderation_panel.anchor_bottom = 0.5
+	moderation_panel.offset_left = -250
+	moderation_panel.offset_right = 250
+	moderation_panel.offset_top = -285
+	moderation_panel.offset_bottom = 285
+	moderation_panel.visible = false
+	moderation_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	root.add_child(moderation_panel)
+	var layout := VBoxContainer.new()
+	layout.add_theme_constant_override("separation", 7)
+	moderation_panel.add_child(layout)
+	var heading := Label.new()
+	heading.text = "🛡 مراجعة بلاغات اللاعبين"
+	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	heading.add_theme_color_override("font_color", Color(0.92, 0.76, 0.42))
+	layout.add_child(heading)
+	moderation_status_label = Label.new()
+	moderation_status_label.text = "تظهر البلاغات المعلقة وقيد المراجعة للمشرفين المعتمدين فقط."
+	moderation_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	layout.add_child(moderation_status_label)
+	var refresh := Button.new()
+	refresh.text = "تحديث البلاغات"
+	refresh.pressed.connect(func(): SocialChatManager.list_moderation_reports())
+	layout.add_child(refresh)
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	layout.add_child(scroll)
+	moderation_reports_box = VBoxContainer.new()
+	moderation_reports_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(moderation_reports_box)
+	var close := Button.new()
+	close.text = "إغلاق لوحة الإشراف"
+	close.pressed.connect(func(): moderation_panel.visible = false)
+	layout.add_child(close)
+
+
+func _open_moderation_panel() -> void:
+	if not is_instance_valid(moderation_panel) or not is_instance_valid(moderation_button) or not moderation_button.visible:
+		return
+	moderation_panel.visible = true
+	moderation_status_label.text = "جارٍ تحميل البلاغات من الخادم..."
+	SocialChatManager.list_moderation_reports()
+
+
+func _render_moderation_reports(data: Variant) -> void:
+	for child in moderation_reports_box.get_children():
+		child.queue_free()
+	if not data is Array:
+		moderation_status_label.text = "لم تصل قائمة البلاغات بصيغة صحيحة."
+		return
+	for report in data:
+		if not report is Dictionary:
+			continue
+		var report_id := str(report.get("report_id", ""))
+		var card := VBoxContainer.new()
+		card.add_theme_constant_override("separation", 4)
+		moderation_reports_box.add_child(card)
+		var reason_names := {
+			"harassment": "مضايقة",
+			"spam": "رسائل مزعجة",
+			"inappropriate_name": "اسم غير مناسب",
+			"cheating": "غش",
+			"other": "سبب آخر"
+		}
+		var title := Label.new()
+		title.text = "بلاغ: %s — الحالة: %s" % [str(reason_names.get(str(report.get("reason", "")), "سبب آخر")), str(report.get("status", ""))]
+		title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		card.add_child(title)
+		var people := Label.new()
+		people.text = "المبلّغ: %s (%s)\nالمبلّغ ضده: %s (%s)" % [
+			str(report.get("reporter_display_name", "لاعب")),
+			str(report.get("reporter_player_code", "")),
+			str(report.get("reported_display_name", "لاعب")),
+			str(report.get("reported_player_code", ""))
+		]
+		people.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		card.add_child(people)
+		var details := Label.new()
+		details.text = "التفاصيل: " + str(report.get("details", ""))
+		details.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		card.add_child(details)
+		var actions := HBoxContainer.new()
+		card.add_child(actions)
+		var reviewing := Button.new()
+		reviewing.text = "بدء المراجعة"
+		reviewing.pressed.connect(func(): SocialChatManager.set_moderation_report_status(report_id, "reviewing"))
+		actions.add_child(reviewing)
+		var resolved := Button.new()
+		resolved.text = "تم الحل"
+		resolved.pressed.connect(func(): SocialChatManager.set_moderation_report_status(report_id, "resolved"))
+		actions.add_child(resolved)
+		var dismissed := Button.new()
+		dismissed.text = "رفض البلاغ"
+		dismissed.pressed.connect(func(): SocialChatManager.set_moderation_report_status(report_id, "dismissed"))
+		actions.add_child(dismissed)
+		if str(report.get("status", "")) == "reviewing":
+			reviewing.disabled = true
+	if moderation_reports_box.get_child_count() == 0:
+		var empty := Label.new()
+		empty.text = "لا توجد بلاغات معلقة أو قيد المراجعة."
+		moderation_reports_box.add_child(empty)
+	moderation_status_label.text = "عدد البلاغات المعروضة: %d" % moderation_reports_box.get_child_count()
 
 
 func _open_social_chat_panel() -> void:
@@ -1248,7 +1369,18 @@ func _on_social_operation_completed(action: String, data: Variant) -> void:
 			if data is Array and not data.is_empty() and data[0] is Dictionary:
 				var identity: Dictionary = data[0]
 				SocialChatManager.set_realtime_player_code(str(identity.get("player_code", "")))
-				SocialChatManager.list_chat_group_invites()
+				SocialChatManager.check_moderator_access()
+		"moderator_check":
+			var allowed := data is bool and data
+			if is_instance_valid(moderation_button):
+				moderation_button.visible = allowed
+			SocialChatManager.list_chat_group_invites()
+		"moderation_reports":
+			_render_moderation_reports(data)
+		"moderation_update":
+			moderation_status_label.text = "نتيجة تحديث البلاغ: " + str(data)
+			if str(data) == "status_updated":
+				SocialChatManager.list_moderation_reports()
 		"chat_invites":
 			_refresh_social_invite_cards(data)
 			SocialChatManager.list_friends()
