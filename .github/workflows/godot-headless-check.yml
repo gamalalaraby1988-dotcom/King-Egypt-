@@ -9,6 +9,7 @@ on:
       - "project.godot"
       - "scenes/**"
       - "scripts/**"
+      - "tests/**"
       - "assets/**"
       - ".github/workflows/godot-headless-check.yml"
   pull_request:
@@ -59,6 +60,16 @@ jobs:
             exit 1
           fi
 
+      - name: Run social input validation tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$GODOT_BIN" --headless --path . --script res://tests/social_chat_validation_test.gd 2>&1 | tee godot-social-tests.log
+          if grep -E "SCRIPT ERROR:|Parse Error:|ERROR:" godot-social-tests.log; then
+            echo "Social input validation tests reported errors."
+            exit 1
+          fi
+
       - name: Start main scene headlessly
         shell: bash
         run: |
@@ -77,5 +88,6 @@ jobs:
           path: |
             godot-import.log
             godot-startup.log
+            godot-social-tests.log
           if-no-files-found: ignore
           retention-days: 14
