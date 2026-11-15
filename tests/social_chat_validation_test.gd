@@ -206,6 +206,8 @@ func _run_social_validation_tests() -> void:
 			push_error("The unsupported gather action still exposes an unused local signal.")
 			quit(1)
 			return
+	city_hud.group_meeting_status.free()
+	city_hud.group_meeting_status = null
 
 	var male_portrait_scene: String = city_hud.get_friend_character_scene_path({"selected_character_id":"eg_m_adam"})
 	var female_portrait_scene: String = city_hud.get_friend_character_scene_path({"selected_character_id":"eg_f_layan"})
