@@ -80,6 +80,7 @@ var social_invites_box: VBoxContainer
 var social_chat_dock_button: Button
 var _seen_realtime_message_ids: Dictionary = {}
 var _pending_group_invite_response_id := ""
+var _deferred_group_invite_responses: Array[Dictionary] = []
 var invitation_overlay: Control
 var _apartment_invite_mode := false
 var moderation_button: Button
@@ -1391,6 +1392,7 @@ func _on_social_account_session_changed(_previous_user_id: String, current_user_
 	_seen_realtime_message_ids.clear()
 	pending_group_invites.clear()
 	_pending_group_invite_response_id = ""
+	_deferred_group_invite_responses.clear()
 	_apartment_invite_mode = false
 	group_meeting_position = Vector3.ZERO
 	group_follow_enabled = false
@@ -1674,8 +1676,7 @@ func _on_social_operation_completed(action: String, data: Variant) -> void:
 			if str(data) == "accepted" or str(data) == "declined":
 				_remove_social_invite_card(_pending_group_invite_response_id)
 			_pending_group_invite_response_id = ""
-			if is_instance_valid(invitation_overlay):
-				invitation_overlay.call("set_response_pending", false)
+			_continue_deferred_group_invite_responses()
 			if str(data) == "accepted":
 				SocialChatManager.get_chat_group()
 		"chat_send":
@@ -1707,8 +1708,7 @@ func _on_social_operation_completed(action: String, data: Variant) -> void:
 func _on_social_operation_failed(action: String, message: String) -> void:
 	if action == "group_invite_response":
 		_pending_group_invite_response_id = ""
-		if is_instance_valid(invitation_overlay):
-			invitation_overlay.call("set_response_pending", false)
+		_continue_deferred_group_invite_responses()
 	if action == "display_name_get" or action == "display_name_change":
 		if is_instance_valid(display_name_status):
 			display_name_status.text = "تعذر تنفيذ العملية: " + message
@@ -1849,18 +1849,43 @@ func _on_invitation_expired(invitation: Dictionary) -> void:
 
 
 func _submit_group_invitation_response(invitation: Dictionary, accepted: bool) -> void:
-	# Only one invitation response may own the shared RPC slot and overlay lock.
-	# Expiry signals can arrive for multiple queued invitations in the same frame.
+	# Only one invitation response may own the shared RPC slot. Expired queued
+	# invitations are serialized here instead of being silently lost.
 	var invite_id := str(invitation.get("invite_id", "")).strip_edges()
-	if not can_submit_group_invitation_response(_pending_group_invite_response_id, invite_id):
+	if invite_id.is_empty():
+		return
+	if not _pending_group_invite_response_id.is_empty():
+		if invite_id == _pending_group_invite_response_id:
+			return
+		for queued_response in _deferred_group_invite_responses:
+			if str(queued_response.get("invite_id", "")) == invite_id:
+				return
+		_deferred_group_invite_responses.append({
+				"invite_id": invite_id,
+				"invitation": invitation.duplicate(true),
+				"accepted": accepted
+			})
 		return
 	_pending_group_invite_response_id = invite_id
 	if is_instance_valid(invitation_overlay):
 		invitation_overlay.call("set_response_pending", true)
 	if not SocialChatManager.respond_chat_group_invite(invite_id, accepted):
 		_pending_group_invite_response_id = ""
-		if is_instance_valid(invitation_overlay):
-			invitation_overlay.call("set_response_pending", false)
+		_continue_deferred_group_invite_responses()
+
+
+func _continue_deferred_group_invite_responses() -> void:
+	if not _pending_group_invite_response_id.is_empty():
+		return
+	if not _deferred_group_invite_responses.is_empty():
+		var next_response: Dictionary = _deferred_group_invite_responses.pop_front()
+		_submit_group_invitation_response(
+			next_response.get("invitation", {}),
+			bool(next_response.get("accepted", false))
+		)
+		return
+	if is_instance_valid(invitation_overlay):
+		invitation_overlay.call("set_response_pending", false)
 
 
 func _respond_to_social_group_invite(invite_id: String, accepted: bool) -> void:
