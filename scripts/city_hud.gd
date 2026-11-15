@@ -9,7 +9,6 @@ signal group_invite_requested(player_id: String)
 signal group_member_removed(player_id: String)
 signal group_chat_message_submitted(message: String)
 signal group_meeting_point_requested(position: Vector3)
-signal group_gather_invite_requested(position: Vector3)
 signal group_follow_mode_requested(enabled: bool)
 signal group_leader_move_requested(target_position: Vector3)
 
@@ -986,12 +985,8 @@ func _request_group_gather_invite() -> void:
 		group_meeting_status.text = "لا يمكن إرسال دعوة التجمع من داخل الشقة."
 		_update_group_gather_visibility()
 		return
-	var player := main_scene.get_node_or_null("Player") as Node3D if is_instance_valid(main_scene) else null
-	if not is_instance_valid(player):
-		group_meeting_status.text = "تعذر تحديد موقع القائد الحالي."
-		return
-	group_gather_invite_requested.emit(player.global_position)
-	group_meeting_status.text = "لم تُرسل الدعوة بعد: خدمة التجمع بين الأجهزة لم تُربط بالخادم حتى الآن."
+	# لا نرسل إشارة محلية بلا مستقبِل؛ دعوة التجمع تحتاج خدمة خادمية فعلية.
+	group_meeting_status.text = "لم تُرسل الدعوة: خدمة التجمع بين الأجهزة غير مفعّلة بعد."
 
 
 func _is_local_group_leader() -> bool:
