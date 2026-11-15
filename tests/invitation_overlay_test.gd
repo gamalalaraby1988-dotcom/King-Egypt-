@@ -38,7 +38,8 @@ func _run_invitation_overlay_tests() -> void:
 		"body": "اختبار",
 		"expires_at": now + 60.0
 })
-	if str(overlay.call("get_current_invitation").get("invite_id", "")) != "group-1":
+	var current_invitation: Dictionary = overlay.call("get_current_invitation")
+	if str(current_invitation.get("invite_id", "")) != "group-1":
 		push_error("The first invitation was not displayed first.")
 		quit(1)
 		return
@@ -52,7 +53,8 @@ func _run_invitation_overlay_tests() -> void:
 		push_error("The first invitation did not expire after its 30-second window.")
 		quit(1)
 		return
-	if str(overlay.call("get_current_invitation").get("invite_id", "")) != "apartment-1":
+	current_invitation = overlay.call("get_current_invitation")
+	if str(current_invitation.get("invite_id", "")) != "apartment-1":
 		push_error("The next invitation did not appear after the first expired.")
 		quit(1)
 		return
