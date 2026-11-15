@@ -116,7 +116,7 @@ func _run_auth_session_tests() -> void:
 	profile_settings.name_input.text = "CI Account A"
 	profile_settings._save_settings()
 	var first_profile_config := ConfigFile.new()
-	if first_profile_config.load(AccountDataSession.get_profile_path()) != OK or str(first_profile_config.get_value("profile", "player_name", "")) != "CI Account A":
+	if first_profile_config.load(data_session.get_profile_path()) != OK or str(first_profile_config.get_value("profile", "player_name", "")) != "CI Account A":
 		push_error("Profile settings did not save the name to the active account profile.")
 		quit(1)
 		return
@@ -138,7 +138,7 @@ func _run_auth_session_tests() -> void:
 	profile_settings.name_input.text = "CI Account B"
 	profile_settings._save_settings()
 	var second_profile_config := ConfigFile.new()
-	if second_profile_config.load(AccountDataSession.get_profile_path()) != OK or str(second_profile_config.get_value("profile", "player_name", "")) != "CI Account B":
+	if second_profile_config.load(data_session.get_profile_path()) != OK or str(second_profile_config.get_value("profile", "player_name", "")) != "CI Account B":
 		push_error("Profile settings did not save the second account's name independently.")
 		quit(1)
 		return
