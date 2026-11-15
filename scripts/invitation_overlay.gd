@@ -9,6 +9,7 @@ const INVITATION_DURATION_SECONDS := 30.0
 var _queue: Array[Dictionary] = []
 var _current: Dictionary = {}
 var _remaining_seconds := 0.0
+var _response_pending := false
 var _panel: PanelContainer
 var _title_label: Label
 var _body_label: Label
@@ -117,7 +118,7 @@ func _contains_invitation(invite_id: String) -> bool:
 	return false
 
 func _show_next() -> void:
-	if not _current.is_empty() or _queue.is_empty():
+	if _response_pending or not _current.is_empty() or _queue.is_empty():
 		return
 	_current = _queue.pop_front()
 	_remaining_seconds = maxf(0.0, float(_current.get("expires_at", 0.0)) - float(Time.get_unix_time_from_system()))
@@ -165,11 +166,17 @@ func _finish_current(accepted: bool) -> void:
 		invitation_declined.emit(finished_item)
 	_show_next()
 
+func set_response_pending(pending: bool) -> void:
+	_response_pending = pending
+	if not _response_pending:
+		_show_next()
+
 func clear_pending_invitations() -> void:
 	# Invitations belong to the authenticated recipient; discard them silently
 	# when the account changes so another player never sees stale requests.
 	_queue.clear()
 	_current.clear()
+	_response_pending = false
 	_remaining_seconds = 0.0
 	if is_instance_valid(_panel):
 		_panel.visible = false
