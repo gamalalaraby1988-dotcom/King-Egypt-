@@ -36,8 +36,8 @@ func _run_social_validation_tests() -> void:
 		return
 	for viewport_width in [20.0, 180.0, 200.0, 240.0, 320.0, 360.0, 800.0, 1280.0]:
 		var panel_layout: Vector2 = expiry_probe.get_panel_layout_for_viewport(viewport_width)
-		if panel_layout.x < 0.0 or panel_layout.y < 0.0 or panel_layout.x + panel_layout.y > viewport_width:
-			push_error("The invitation panel escaped the viewport after a portrait/landscape size change.")
+		if panel_layout.x < 0.0 or panel_layout.y < 0.0 or panel_layout.x * 2.0 + panel_layout.y > viewport_width:
+			push_error("The invitation panel or its horizontal margins escaped the viewport after a portrait/landscape size change.")
 			quit(1)
 			return
 	var known_created_at := "2026-11-16T10:00:00"
