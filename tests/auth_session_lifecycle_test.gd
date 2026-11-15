@@ -259,7 +259,7 @@ func _run_auth_session_tests() -> void:
 		"reward_chips": 50,
 		"reward_xp": 100
 	})
-	if mission_manager.money != 0 or mission_manager.daily_chest_server_claimed or not mission_manager.has_reward_receipt("daily_chest_2099-01-01") == false:
+	if mission_manager.money != 0 or mission_manager.daily_chest_server_claimed or mission_manager.has_reward_receipt("daily_chest_2099-01-01"):
 		push_error("A late daily chest response changed state after the account session ended.")
 		quit(1)
 		return
