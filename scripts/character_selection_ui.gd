@@ -99,12 +99,16 @@ func _build_screen() -> void:
 	var men := Button.new()
 	men.text = "♂  الرجال"
 	men.toggle_mode = true
+	var gender_group := ButtonGroup.new()
+	gender_group.allow_unpress = false
+	men.button_group = gender_group
 	men.button_pressed = true
 	men.pressed.connect(func(): _set_gender("male"))
 	gender_row.add_child(men)
 	var women := Button.new()
 	women.text = "♀  النساء"
 	women.toggle_mode = true
+	women.button_group = gender_group
 	women.pressed.connect(func(): _set_gender("female"))
 	gender_row.add_child(women)
 
@@ -244,7 +248,6 @@ func _refresh_cards() -> void:
 		var card := Button.new()
 		card.custom_minimum_size = Vector2(126, 88)
 		card.text = "%s  %s\n%s" % [str(character.flag), str(character.name), str(character.country)]
-		card.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		card.add_theme_font_size_override("font_size", 15)
 		var active := str(character.id) == selected_id
 		card.add_theme_stylebox_override("normal", _style(Color("#29334a") if active else Color("#1b2433"), Color("#e7bd5e") if active else Color("#78613a"), 2))
