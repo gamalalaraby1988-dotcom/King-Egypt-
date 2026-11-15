@@ -150,6 +150,22 @@ func _run_social_validation_tests() -> void:
 		push_error("A valid ten-character player code was rejected.")
 		quit(1)
 		return
+	if not social.is_valid_invite_id("550e8400-e29b-41d4-a716-446655440000"):
+		push_error("A valid UUID invitation id was rejected.")
+		quit(1)
+		return
+	if not social.is_valid_invite_id("550E8400-E29B-41D4-A716-446655440000"):
+		push_error("A valid uppercase UUID invitation id was rejected.")
+		quit(1)
+		return
+	if social.is_valid_invite_id("invite-1") or social.is_valid_invite_id("550e8400-e29b-41d4-a716-44665544000"):
+		push_error("A malformed invitation id was accepted.")
+		quit(1)
+		return
+	if social.respond_chat_group_invite("invite-1", true):
+		push_error("A malformed invitation id was sent to the RPC layer.")
+		quit(1)
+		return
 	if social.is_valid_player_code("AB12-CD34"):
 		push_error("A player code containing punctuation was accepted.")
 		quit(1)
