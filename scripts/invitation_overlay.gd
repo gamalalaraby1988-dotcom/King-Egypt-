@@ -18,6 +18,8 @@ var _title_label: Label
 var _body_label: Label
 var _timer_label: Label
 var _progress: ProgressBar
+var _accept_button: Button
+var _decline_button: Button
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -121,20 +123,20 @@ func _build_ui() -> void:
 	var actions := HBoxContainer.new()
 	actions.add_theme_constant_override("separation", 8)
 	column.add_child(actions)
-	var accept := Button.new()
-	accept.name = "AcceptInvitationButton"
-	accept.text = "قبول"
-	accept.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	accept.custom_minimum_size.y = 44.0
-	accept.pressed.connect(_finish_current.bind(true))
-	actions.add_child(accept)
-	var decline := Button.new()
-	decline.name = "DeclineInvitationButton"
-	decline.text = "رفض"
-	decline.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	decline.custom_minimum_size.y = 44.0
-	decline.pressed.connect(_finish_current.bind(false))
-	actions.add_child(decline)
+	_accept_button = Button.new()
+	_accept_button.name = "AcceptInvitationButton"
+	_accept_button.text = "قبول"
+	_accept_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_accept_button.custom_minimum_size.y = 44.0
+	_accept_button.pressed.connect(_finish_current.bind(true))
+	actions.add_child(_accept_button)
+	_decline_button = Button.new()
+	_decline_button.name = "DeclineInvitationButton"
+	_decline_button.text = "رفض"
+	_decline_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_decline_button.custom_minimum_size.y = 44.0
+	_decline_button.pressed.connect(_finish_current.bind(false))
+	actions.add_child(_decline_button)
 
 func enqueue_invitation(invitation: Dictionary) -> void:
 	var item := invitation.duplicate(true)
@@ -198,6 +200,11 @@ func _show_next() -> void:
 		return
 	_title_label.text = str(_current.get("title", "دعوة جديدة"))
 	_body_label.text = str(_current.get("body", "لديك دعوة جديدة."))
+	var can_respond := can_respond_to_invitation(_current)
+	_accept_button.disabled = not can_respond
+	_decline_button.disabled = not can_respond
+	if not can_respond:
+		_body_label.text += "\n\nالاستجابة لهذه الدعوة غير متاحة حاليًا؛ لم تُربط خدمتها بالخادم بعد."
 	_panel.visible = true
 	_update_timer_display()
 
@@ -233,8 +240,12 @@ func _update_timer_display() -> void:
 	_timer_label.text = "متبقي %d ثانية" % int(ceil(_remaining_seconds))
 	_progress.value = clampf(_remaining_seconds, 0.0, INVITATION_DURATION_SECONDS)
 
+func can_respond_to_invitation(invitation: Dictionary) -> bool:
+	# Only group invitations currently have a verified accept/decline RPC.
+	return str(invitation.get("type", "")) == "group_invite"
+
 func _finish_current(accepted: bool) -> void:
-	if _current.is_empty():
+	if _current.is_empty() or not can_respond_to_invitation(_current):
 		return
 	var finished_item := _current.duplicate(true)
 	_current.clear()
