@@ -30,6 +30,7 @@ var player_level_label: Label
 var player_status_label: Label
 var player_avatar_label: Label
 var player_action_status: Label
+var player_block_button: Button
 var player_primary_action_button: Button
 var selected_player_is_friend := false
 var selected_player_id := ""
@@ -482,6 +483,11 @@ func _build_player_interaction_popup() -> void:
 	gift_party.add_theme_font_size_override("font_size", 22)
 	gift_party.pressed.connect(_on_player_gift_party)
 	content.add_child(gift_party)
+	player_block_button = Button.new()
+	player_block_button.name = "BlockSelectedPlayer"
+	player_block_button.text = "حظر اللاعب"
+	player_block_button.pressed.connect(_on_player_block)
+	content.add_child(player_block_button)
 	var report := Button.new()
 	report.text = "⚠ تقديم بلاغ"
 	report.pressed.connect(_on_player_report)
@@ -495,9 +501,11 @@ func _build_player_interaction_popup() -> void:
 
 func open_player_interaction(player_data: Dictionary) -> void:
 	# البيانات المتوقعة: player_id, display_name, level, account_age, avatar_text.
-	selected_player_id = str(player_data.get("player_id", "")).strip_edges()
-	if selected_player_id.is_empty() or selected_player_id.length() > 64 or selected_player_id == "local_leader":
+	selected_player_id = str(player_data.get("player_code", player_data.get("player_id", ""))).strip_edges().to_upper()
+	if not selected_player_id.matches("^[A-Z0-9]{10}$"):
 		selected_player_id = ""
+	if is_instance_valid(player_block_button):
+		player_block_button.visible = not selected_player_id.is_empty()
 	selected_player_is_friend = bool(player_data.get("is_friend", false))
 	player_primary_action_button.text = "إضافة للمجموعة" if selected_player_is_friend else "إضافة صديق"
 	var clean_name := str(player_data.get("display_name", "لاعب")).strip_edges().substr(0, 24)
@@ -537,6 +545,14 @@ func _on_player_gift_party() -> void:
 		return
 	party_gift_requested.emit(selected_player_id)
 	player_action_status.text = "تم تجهيز طلب إهداء الحفلة؛ التنفيذ يحتاج خدمة الحفلات المتصلة."
+
+
+func _on_player_block() -> void:
+	if not _has_selected_player():
+		player_action_status.text = "تعذر حظر اللاعب: رمز اللاعب غير صالح."
+		return
+	SocialChatManager.block_player(selected_player_id)
+	player_action_status.text = "جارٍ إرسال طلب الحظر إلى الخادم..."
 
 
 func _on_player_report() -> void:
@@ -1117,6 +1133,10 @@ func _on_social_operation_completed(action: String, data: Variant) -> void:
 				social_friends_box.add_child(empty_label)
 			social_chat_status.text = "تم تحميل قائمة الأصدقاء من الخادم."
 			SocialChatManager.get_chat_group()
+		"block_player":
+			player_action_status.text = "نتيجة الحظر: " + str(data)
+			if str(data) == "blocked":
+				player_popup.visible = false
 		"friend_request":
 			social_chat_status.text = "نتيجة طلب الصداقة: " + str(data)
 			if str(data) == "sent":
