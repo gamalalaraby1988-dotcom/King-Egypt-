@@ -478,8 +478,6 @@ func _run_social_validation_tests() -> void:
 		push_error("A previous account's active or queued invitation survived account cleanup.")
 		quit(1)
 		return
-	dedupe_overlay.free()
-
 	print("SOCIAL_TEST_STAGE: invitation_lifecycle_complete")
 	print("Social chat input and invitation lifecycle validation tests passed.")
 	quit(0)
