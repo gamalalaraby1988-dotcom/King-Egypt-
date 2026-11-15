@@ -11,6 +11,19 @@ func _run_social_validation_tests() -> void:
 		quit(1)
 		return
 
+	if not social.is_valid_player_code("AB12CD34EF"):
+		push_error("A valid ten-character player code was rejected.")
+		quit(1)
+		return
+	if social.is_valid_player_code("AB12-CD34"):
+		push_error("A player code containing punctuation was accepted.")
+		quit(1)
+		return
+	if social.is_valid_player_code("AB12CD34E"):
+		push_error("A player code shorter than ten characters was accepted.")
+		quit(1)
+		return
+
 	if social.open_direct_conversation("bad-code"):
 		push_error("Invalid player code was accepted for direct conversation.")
 		quit(1)
