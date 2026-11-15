@@ -41,6 +41,11 @@ var selected_player_id := ""
 var group_members: Array[Dictionary] = [{"player_id":"local_leader", "display_name":"أنت", "is_leader":true}]
 var pending_group_invites: Array[String] = []
 var group_popup: PanelContainer
+var group_invite_popup: PanelContainer
+var group_invite_list: VBoxContainer
+var group_invite_status: Label
+var group_invite_button: Button
+var _group_invite_friends_cache: Array = []
 var group_status_label: Label
 var group_members_box: VBoxContainer
 var group_chat_popup: PanelContainer
@@ -119,6 +124,7 @@ func _ready() -> void:
 	_build_display_name_panel()
 	_build_player_interaction_popup()
 	_build_group_popup()
+	_build_group_invite_popup()
 	_build_group_chat_popup()
 	_build_social_chat_panel()
 	_build_invitation_overlay()
@@ -635,6 +641,12 @@ func _build_group_popup() -> void:
 	group_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	group_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	box.add_child(group_status_label)
+	group_invite_button = Button.new()
+	group_invite_button.name = "InviteGroupMembersButton"
+	group_invite_button.text = "👥 دعوة أعضاء"
+	group_invite_button.custom_minimum_size.y = 44
+	group_invite_button.pressed.connect(_open_group_invite_popup)
+	box.add_child(group_invite_button)
 	var chat_button := Button.new()
 	chat_button.text = "💬 محادثة المجموعة"
 	chat_button.custom_minimum_size.y = 44
@@ -664,12 +676,166 @@ func _build_group_popup() -> void:
 	_refresh_group_popup()
 
 
+func _build_group_invite_popup() -> void:
+	group_invite_popup = PanelContainer.new()
+	group_invite_popup.name = "GroupInviteFriendsPopup"
+	group_invite_popup.anchor_left = 0.5
+	group_invite_popup.anchor_right = 0.5
+	group_invite_popup.anchor_top = 0.5
+	group_invite_popup.anchor_bottom = 0.5
+	group_invite_popup.offset_left = -180
+	group_invite_popup.offset_right = 180
+	group_invite_popup.offset_top = -230
+	group_invite_popup.offset_bottom = 230
+	group_invite_popup.visible = false
+	group_invite_popup.mouse_filter = Control.MOUSE_FILTER_STOP
+	var panel_style := StyleBoxFlat.new()
+	panel_style.bg_color = Color(0.035, 0.055, 0.075, 0.86)
+	panel_style.border_color = Color(0.72, 0.55, 0.25, 0.95)
+	panel_style.set_border_width_all(2)
+	panel_style.set_corner_radius_all(16)
+	panel_style.content_margin_left = 12
+	panel_style.content_margin_right = 12
+	panel_style.content_margin_top = 12
+	panel_style.content_margin_bottom = 12
+	group_invite_popup.add_theme_stylebox_override("panel", panel_style)
+	root.add_child(group_invite_popup)
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 9)
+	group_invite_popup.add_child(column)
+	var heading := Label.new()
+	heading.text = "دعوة أعضاء المجموعة"
+	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	heading.add_theme_font_size_override("font_size", 21)
+	column.add_child(heading)
+	group_invite_status = Label.new()
+	group_invite_status.text = "الأصدقاء المتصلون فقط"
+	group_invite_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	group_invite_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	column.add_child(group_invite_status)
+	var scroll := ScrollContainer.new()
+	scroll.name = "GroupInviteFriendsScroll"
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	column.add_child(scroll)
+	group_invite_list = VBoxContainer.new()
+	group_invite_list.name = "GroupInviteFriendsList"
+	group_invite_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(group_invite_list)
+	var close_button := Button.new()
+	close_button.text = "إغلاق"
+	close_button.custom_minimum_size.y = 44
+	close_button.pressed.connect(func(): group_invite_popup.visible = false)
+	column.add_child(close_button)
+
+
+func _open_group_invite_popup() -> void:
+	if group_members.size() >= GROUP_MAX_MEMBERS:
+		group_invite_status.text = "المجموعة مكتملة؛ الحد الأقصى أربعة لاعبين."
+		group_invite_popup.visible = true
+		return
+	if not AuthManager.is_authenticated():
+		group_invite_status.text = "سجّل الدخول لعرض أصدقائك المتصلين."
+		group_invite_popup.visible = true
+		return
+	group_invite_status.text = "جارٍ تحميل الأصدقاء المتصلين..."
+	group_invite_popup.visible = true
+	SocialChatManager.list_friends()
+
+
+func get_online_group_invite_friends(friends: Array) -> Array:
+	var online_friends: Array = []
+	for friend in friends:
+		if not friend is Dictionary:
+			continue
+		var online_value: Variant = friend.get("is_online", friend.get("online", false))
+		var presence_value := str(friend.get("presence", friend.get("status", ""))).strip_edges().to_lower()
+		if bool(online_value) or presence_value == "online" or presence_value == "متصل":
+			online_friends.append(friend)
+	return online_friends
+
+
+func _refresh_group_invite_friends(friends: Array) -> void:
+	if not is_instance_valid(group_invite_list):
+		return
+	for child in group_invite_list.get_children():
+		child.queue_free()
+	_group_invite_friends_cache = get_online_group_invite_friends(friends)
+	if group_members.size() >= GROUP_MAX_MEMBERS:
+		group_invite_status.text = "المجموعة مكتملة؛ لا يمكن إرسال دعوات جديدة."
+		return
+	if _group_invite_friends_cache.is_empty():
+		group_invite_status.text = "لا يوجد أصدقاء متصلون حاليًا."
+		return
+	group_invite_status.text = "الأصدقاء المتصلون: %d" % _group_invite_friends_cache.size()
+	for friend in _group_invite_friends_cache:
+		var code := str(friend.get("player_code", "")).strip_edges().to_upper()
+		var display_name := str(friend.get("display_name", "صديق")).strip_edges()
+		if display_name.is_empty():
+			display_name = "صديق"
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 8)
+		group_invite_list.add_child(row)
+		var avatar := Label.new()
+		avatar.text = "👤"
+		avatar.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		avatar.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		avatar.custom_minimum_size = Vector2(42, 42)
+		avatar.add_theme_font_size_override("font_size", 24)
+		row.add_child(avatar)
+		var name_column := VBoxContainer.new()
+		name_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(name_column)
+		var name_label := Label.new()
+		name_label.text = display_name.substr(0, 24)
+		name_label.clip_text = true
+		name_column.add_child(name_label)
+		var online_label := Label.new()
+		online_label.text = "متصل"
+		online_label.add_theme_color_override("font_color", Color(0.35, 0.85, 0.55, 1.0))
+		name_column.add_child(online_label)
+		var invite := Button.new()
+		invite.text = "دعوة"
+		invite.custom_minimum_size = Vector2(76, 42)
+		var already_member := _group_contains(code)
+		var already_pending := pending_group_invites.has(code)
+		invite.disabled = code.is_empty() or not SocialChatManager.is_valid_player_code(code) or already_member or already_pending or group_members.size() >= GROUP_MAX_MEMBERS
+		if already_member:
+			invite.text = "عضو"
+		elif already_pending:
+			invite.text = "مُرسلة"
+		invite.pressed.connect(_send_group_invite_from_list.bind(code))
+		row.add_child(invite)
+
+
+func _send_group_invite_from_list(player_code: String) -> void:
+	var code := player_code.strip_edges().to_upper()
+	if not SocialChatManager.is_valid_player_code(code):
+		group_invite_status.text = "رمز اللاعب غير صالح."
+		return
+	if group_members.size() >= GROUP_MAX_MEMBERS:
+		group_invite_status.text = "المجموعة مكتملة؛ الحد الأقصى أربعة لاعبين."
+		return
+	if _group_contains(code) or pending_group_invites.has(code):
+		group_invite_status.text = "هذا الصديق عضو بالفعل أو أُرسلت له دعوة."
+		return
+	if not SocialChatManager.invite_chat_group_member(code):
+		group_invite_status.text = "تعذر إرسال الدعوة الآن."
+		return
+	pending_group_invites.append(code)
+	group_invite_status.text = "جارٍ إرسال الدعوة إلى الصديق..."
+	_refresh_group_invite_friends(_group_invite_friends_cache)
+	_refresh_group_popup()
+
+
 func _open_group_popup() -> void:
 	_refresh_group_popup()
 	group_popup.visible = true
 
 
 func _refresh_group_popup() -> void:
+	if is_instance_valid(group_invite_button):
+		group_invite_button.disabled = group_members.size() >= GROUP_MAX_MEMBERS
 	if not is_instance_valid(group_members_box):
 		return
 	for child in group_members_box.get_children():
@@ -1441,6 +1607,8 @@ func _on_social_operation_completed(action: String, data: Variant) -> void:
 				player_popup.visible = false
 				_refresh_blocked_players()
 		"friends_list":
+			if data is Array and is_instance_valid(group_invite_popup) and group_invite_popup.visible:
+				_refresh_group_invite_friends(data)
 			_friend_buttons.clear()
 			_friend_base_labels.clear()
 			for child in social_friends_box.get_children():
@@ -1597,6 +1765,7 @@ func _on_social_operation_completed(action: String, data: Variant) -> void:
 			_refresh_group_popup()
 		"group_invite":
 			social_chat_status.text = "نتيجة دعوة المجموعة: " + str(data)
+			group_invite_status.text = "تم إرسال طلب الدعوة إلى الخادم." if str(data) == "sent" else "رد الخادم: " + str(data)
 			SocialChatManager.get_chat_group()
 		"group_invite_response":
 			social_chat_status.text = "نتيجة الرد على الدعوة: " + str(data)
@@ -1633,6 +1802,13 @@ func _on_social_operation_completed(action: String, data: Variant) -> void:
 
 
 func _on_social_operation_failed(action: String, message: String) -> void:
+	if action == "group_invite":
+		group_invite_status.text = "تعذر إرسال الدعوة: " + message
+		for pending_code in pending_group_invites.duplicate():
+			if _group_invite_friends_cache.any(func(friend): return str(friend.get("player_code", "")).to_upper() == pending_code):
+				pending_group_invites.erase(pending_code)
+		_refresh_group_invite_friends(_group_invite_friends_cache)
+		_refresh_group_popup()
 	if action == "group_invite_response":
 		_pending_group_invite_response_id = ""
 		_continue_deferred_group_invite_responses()
