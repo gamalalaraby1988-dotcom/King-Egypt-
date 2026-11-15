@@ -98,7 +98,14 @@ func _run_auth_session_tests() -> void:
 	social._realtime_player_code = "ABCDEFGHIJ"
 	social._realtime_group_id = "ci-group"
 	social._realtime_direct_id = "ci-direct"
+	social._pending_action = "direct_read"
+	social._pending_user_id = "00000000-0000-4000-8000-000000000001"
+	social._pending_session_generation = auth.get_session_generation()
 	auth.clear_session()
+	if not social._pending_action.is_empty() or not social._pending_user_id.is_empty() or social._pending_session_generation != -1:
+		push_error("Pending social RPC retained the signed-out account session.")
+		quit(1)
+		return
 	if not social._realtime_topics.is_empty() or not social._realtime_join_refs.is_empty() or not social._realtime_player_code.is_empty() or not social._realtime_group_id.is_empty() or not social._realtime_direct_id.is_empty():
 		push_error("Realtime subscriptions or account identity survived sign-out.")
 		quit(1)
