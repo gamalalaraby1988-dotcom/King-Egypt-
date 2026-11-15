@@ -699,6 +699,13 @@ func _apply_apartment_design(root: Node3D) -> void:
 		elif item.is_in_group("apartment_gold"):
 			item.material_override = _material(gold)
 
+func is_player_inside_private_apartment() -> bool:
+	if not is_instance_valid(interior_root):
+		return false
+	var interior_title := interior_root.get_node_or_null("Label3D") as Label3D
+	return is_instance_valid(interior_title) and interior_title.text == "شقتي"
+
+
 func _create_apartment_customization_ui() -> void:
 	if is_instance_valid(apartment_customization_layer):
 		apartment_customization_layer.queue_free()
@@ -714,6 +721,22 @@ func _create_apartment_customization_ui() -> void:
 	design_button.add_theme_font_size_override("font_size", 18)
 	design_button.pressed.connect(_cycle_apartment_design)
 	apartment_customization_layer.add_child(design_button)
+	var invite_button := Button.new()
+	invite_button.name = "ApartmentInviteFriendsButton"
+	invite_button.custom_minimum_size = Vector2(250, 48)
+	invite_button.position = Vector2(24, 158)
+	invite_button.text = "👥 دعوة الأصدقاء"
+	invite_button.add_theme_font_size_override("font_size", 17)
+	invite_button.pressed.connect(_open_apartment_invite_picker)
+	apartment_customization_layer.add_child(invite_button)
+
+func _open_apartment_invite_picker() -> void:
+	if not is_player_inside_private_apartment():
+		return
+	var hud := get_node_or_null("CityActionHUD")
+	if is_instance_valid(hud) and hud.has_method("open_apartment_invite_picker"):
+		hud.call("open_apartment_invite_picker")
+
 
 func _cycle_apartment_design() -> void:
 	if not is_instance_valid(interior_root) or interior_transition_busy:
