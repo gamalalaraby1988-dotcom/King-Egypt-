@@ -22,13 +22,18 @@ var showroom_panel: PanelContainer
 var selected_label: Label
 var detail_label: Label
 var _selected_id := "horus_2030"
+var open_button: Button
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_SIZE_CHANGED or what == NOTIFICATION_RESIZED:
+		_call_deferred("_update_responsive_layout")
 
 func _ready() -> void:
 	layer = 21
 	_build_ui()
 
 func _build_ui() -> void:
-	var open_button := Button.new()
+	open_button = Button.new()
 	open_button.name = "OpenVehicleShowroom"
 	open_button.text = "معرض المركبات 𓂀"
 	open_button.custom_minimum_size = Vector2(190, 54)
@@ -38,9 +43,11 @@ func _build_ui() -> void:
 
 	showroom_panel = PanelContainer.new()
 	showroom_panel.name = "VehicleShowroomPanel"
-	showroom_panel.set_anchors_preset(Control.PRESET_CENTER)
-	showroom_panel.position = Vector2(-470, -285)
-	showroom_panel.custom_minimum_size = Vector2(940, 570)
+	showroom_panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	showroom_panel.offset_left = 12
+	showroom_panel.offset_top = 12
+	showroom_panel.offset_right = -12
+	showroom_panel.offset_bottom = -12
 	showroom_panel.visible = false
 	add_child(showroom_panel)
 
@@ -61,7 +68,8 @@ func _build_ui() -> void:
 	root.add_child(body)
 
 	var scroll := ScrollContainer.new()
-	scroll.custom_minimum_size = Vector2(390, 0)
+	scroll.custom_minimum_size = Vector2(0, 0)
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	body.add_child(scroll)
 
@@ -73,7 +81,7 @@ func _build_ui() -> void:
 	for item in VEHICLES:
 		var card := Button.new()
 		card.text = "%02d  |  %s  |  %s" % [VEHICLES.find(item) + 1, item.name, item.tier]
-		card.custom_minimum_size = Vector2(360, 48)
+		card.custom_minimum_size = Vector2(0, 48)
 		card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		card.pressed.connect(_select_preview.bind(item.id))
 		cards.add_child(card)
@@ -115,6 +123,7 @@ func _build_ui() -> void:
 	root.add_child(close_button)
 
 	_select_preview(_selected_id)
+	_update_responsive_layout()
 
 func _select_preview(vehicle_id: String) -> void:
 	for item in VEHICLES:
@@ -127,3 +136,19 @@ func _select_preview(vehicle_id: String) -> void:
 func _toggle_showroom() -> void:
 	if is_instance_valid(showroom_panel):
 		showroom_panel.visible = not showroom_panel.visible
+
+func _update_responsive_layout() -> void:
+	if not is_instance_valid(showroom_panel):
+		return
+	var viewport := get_viewport().get_visible_rect().size
+	var compact := viewport.x < 760.0 or viewport.y < 560.0
+	showroom_panel.offset_left = 8.0 if compact else 20.0
+	showroom_panel.offset_top = 8.0 if compact else 20.0
+	showroom_panel.offset_right = -8.0 if compact else -20.0
+	showroom_panel.offset_bottom = -8.0 if compact else -20.0
+	if compact:
+		showroom_panel.get_child(0).add_theme_constant_override("separation", 6)
+	else:
+		showroom_panel.get_child(0).add_theme_constant_override("separation", 12)
+	if is_instance_valid(open_button):
+		open_button.custom_minimum_size = Vector2(170 if compact else 190, 48 if compact else 54)
