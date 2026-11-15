@@ -138,19 +138,21 @@ func _show_next() -> void:
 func _process(delta: float) -> void:
 	_tick(delta)
 
-func _tick(delta: float) -> void:
-	var elapsed := maxf(0.0, delta)
-	# Queued invitations keep counting down while another server response is pending.
+func _tick(_delta: float) -> void:
+	# Use absolute expiry timestamps rather than frame deltas so invitations
+	# still expire correctly after the app is backgrounded or the frame stalls.
+	var now := float(Time.get_unix_time_from_system())
 	for index in range(_queue.size() - 1, -1, -1):
 		var queued_item := _queue[index]
-		var queued_remaining := maxf(0.0, float(queued_item.get("_remaining_seconds", float(queued_item.get("expires_at", 0.0)) - float(Time.get_unix_time_from_system()))) - elapsed)
+		var queued_remaining := maxf(0.0, float(queued_item.get("expires_at", now)) - now)
 		queued_item["_remaining_seconds"] = queued_remaining
 		if queued_remaining <= 0.0:
 			_queue.remove_at(index)
 			invitation_expired.emit(queued_item)
 	if _current.is_empty():
 		return
-	_remaining_seconds = maxf(0.0, _remaining_seconds - elapsed)
+	_remaining_seconds = maxf(0.0, float(_current.get("expires_at", now)) - now)
+	_current["_remaining_seconds"] = _remaining_seconds
 	_update_timer_display()
 	if _remaining_seconds <= 0.0:
 		var expired_item := _current.duplicate(true)
