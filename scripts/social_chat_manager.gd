@@ -256,8 +256,19 @@ func invite_chat_group_member(player_code: String) -> bool:
 		return false
 	return _rpc("invite_my_test_chat_group_member", {"p_player_code": clean_code}, "group_invite")
 
+func is_valid_invite_id(invite_id: String) -> bool:
+	var validator := RegEx.new()
+	if validator.compile("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$") != OK:
+		return false
+	return validator.search(invite_id.strip_edges().to_lower()) != null
+
+
 func respond_chat_group_invite(invite_id: String, accept: bool) -> bool:
-	return _rpc("respond_my_test_chat_group_invite", {"p_invite_id": invite_id, "p_accept": accept}, "group_invite_response")
+	var clean_invite_id := invite_id.strip_edges().to_lower()
+	if not is_valid_invite_id(clean_invite_id):
+		operation_failed.emit("group_invite_response", "معرّف الدعوة غير صالح.")
+		return false
+	return _rpc("respond_my_test_chat_group_invite", {"p_invite_id": clean_invite_id, "p_accept": accept}, "group_invite_response")
 
 func send_chat_message(channel: String, body: String) -> bool:
 	var clean_channel := channel.strip_edges().to_lower()
