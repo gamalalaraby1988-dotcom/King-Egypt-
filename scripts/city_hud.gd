@@ -1749,15 +1749,22 @@ func _on_social_realtime_event(topic: String, event_name: String, payload: Dicti
 		return
 	if event_name != "chat_message" and event_name != "direct_message":
 		return
+	# Deduplicate before either rendering or incrementing unread counters.
+	var message_id := str(payload.get("message_id", ""))
+	if not message_id.is_empty() and _seen_realtime_message_ids.has(message_id):
+		return
+	if not message_id.is_empty():
+		_seen_realtime_message_ids[message_id] = true
+	var active_group_topic := "chat:group:" + SocialChatManager._realtime_group_id
 	var should_show := false
 	if topic == "chat:public:messages" and social_chat_channel == "العامة" and social_chat_panel.visible:
 		should_show = true
-	elif topic.begins_with("chat:group:") and social_chat_channel == "المجموعة" and social_chat_panel.visible:
+	elif not SocialChatManager._realtime_group_id.is_empty() and topic == active_group_topic and social_chat_channel == "المجموعة" and social_chat_panel.visible:
 		should_show = true
-	elif topic.begins_with("chat:direct:") and topic == "chat:direct:" + selected_friend_conversation_id and social_chat_channel == "الأصدقاء" and social_chat_panel.visible:
+	elif not selected_friend_conversation_id.is_empty() and topic == "chat:direct:" + selected_friend_conversation_id and social_chat_channel == "الأصدقاء" and social_chat_panel.visible:
 		should_show = true
 	if not should_show or not is_instance_valid(social_chat_log):
-		if topic.begins_with("chat:group:"):
+		if not SocialChatManager._realtime_group_id.is_empty() and topic == active_group_topic:
 			_unread_group_messages += 1
 		elif topic.begins_with("chat:direct:"):
 			var conversation_id := topic.trim_prefix("chat:direct:")
@@ -1767,11 +1774,6 @@ func _on_social_realtime_event(topic: String, event_name: String, payload: Dicti
 				_update_friend_unread_badge(friend_code)
 		_refresh_unread_indicators()
 		return
-	var message_id := str(payload.get("message_id", ""))
-	if not message_id.is_empty() and _seen_realtime_message_ids.has(message_id):
-		return
-	if not message_id.is_empty():
-		_seen_realtime_message_ids[message_id] = true
 	if topic.begins_with("chat:group:"):
 		_unread_group_messages = 0
 	elif topic.begins_with("chat:direct:"):
