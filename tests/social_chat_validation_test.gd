@@ -124,6 +124,18 @@ func _run_social_validation_tests() -> void:
 		push_error("A realtime channel continued retrying after the configured limit.")
 		quit(1)
 		return
+	# Drop retry entries when the topic is no longer wanted or already has a live join.
+	social._realtime_topics = {"chat:direct:active": true}
+	social._realtime_join_refs = {"chat:direct:active": "live-ref"}
+	social._realtime_topic_retry_seconds = {
+		"chat:direct:removed": 0.0,
+		"chat:direct:active": 0.0
+	}
+	var ignored_retries := social._take_due_realtime_topic_retries(0.0)
+	if not ignored_retries.is_empty() or not social._realtime_topic_retry_seconds.is_empty():
+		push_error("Obsolete or already-joined realtime topics were retried.")
+		quit(1)
+		return
 	social._realtime_topic_retry_seconds = saved_topic_retries
 	social._realtime_topic_retry_attempts = saved_topic_retry_attempts
 	if social.is_realtime_topic_subscribed("chat:direct:unjoined") or social.is_realtime_topic_subscribed("chat:group:joined"):
