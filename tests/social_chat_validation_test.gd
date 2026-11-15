@@ -195,6 +195,17 @@ func _run_social_validation_tests() -> void:
 		push_error("The group gather button remained available inside a private apartment.")
 		quit(1)
 		return
+	city_hud.group_meeting_status = Label.new()
+	city_hud.call("_request_group_gather_invite")
+	if city_hud.group_meeting_status.text != "لم تُرسل الدعوة: خدمة التجمع بين الأجهزة غير مفعّلة بعد.":
+		push_error("The gather action did not clearly report that the backend service is unavailable.")
+		quit(1)
+		return
+	for signal_info in city_hud.get_signal_list():
+		if str(signal_info.get("name", "")) == "group_gather_invite_requested":
+			push_error("The unsupported gather action still exposes an unused local signal.")
+			quit(1)
+			return
 
 	var male_portrait_scene: String = city_hud.get_friend_character_scene_path({"selected_character_id":"eg_m_adam"})
 	var female_portrait_scene: String = city_hud.get_friend_character_scene_path({"selected_character_id":"eg_f_layan"})
