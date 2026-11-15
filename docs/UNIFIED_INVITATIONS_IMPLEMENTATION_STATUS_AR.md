@@ -44,4 +44,7 @@
 
 ## التحقق
 
-أُضيف `tests/invitation_overlay_test.gd` إلى مسار CI الأساسي. يجب تسجيل نتيجة تشغيل GitHub Actions النهائية قبل إعلان نجاح الاختبار. لم يتم اختبار Android أو حسابين حقيقيين في هذه المرحلة.
+- نجح فحص Godot الأساسي على آخر HEAD الخاص بالفرع بعد إضافة تقرير التنفيذ: [Run 43760184191](https://github.com/gamalalaraby1988-dotcom/King-Egypt-/actions/runs/43760184191).
+- نجحت اختبارات المحفظة والمحادثات ودورة الجلسة واختبار نافذة الدعوات الموحدة وبدء المشهد في [Run 43760157509](https://github.com/gamalalaraby1988-dotcom/King-Egypt-/actions/runs/43760157509).
+- نجح مسار Godot Headless على commit الشيفرة نفسه في [Run 43760157486](https://github.com/gamalalaraby1988-dotcom/King-Egypt-/actions/runs/43760157486).
+- لم يتم اختبار Android أو حسابين حقيقيين أو دعوات شقق/تجمع عابرة للأجهزة في هذه المرحلة.
