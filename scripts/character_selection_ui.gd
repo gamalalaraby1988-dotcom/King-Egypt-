@@ -172,8 +172,6 @@ func _build_screen() -> void:
 	preview_viewport.size = Vector2i(520, 620)
 	preview_viewport.own_world_3d = true
 	preview_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
-	preview_viewport.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	preview_viewport.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var viewport_container := SubViewportContainer.new()
 	viewport_container.name = "SelectedCharacter3DPreview"
 	viewport_container.stretch = true
