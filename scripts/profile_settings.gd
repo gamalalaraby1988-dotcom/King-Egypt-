@@ -23,6 +23,8 @@ func _ready() -> void:
 	_load_settings()
 	if AccountDataSession.is_ready():
 		_on_account_session_ready(AccountDataSession.get_user_id(), AccountDataSession.get_generation(), AccountDataSession.get_profile_path())
+	else:
+		_on_account_session_invalidated("", -1)
 	_apply_settings()
 
 func _exit_tree() -> void:
