@@ -75,7 +75,7 @@ jobs:
           GODOT="/tmp/godot/Godot_v4.7.2-stable_linux.x86_64"
           LOG="/tmp/godot-social-tests.log"
           set +e
-          "$GODOT" --headless --path . --script res://tests/social_chat_validation_test.gd 2>&1 | tee "$LOG"
+          timeout --signal=TERM --kill-after=10s 180s "$GODOT" --headless --path . --script res://tests/social_chat_validation_test.gd 2>&1 | tee "$LOG"
           GODOT_STATUS=${PIPESTATUS[0]}
           set -e
           if [ "$GODOT_STATUS" -ne 0 ]; then
