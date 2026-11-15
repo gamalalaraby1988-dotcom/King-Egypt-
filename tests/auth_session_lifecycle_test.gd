@@ -127,7 +127,6 @@ func _run_auth_session_tests() -> void:
 		push_error("Returning to the first account did not restore its own achievement progress.")
 		quit(1)
 		return
-	var achievement_file_before_signout := FileAccess.get_file_as_bytes(expected_achievement_path)
 	var legacy_achievement_path := "user://kings_city_achievements.cfg"
 	var legacy_achievement_existed := FileAccess.file_exists(legacy_achievement_path)
 	var legacy_achievement_snapshot := FileAccess.get_file_as_bytes(legacy_achievement_path) if legacy_achievement_existed else PackedByteArray()
