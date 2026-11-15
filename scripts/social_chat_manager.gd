@@ -36,6 +36,13 @@ func list_friends() -> bool:
 func send_friend_request(player_code: String) -> bool:
 	return _rpc("send_test_friend_request", {"p_player_code": player_code}, "friend_request")
 
+func block_player(player_code: String) -> bool:
+	var clean_code := player_code.strip_edges().to_upper()
+	if not clean_code.matches("^[A-Z0-9]{10}$"):
+		operation_failed.emit("block_player", "رمز اللاعب غير صالح.")
+		return false
+	return _rpc("block_test_player", {"p_player_code": clean_code}, "block_player")
+
 func open_direct_conversation(player_code: String) -> bool:
 	return _rpc("open_test_direct_conversation", {"p_player_code": player_code}, "direct_open")
 
