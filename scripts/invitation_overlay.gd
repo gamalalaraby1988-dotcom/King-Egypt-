@@ -134,7 +134,7 @@ func _remember_invitation_id(invite_id: String) -> void:
 	_seen_invitation_ids[invite_id] = true
 	_seen_invitation_order.append(invite_id)
 	while _seen_invitation_order.size() > MAX_SEEN_INVITATION_IDS:
-		var oldest_id := _seen_invitation_order.pop_front()
+		var oldest_id: String = _seen_invitation_order.pop_front()
 		_seen_invitation_ids.erase(oldest_id)
 
 func _show_next() -> void:
