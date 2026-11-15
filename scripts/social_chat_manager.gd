@@ -80,3 +80,25 @@ func _on_request_completed(result: int, response_code: int, _headers: PackedStri
 		operation_failed.emit(action, "رفض الخادم الطلب (HTTP %d)." % response_code)
 		return
 	operation_completed.emit(action, parsed)
+
+func create_chat_group() -> bool:
+	return _rpc("create_my_test_chat_group", {}, "group_create")
+
+func get_chat_group() -> bool:
+	return _rpc("get_my_test_chat_group", {}, "group_info")
+
+func invite_chat_group_member(player_code: String) -> bool:
+	return _rpc("invite_my_test_chat_group_member", {"p_player_code": player_code}, "group_invite")
+
+func respond_chat_group_invite(invite_id: String, accept: bool) -> bool:
+	return _rpc("respond_my_test_chat_group_invite", {"p_invite_id": invite_id, "p_accept": accept}, "group_invite_response")
+
+func send_chat_message(channel: String, body: String) -> bool:
+	return _rpc("send_my_test_chat_message", {"p_channel": channel, "p_body": body}, "chat_send")
+
+func read_chat_messages(channel: String) -> bool:
+	return _rpc("read_my_test_chat_messages", {
+		"p_channel": channel,
+		"p_before_message_id": null,
+		"p_limit": 50
+	}, "chat_read")
