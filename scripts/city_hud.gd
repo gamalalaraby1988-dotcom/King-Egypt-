@@ -960,7 +960,8 @@ func receive_group_meeting_point(position: Vector3, leader_name: String = "قا�
 		group_meeting_status.text = "موقع القائد الحالي للتجمع: %s" % leader_name.strip_edges().substr(0, 24)
 
 
-func _show_group_meeting_marker(position: Vector3) -> vscript := load("res://scripts/invitation_overlay.gd") as Script
+func _build_invitation_overlay() -> void:
+	var overlay_script := load("res://scripts/invitation_overlay.gd") as Script
 	if overlay_script == null:
 		push_warning("تعذر تحميل نافذة الدعوات الموحدة.")
 		return
