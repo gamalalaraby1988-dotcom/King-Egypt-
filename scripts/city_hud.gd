@@ -73,6 +73,9 @@ var moderation_button: Button
 var moderation_panel: PanelContainer
 var moderation_reports_box: VBoxContainer
 var moderation_status_label: Label
+var display_name_panel: PanelContainer
+var display_name_input: LineEdit
+var display_name_status: Label
 
 const GROUP_MAX_MEMBERS := 4
 const GROUP_CHAT_MAX_LENGTH := 300
@@ -99,6 +102,7 @@ func _ready() -> void:
 	main_scene = get_parent()
 	mission_manager = main_scene.get_node_or_null("MissionManager") if is_instance_valid(main_scene) else null
 	_build()
+	_build_display_name_panel()
 	_build_player_interaction_popup()
 	_build_group_popup()
 	_build_group_chat_popup()
@@ -251,6 +255,9 @@ func _open_section(section: String) -> void:
 		return
 	if section == "phone":
 		_open_vehicle_store_phone()
+		return
+	if section == "profile":
+		_open_display_name_panel()
 		return
 	popup_title.text = str(SECTIONS[section][0])
 	popup_body.text = str(SECTIONS[section][1])
@@ -1224,6 +1231,58 @@ func _render_moderation_reports(data: Variant) -> void:
 	moderation_status_label.text = "عدد البلاغات المعروضة: %d" % moderation_reports_box.get_child_count()
 
 
+func _build_display_name_panel() -> void:
+	display_name_panel = PanelContainer.new()
+	display_name_panel.name = "DisplayNamePanel"
+	display_name_panel.anchor_left = 0.5
+	display_name_panel.anchor_right = 0.5
+	display_name_panel.anchor_top = 0.5
+	display_name_panel.anchor_bottom = 0.5
+	display_name_panel.offset_left = -175
+	display_name_panel.offset_right = 175
+	display_name_panel.offset_top = -125
+	display_name_panel.offset_bottom = 125
+	display_name_panel.visible = false
+	display_name_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	root.add_child(display_name_panel)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 10)
+	display_name_panel.add_child(box)
+	var heading := Label.new()
+	heading.text = "👤 اسم اللاعب"
+	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	heading.add_theme_font_size_override("font_size", 21)
+	box.add_child(heading)
+	display_name_input = LineEdit.new()
+	display_name_input.placeholder_text = "اكتب الاسم الجديد (حتى 24 حرفًا)"
+	display_name_input.max_length = 24
+	box.add_child(display_name_input)
+	display_name_status = Label.new()
+	display_name_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	display_name_status.text = "يُسمح بتغيير الاسم مرة واحدة يوميًا."
+	box.add_child(display_name_status)
+	var actions := HBoxContainer.new()
+	box.add_child(actions)
+	var save := Button.new()
+	save.text = "حفظ الاسم"
+	save.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	save.pressed.connect(func(): SocialChatManager.change_my_display_name(display_name_input.text))
+	actions.add_child(save)
+	var close := Button.new()
+	close.text = "إغلاق"
+	close.pressed.connect(func(): display_name_panel.visible = false)
+	actions.add_child(close)
+
+func _open_display_name_panel() -> void:
+	if not is_instance_valid(display_name_panel):
+		return
+	display_name_panel.visible = true
+	if AuthManager.is_authenticated():
+		display_name_status.text = "جارٍ تحميل بيانات الاسم من الخادم..."
+		SocialChatManager.get_my_display_name()
+	else:
+		display_name_status.text = "سجّل الدخول أولًا لتغيير اسم اللاعب."
+
 func _open_social_chat_panel() -> void:
 	if not is_instance_valid(social_chat_panel):
 		return
@@ -1327,6 +1386,25 @@ func _on_social_operation_completed(action: String, data: Variant) -> void:
 				social_friends_box.add_child(empty_label)
 			social_chat_status.text = "تم تحميل قائمة الأصدقاء من الخادم."
 			SocialChatManager.get_chat_group()
+		"display_name_get":
+			if is_instance_valid(display_name_status):
+				if data is Array and not data.is_empty() and data[0] is Dictionary:
+					var profile: Dictionary = data[0]
+					display_name_input.text = str(profile.get("display_name", ""))
+					display_name_status.text = "يمكنك تغيير الاسم مرة واحدة يوميًا. يعود السماح عند منتصف الليل بتوقيت مصر."
+				else:
+					display_name_status.text = "تعذر تحميل اسم اللاعب."
+		"display_name_change":
+			if data is Array and not data.is_empty() and data[0] is Dictionary:
+				var result: Dictionary = data[0]
+				if bool(result.get("success", false)):
+					display_name_input.text = str(result.get("current_display_name", ""))
+					display_name_status.text = "تم تغيير الاسم بنجاح. التغيير التالي بعد منتصف الليل بتوقيت مصر."
+				else:
+					var code := str(result.get("error_code", "unknown"))
+					display_name_status.text = "لم يتم تغيير الاسم: " + code
+			else:
+				display_name_status.text = "تعذر تأكيد تغيير الاسم من الخادم."
 		"friend_request":
 			social_chat_status.text = "نتيجة طلب الصداقة: " + str(data)
 			if str(data) == "sent":
