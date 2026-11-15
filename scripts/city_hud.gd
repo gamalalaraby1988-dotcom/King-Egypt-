@@ -814,14 +814,24 @@ func _refresh_group_invite_friends(friends: Array) -> void:
 
 
 func get_friend_character_scene_path(friend: Dictionary) -> String:
-	# Only render a character scene shipped inside the game; never accept image URLs,
+	# Render only one of the game's own character IDs. Never accept image URLs,
 	# arbitrary file paths, or texture payloads from a friend-list response.
 	var character_id := str(friend.get("selected_character_id", friend.get("character_id", ""))).strip_edges()
-	var id_pattern := RegEx.new()
-	if id_pattern.compile("^[a-z]{2}_[mf]_[a-z]+$") != OK or id_pattern.search(character_id) == null:
+	var supported_ids := [
+		"eg_m_adam", "eg_m_omar", "it_m_leon", "fr_m_alex",
+		"br_m_matheus", "jp_m_ren", "us_m_lucas", "tr_m_amir",
+		"eg_f_layan", "eg_f_nour", "it_f_sofia", "fr_f_emma",
+		"br_f_isabella", "jp_f_aika", "us_f_olivia", "tr_f_eileen"
+	]
+	if not supported_ids.has(character_id):
 		return ""
-	var scene_path := "res://assets/characters/%s/character.tscn" % character_id
-	return scene_path if ResourceLoader.exists(scene_path) else ""
+	var final_scene_path := "res://assets/characters/%s/character.tscn" % character_id
+	if ResourceLoader.exists(final_scene_path):
+		return final_scene_path
+	# Until final art assets arrive, use the game's own 3D character scene,
+	# not an external portrait or a random stock image.
+	var in_game_preview_path := "res://scenes/characters/avatar_visual.tscn"
+	return in_game_preview_path if ResourceLoader.exists(in_game_preview_path) else ""
 
 
 func _build_friend_character_portrait(friend: Dictionary) -> Control:
@@ -864,6 +874,9 @@ func _build_friend_character_portrait(friend: Dictionary) -> Control:
 		var character := packed.instantiate() as Node3D
 		if character != null:
 			world.add_child(character)
+			if scene_path == "res://scenes/characters/avatar_visual.tscn" and character.has_method("apply_character_identity"):
+				var character_id := str(friend.get("selected_character_id", friend.get("character_id", ""))).strip_edges()
+				character.call("apply_character_identity", character_id)
 	return portrait
 
 
