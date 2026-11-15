@@ -716,10 +716,22 @@ func _is_inside_private_apartment() -> bool:
 	return is_instance_valid(main_scene) and main_scene.has_method("is_player_inside_private_apartment") and bool(main_scene.call("is_player_inside_private_apartment"))
 
 
+func can_show_group_gather_button(is_leader: bool, member_count: int, inside_apartment: bool) -> bool:
+	return is_leader and member_count > 1 and not inside_apartment
+
+
+func can_submit_group_invitation_response(pending_invite_id: String, invite_id: String) -> bool:
+	return pending_invite_id.strip_edges().is_empty() and not invite_id.strip_edges().is_empty()
+
+
 func _update_group_gather_visibility() -> void:
 	if not is_instance_valid(group_meeting_point_button):
 		return
-	group_meeting_point_button.visible = _is_local_group_leader() and group_members.size() > 1 and not _is_inside_private_apartment()
+	group_meeting_point_button.visible = can_show_group_gather_button(
+		_is_local_group_leader(),
+		group_members.size(),
+		_is_inside_private_apartment()
+	)
 
 
 func _request_group_gather_invite() -> void:
@@ -1839,10 +1851,8 @@ func _on_invitation_expired(invitation: Dictionary) -> void:
 func _submit_group_invitation_response(invitation: Dictionary, accepted: bool) -> void:
 	# Only one invitation response may own the shared RPC slot and overlay lock.
 	# Expiry signals can arrive for multiple queued invitations in the same frame.
-	if not _pending_group_invite_response_id.is_empty():
-		return
 	var invite_id := str(invitation.get("invite_id", "")).strip_edges()
-	if invite_id.is_empty():
+	if not can_submit_group_invitation_response(_pending_group_invite_response_id, invite_id):
 		return
 	_pending_group_invite_response_id = invite_id
 	if is_instance_valid(invitation_overlay):
