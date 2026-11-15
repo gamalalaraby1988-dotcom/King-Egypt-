@@ -477,6 +477,20 @@ func _create_interior_furnishings(root: Node3D, building_title: String) -> void:
 			_create_box(root, "VIPLoungeTableBase_%d" % index, Vector3(0.18, 0.48, 0.18), Vector3(x, 0.28, 1.35), Color(0.78, 0.61, 0.29), true)
 		_create_box(root, "VIPFeaturePanel", Vector3(4.8, 2.4, 0.16), Vector3(0, 2.25, -6.65), Color(0.08, 0.13, 0.15))
 		_create_box(root, "VIPFeatureGoldFrame", Vector3(5.0, 0.12, 0.22), Vector3(0, 3.52, -6.65), Color(0.84, 0.68, 0.34))
+		# أربع وحدات ماكينة تجميلية متنوعة بصريًا؛ لا تتصل باقتصاد أو رهانات أو جوائز.
+		# توضع بمحاذاة الجانبين لتبقى منطقة الحركة والمدخل في المنتصف مفتوحين.
+		for index in range(4):
+			var side := -1.0 if index < 2 else 1.0
+			var lane := -2.15 if index % 2 == 0 else 2.15
+			var machine_x := side * 5.55
+			var machine_z := lane
+			var machine_color := Color(0.10, 0.20, 0.24) if index % 2 == 0 else Color(0.22, 0.12, 0.16)
+			var machine_name := "VIPArcadeMachine_%d" % index
+			_create_box(root, machine_name + "_Cabinet", Vector3(0.95, 1.85, 0.82), Vector3(machine_x, 0.93, machine_z), Color(0.075, 0.085, 0.10), true)
+			_create_box(root, machine_name + "_Screen", Vector3(0.72, 0.72, 0.08), Vector3(machine_x, 1.38, machine_z + 0.44), machine_color)
+			_create_box(root, machine_name + "_ScreenGoldFrame", Vector3(0.82, 0.08, 0.10), Vector3(machine_x, 1.79, machine_z + 0.45), Color(0.84, 0.66, 0.31))
+			_create_box(root, machine_name + "_ControlPanel", Vector3(0.72, 0.12, 0.30), Vector3(machine_x, 0.94, machine_z + 0.47), Color(0.30, 0.22, 0.13))
+			_create_box(root, machine_name + "_PedestalTrim", Vector3(1.00, 0.10, 0.86), Vector3(machine_x, 0.16, machine_z), Color(0.78, 0.59, 0.27))
 	elif building_title == "مركز التوظيف":
 		for index in range(3):
 			var x := -4.0 + float(index) * 4.0
