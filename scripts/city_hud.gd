@@ -947,8 +947,7 @@ func _set_group_meeting_point_here() -> void:
 		return
 	group_meeting_position = player.global_position
 	group_meeting_point_requested.emit(group_meeting_position)
-	_show_group_meeting_marker(group_meeting_position)
-	group_meeting_status.text = "تم تحديد مكان التجمع عند موقعك الحالي. سيظهر للأعضاء بعد ربط الخادم."
+	group_meeting_status.text = "موقعك الحالي هو موقع تجمع المجموعة؛ لا توجد نقطة أو علامة مستقلة."
 
 
 func receive_group_meeting_point(position: Vector3, leader_name: String = "قائد المجموعة") -> void:
@@ -961,45 +960,7 @@ func receive_group_meeting_point(position: Vector3, leader_name: String = "قا�
 		group_meeting_status.text = "موقع القائد الحالي للتجمع: %s" % leader_name.strip_edges().substr(0, 24)
 
 
-func _show_group_meeting_marker(position: Vector3) -> void:
-	if not position.is_finite() or not is_instance_valid(main_scene):
-		return
-	_clear_group_meeting_marker()
-	var marker := Node3D.new()
-	marker.name = "GroupMeetingMarker"
-	marker.position = Vector3(position.x, 0.15, position.z)
-	main_scene.add_child(marker)
-	var ring := MeshInstance3D.new()
-	var ring_mesh := TorusMesh.new()
-	ring_mesh.inner_radius = 1.15
-	ring_mesh.outer_radius = 1.35
-	ring.mesh = ring_mesh
-	ring.rotation.x = PI / 2.0
-	var ring_material := StandardMaterial3D.new()
-	ring_material.albedo_color = Color(0.12, 0.78, 1.0, 0.9)
-	ring_material.emission_enabled = true
-	ring_material.emission = Color(0.05, 0.55, 1.0)
-	ring.material_override = ring_material
-	marker.add_child(ring)
-	var beacon := MeshInstance3D.new()
-	var beacon_mesh := CylinderMesh.new()
-	beacon_mesh.top_radius = 0.08
-	beacon_mesh.bottom_radius = 0.08
-	beacon_mesh.height = 2.8
-	beacon.mesh = beacon_mesh
-	beacon.position.y = 1.45
-	beacon.material_override = ring_material
-	marker.add_child(beacon)
-	var label := Label3D.new()
-	label.text = "مكان تجمع المجموعة"
-	label.position.y = 3.1
-	label.font_size = 32
-	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	marker.add_child(label)
-
-
-func _build_invitation_overlay() -> void:
-	var overlay_script := load("res://scripts/invitation_overlay.gd") as Script
+func _show_group_meeting_marker(position: Vector3) -> vscript := load("res://scripts/invitation_overlay.gd") as Script
 	if overlay_script == null:
 		push_warning("تعذر تحميل نافذة الدعوات الموحدة.")
 		return
