@@ -66,6 +66,45 @@ func _run_social_validation_tests() -> void:
 		push_error("A server-acknowledged realtime topic was not recognized.")
 		quit(1)
 		return
+
+	# Channel-level close/error must retry only the current join, never a stale ref.
+	var saved_topic_retries: Dictionary = social._realtime_topic_retry_seconds.duplicate(true)
+	social._realtime_topics = {"chat:direct:retry": true}
+	social._realtime_join_refs = {"chat:direct:retry": "active-ref"}
+	social._realtime_ready_topics = {"chat:direct:retry": true}
+	social._realtime_topic_retry_seconds = {}
+	social._schedule_realtime_topic_retry("chat:direct:retry", "stale-ref")
+	if not social._realtime_join_refs.has("chat:direct:retry") or not social._realtime_ready_topics.has("chat:direct:retry"):
+		push_error("A stale channel failure cleared the current realtime join.")
+		quit(1)
+		return
+	social._schedule_realtime_topic_retry("chat:direct:retry", "active-ref")
+	if social._realtime_join_refs.has("chat:direct:retry") or social._realtime_ready_topics.has("chat:direct:retry"):
+		push_error("A current channel failure did not clear its failed join state.")
+		quit(1)
+		return
+	if social._take_due_realtime_topic_retries(1.0).size() != 0:
+		push_error("A realtime channel retry fired before its backoff elapsed.")
+		quit(1)
+		return
+	var due_retries := social._take_due_realtime_topic_retries(1.1)
+	if due_retries.size() != 1 or due_retries[0] != "chat:direct:retry":
+		push_error("A failed active realtime channel was not scheduled for retry.")
+		quit(1)
+		return
+	social._realtime_topics = {"chat:direct:retry": true}
+	social._realtime_join_refs = {"chat:direct:retry": "new-ref"}
+	social._realtime_ready_topics = {}
+	social._schedule_realtime_topic_retry("chat:direct:retry", "new-ref")
+	social._leave_realtime_topic("chat:direct:retry")
+	if social._realtime_topic_retry_seconds.has("chat:direct:retry"):
+		push_error("Leaving a realtime topic did not cancel its pending retry.")
+		quit(1)
+		return
+	social._realtime_topics = {"chat:direct:joined": true}
+	social._realtime_join_refs = {"chat:direct:joined": "ci-join-ref"}
+	social._realtime_ready_topics = {"chat:direct:joined": true}
+	social._realtime_topic_retry_seconds = saved_topic_retries
 	if social.is_realtime_topic_subscribed("chat:direct:unjoined") or social.is_realtime_topic_subscribed("chat:group:joined"):
 		push_error("An unjoined realtime topic was treated as an active subscription.")
 		quit(1)
