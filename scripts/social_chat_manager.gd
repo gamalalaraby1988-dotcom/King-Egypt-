@@ -2,12 +2,26 @@ extends Node
 ## Authenticated REST RPC bridge for test social features.
 signal operation_completed(action: String, data: Variant)
 signal operation_failed(action: String, message: String)
+signal realtime_event(topic: String, event_name: String, payload: Dictionary)
+signal realtime_status_changed(status: String)
 
 const SUPABASE_URL := "https://unwrlvyjrtdwobcktetd.supabase.co"
 const SUPABASE_PUBLISHABLE_KEY := "sb_publishable_BrWeMmhyOpL73Uca40Ug0Q_8Zgw55si"
 
 var _http: HTTPRequest
 var _pending_action := ""
+var _realtime_socket: WebSocketPeer
+var _realtime_topics: Dictionary = {}
+var _realtime_join_refs: Dictionary = {}
+var _realtime_ref := 0
+var _realtime_heartbeat_elapsed := 0.0
+var _realtime_retry_elapsed := 0.0
+var _realtime_retry_delay := 2.0
+var _realtime_connected := false
+var _realtime_last_token := ""
+var _realtime_player_code := ""
+var _realtime_group_id := ""
+var _realtime_direct_id := ""
 
 func _ready() -> void:
 	_http = HTTPRequest.new()
@@ -102,3 +116,171 @@ func read_chat_messages(channel: String) -> bool:
 		"p_before_message_id": null,
 		"p_limit": 50
 	}, "chat_read")
+
+func _process(delta: float) -> void:
+	if not AuthManager.is_authenticated():
+		if _realtime_socket != null and _realtime_socket.get_ready_state() != WebSocketPeer.STATE_CLOSED:
+			_realtime_socket.close()
+		_realtime_connected = false
+		return
+	if _realtime_socket == null:
+		_realtime_retry_elapsed += delta
+		if _realtime_retry_elapsed >= _realtime_retry_delay:
+			_connect_realtime_socket()
+		return
+	_realtime_socket.poll()
+	var state := _realtime_socket.get_ready_state()
+	if state == WebSocketPeer.STATE_OPEN:
+		if not _realtime_connected:
+			_realtime_connected = true
+			_realtime_retry_elapsed = 0.0
+			_realtime_retry_delay = 2.0
+			_realtime_last_token = AuthManager.get_access_token()
+			realtime_status_changed.emit("متصل")
+			for topic in _realtime_topics.keys():
+				_join_realtime_topic(str(topic))
+		var token := AuthManager.get_access_token()
+		if not token.is_empty() and token != _realtime_last_token:
+			_realtime_last_token = token
+			for topic in _realtime_join_refs.keys():
+				_send_realtime_frame("realtime:" + str(topic), "access_token", {"access_token": token}, str(_realtime_join_refs[topic]))
+		_realtime_heartbeat_elapsed += delta
+		if _realtime_heartbeat_elapsed >= 25.0:
+			_realtime_heartbeat_elapsed = 0.0
+			_send_realtime_frame("phoenix", "heartbeat", {}, "")
+		while _realtime_socket.get_available_packet_count() > 0:
+			_handle_realtime_packet(_realtime_socket.get_packet())
+	elif state == WebSocketPeer.STATE_CLOSED:
+		if _realtime_connected:
+			_realtime_connected = false
+			_realtime_join_refs.clear()
+			realtime_status_changed.emit("انقطع الاتصال؛ جارٍ إعادة المحاولة")
+		_realtime_retry_elapsed += delta
+		if _realtime_retry_elapsed >= _realtime_retry_delay:
+			_realtime_retry_elapsed = 0.0
+			_realtime_retry_delay = min(_realtime_retry_delay * 2.0, 10.0)
+			_connect_realtime_socket()
+
+
+func connect_realtime() -> void:
+	if not AuthManager.is_authenticated():
+		return
+	_realtime_topics["chat:public:messages"] = true
+	if not _realtime_player_code.is_empty():
+		_realtime_topics["chat:invites:" + _realtime_player_code] = true
+	if _realtime_socket == null or _realtime_socket.get_ready_state() == WebSocketPeer.STATE_CLOSED:
+		_realtime_retry_elapsed = _realtime_retry_delay
+		_connect_realtime_socket()
+
+
+func _connect_realtime_socket() -> void:
+	if not AuthManager.is_authenticated():
+		return
+	_realtime_socket = WebSocketPeer.new()
+	var endpoint := SUPABASE_URL.replace("https://", "wss://") + "/realtime/v1/websocket?apikey=" + SUPABASE_PUBLISHABLE_KEY.uri_encode() + "&vsn=1.0.0"
+	var error := _realtime_socket.connect_to_url(endpoint)
+	if error != OK:
+		_realtime_socket = null
+		_realtime_retry_elapsed = 0.0
+		realtime_status_changed.emit("تعذر فتح اتصال الدردشة اللحظية")
+		return
+	_realtime_connected = false
+	_realtime_join_refs.clear()
+
+
+func get_realtime_identity() -> bool:
+	return _rpc("get_my_test_chat_realtime_identity", {}, "chat_identity")
+
+
+func list_chat_group_invites() -> bool:
+	return _rpc("list_my_test_chat_group_invites", {}, "chat_invites")
+
+
+func set_realtime_player_code(player_code: String) -> void:
+	_realtime_player_code = player_code.strip_edges().to_upper()
+	if not _realtime_player_code.is_empty():
+		_subscribe_realtime_topic("chat:invites:" + _realtime_player_code)
+
+
+func subscribe_group_chat(group_id: String) -> void:
+	if _realtime_group_id == group_id:
+		return
+	if not _realtime_group_id.is_empty():
+		_leave_realtime_topic("chat:group:" + _realtime_group_id)
+	_realtime_group_id = group_id
+	if not group_id.is_empty():
+		_subscribe_realtime_topic("chat:group:" + group_id)
+
+
+func subscribe_direct_chat(conversation_id: String) -> void:
+	if _realtime_direct_id == conversation_id:
+		return
+	if not _realtime_direct_id.is_empty():
+		_leave_realtime_topic("chat:direct:" + _realtime_direct_id)
+	_realtime_direct_id = conversation_id
+	if not conversation_id.is_empty():
+		_subscribe_realtime_topic("chat:direct:" + conversation_id)
+
+
+func _subscribe_realtime_topic(topic: String) -> void:
+	_realtime_topics[topic] = true
+	if _realtime_connected:
+		_join_realtime_topic(topic)
+
+
+func _leave_realtime_topic(topic: String) -> void:
+	_realtime_topics.erase(topic)
+	if _realtime_join_refs.has(topic) and _realtime_connected:
+		_send_realtime_frame("realtime:" + topic, "phx_leave", {}, str(_realtime_join_refs[topic]))
+	_realtime_join_refs.erase(topic)
+
+
+func _join_realtime_topic(topic: String) -> void:
+	if not _realtime_connected or _realtime_join_refs.has(topic):
+		return
+	_realtime_ref += 1
+	var join_ref := str(_realtime_ref)
+	_realtime_join_refs[topic] = join_ref
+	var payload := {
+		"config": {
+			"broadcast": {"ack": false, "self": false},
+			"presence": {"enabled": false},
+			"postgres_changes": [],
+			"private": true
+		},
+		"access_token": AuthManager.get_access_token()
+	}
+	_send_realtime_frame("realtime:" + topic, "phx_join", payload, join_ref)
+
+
+func _send_realtime_frame(topic: String, event_name: String, payload: Dictionary, join_ref: String) -> void:
+	if _realtime_socket == null or _realtime_socket.get_ready_state() != WebSocketPeer.STATE_OPEN:
+		return
+	_realtime_ref += 1
+	var frame := {"topic": topic, "event": event_name, "payload": payload, "ref": str(_realtime_ref)}
+	if not join_ref.is_empty():
+		frame["join_ref"] = join_ref
+	_realtime_socket.send_text(JSON.stringify(frame))
+
+
+func _handle_realtime_packet(packet: PackedByteArray) -> void:
+	var parsed: Variant = JSON.parse_string(packet.get_string_from_utf8())
+	if not parsed is Dictionary:
+		return
+	var topic := str(parsed.get("topic", "")).trim_prefix("realtime:")
+	var event_name := str(parsed.get("event", ""))
+	var payload: Variant = parsed.get("payload", {})
+	if event_name == "phx_reply":
+		if payload is Dictionary and str(payload.get("status", "")) == "error":
+			realtime_status_changed.emit("رفض الخادم قناة: " + topic)
+		elif payload is Dictionary and str(payload.get("status", "")) == "ok":
+			realtime_status_changed.emit("القنوات اللحظية جاهزة")
+		return
+	if event_name == "phx_error" or event_name == "phx_close":
+		_realtime_join_refs.erase(topic)
+		return
+	if event_name == "broadcast" and payload is Dictionary:
+		var broadcast_event := str(payload.get("event", ""))
+		var broadcast_payload: Variant = payload.get("payload", {})
+		if broadcast_payload is Dictionary:
+			realtime_event.emit(topic, broadcast_event, broadcast_payload)
