@@ -7,6 +7,7 @@ var _otp_input: LineEdit
 var _status_label: Label
 var _send_button: Button
 var _verify_button: Button
+var _enter_button: Button
 
 func _ready() -> void:
 	layer = 80
@@ -87,6 +88,13 @@ func _build_ui() -> void:
 	_status_label.add_theme_color_override("font_color", Color(0.88, 0.82, 0.66))
 	content.add_child(_status_label)
 
+	_enter_button = Button.new()
+	_enter_button.text = "الدخول إلى المدينة"
+	_enter_button.custom_minimum_size = Vector2(0, 48)
+	_enter_button.visible = false
+	_enter_button.pressed.connect(_enter_city)
+	content.add_child(_enter_button)
+
 func _request_otp() -> void:
 	var email := _email_input.text.strip_edges()
 	_send_button.disabled = true
@@ -110,7 +118,11 @@ func _on_authenticated(_user_id: String, email: String) -> void:
 	_verify_button.disabled = true
 	_email_input.editable = false
 	_otp_input.editable = false
-	_status_label.text = "تم التحقق من البريد بنجاح: " + email + "\nلم يتم ربط حساب لاعب بعد؛ يلزم تنفيذ الربط الخادمي الآمن."
+	_status_label.text = "تم التحقق من البريد بنجاح: " + email + "\nحساب اللاعب لم يُربط بعد. يمكنك دخول المدينة بوضع الاختبار."
+	_enter_button.visible = true
+
+func _enter_city() -> void:
+	visible = false
 
 func _on_authentication_failed(message: String) -> void:
 	_send_button.disabled = false
