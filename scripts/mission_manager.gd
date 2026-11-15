@@ -521,9 +521,11 @@ func _update_interaction_target() -> void:
 		allowed_distance = clampf(allowed_distance, 0.5, 4.8)
 		if candidate == previous_target:
 			allowed_distance += 0.65
-		var distance := player.global_position.distance_to(candidate.global_position)
-		if distance <= allowed_distance and distance < best_distance:
-			best_distance = distance
+		# استخدم المسافة المربعة أثناء فحص المرشحين لتجنب الجذر التربيعي لكل بوابة/مبنى في كل إطار.
+		var distance_squared := player.global_position.distance_squared_to(candidate.global_position)
+		var allowed_distance_squared := allowed_distance * allowed_distance
+		if distance_squared <= allowed_distance_squared and distance_squared < best_distance:
+			best_distance = distance_squared
 			best = candidate
 	nearest_interactable = best
 	nearest_building = best if is_instance_valid(best) and best.has_method("get_mission_data") else null
