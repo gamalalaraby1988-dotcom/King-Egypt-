@@ -1447,6 +1447,9 @@ func _send_friend_request_from_search() -> void:
 
 
 func _on_social_friend_selected(player_code: String) -> void:
+	if not SocialChatManager._pending_action.is_empty():
+		social_chat_status.text = "انتظر اكتمال عملية التواصل الحالية قبل تبديل المحادثة."
+		return
 	if _apartment_invite_mode:
 		_apartment_invite_mode = false
 		social_chat_status.text = "تم اختيار الصديق، لكن لم تُرسل دعوة: خدمة دعوات الشقق الخادمية غير موجودة بعد."
@@ -1570,6 +1573,8 @@ func _on_social_operation_completed(action: String, data: Variant) -> void:
 				else:
 					social_chat_status.text = "تعذر فتح المحادثة: " + str(result.get("error_code", "unknown"))
 		"direct_read":
+			if social_chat_channel != "الأصدقاء" or selected_friend_conversation_id.is_empty():
+				return
 			if not selected_friend_code.is_empty():
 				_unread_direct_by_friend.erase(selected_friend_code)
 				_update_friend_unread_badge(selected_friend_code)
