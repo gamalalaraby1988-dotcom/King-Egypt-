@@ -167,6 +167,12 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 func _create_beach_portal() -> void:
+	# قد يُعاد إنشاء نظام التنقل أثناء بقاء المدينة؛ لا تضف بوابة شاطئ مكررة.
+	if not is_instance_valid(city) or city.is_queued_for_deletion() or not city.is_inside_tree():
+		return
+	var existing_portal := city.get_node_or_null("FiveCivilizationsShipBeachGate")
+	if is_instance_valid(existing_portal):
+		return
 	var portal := Node3D.new()
 	portal.name = "FiveCivilizationsShipBeachGate"
 	portal.add_to_group("city_world_geometry")
