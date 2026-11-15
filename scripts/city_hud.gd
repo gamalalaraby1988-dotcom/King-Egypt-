@@ -1869,6 +1869,13 @@ func _submit_group_invitation_response(invitation: Dictionary, accepted: bool) -
 	# submit malformed identifiers even if they bypass realtime payload checks.
 	if not SocialChatManager.is_valid_invite_id(invite_id):
 		return
+	# Re-check the absolute deadline at the final client RPC boundary too;
+	# the overlay's click-time check alone is not enough if processing was delayed.
+	accepted = resolve_deferred_invitation_acceptance(
+		invitation,
+		accepted,
+		float(Time.get_unix_time_from_system())
+	)
 	if not _pending_group_invite_response_id.is_empty():
 		if invite_id == _pending_group_invite_response_id:
 			return
