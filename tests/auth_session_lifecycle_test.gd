@@ -196,11 +196,11 @@ func _run_auth_session_tests() -> void:
 		push_error("A cleared session was still considered current.")
 		quit(1)
 		return
-	if changed_events.size() != 3:
-		push_error("Session invalidation signal was not emitted exactly once.")
+	if changed_events.size() != 5:
+		push_error("Session change and invalidation signals did not match the expected sign-in, account-switch, and sign-out sequence.")
 		quit(1)
 		return
-	if changed_events[2].get("previous_uid", "") != "00000000-0000-4000-8000-000000000001" or changed_events[2].get("current_uid", "") != "":
+	if changed_events[4].get("previous_uid", "") != "00000000-0000-4000-8000-000000000001" or changed_events[4].get("current_uid", "") != "":
 		push_error("Session invalidation signal contained incorrect account identities.")
 		quit(1)
 		return
