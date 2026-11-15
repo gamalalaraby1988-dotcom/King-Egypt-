@@ -321,6 +321,14 @@ func _run_social_validation_tests() -> void:
 		push_error("The next unexpired invitation was not shown after the pending response completed.")
 		quit(1)
 		return
+	# The currently displayed invitation must also expire from its absolute
+	# deadline, independently of frame delta or app pause duration.
+	invitation_overlay._current["expires_at"] = float(Time.get_unix_time_from_system()) - 1.0
+	invitation_overlay.call("_tick", 0.0)
+	if expired_count[0] != 3 or invitation_overlay.get_pending_invitation_count() != 0 or invitation_overlay._panel.visible:
+		push_error("The active invitation did not expire and close at its absolute deadline.")
+		quit(1)
+		return
 	invitation_overlay.clear_pending_invitations()
 	if invitation_overlay.get_pending_invitation_count() != 0 or not invitation_overlay._current.is_empty() or invitation_overlay._panel.visible:
 		push_error("A previous account's active or queued invitation survived account cleanup.")
