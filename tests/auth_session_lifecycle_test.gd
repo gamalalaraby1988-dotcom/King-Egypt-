@@ -175,6 +175,13 @@ func _run_auth_session_tests() -> void:
 	mission_manager.achievement_totals = {"jobs": 7, "missions": 4, "daily_claims": 2}
 	mission_manager.reward_receipts = {"ci_private_reward": "claimed"}
 	mission_manager.daily_task_progress = {"2099-01-01": {"ci_task": 9}}
+	mission_manager.active_mission = Node3D.new()
+	mission_manager.active_job = Node3D.new()
+	mission_manager.active_job_target = Vector3(1, 2, 3)
+	mission_manager.active_job_reward = {"money": 500}
+	mission_manager.job_running = true
+	mission_manager.mission_running = true
+	mission_manager.active_rental_transaction_id = "ci_previous_account_rental"
 
 	# Seed account-bound realtime state and prove sign-out clears every subscription.
 	social._realtime_topics = {
@@ -240,6 +247,10 @@ func _run_auth_session_tests() -> void:
 		quit(1)
 		return
 	mission_manager._on_account_session_invalidated("00000000-0000-4000-8000-000000000001", auth.get_session_generation())
+	if mission_manager.active_mission != null or mission_manager.active_job != null or mission_manager.job_running or mission_manager.mission_running or mission_manager.active_job_target != Vector3.ZERO or not mission_manager.active_job_reward.is_empty() or not mission_manager.active_rental_transaction_id.is_empty():
+		push_error("An active mission, job, or rental from the previous account survived session invalidation.")
+		quit(1)
+		return
 	if mission_manager.owned_outfits != ["default"] or mission_manager.daily_chest_reward_configured or mission_manager.daily_chest_server_claimed or not mission_manager.daily_chest_reward_day.is_empty():
 		push_error("Mission state from the previous account remained after session invalidation.")
 		quit(1)
