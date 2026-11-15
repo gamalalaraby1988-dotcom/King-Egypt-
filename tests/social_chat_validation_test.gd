@@ -289,6 +289,30 @@ func _run_social_validation_tests() -> void:
 		push_error("An invitation created more than 30 seconds ago received a fresh lifetime.")
 		quit(1)
 		return
+	var shortened_deadline := invitation_now + 8.0
+	var server_shortened := float(invitation_overlay.call("resolve_invitation_expiry", {
+		"expires_at": shortened_deadline
+	}, invitation_now))
+	if not is_equal_approx(server_shortened, shortened_deadline):
+		push_error("A shorter server-provided invitation deadline was not preserved.")
+		quit(1)
+		return
+	var already_expired_deadline := invitation_now - 3.0
+	var server_expired := float(invitation_overlay.call("resolve_invitation_expiry", {
+		"expires_at": already_expired_deadline
+	}, invitation_now))
+	if not is_equal_approx(server_expired, already_expired_deadline):
+		push_error("An already-expired server invitation was extended locally.")
+		quit(1)
+		return
+	var future_created_at := Time.get_datetime_string_from_unix_time(int(invitation_now) + 300)
+	var future_timestamp_deadline := float(invitation_overlay.call("resolve_invitation_expiry", {
+		"created_at": future_created_at
+	}, invitation_now))
+	if future_timestamp_deadline > invitation_now + 30.0 or future_timestamp_deadline < invitation_now + 29.0:
+		push_error("A future creation timestamp bypassed the local invitation lifetime cap.")
+		quit(1)
+		return
 	invitation_overlay.enqueue_invitation({
 		"invite_id": "ci-account-a-invite",
 		"title": "CI invitation",
