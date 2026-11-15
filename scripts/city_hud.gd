@@ -1726,6 +1726,9 @@ func _on_social_realtime_status(status: String) -> void:
 
 func _on_social_realtime_event(topic: String, event_name: String, payload: Dictionary) -> void:
 	if event_name == "group_invite" or event_name == "group_meeting_invite" or event_name == "apartment_invite":
+		# Accept invitations only from the private topic bound to this player's verified code.
+		if not SocialChatManager.is_valid_player_code(local_player_code) or topic != "chat:invites:" + local_player_code:
+			return
 		var invitation := payload.duplicate(true)
 		invitation["type"] = event_name
 		if not invitation.has("invite_id"):
