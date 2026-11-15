@@ -14,6 +14,30 @@ func _run_invitation_overlay_tests() -> void:
 	root.add_child(overlay)
 	await process_frame
 
+	var expiry_reference := 2000000000.0
+	var capped_expiry := float(overlay.call("resolve_invitation_expiry", {
+		"expires_at": expiry_reference + 90.0
+	}, expiry_reference))
+	if not is_equal_approx(capped_expiry, expiry_reference + 30.0):
+		push_error("A supplied deadline extended an invitation beyond the approved 30-second lifetime.")
+		quit(1)
+		return
+	var shortened_expiry := float(overlay.call("resolve_invitation_expiry", {
+		"expires_at": expiry_reference + 12.0
+	}, expiry_reference))
+	if not is_equal_approx(shortened_expiry, expiry_reference + 12.0):
+		push_error("A shorter supplied invitation deadline was not preserved.")
+		quit(1)
+		return
+	var future_created_at := Time.get_datetime_string_from_unix_time(int(expiry_reference + 60.0))
+	var future_timestamp_expiry := float(overlay.call("resolve_invitation_expiry", {
+		"created_at": future_created_at
+	}, expiry_reference))
+	if not is_equal_approx(future_timestamp_expiry, expiry_reference + 30.0):
+		push_error("A future creation timestamp incorrectly extended the invitation lifetime.")
+		quit(1)
+		return
+
 	var expired_ids: Array[String] = []
 	var accepted_ids: Array[String] = []
 	var declined_ids: Array[String] = []
