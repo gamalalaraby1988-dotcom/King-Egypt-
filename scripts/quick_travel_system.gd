@@ -330,7 +330,7 @@ func _select_destination(destination_id: String) -> void:
 		await _move_inside_ship(destination_id)
 
 func _enter_ship() -> void:
-	if not is_instance_valid(player) or ship_transition_busy:
+	if ship_transition_busy or not is_instance_valid(city) or not city.is_inside_tree() or not is_instance_valid(player) or not player.is_inside_tree():
 		return
 	ship_transition_busy = true
 	city.set("interior_transition_busy", true)
@@ -339,14 +339,8 @@ func _enter_ship() -> void:
 	player.set_physics_process(false)
 	city.call("_show_interior_loading", false, "interior_loading")
 	await get_tree().create_timer(0.65).timeout
-	if not is_instance_valid(player) or not is_inside_tree():
-		ship_transition_busy = false
-		if is_instance_valid(city):
-			city.set("interior_transition_busy", false)
-			city.set("interior_player", null)
-			city.call("_hide_interior_loading")
-		if is_instance_valid(player):
-			player.set_physics_process(true)
+	if not is_inside_tree() or not is_instance_valid(city) or not city.is_inside_tree() or not is_instance_valid(player) or not player.is_inside_tree():
+		_abort_ship_transition()
 		return
 	city.call("_set_city_world_hidden", true)
 	ship_interior = _build_ship_interior()
@@ -361,7 +355,7 @@ func _enter_ship() -> void:
 	city.call("_hide_interior_loading")
 
 func _exit_ship_to_beach() -> void:
-	if not is_instance_valid(ship_interior) or ship_transition_busy or not is_instance_valid(player):
+	if ship_transition_busy or not is_instance_valid(city) or not city.is_inside_tree() or not is_instance_valid(ship_interior) or not is_instance_valid(player) or not player.is_inside_tree():
 		return
 	ship_transition_busy = true
 	city.set("interior_transition_busy", true)
@@ -386,7 +380,7 @@ func _exit_ship_to_beach() -> void:
 	_refresh_city_interactions()
 
 func _move_inside_ship(location_id: String) -> void:
-	if not is_instance_valid(ship_interior) or ship_transition_busy or not is_instance_valid(player):
+	if ship_transition_busy or not is_instance_valid(city) or not city.is_inside_tree() or not is_instance_valid(ship_interior) or not is_instance_valid(player) or not player.is_inside_tree():
 		return
 	ship_transition_busy = true
 	city.set("interior_transition_busy", true)
