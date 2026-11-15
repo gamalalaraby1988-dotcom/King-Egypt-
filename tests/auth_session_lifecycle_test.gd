@@ -172,6 +172,9 @@ func _run_auth_session_tests() -> void:
 	mission_manager.daily_chest_reward_configured = true
 	mission_manager.daily_chest_server_claimed = true
 	mission_manager.daily_chest_reward_day = "2099-01-01"
+	mission_manager._daily_chest_request_action = "daily_chest_claim"
+	mission_manager._daily_chest_request_uid = "00000000-0000-4000-8000-000000000001"
+	mission_manager._daily_chest_request_generation = auth.get_session_generation()
 	mission_manager.achievement_totals = {"jobs": 7, "missions": 4, "daily_claims": 2}
 	mission_manager.reward_receipts = {"ci_private_reward": "claimed"}
 	mission_manager.daily_task_progress = {"2099-01-01": {"ci_task": 9}}
@@ -249,6 +252,17 @@ func _run_auth_session_tests() -> void:
 		quit(1)
 		return
 	mission_manager._on_account_session_invalidated("00000000-0000-4000-8000-000000000001", auth.get_session_generation())
+	mission_manager._on_daily_chest_rpc_completed("daily_chest_claim", {
+		"status": "claimed",
+		"reward_day": "2099-01-01",
+		"reward_cash": 999,
+		"reward_chips": 50,
+		"reward_xp": 100
+	})
+	if mission_manager.money != 0 or mission_manager.daily_chest_server_claimed or not mission_manager.has_reward_receipt("daily_chest_2099-01-01") == false:
+		push_error("A late daily chest response changed state after the account session ended.")
+		quit(1)
+		return
 	if mission_manager.active_mission != null or mission_manager.active_job != null or mission_manager.job_running or mission_manager.mission_running or mission_manager.active_job_target != Vector3.ZERO or not mission_manager.active_job_reward.is_empty() or not mission_manager.active_rental_transaction_id.is_empty():
 		push_error("An active mission, job, or rental from the previous account survived session invalidation.")
 		quit(1)
