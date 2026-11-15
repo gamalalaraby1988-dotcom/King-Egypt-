@@ -1182,7 +1182,8 @@ func _on_social_operation_completed(action: String, data: Variant) -> void:
 				if is_instance_valid(social_group_invite_button):
 					social_group_invite_button.visible = (social_chat_channel == "المجموعة" and not selected_friend_code.is_empty())
 				social_chat_status.text = "تم تحميل أعضاء المجموعة من الخادم."
-				SocialChatManager.read_chat_messages("group")
+				if social_chat_channel == "المجموعة":
+					SocialChatManager.read_chat_messages("group")
 			_refresh_group_popup()
 		"group_invite":
 			social_chat_status.text = "نتيجة دعوة المجموعة: " + str(data)
@@ -1239,6 +1240,8 @@ func _on_social_realtime_event(topic: String, event_name: String, payload: Dicti
 	elif topic.begins_with("chat:direct:") and topic == "chat:direct:" + selected_friend_conversation_id and social_chat_channel == "الأصدقاء":
 		should_show = true
 	if not should_show or not is_instance_valid(social_chat_log):
+		if is_instance_valid(social_chat_dock_button):
+			social_chat_dock_button.text = "💬 🔴"
 		return
 	var message_id := str(payload.get("message_id", ""))
 	if not message_id.is_empty() and _seen_realtime_message_ids.has(message_id):
