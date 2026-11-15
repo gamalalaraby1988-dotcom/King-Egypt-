@@ -36,21 +36,30 @@ func get_panel_width_for_viewport(viewport_width: float) -> float:
 func get_panel_layout_for_viewport(viewport_width: float) -> Vector2:
 	return Vector2(get_panel_horizontal_margin(viewport_width), get_panel_width_for_viewport(viewport_width))
 
+func get_panel_vertical_layout(viewport_height: float) -> Vector2:
+	var panel_height := minf(226.0, maxf(0.0, viewport_height - 24.0))
+	var top_margin := minf(viewport_height * 0.12, maxf(0.0, (viewport_height - panel_height) * 0.5))
+	return Vector2(top_margin, panel_height)
+
 func _apply_panel_layout() -> void:
 	if not is_instance_valid(_panel):
 		return
-	var layout := get_panel_layout_for_viewport(get_viewport_rect().size.x)
-	_panel.offset_left = -layout.y - layout.x
-	_panel.offset_right = -layout.x
-	_panel.custom_minimum_size.x = layout.y
+	var viewport_size := get_viewport_rect().size
+	var horizontal_layout := get_panel_layout_for_viewport(viewport_size.x)
+	var vertical_layout := get_panel_vertical_layout(viewport_size.y)
+	_panel.offset_left = -horizontal_layout.y - horizontal_layout.x
+	_panel.offset_right = -horizontal_layout.x
+	_panel.offset_top = vertical_layout.x
+	_panel.offset_bottom = vertical_layout.x + vertical_layout.y
+	_panel.custom_minimum_size = Vector2(horizontal_layout.y, vertical_layout.y)
 
 func _build_ui() -> void:
 	_panel = PanelContainer.new()
 	_panel.name = "UnifiedInvitationPanel"
 	_panel.anchor_left = 1.0
 	_panel.anchor_right = 1.0
-	_panel.anchor_top = 0.12
-	_panel.anchor_bottom = 0.12
+	_panel.anchor_top = 0.0
+	_panel.anchor_bottom = 0.0
 	_panel.offset_left = -326.0
 	_panel.offset_right = -12.0
 	_panel.offset_top = 0.0
