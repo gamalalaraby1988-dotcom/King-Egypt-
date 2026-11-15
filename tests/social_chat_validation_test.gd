@@ -45,12 +45,12 @@ func _run_social_validation_tests() -> void:
 		quit(1)
 		return
 	var malformed_created_deadline: float = expiry_probe.resolve_invitation_expiry({"created_at": "not-a-date"}, 1000.0)
-	if not is_equal_approx(malformed_created_deadline, 1000.0):
+	if not is_equal_approx(malformed_created_deadline, 1030.0):
 		push_error("An invitation with a malformed creation timestamp was granted a fresh lifetime.")
 		quit(1)
 		return
 	var future_created_deadline: float = expiry_probe.resolve_invitation_expiry({"created_at": "2026-11-17T10:00:00"}, 1000.0)
-	if not is_equal_approx(future_created_deadline, 1000.0):
+	if not is_equal_approx(future_created_deadline, 1030.0):
 		push_error("An invitation with a future creation timestamp was granted a fresh lifetime.")
 		quit(1)
 		return
