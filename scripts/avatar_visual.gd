@@ -36,6 +36,39 @@ func _ready() -> void:
 	apply_hairstyle(current_hairstyle)
 	_cache_animation_defaults()
 
+
+func apply_character_identity(character_id: String) -> void:
+	# Fixed in-game presets for the roster; this is not a wardrobe/customization system.
+	var is_female := character_id.contains("_f_")
+	var palette_index := absi(character_id.hash()) % 4
+	var skin_tones: Array[Color] = [
+		Color("#c98f68"), Color("#a96f50"), Color("#e0ad83"), Color("#86583f")
+	]
+	var hair_tones: Array[Color] = [
+		Color("#241b18"), Color("#493025"), Color("#17191e"), Color("#76503a")
+	]
+	var outfit_tones: Array[Color] = [
+		Color("#315b78"), Color("#466b5b"), Color("#75445d"), Color("#66543c")
+	]
+	var skin := skin_tones[palette_index]
+	var hair := hair_tones[palette_index]
+	var outfit := outfit_tones[palette_index]
+	for part_name in ["Head", "Neck", "LeftArm", "RightArm", "LeftEar", "RightEar"]:
+		_set_part_color(part_name, skin)
+	for part_name in ["ShortHairCap", "LongHairBack", "CurlyHairCap", "Curl_0", "Curl_1", "Curl_2", "Curl_3", "Curl_4"]:
+		_set_part_color(part_name, hair)
+	if is_female:
+		apply_outfit("women_formal")
+		apply_hairstyle("long")
+		_set_part_color("SkirtLayer", outfit)
+		_set_part_color("WomenFormalTopLayer", outfit.lightened(0.12))
+	else:
+		apply_outfit("men_formal")
+		apply_hairstyle("short")
+		_set_part_color("JacketLayer", outfit)
+		_set_part_color("ShirtLayer", Color("#e8e6df"))
+		_set_part_color("TieLayer", outfit.darkened(0.25))
+
 func set_motion_state(state: String, speed: float = 0.0) -> void:
 	motion_state = state if ["idle", "walk", "run", "sit"].has(state) else "idle"
 	motion_speed = maxf(speed, 0.0)
