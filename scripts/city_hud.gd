@@ -1518,6 +1518,10 @@ func _on_social_operation_completed(action: String, data: Variant) -> void:
 
 
 func _on_social_operation_failed(action: String, message: String) -> void:
+	if action == "display_name_get" or action == "display_name_change":
+		if is_instance_valid(display_name_status):
+			display_name_status.text = "تعذر تنفيذ العملية: " + message
+		return
 	social_chat_status.text = "تعذر تنفيذ " + action + ": " + message
 
 
