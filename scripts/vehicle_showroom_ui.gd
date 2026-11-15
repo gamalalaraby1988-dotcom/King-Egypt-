@@ -24,12 +24,10 @@ var detail_label: Label
 var _selected_id := "horus_2030"
 var open_button: Button
 
-func _notification(what: int) -> void:
-	if what == NOTIFICATION_WM_SIZE_CHANGED or what == NOTIFICATION_RESIZED:
-		_call_deferred("_update_responsive_layout")
 
 func _ready() -> void:
 	layer = 21
+	get_viewport().size_changed.connect(_update_responsive_layout)
 	_build_ui()
 
 func _build_ui() -> void:
