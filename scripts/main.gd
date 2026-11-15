@@ -53,6 +53,19 @@ func _ready() -> void:
 	_create_city_map()
 	_create_interior_transition_ui()
 	_create_player_vehicle()
+	_create_auth_login_panel()
+
+
+func _create_auth_login_panel() -> void:
+	# واجهة مصادقة تجريبية مستقلة؛ لا تغيّر بيانات اللاعب أو تفتح صلاحيات المؤسس.
+	var panel_script := load("res://scripts/auth_login_panel.gd") as Script
+	if panel_script == null:
+		push_warning("تعذر تحميل واجهة تسجيل الدخول التجريبية.")
+		return
+	var auth_panel := CanvasLayer.new()
+	auth_panel.name = "TestEmailAuthPanel"
+	auth_panel.set_script(panel_script)
+	add_child(auth_panel)
 
 
 func _process(_delta: float) -> void:
