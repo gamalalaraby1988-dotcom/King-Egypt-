@@ -115,6 +115,7 @@ func _on_request_completed(
 	body: PackedByteArray
 ) -> void:
 	var action := _pending_action
+	var request_email := _pending_email
 	var response_text := body.get_string_from_utf8()
 	_clear_pending()
 
@@ -131,7 +132,7 @@ func _on_request_completed(
 		return
 
 	if action == "request_otp":
-		otp_sent.emit(_pending_email)
+		otp_sent.emit(request_email)
 		return
 
 	if action == "verify_otp":
@@ -142,7 +143,7 @@ func _on_request_completed(
 			authentication_failed.emit("لم تكتمل جلسة تسجيل الدخول.")
 			return
 		var user_id := str(user_data.get("id", ""))
-		var user_email := str(user_data.get("email", _pending_email))
+		var user_email := str(user_data.get("email", request_email))
 		if user_id.is_empty():
 			authentication_failed.emit("تعذر تأكيد هوية الحساب.")
 			return
@@ -169,3 +170,4 @@ func _is_valid_email(value: String) -> bool:
 
 func _clear_pending() -> void:
 	_pending_action = ""
+	_pending_email = ""
