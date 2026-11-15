@@ -1111,6 +1111,7 @@ func _open_social_chat_panel() -> void:
 		social_chat_dock_button.text = "💬"
 	if AuthManager.is_authenticated():
 		SocialChatManager.list_chat_group_invites()
+		_refresh_blocked_players()
 	if is_instance_valid(social_chat_input):
 		social_chat_input.grab_focus()
 
