@@ -23,20 +23,47 @@ func _build_world() -> void:
 	_create_district_gateways()
 
 
+var _material_cache: Dictionary = {}
+var _box_mesh_cache: Dictionary = {}
+var _box_shape_cache: Dictionary = {}
+
+
 func _material(color: Color, roughness: float = 0.88, metallic: float = 0.0) -> StandardMaterial3D:
+	var key := "%s|%s|%s|%s|%s|%s" % [str(color.r), str(color.g), str(color.b), str(color.a), str(roughness), str(metallic)]
+	if _material_cache.has(key):
+		return _material_cache[key] as StandardMaterial3D
 	var material := StandardMaterial3D.new()
 	material.albedo_color = color
 	material.roughness = roughness
 	material.metallic = metallic
+	_material_cache[key] = material
 	return material
+
+
+func _get_box_mesh(size: Vector3) -> BoxMesh:
+	var key := "%s|%s|%s" % [str(size.x), str(size.y), str(size.z)]
+	if _box_mesh_cache.has(key):
+		return _box_mesh_cache[key] as BoxMesh
+	var mesh := BoxMesh.new()
+	mesh.size = size
+	_box_mesh_cache[key] = mesh
+	return mesh
+
+
+func _get_box_shape(size: Vector3) -> BoxShape3D:
+	var key := "%s|%s|%s" % [str(size.x), str(size.y), str(size.z)]
+	if _box_shape_cache.has(key):
+		return _box_shape_cache[key] as BoxShape3D
+	var shape := BoxShape3D.new()
+	shape.size = size
+	_box_shape_cache[key] = shape
+	return shape
 
 
 func _box(parent: Node3D, name: String, size: Vector3, position: Vector3, color: Color, collision: bool = false) -> MeshInstance3D:
 	var mesh_node := MeshInstance3D.new()
 	mesh_node.name = name
-	var mesh := BoxMesh.new()
-	mesh.size = size
-	mesh_node.mesh = mesh
+	mesh_node.mesh = _get_box_mesh(size)
 	mesh_node.position = position
 	mesh_node.material_override = _material(color)
 	parent.add_child(mesh_node)
@@ -45,9 +72,7 @@ func _box(parent: Node3D, name: String, size: Vector3, position: Vector3, color:
 		body.name = name + "_Collision"
 		body.position = position
 		var shape_node := CollisionShape3D.new()
-		var shape := BoxShape3D.new()
-		shape.size = size
-		shape_node.shape = shape
+		shape_node.shape = _get_box_shape(size)
 		body.add_child(shape_node)
 		parent.add_child(body)
 	return mesh_node
@@ -148,8 +173,7 @@ func _create_seaside() -> void:
 	plane.size = Vector2(700, 180)
 	water.mesh = plane
 	water.position = Vector3(0, -0.02, 330)
-	var water_material := _material(WATER_COLOR, 0.24, 0.18)
-	water_material.metallic = 0.12
+	var water_material := _material(WATER_COLOR, 0.24, 0.12)
 	water.material_override = water_material
 	coast.add_child(water)
 
