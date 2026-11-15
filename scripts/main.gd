@@ -128,6 +128,12 @@ func _create_player_vehicle() -> void:
 	layer.layer = 20
 	add_child(layer)
 
+	# معرض المركبات منفصل عن الاستدعاء والملكية؛ لا ينفذ شراء أو يغيّر المركبة المختارة.
+	var showroom_layer := CanvasLayer.new()
+	showroom_layer.name = "VehicleShowroomUI"
+	showroom_layer.set_script(load("res://scripts/vehicle_showroom_ui.gd"))
+	add_child(showroom_layer)
+
 	vehicle_summon_button = Button.new()
 	vehicle_summon_button.name = "VehicleSummonButton"
 	vehicle_summon_button.text = "إحضار السيارة"
