@@ -162,19 +162,21 @@ func _run_social_validation_tests() -> void:
 		quit(1)
 		return
 	var male_avatar := avatar_scene.instantiate()
+	root.add_child(male_avatar)
 	male_avatar.call("apply_character_identity", "eg_m_adam")
 	if str(male_avatar.get("current_outfit")) != "men_formal" or str(male_avatar.get("current_hairstyle")) != "short":
 		push_error("A male roster identity did not apply its approved in-game character preset.")
 		quit(1)
 		return
-	male_avatar.free()
+	male_avatar.queue_free()
 	var female_avatar := avatar_scene.instantiate()
+	root.add_child(female_avatar)
 	female_avatar.call("apply_character_identity", "eg_f_layan")
 	if str(female_avatar.get("current_outfit")) != "women_formal" or str(female_avatar.get("current_hairstyle")) != "long":
 		push_error("A female roster identity did not apply its approved in-game character preset.")
 		quit(1)
 		return
-	female_avatar.free()
+	female_avatar.queue_free()
 	if city_hud.get_friend_character_scene_path({"selected_character_id":"xx_m_unknown"}) != "":
 		push_error("An unknown character ID was allowed to resolve to a portrait scene.")
 		quit(1)
