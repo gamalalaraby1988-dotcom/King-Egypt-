@@ -80,6 +80,7 @@ func _build_ui() -> void:
 	add_child(_panel)
 
 	var scroll := ScrollContainer.new()
+	scroll.name = "InvitationContentScroll"
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
 	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
