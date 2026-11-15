@@ -180,6 +180,7 @@ func _run_social_validation_tests() -> void:
 	var male_portrait: Control = city_hud.call("_build_friend_character_portrait", {"selected_character_id":"eg_m_adam"}) as Control
 	root.add_child(male_portrait)
 	await process_frame
+	await process_frame
 	if not male_portrait is SubViewportContainer:
 		push_error("A valid in-game male character did not produce a rendered viewport portrait.")
 		quit(1)
@@ -194,6 +195,7 @@ func _run_social_validation_tests() -> void:
 	male_portrait.free()
 	var female_portrait: Control = city_hud.call("_build_friend_character_portrait", {"character_id":"eg_f_layan"}) as Control
 	root.add_child(female_portrait)
+	await process_frame
 	await process_frame
 	if not female_portrait is SubViewportContainer:
 		push_error("A valid in-game female character did not produce a rendered viewport portrait.")
