@@ -1837,6 +1837,10 @@ func _on_invitation_expired(invitation: Dictionary) -> void:
 
 
 func _submit_group_invitation_response(invitation: Dictionary, accepted: bool) -> void:
+	# Only one invitation response may own the shared RPC slot and overlay lock.
+	# Expiry signals can arrive for multiple queued invitations in the same frame.
+	if not _pending_group_invite_response_id.is_empty():
+		return
 	var invite_id := str(invitation.get("invite_id", "")).strip_edges()
 	if invite_id.is_empty():
 		return
