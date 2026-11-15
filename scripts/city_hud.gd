@@ -1662,6 +1662,8 @@ func _on_social_operation_completed(action: String, data: Variant) -> void:
 			if str(data) == "accepted" or str(data) == "declined":
 				_remove_social_invite_card(_pending_group_invite_response_id)
 				_pending_group_invite_response_id = ""
+			if is_instance_valid(invitation_overlay):
+				invitation_overlay.call("set_response_pending", false)
 			if str(data) == "accepted":
 				SocialChatManager.get_chat_group()
 		"chat_send":
@@ -1691,6 +1693,10 @@ func _on_social_operation_completed(action: String, data: Variant) -> void:
 
 
 func _on_social_operation_failed(action: String, message: String) -> void:
+	if action == "group_invite_response":
+		_pending_group_invite_response_id = ""
+		if is_instance_valid(invitation_overlay):
+			invitation_overlay.call("set_response_pending", false)
 	if action == "display_name_get" or action == "display_name_change":
 		if is_instance_valid(display_name_status):
 			display_name_status.text = "تعذر تنفيذ العملية: " + message
@@ -1811,8 +1817,7 @@ func _add_social_group_invite_card(invite: Dictionary) -> void:
 func _on_invitation_accepted(invitation: Dictionary) -> void:
 	var kind := str(invitation.get("type", ""))
 	if kind == "group_invite":
-		_pending_group_invite_response_id = str(invitation.get("invite_id", ""))
-		SocialChatManager.respond_chat_group_invite(_pending_group_invite_response_id, true)
+		_submit_group_invitation_response(invitation, true)
 	else:
 		social_chat_status.text = "القبول غير متاح: لم تُربط خدمة هذا النوع من الدعوات بالخادم بعد."
 
@@ -1820,17 +1825,28 @@ func _on_invitation_accepted(invitation: Dictionary) -> void:
 func _on_invitation_declined(invitation: Dictionary) -> void:
 	var kind := str(invitation.get("type", ""))
 	if kind == "group_invite":
-		_pending_group_invite_response_id = str(invitation.get("invite_id", ""))
-		SocialChatManager.respond_chat_group_invite(_pending_group_invite_response_id, false)
+		_submit_group_invitation_response(invitation, false)
 	else:
 		social_chat_status.text = "تم رفض الدعوة."
 
 
 func _on_invitation_expired(invitation: Dictionary) -> void:
 	if str(invitation.get("type", "")) == "group_invite":
-		_pending_group_invite_response_id = str(invitation.get("invite_id", ""))
-		SocialChatManager.respond_chat_group_invite(_pending_group_invite_response_id, false)
+		_submit_group_invitation_response(invitation, false)
 		social_chat_status.text = "انتهت صلاحية دعوة المجموعة بعد 30 ثانية."
+
+
+func _submit_group_invitation_response(invitation: Dictionary, accepted: bool) -> void:
+	var invite_id := str(invitation.get("invite_id", "")).strip_edges()
+	if invite_id.is_empty():
+		return
+	_pending_group_invite_response_id = invite_id
+	if is_instance_valid(invitation_overlay):
+		invitation_overlay.call("set_response_pending", true)
+	if not SocialChatManager.respond_chat_group_invite(invite_id, accepted):
+		_pending_group_invite_response_id = ""
+		if is_instance_valid(invitation_overlay):
+			invitation_overlay.call("set_response_pending", false)
 
 
 func _respond_to_social_group_invite(invite_id: String, accepted: bool) -> void:
