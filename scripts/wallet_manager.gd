@@ -130,8 +130,9 @@ func get_balance(currency: String) -> int:
 	return int(balances[currency])
 
 func get_balances() -> Dictionary:
-	if initialized:
-		_refresh_legacy_balances()
+	if not _can_access_profile():
+		return {"money": 0, "chips": 0, "gems": 0}
+	_refresh_legacy_balances()
 	return balances.duplicate(true)
 
 func _refresh_legacy_balances() -> void:
@@ -180,6 +181,8 @@ func save_profile_update(config: ConfigFile, money_value: int, chips_value: int)
 	return true
 
 func get_recent_transactions(limit: int = 5) -> Array:
+	if not _can_access_profile():
+		return []
 	var result: Array = []
 	var count := mini(maxi(limit, 0), 20)
 	for index in range(ledger.size() - 1, maxi(ledger.size() - count - 1, -1), -1):
@@ -187,7 +190,7 @@ func get_recent_transactions(limit: int = 5) -> Array:
 	return result
 
 func has_transaction(transaction_id: String) -> bool:
-	return receipts.has(transaction_id)
+	return _can_access_profile() and receipts.has(transaction_id)
 
 func purchase_once(transaction_id: String, currency: String, amount: int, reason: String, profile_updates: Dictionary = {}) -> bool:
 	# يطبق الخصم وتحديث الملكية/الإيصال في الملف نفسه؛ لا توجد ملكية دون خصم ناجح.
