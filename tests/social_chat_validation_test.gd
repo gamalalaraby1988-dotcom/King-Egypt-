@@ -110,6 +110,20 @@ func _run_social_validation_tests() -> void:
 		push_error("Starting an activity did not reset shared-navigation timers.")
 		quit(1)
 		return
+	# التدخل اليدوي يلغي توجيه الموقع فقط، دون فتح نافذة إلغاء مهمة.
+	player_probe.call("begin_auto_navigation")
+	player_probe.call("set_auto_navigation_direction", Vector3(0.0, 0.0, -1.0))
+	player_probe.set("auto_navigation_cancelled", true)
+	route_probe.set("landmark_navigation_key", "shared_location")
+	route_probe.set("landmark_navigation_active", true)
+	route_probe.set("landmark_route_points", valid_shared_route)
+	route_probe.set("landmark_route_index", 1)
+	marker_probe.visible = true
+	route_probe.call("_cancel_shared_location_navigation_for_manual_input")
+	if bool(route_probe.get("landmark_navigation_active")) or str(route_probe.get("landmark_navigation_key")) != "" or not (route_probe.get("landmark_route_points") as PackedVector3Array).is_empty() or marker_probe.visible or bool(player_probe.get("auto_navigation_active")):
+		push_error("Manual movement did not cleanly cancel shared-location navigation.")
+		quit(1)
+		return
 	var main_script: Script = load("res://scripts/main.gd")
 	if main_script == null:
 		push_error("Main scene script could not be loaded for vehicle-follow cleanup validation.")

@@ -689,11 +689,26 @@ func _process(_delta: float) -> void:
 	_update_shared_location_auto_walk()
 
 
+func _cancel_shared_location_navigation_for_manual_input() -> void:
+	# تدخل اللاعب يلغي مشاركة التوجيه فقط، ولا يعرض رسالة إلغاء مهمة أو وظيفة.
+	if is_instance_valid(player) and player.has_method("end_auto_navigation"):
+		player.call("end_auto_navigation")
+	hide_shared_location_marker()
+	landmark_navigation_active = false
+	landmark_navigation_key = ""
+	landmark_route_points.clear()
+	landmark_route_index = 0
+	navigation_arrival_remaining = 0.0
+	navigation_off_route_time = 0.0
+	navigation_route_notice_remaining = 0.0
+	_update_navigation_hud()
+
+
 func _update_shared_location_auto_walk() -> void:
 	if not landmark_navigation_active or landmark_navigation_key != "shared_location" or not is_instance_valid(player):
 		return
 	if player.has_method("is_auto_navigation_cancelled") and bool(player.call("is_auto_navigation_cancelled")):
-		_cancel_active_navigation()
+		_cancel_shared_location_navigation_for_manual_input()
 		return
 	_advance_landmark_route()
 	var waypoint := landmark_navigation_target
