@@ -2233,21 +2233,21 @@ func _on_social_operation_completed(action: String, data: Variant) -> void:
 			var request_result := str(data)
 			var completed_player_code := _pending_friend_request_player_code
 			_pending_friend_request_player_code = ""
-			if is_instance_valid(player_primary_action_button) and not selected_player_is_friend and selected_player_id == completed_player_code:
-				player_primary_action_button.disabled = request_result == "sent"
+			# احتفظ بنتيجة الخادم حتى لو أُغلقت نافذة الشخصية أو فُتحت شخصية أخرى.
+			if not completed_player_code.is_empty():
 				if request_result == "sent":
 					_sent_friend_requests[completed_player_code] = true
+				else:
+					_sent_friend_requests.erase(completed_player_code)
+			if is_instance_valid(player_primary_action_button) and selected_player_id == completed_player_code and not selected_player_is_friend:
+				if request_result == "sent":
 					player_primary_action_button.disabled = true
 					player_primary_action_button.text = "تم إرسال طلب الصداقة"
 					player_action_status.text = "تم إرسال طلب صداقة لهذا اللاعب. ينتظر الرد."
 				else:
-					_sent_friend_requests.erase(completed_player_code)
 					player_primary_action_button.disabled = false
 					player_primary_action_button.text = "إضافة صديق"
 					player_action_status.text = "لم يتم إرسال طلب الصداقة: " + request_result
-			elif is_instance_valid(player_primary_action_button) and not selected_player_is_friend:
-				player_primary_action_button.disabled = false
-				player_primary_action_button.text = "إضافة صديق"
 			if is_instance_valid(social_chat_status):
 				social_chat_status.text = "نتيجة طلب الصداقة: " + request_result
 			if request_result == "sent":
