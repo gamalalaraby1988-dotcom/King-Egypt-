@@ -97,6 +97,22 @@ func _run_social_validation_tests() -> void:
 				quit(1)
 				return
 	print("SOCIAL_TEST_STAGE: mountain_turn_guard_connectors_complete")
+	# Every straight road segment must keep continuous solid barriers on both sides.
+	for segment_index in range(mountain_route_script.ROUTE_POINTS.size() - 1):
+		for side_name in ["L", "R"]:
+			var road_guard_name := "MountainGuardWall_%02d_%s" % [segment_index, side_name]
+			var road_guard_mesh := mountain_route_probe.get_node_or_null(road_guard_name) as MeshInstance3D
+			var road_guard_body := mountain_route_probe.get_node_or_null(road_guard_name + "Collision") as StaticBody3D
+			var road_guard_shape := road_guard_body.get_node_or_null("CollisionShape3D") as CollisionShape3D if is_instance_valid(road_guard_body) else null
+			var road_gold_rail := mountain_route_probe.get_node_or_null("MountainGuardGoldRail_%02d_%s" % [segment_index, side_name]) as MeshInstance3D
+			if not is_instance_valid(road_guard_mesh) or not is_instance_valid(road_guard_body) or not is_instance_valid(road_guard_shape) or not is_instance_valid(road_gold_rail):
+				push_error("Mountain road segment is missing a solid side barrier or gold rail: " + road_guard_name)
+				quit(1)
+				return
+			if road_guard_body.collision_layer != 1 or (road_guard_body.collision_mask & 6) != 6:
+				push_error("Mountain road side barrier must block both players and vehicles: " + road_guard_name)
+				quit(1)
+				return
 	# Scenic decks must retain their approach opening while all exposed edges are solid
 	# and receive the decorative gold top rail.
 	for stop_number in range(2):
