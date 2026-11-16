@@ -208,6 +208,10 @@ func _process(_delta: float) -> void:
 	if is_instance_valid(vehicle_interaction_button):
 		var vehicle_or_party_target := is_instance_valid(nearby_party_station) or (is_instance_valid(city_vehicle) and close_enough and not is_instance_valid(nearby_city_interactable))
 		vehicle_interaction_button.visible = vehicle_or_party_target
+		if vehicle_or_party_target:
+			vehicle_interaction_button.add_theme_stylebox_override("normal", _make_vehicle_summon_style(Color(0.04, 0.34, 0.78)))
+			vehicle_interaction_button.add_theme_stylebox_override("hover", _make_vehicle_summon_style(Color(0.08, 0.46, 0.94)))
+			vehicle_interaction_button.add_theme_stylebox_override("pressed", _make_vehicle_summon_style(Color(0.02, 0.23, 0.58)))
 		if is_instance_valid(nearby_party_station):
 			vehicle_interaction_button.text = "إقامة حفلة" if CityLanguage.get_language() == "ar" else "Start party"
 		else:
