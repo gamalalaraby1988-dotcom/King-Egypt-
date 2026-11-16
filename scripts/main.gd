@@ -357,33 +357,30 @@ func begin_shared_location_navigation(destination: Vector3) -> bool:
 	return bool(mission_manager.call("navigate_to_landmark", "shared_location", destination))
 
 
+func _clear_shared_location_vehicle_follow() -> void:
+	if is_instance_valid(city_vehicle) and city_vehicle.has_method("clear_auto_navigation_controls"):
+		city_vehicle.call("clear_auto_navigation_controls")
+	_shared_location_vehicle_following = false
+	_shared_location_vehicle_target = Vector3.ZERO
+	_shared_location_vehicle_route = PackedVector3Array()
+	_shared_location_vehicle_route_index = 0
+	var mission_manager := get_node_or_null("MissionManager")
+	if is_instance_valid(mission_manager) and mission_manager.has_method("hide_shared_location_marker"):
+		mission_manager.call("hide_shared_location_marker")
+
+
 func _update_shared_location_vehicle_follow() -> void:
 	if not _shared_location_vehicle_following:
 		return
 	if not vehicle_occupied or not is_instance_valid(city_vehicle):
-		if is_instance_valid(city_vehicle) and city_vehicle.has_method("clear_auto_navigation_controls"):
-			city_vehicle.call("clear_auto_navigation_controls")
-		_shared_location_vehicle_following = false
-		_shared_location_vehicle_target = Vector3.ZERO
-		_shared_location_vehicle_route = PackedVector3Array()
-		_shared_location_vehicle_route_index = 0
-		var inactive_vehicle_manager := get_node_or_null("MissionManager")
-		if is_instance_valid(inactive_vehicle_manager) and inactive_vehicle_manager.has_method("hide_shared_location_marker"):
-			inactive_vehicle_manager.call("hide_shared_location_marker")
+		_clear_shared_location_vehicle_follow()
 		return
 	var mission_manager := get_node_or_null("MissionManager")
 	if is_instance_valid(mission_manager) and (bool(mission_manager.get("mission_running")) or bool(mission_manager.get("job_running"))):
-		city_vehicle.call("clear_auto_navigation_controls")
-		_shared_location_vehicle_following = false
-		_shared_location_vehicle_route = PackedVector3Array()
-		mission_manager.call("hide_shared_location_marker")
+		_clear_shared_location_vehicle_follow()
 		return
 	if bool(city_vehicle.get("auto_navigation_interrupted")):
-		city_vehicle.call("clear_auto_navigation_controls")
-		_shared_location_vehicle_following = false
-		_shared_location_vehicle_route = PackedVector3Array()
-		if is_instance_valid(get_node_or_null("MissionManager")):
-			get_node("MissionManager").call("hide_shared_location_marker")
+		_clear_shared_location_vehicle_follow()
 		return
 	while _shared_location_vehicle_route_index < _shared_location_vehicle_route.size():
 		var waypoint: Vector3 = _shared_location_vehicle_route[_shared_location_vehicle_route_index]
@@ -393,11 +390,7 @@ func _update_shared_location_vehicle_follow() -> void:
 			break
 		_shared_location_vehicle_route_index += 1
 	if _shared_location_vehicle_route_index >= _shared_location_vehicle_route.size():
-		city_vehicle.call("clear_auto_navigation_controls")
-		_shared_location_vehicle_following = false
-		_shared_location_vehicle_route = PackedVector3Array()
-		if is_instance_valid(get_node_or_null("MissionManager")):
-			get_node("MissionManager").call("hide_shared_location_marker")
+		_clear_shared_location_vehicle_follow()
 		return
 	var direction: Vector3 = _shared_location_vehicle_route[_shared_location_vehicle_route_index] - city_vehicle.global_position
 	direction.y = 0.0

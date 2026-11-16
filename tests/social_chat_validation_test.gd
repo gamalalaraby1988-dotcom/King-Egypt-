@@ -136,6 +136,17 @@ func _run_social_validation_tests() -> void:
 		push_error("Losing vehicle occupancy did not hide the shared-location marker and clear its target.")
 		quit(1)
 		return
+	# Every vehicle-follow termination path shares the same complete cleanup.
+	main_probe.set("_shared_location_vehicle_following", true)
+	main_probe.set("_shared_location_vehicle_target", Vector3(12.0, 0.0, 8.0))
+	main_probe.set("_shared_location_vehicle_route", PackedVector3Array([Vector3.ZERO, Vector3(12.0, 0.0, 8.0)]))
+	main_probe.set("_shared_location_vehicle_route_index", 1)
+	marker_probe.visible = true
+	main_probe.call("_clear_shared_location_vehicle_follow")
+	if bool(main_probe.get("_shared_location_vehicle_following")) or not (main_probe.get("_shared_location_vehicle_target") as Vector3).is_zero_approx() or not (main_probe.get("_shared_location_vehicle_route") as PackedVector3Array).is_empty() or int(main_probe.get("_shared_location_vehicle_route_index")) != 0 or marker_probe.visible:
+		push_error("Shared-location vehicle follow cleanup did not reset every state field and hide the marker.")
+		quit(1)
+		return
 	main_probe.remove_child(route_probe)
 	main_probe.free()
 	route_probe.free()
