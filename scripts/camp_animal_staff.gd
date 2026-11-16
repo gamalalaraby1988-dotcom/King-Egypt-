@@ -1,4 +1,6 @@
 extends Node3D
+
+const CollisionProfile = preload("res://scripts/city_collision_profile.gd")
 ## موظف المخيم المسؤول عن تأجير الحيوانات الثمانية لجميع اللاعبين.
 
 @export var ride_price: int = 25
@@ -8,6 +10,7 @@ func _ready() -> void:
 	add_to_group("city_interactables")
 	add_to_group("camp_staff")
 	_build_visual()
+	CollisionProfile.add_staff_collider(self, 0.35, 1.82)
 
 func _build_visual() -> void:
 	var uniform := StandardMaterial3D.new()
