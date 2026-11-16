@@ -1507,17 +1507,19 @@ func can_start_shared_location_navigation() -> bool:
 func navigate_to_landmark(landmark_key: String, destination: Vector3) -> bool:
 	if mission_running or job_running:
 		return false
-	# الملاحة تنتهي عند المدخل أو لوحة الوظيفة بدل مركز المبنى.
-	landmark_navigation_target = get_landmark_entrance(landmark_key, destination)
-	landmark_navigation_key = landmark_key
-	landmark_navigation_name = "الموقع المشترك" if landmark_key == "shared_location" else CityLanguage.translate(landmark_key)
+	# تحقّق من المسار قبل تغيير حالة الملاحة الحالية؛ الوجهة المرفوضة
+	# يجب ألا تترك اسمًا أو هدفًا جديدًا فوق متابعة سابقة.
+	var requested_target := get_landmark_entrance(landmark_key, destination)
 	var validated_shared_route := PackedVector3Array()
 	if landmark_key == "shared_location":
 		if not is_instance_valid(player):
 			return false
-		validated_shared_route = build_shared_location_route_from(player.global_position, landmark_navigation_target)
+		validated_shared_route = build_shared_location_route_from(player.global_position, requested_target)
 		if validated_shared_route.size() < 2:
 			return false
+	landmark_navigation_target = requested_target
+	landmark_navigation_key = landmark_key
+	landmark_navigation_name = "الموقع المشترك" if landmark_key == "shared_location" else CityLanguage.translate(landmark_key)
 	navigation_arrival_remaining = 0.0
 	navigation_off_route_time = 0.0
 	navigation_route_notice_remaining = 0.0
