@@ -1452,20 +1452,47 @@ func _is_local_group_leader() -> bool:
 	return (leader_id == "local_leader" or (not local_player_code.is_empty() and leader_id == local_player_code)) and bool(leader.get("is_leader", false))
 
 
+static func can_request_group_invite_for_player(player_code: String, group_size: int, max_members: int, already_member: bool, already_pending: bool) -> bool:
+	return (
+		SocialChatManager.is_valid_player_code(player_code)
+		and group_size >= 1
+		and max_members >= 2
+		and group_size < max_members
+		and not already_member
+		and not already_pending
+	)
+
+
 func _request_group_invite(player_id: String) -> void:
-	player_id = player_id.strip_edges()
-	if player_id.is_empty() or player_id.length() > 64 or player_id == "local_leader":
-		player_action_status.text = "رمز اللاعب غير صالح."
+	var code := player_id.strip_edges().to_upper()
+	if not _is_local_group_leader():
+		player_action_status.text = "دعوة أعضاء المجموعة متاحة للقائد فقط."
 		return
-	if group_members.size() >= GROUP_MAX_MEMBERS:
-		player_action_status.text = "المجموعة مكتملة؛ الحد الأقصى أربعة لاعبين."
+	if not can_request_group_invite_for_player(code, group_members.size(), GROUP_MAX_MEMBERS, _group_contains(code), pending_group_invites.has(code)):
+		if not SocialChatManager.is_valid_player_code(code):
+			player_action_status.text = "رمز اللاعب غير صالح."
+		elif group_members.size() >= GROUP_MAX_MEMBERS:
+			player_action_status.text = "المجموعة مكتملة؛ الحد الأقصى أربعة لاعبين."
+		else:
+			player_action_status.text = "هذا اللاعب موجود بالفعل أو أُرسلت له دعوة."
 		return
-	if _group_contains(player_id) or pending_group_invites.has(player_id):
-		player_action_status.text = "هذا اللاعب موجود بالفعل أو أُرسلت له دعوة."
+	if not AuthManager.is_authenticated():
+		player_action_status.text = "سجّل الدخول أولًا لإرسال دعوة المجموعة."
 		return
-	pending_group_invites.append(player_id)
-	group_add_requested.emit(player_id)
-	player_action_status.text = "تم تجهيز دعوة المجموعة. لن يُضاف اللاعب إلا بعد قبول الدعوة من الطرف الآخر."
+	pending_group_invites.append(code)
+	_pending_group_invite_code = code
+	player_primary_action_button.disabled = true
+	player_primary_action_button.text = "جارٍ إرسال الدعوة..."
+	if not SocialChatManager.invite_chat_group_member(code):
+		if _pending_group_invite_code == code:
+			pending_group_invites.erase(code)
+			_pending_group_invite_code = ""
+			player_primary_action_button.disabled = false
+			player_primary_action_button.text = "دعوة للمجموعة"
+		return
+	player_action_status.text = "جارٍ إرسال دعوة المجموعة إلى الخادم..."
+	group_invite_status.text = "جارٍ إرسال الدعوة إلى اللاعب..."
+	_refresh_group_invite_friends(_group_invite_friends_cache)
 	_refresh_group_popup()
 
 
@@ -2293,9 +2320,14 @@ func _on_social_operation_completed(action: String, data: Variant) -> void:
 					SocialChatManager.read_chat_messages("group")
 			_refresh_group_popup()
 		"group_invite":
+			var completed_group_invite_code := _pending_group_invite_code
+			_pending_group_invite_code = ""
 			social_chat_status.text = "نتيجة دعوة المجموعة: " + str(data)
 			group_invite_status.text = "تم إرسال طلب الدعوة إلى الخادم." if str(data) == "sent" else "رد الخادم: " + str(data)
-			_pending_group_invite_code = ""
+			if not completed_group_invite_code.is_empty() and selected_player_id == completed_group_invite_code:
+				player_action_status.text = "تم إرسال دعوة المجموعة. ينتظر انضمام اللاعب بعد قبولها." if str(data) == "sent" else "نتيجة دعوة المجموعة: " + str(data)
+				player_primary_action_button.disabled = str(data) == "sent"
+				player_primary_action_button.text = "تم إرسال الدعوة" if str(data) == "sent" else "دعوة للمجموعة"
 			SocialChatManager.get_chat_group()
 		"group_invite_response":
 			social_chat_status.text = "نتيجة الرد على الدعوة: " + str(data)
@@ -2335,9 +2367,14 @@ func _on_social_operation_completed(action: String, data: Variant) -> void:
 func _on_social_operation_failed(action: String, message: String) -> void:
 	if action == "group_invite":
 		group_invite_status.text = "تعذر إرسال الدعوة: " + message
-		if not _pending_group_invite_code.is_empty():
-			pending_group_invites.erase(_pending_group_invite_code)
+		var failed_group_invite_code := _pending_group_invite_code
+		if not failed_group_invite_code.is_empty():
+			pending_group_invites.erase(failed_group_invite_code)
 			_pending_group_invite_code = ""
+			if selected_player_id == failed_group_invite_code:
+				player_primary_action_button.disabled = false
+				player_primary_action_button.text = "دعوة للمجموعة"
+				player_action_status.text = "تعذر إرسال دعوة المجموعة: " + message
 		_refresh_group_invite_friends(_group_invite_friends_cache)
 		_refresh_group_popup()
 	if action == "group_invite_response":
