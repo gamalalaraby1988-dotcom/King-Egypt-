@@ -18,6 +18,9 @@ func _ready() -> void:
 	_build_city_approach()
 	_build_approach_gate()
 	_build_road()
+	_build_turn_aprons()
+	_build_wayfinding_lights()
+	_build_rock_outcrops()
 	_build_rest_stops()
 	_build_summit_terrace()
 
@@ -71,6 +74,8 @@ func _build_road() -> void:
 		var basis := Basis.looking_at(direction, Vector3.UP)
 		var center := (start + finish) * 0.5
 		_add_oriented_box("MountainRoadSegment_%02d" % i, Vector3(ROAD_WIDTH, ROAD_THICKNESS, length), center, basis, Color(0.23, 0.23, 0.22), true)
+		# خط إرشادي ذهبي رفيع في منتصف المسار.
+		_add_oriented_box("MountainRoadCenterGuide_%02d" % i, Vector3(0.10, 0.025, maxf(1.0, length - 1.2)), center + basis.y * (ROAD_THICKNESS * 0.5 + 0.018), basis, Color(0.70, 0.56, 0.30), false)
 		# حواجز صلبة على حافتي الطريق، مع فتح عرض الطريق بالكامل.
 		for side in [-1.0, 1.0]:
 			var rail_center: Vector3 = center + basis.x * side * (ROAD_WIDTH * 0.5 + 0.28) + basis.y * 0.88
@@ -78,6 +83,46 @@ func _build_road() -> void:
 			var gold_center: Vector3 = rail_center + basis.y * 0.72
 			_add_oriented_box("MountainGuardGoldRail_%02d_%s" % [i, "L" if side < 0.0 else "R"], Vector3(0.18, 0.16, length), gold_center, basis, Color(0.82, 0.65, 0.29), true)
 
+
+func _build_turn_aprons() -> void:
+	# توسعات صغيرة عند المنعطفات تمنع الفواصل الحادة بين مقاطع الطريق.
+	for i in range(1, ROUTE_POINTS.size() - 1):
+		var incoming: Vector3 = (ROUTE_POINTS[i] - ROUTE_POINTS[i - 1]).normalized()
+		var outgoing: Vector3 = (ROUTE_POINTS[i + 1] - ROUTE_POINTS[i]).normalized()
+		var tangent := (incoming + outgoing).normalized()
+		if tangent.length() < 0.1:
+			tangent = outgoing
+		var basis := Basis.looking_at(tangent, Vector3.UP)
+		_add_oriented_box("MountainTurnApron_%02d" % i, Vector3(9.2, ROAD_THICKNESS, 9.2), ROUTE_POINTS[i], basis, Color(0.25, 0.24, 0.22), true)
+
+func _build_wayfinding_lights() -> void:
+	# أعمدة إنارة وإرشاد خارج حافة الحواجز؛ لا تقترب من حيز قيادة المركبات.
+	for i in range(ROUTE_POINTS.size()):
+		var previous: Vector3 = ROUTE_POINTS[maxi(0, i - 1)]
+		var following: Vector3 = ROUTE_POINTS[mini(ROUTE_POINTS.size() - 1, i + 1)]
+		var forward := (following - previous).normalized()
+		var side := Vector3.UP.cross(forward).normalized()
+		if side.length() < 0.1:
+			side = Vector3.RIGHT
+		var side_sign := -1.0 if i % 2 == 0 else 1.0
+		var lamp_position: Vector3 = ROUTE_POINTS[i] + side * side_sign * 6.4
+		_add_box("MountainWayfindingLampPost_%02d" % i, Vector3(0.32, 3.0, 0.32), lamp_position + Vector3.UP * 1.5, Color(0.49, 0.39, 0.25), true)
+		_add_box("MountainWayfindingLampCap_%02d" % i, Vector3(0.72, 0.32, 0.72), lamp_position + Vector3.UP * 3.12, Color(0.82, 0.65, 0.30), false)
+		var glow := OmniLight3D.new()
+		glow.name = "MountainWayfindingGlow_%02d" % i
+		glow.position = lamp_position + Vector3.UP * 3.0
+		glow.light_color = Color(1.0, 0.78, 0.43)
+		glow.light_energy = 0.65
+		glow.omni_range = 8.0
+		glow.shadow_enabled = false
+		add_child(glow)
+
+func _build_rock_outcrops() -> void:
+	# كتل صخرية زخرفية على مسافة آمنة خارج الحواجز.
+	_add_box("MountainRockOutcrop_00", Vector3(5.0, 3.8, 6.0), Vector3(27.0, 2.0, 145.0), Color(0.37, 0.32, 0.27), true)
+	_add_box("MountainRockOutcrop_01", Vector3(6.0, 5.0, 5.0), Vector3(88.0, 4.0, 176.0), Color(0.33, 0.29, 0.25), true)
+	_add_box("MountainRockOutcrop_02", Vector3(5.5, 4.5, 6.5), Vector3(22.0, 8.0, 193.0), Color(0.42, 0.36, 0.29), true)
+	_add_box("MountainRockOutcrop_03", Vector3(4.5, 3.2, 5.0), Vector3(84.0, 0.5, 119.0), Color(0.39, 0.34, 0.29), true)
 
 func _build_rest_stops() -> void:
 	# فسحات جانبية خارج مسار المركبات؛ لا توضع المقاعد على الطريق.
