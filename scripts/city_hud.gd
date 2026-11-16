@@ -91,6 +91,8 @@ var _friend_base_labels: Dictionary = {}
 var _direct_conversation_to_friend: Dictionary = {}
 var _friend_to_conversation: Dictionary = {}
 var selected_friend_conversation_id := ""
+var _pending_direct_read_conversation_id := ""
+var _pending_direct_send_conversation_id := ""
 var social_group_create_button: Button
 var social_group_invite_button: Button
 var social_invites_box: VBoxContainer
@@ -1382,7 +1384,8 @@ func _share_current_location() -> void:
 	var sent := false
 	match str(destination.get("kind", "")):
 		"direct":
-			sent = SocialChatManager.send_direct_message(str(destination.get("conversation_id", "")), location_message)
+			sent = _pending_direct_send_conversation_id = str(destination.get("conversation_id", ""))
+			sent = SocialChatManager.send_direct_message(_pending_direct_send_conversation_id, location_message)
 		"group":
 			sent = SocialChatManager.send_chat_message("group", location_message)
 		"public":
@@ -2185,13 +2188,16 @@ func _on_social_operation_completed(action: String, data: Variant) -> void:
 						_update_friend_unread_badge(requested_friend_code)
 						_refresh_unread_indicators()
 						SocialChatManager.subscribe_direct_chat(conversation_id)
+						_pending_direct_read_conversation_id = conversation_id
 						SocialChatManager.read_direct_messages(conversation_id)
 				else:
 					social_chat_status.text = "تعذر فتح المحادثة: " + str(result.get("error_code", "unknown"))
 			else:
 				social_chat_status.text = "تعذر فتح المحادثة: استجابة الخادم غير صالحة."
 		"direct_read":
-			if social_chat_channel != "الأصدقاء" or selected_friend_conversation_id.is_empty():
+			var read_conversation_id := _pending_direct_read_conversation_id
+			_pending_direct_read_conversation_id = ""
+			if read_conversation_id.is_empty() or social_chat_channel != "الأصدقاء" or selected_friend_conversation_id != read_conversation_id:
 				return
 			if not selected_friend_code.is_empty():
 				_unread_direct_by_friend.erase(selected_friend_code)
@@ -2210,11 +2216,17 @@ func _on_social_operation_completed(action: String, data: Variant) -> void:
 					social_chat_log.append_text(format_public_chat_message(sender, str(item.get("body", ""))))
 			social_chat_status.text = "محادثة الأصدقاء متصلة."
 		"direct_send":
+			var sent_conversation_id := _pending_direct_send_conversation_id
+			_pending_direct_send_conversation_id = ""
 			if data is Array and not data.is_empty() and data[0] is Dictionary and bool(data[0].get("success", false)):
+				if social_chat_channel != "الأصدقاء" or selected_friend_conversation_id != sent_conversation_id:
+					return
 				social_chat_input.clear()
-				SocialChatManager.read_direct_messages(selected_friend_conversation_id)
+					_pending_direct_read_conversation_id = sent_conversation_id
+					SocialChatManager.read_direct_messages(sent_conversation_id)
 			else:
-				social_chat_status.text = "لم تُرسل الرسالة؛ تحقق من الصداقة والاتصال."
+				if social_chat_channel == "الأصدقاء" and selected_friend_conversation_id == sent_conversation_id:
+					social_chat_status.text = "لم تُرسل الرسالة؛ تحقق من الصداقة والاتصال."
 		"group_create":
 			if data is Array and not data.is_empty() and data[0] is Dictionary and bool(data[0].get("success", false)):
 				social_chat_status.text = "تم إنشاء المجموعة على الخادم."
@@ -2327,6 +2339,15 @@ func _on_social_operation_failed(action: String, message: String) -> void:
 	if action == "display_name_get" or action == "display_name_change":
 		if is_instance_valid(display_name_status):
 			display_name_status.text = "تعذر تنفيذ العملية: " + message
+		return
+	if action == "direct_read":
+		_pending_direct_read_conversation_id = ""
+		return
+	if action == "direct_send":
+		var failed_send_conversation_id := _pending_direct_send_conversation_id
+		_pending_direct_send_conversation_id = ""
+		if social_chat_channel == "الأصدقاء" and selected_friend_conversation_id == failed_send_conversation_id:
+			social_chat_status.text = "تعذر إرسال الرسالة: " + message
 		return
 	if action == "direct_open":
 		var failed_direct_code := _pending_direct_open_player_code
@@ -2648,7 +2669,9 @@ func _submit_social_chat_message(raw_message: String) -> void:
 		if selected_friend_conversation_id.is_empty():
 			social_chat_status.text = "اختر صديقًا أولًا لفتح محادثته."
 			return
-		SocialChatManager.send_direct_message(selected_friend_conversation_id, message)
+		_pending_direct_send_conversation_id = selected_friend_conversation_id
+		if not SocialChatManager.send_direct_message(_pending_direct_send_conversation_id, message):
+			_pending_direct_send_conversation_id = ""
 	elif social_chat_channel == "المجموعة":
 		SocialChatManager.send_chat_message("group", message)
 	else:
