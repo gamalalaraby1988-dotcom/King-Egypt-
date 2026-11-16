@@ -35,6 +35,39 @@ func _run_mountain_route_tests() -> void:
 		quit(1)
 		return
 
-	print("King mountain summit destination signage and illumination tests passed.")
+	var road_reflector_count := 0
+	var turn_reflector_count := 0
+	var approach_stripe_count := 0
+	var turn_edge_guide_count := 0
+	var warning_sign_count := 0
+	var rest_arrow_count := 0
+	for child in route.get_children():
+		var node_name := child.name
+		if node_name.begins_with("MountainRoadEdgeReflector_"):
+			road_reflector_count += 1
+		elif node_name.begins_with("MountainTurnEdgeReflector_"):
+			turn_reflector_count += 1
+		elif node_name.begins_with("MountainTurnApproachStripe_"):
+			approach_stripe_count += 1
+		elif node_name.begins_with("MountainTurnApronEdgeGuide_"):
+			turn_edge_guide_count += 1
+		elif node_name.begins_with("MountainTurnWarning_"):
+			warning_sign_count += 1
+		elif node_name.begins_with("MountainRestContinueArrow_"):
+			rest_arrow_count += 1
+	if road_reflector_count == 0 or turn_reflector_count == 0:
+		push_error("Mountain road edge reflectors are missing from straight segments or bends.")
+		quit(1)
+		return
+	if approach_stripe_count == 0 or turn_edge_guide_count == 0 or warning_sign_count == 0:
+		push_error("Mountain bend approach markings, apron edge guides, or warning signs are missing.")
+		quit(1)
+		return
+	if rest_arrow_count < 2:
+		push_error("Both mountain rest stops must show a clear uphill continuation arrow.")
+		quit(1)
+		return
+
+	print("King mountain summit signage, road reflectors, bend warnings, and rest-stop direction tests passed.")
 	route.queue_free()
 	quit(0)
