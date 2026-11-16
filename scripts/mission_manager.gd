@@ -1096,8 +1096,7 @@ func _accept_selected_activity() -> void:
 func _accept_job() -> void:
 	if not is_instance_valid(active_job) or mission_running or job_running:
 		return
-	landmark_navigation_active = false
-	navigation_arrival_remaining = 0.0
+	_stop_shared_location_navigation_for_activity()
 	var data: Dictionary = active_job.get_job_data()
 	var key := str(data.get("job_id", active_job.name))
 	if completed_jobs.has(key) or player_level < int(data.get("level", 1)):
@@ -1112,6 +1111,21 @@ func _accept_job() -> void:
 	description_label.text = "بدأت الوظيفة! اتبع علامة العمل حتى تصل إلى الموقع المطلوب."
 	reward_label.text = "الأجر عند إتمام العمل: %d جنيه | %d رقائق | %d خبرة" % [int(data.get("money", 0)), int(data.get("chips", 0)), int(data.get("xp", 0))]
 	status_label.text = "توجّه إلى نقطة العمل."
+
+func _stop_shared_location_navigation_for_activity() -> void:
+	# لا تسمح لمتابعة موقع قديمة بمواصلة تحريك اللاعب بعد بدء مهمة أو وظيفة.
+	if landmark_navigation_key == "shared_location":
+		if is_instance_valid(player) and player.has_method("end_auto_navigation"):
+			player.call("end_auto_navigation")
+		hide_shared_location_marker()
+		landmark_route_points.clear()
+		landmark_route_index = 0
+	landmark_navigation_active = false
+	navigation_arrival_remaining = 0.0
+	navigation_off_route_time = 0.0
+	navigation_route_notice_remaining = 0.0
+	landmark_navigation_key = ""
+
 
 func _complete_active_job() -> void:
 	if not job_running:
@@ -1140,8 +1154,7 @@ func _complete_active_job() -> void:
 func _accept_mission() -> void:
 	if not is_instance_valid(active_mission) or active_mission.is_queued_for_deletion() or mission_running or job_running:
 		return
-	landmark_navigation_active = false
-	navigation_arrival_remaining = 0.0
+	_stop_shared_location_navigation_for_activity()
 	var data: Dictionary = active_mission.get_mission_data()
 	var key: String = str(active_mission.get("building_id"))
 	if completed_missions.has(key) or player_level < int(data["level"]):
