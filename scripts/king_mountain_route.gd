@@ -114,6 +114,25 @@ func _build_road() -> void:
 			_add_oriented_box("MountainGuardWall_%02d_%s" % [i, "L" if side < 0.0 else "R"], Vector3(0.56, 1.35, length), rail_center, basis, Color(0.48, 0.40, 0.31), true)
 			var gold_center: Vector3 = rail_center + basis.y * 0.72
 			_add_oriented_box("MountainGuardGoldRail_%02d_%s" % [i, "L" if side < 0.0 else "R"], Vector3(0.18, 0.16, length), gold_center, basis, Color(0.82, 0.65, 0.29), true)
+			# عواكس ذهبية مضيئة على الحاجز لتوضيح حافة الطريق ليلًا دون عوائق إضافية.
+			var marker_count := maxi(1, int(floor(length / 8.0)))
+			for marker_index in range(marker_count):
+				var marker_t := (float(marker_index) + 0.5) / float(marker_count)
+				var marker_position: Vector3 = start.lerp(finish, marker_t) + basis.x * side * (ROAD_WIDTH * 0.5 + 0.62) + basis.y * 1.05
+				var marker := MeshInstance3D.new()
+				marker.name = "MountainRoadEdgeReflector_%02d_%s_%02d" % [i, "L" if side < 0.0 else "R", marker_index]
+				var marker_mesh := BoxMesh.new()
+				marker_mesh.size = Vector3(0.12, 0.34, 0.20)
+				marker.mesh = marker_mesh
+				marker.transform = Transform3D(basis, marker_position)
+				var marker_material := StandardMaterial3D.new()
+				marker_material.albedo_color = Color(1.0, 0.72, 0.28)
+				marker_material.emission_enabled = true
+				marker_material.emission = Color(1.0, 0.55, 0.16)
+				marker_material.emission_energy_multiplier = 0.8
+				marker_material.roughness = 0.55
+				marker.material_override = marker_material
+				add_child(marker)
 
 
 
