@@ -703,33 +703,68 @@ func _create_destination_scene(destination_name: String, destination_kind: Strin
 	var dark_stone := Color(0.34, 0.29, 0.23)
 	var gold := Color(0.88, 0.68, 0.27)
 	if destination_kind == "summit":
-		# منصة جبلية مرتفعة تطل على الأهرامات، مع درجات حجرية ومعبد ملكي.
-		_create_box(root, "SummitRockPlatform", Vector3(30, 1.2, 30), Vector3(0, -0.6, 0), Color(0.38, 0.34, 0.28), true)
-		_create_box(root, "SummitInnerTerrace", Vector3(22, 0.45, 22), Vector3(0, 0.2, 0), stone, true)
+		# قمة الملوك ساحة مشاهدة مفتوحة فوق الجبل، وليست قصرًا أو مبنى مغلقًا.
+		var summit_stone := Color(0.43, 0.38, 0.30)
+		var rail_gold := Color(0.76, 0.58, 0.27)
+		_create_box(root, "SummitRockPlatform", Vector3(38, 1.4, 38), Vector3(0, -0.7, 0), summit_stone, true)
+		_create_box(root, "SummitOpenViewingTerrace", Vector3(30, 0.35, 30), Vector3(0, 0.15, 0), stone, true)
+		# حواجز آمنة حول الحواف، مع إبقاء الواجهة الأمامية مفتوحة للإطلالة.
 		for side in [-1.0, 1.0]:
-			_create_box(root, "SummitCliff_%d" % int(side), Vector3(30, 5, 1.0), Vector3(0, -2.8, side * 14.5), dark_stone, true)
-			_create_box(root, "SummitPillar_%d" % int(side), Vector3(1.1, 5.2, 1.1), Vector3(side * 8.5, 2.6, -5.0), gold, true)
-		_create_box(root, "SummitTempleBase", Vector3(10, 0.8, 5), Vector3(0, 0.8, -5.2), dark_stone, true)
-		_create_box(root, "SummitTempleUpper", Vector3(8, 1.1, 4), Vector3(0, 1.7, -5.2), stone, true)
-		_create_box(root, "SummitObelisk", Vector3(0.8, 5.2, 0.8), Vector3(0, 3.8, -5.2), gold, true)
-		for x in [-3.2, -1.1, 1.1, 3.2]:
-			_create_box(root, "SummitFrontColumn_%d" % int(x * 10), Vector3(0.55, 3.0, 0.55), Vector3(x, 2.3, -2.8), gold, true)
-		_create_box(root, "SummitViewMarker", Vector3(8, 0.16, 0.25), Vector3(0, 0.48, 7.0), gold)
+			_create_box(root, "SummitSideSafetyWall_%d" % int(side), Vector3(0.55, 1.35, 29), Vector3(side * 14.8, 0.95, -0.5), dark_stone, true)
+			_create_box(root, "SummitSideGoldRail_%d" % int(side), Vector3(0.18, 0.18, 29), Vector3(side * 14.8, 1.72, -0.5), rail_gold, true)
+		_create_box(root, "SummitRearSafetyWall", Vector3(29.5, 1.35, 0.55), Vector3(0, 0.95, 14.8), dark_stone, true)
+		_create_box(root, "SummitRearGoldRail", Vector3(29.5, 0.18, 0.55), Vector3(0, 1.72, 14.8), rail_gold, true)
+		# أعمدة ذهبية زخرفية عند أطراف الشرفة، لا تسد خط النظر.
+		for x in [-12.0, 12.0]:
+			for z in [-11.0, 10.0]:
+				_create_box(root, "SummitTerracePillar_%d_%d" % [int(x), int(z)], Vector3(0.85, 4.0, 0.85), Vector3(x, 2.15, z), gold, true)
+		# قاعدة معبد ومسلة جانبية كعلامة ملكية، مع إبقاء منتصف الشرفة للمشاهدة.
+		_create_box(root, "SummitTempleBase", Vector3(7.0, 0.65, 4.0), Vector3(-9.0, 0.65, -7.0), dark_stone, true)
+		_create_box(root, "SummitTempleUpper", Vector3(5.5, 0.65, 3.2), Vector3(-9.0, 1.3, -7.0), stone, true)
+		_create_box(root, "SummitObelisk", Vector3(0.65, 4.5, 0.65), Vector3(-9.0, 3.85, -7.0), gold, true)
+		# مقاعد على الجانبين بعيدًا عن مسار الحركة وخط المشاهدة المركزي.
+		for x in [-10.0, 10.0]:
+			for z in [-1.0, 6.0]:
+				_create_box(root, "SummitViewingBench_%d_%d" % [int(x), int(z)], Vector3(3.2, 0.5, 0.8), Vector3(x, 0.48, z), dark_stone, true)
+		# أفق بصري بعيد يوضح المدينة والبحر والأهرامات من الشرفة المفتوحة.
+		_create_box(root, "SummitDistantSea", Vector3(180, 0.25, 34), Vector3(0, -1.4, -86), Color(0.07, 0.25, 0.38))
+		for i in range(9):
+			var skyline_x: float = -48.0 + float(i) * 12.0
+			var skyline_h: float = 7.0 + float((i * 7) % 5) * 2.0
+			_create_box(root, "SummitDistantCity_%d" % i, Vector3(7.0, skyline_h, 5.0), Vector3(skyline_x, skyline_h * 0.5 - 1.2, -59.0), Color(0.43, 0.39, 0.32))
+		for i in range(3):
+			var pyramid_x: float = -25.0 + float(i) * 25.0
+			_create_box(root, "SummitDistantPyramidBase_%d" % i, Vector3(11.0, 0.25, 8.0), Vector3(pyramid_x, -1.0, -69.0), gold)
+			_create_box(root, "SummitDistantPyramidBody_%d" % i, Vector3(7.0, 9.0, 5.5), Vector3(pyramid_x, 3.5, -69.0), Color(0.69, 0.57, 0.39))
+		_create_box(root, "SummitViewMarker", Vector3(9, 0.12, 0.22), Vector3(0, 0.42, -5.0), gold)
 	elif destination_kind == "plaza":
-		# ميدان مفتوح ببلاط حجري ونافورة مركزية وأعمدة ومقاعد جانبية.
-		_create_box(root, "RoyalPlazaGround", Vector3(30, 0.8, 30), Vector3(0, -0.4, 0), stone, true)
-		for x in [-10.0, -5.0, 0.0, 5.0, 10.0]:
-			for z in [-10.0, -5.0, 0.0, 5.0, 10.0]:
-				_create_box(root, "PlazaTile_%d_%d" % [int(x), int(z)], Vector3(4.8, 0.035, 4.8), Vector3(x, 0.02, z), Color(0.72, 0.63, 0.48))
-		_create_box(root, "PlazaFountainBase", Vector3(5.0, 0.5, 5.0), Vector3(0, 0.35, -1.0), dark_stone, true)
-		_create_box(root, "PlazaFountainWater", Vector3(3.8, 0.12, 3.8), Vector3(0, 0.68, -1.0), Color(0.12, 0.48, 0.62))
-		_create_box(root, "PlazaFountainColumn", Vector3(0.65, 1.8, 0.65), Vector3(0, 1.5, -1.0), gold, true)
-		for x in [-9.0, 9.0]:
-			for z in [-8.0, 7.0]:
-				_create_box(root, "PlazaMonument_%d_%d" % [int(x), int(z)], Vector3(1.2, 4.8, 1.2), Vector3(x, 2.4, z), gold, true)
-		for x in [-8.0, 8.0]:
-			_create_box(root, "PlazaBench_%d" % int(x), Vector3(4.0, 0.55, 0.9), Vector3(x, 0.48, 1.0), dark_stone, true)
-		_create_box(root, "PlazaRoyalGate", Vector3(12, 0.7, 0.7), Vector3(0, 4.2, -12.0), gold, true)
+		# الميدان الملكي ساحة مركزية مفتوحة للاجتماع والاحتفالات.
+		_create_box(root, "RoyalPlazaGround", Vector3(36, 0.8, 36), Vector3(0, -0.4, 0), stone, true)
+		var tile_colors := [Color(0.72, 0.63, 0.48), Color(0.61, 0.53, 0.41)]
+		for x in range(-15, 16, 3):
+			for z in range(-15, 16, 3):
+				var tile_color: Color = tile_colors[(int(x / 3) + int(z / 3) + 20) % 2]
+				_create_box(root, "PlazaTile_%d_%d" % [x, z], Vector3(2.92, 0.045, 2.92), Vector3(float(x), 0.025, float(z)), tile_color)
+		# نافورة مركزية منخفضة؛ لا تتجاوز الممرات المحيطة بها.
+		_create_box(root, "PlazaFountainOuterBasin", Vector3(5.4, 0.55, 5.4), Vector3(0, 0.35, -2.0), dark_stone, true)
+		_create_box(root, "PlazaFountainWater", Vector3(4.65, 0.12, 4.65), Vector3(0, 0.68, -2.0), Color(0.12, 0.48, 0.62))
+		_create_box(root, "PlazaFountainCentralPedestal", Vector3(0.85, 1.8, 0.85), Vector3(0, 1.5, -2.0), gold, true)
+		_create_box(root, "PlazaFountainTopBowl", Vector3(2.1, 0.22, 2.1), Vector3(0, 2.48, -2.0), gold, true)
+		# أربعة نصب عند الزوايا الداخلية، بعيدًا عن مدخل الساحة.
+		for x in [-12.0, 12.0]:
+			for z in [-11.0, 10.0]:
+				_create_box(root, "PlazaMonumentBase_%d_%d" % [int(x), int(z)], Vector3(2.0, 0.55, 2.0), Vector3(x, 0.28, z), dark_stone, true)
+				_create_box(root, "PlazaMonument_%d_%d" % [int(x), int(z)], Vector3(0.85, 4.6, 0.85), Vector3(x, 2.85, z), gold, true)
+		# مقاعد جانبية تحافظ على ممرات واضحة حول النافورة.
+		for x in [-11.0, 11.0]:
+			for z in [-3.0, 5.0]:
+				_create_box(root, "PlazaBench_%d_%d" % [int(x), int(z)], Vector3(4.0, 0.55, 0.9), Vector3(x, 0.48, z), dark_stone, true)
+		# بوابة ملكية خلفية بأعمدة جانبية وعتبة ذهبية.
+		_create_box(root, "PlazaRoyalGateTop", Vector3(13.0, 0.65, 0.75), Vector3(0, 5.0, -15.5), gold, true)
+		for x in [-6.0, 6.0]:
+			_create_box(root, "PlazaRoyalGatePillar_%d" % int(x), Vector3(0.9, 5.2, 0.9), Vector3(x, 2.6, -15.5), gold, true)
+		_create_box(root, "PlazaFireworksLaunchMarker", Vector3(2.0, 0.15, 2.0), Vector3(0, 0.12, 14.0), Color(0.52, 0.18, 0.14))
+		# منطقة الإطلاق موضع بصري فقط؛ تشغيل الألعاب النارية يحتاج خدمة/نظام مؤثرات مستقلًا.
 	elif destination_kind == "ship":
 		# القاعة الرئيسية لسفينة الحضارات الخمس؛ مساحة واحدة بلا طوابق أو سلالم.
 		var ivory := Color(0.91, 0.87, 0.76)
