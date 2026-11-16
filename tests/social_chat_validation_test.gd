@@ -91,13 +91,12 @@ func _run_social_validation_tests() -> void:
 	var vehicle_scene: PackedScene = load("res://scenes/vehicle.tscn")
 	var player_instance := player_scene.instantiate() as CharacterBody3D
 	var vehicle_instance := vehicle_scene.instantiate() as CharacterBody3D
-	var mountain_slope_controller_script: Script = load("res://scripts/vehicle_controller.gd")
-	var mountain_slope_controller_probe: CharacterBody3D = mountain_slope_controller_script.new()
-	if mountain_slope_controller_probe.floor_snap_length < 0.75 or rad_to_deg(mountain_slope_controller_probe.floor_max_angle) < 37.0 or not mountain_slope_controller_probe.floor_constant_speed:
+	root.add_child(vehicle_instance)
+	await process_frame
+	if vehicle_instance.floor_snap_length < 0.75 or rad_to_deg(vehicle_instance.floor_max_angle) < 37.0 or not vehicle_instance.floor_constant_speed:
 		push_error("Vehicle slope contact settings are insufficient for the shared mountain road.")
 		quit(1)
 		return
-	mountain_slope_controller_probe.free()
 	if player_instance == null or vehicle_instance == null or player_instance.collision_layer != player_layer or player_instance.collision_mask != player_mask or vehicle_instance.collision_layer != vehicle_layer or vehicle_instance.collision_mask != vehicle_mask:
 		push_error("Player or vehicle scenes do not apply the central collision profile.")
 		quit(1)
