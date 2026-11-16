@@ -1434,6 +1434,29 @@ func _find_grid_route(start_node: Vector2, target_node: Vector2) -> Array[Vector
 const SHARED_LOCATION_MAX_ROAD_CONNECTOR_DISTANCE := 35.0
 
 
+func is_position_near_shared_location_route(position: Vector3, route: PackedVector3Array, start_index: int, max_deviation: float) -> bool:
+	if route.is_empty() or not is_finite(max_deviation) or max_deviation <= 0.0:
+		return false
+	for coordinate in [position.x, position.y, position.z]:
+		if not is_finite(coordinate):
+			return false
+	var flat_position := Vector2(position.x, position.z)
+	if route.size() == 1:
+		var only_point: Vector3 = route[0]
+		return flat_position.distance_to(Vector2(only_point.x, only_point.z)) <= max_deviation
+	var first_segment := clampi(start_index - 1, 0, route.size() - 2)
+	var closest_distance := INF
+	for index in range(first_segment, route.size() - 1):
+		var a_point: Vector3 = route[index]
+		var b_point: Vector3 = route[index + 1]
+		var a := Vector2(a_point.x, a_point.z)
+		var segment := Vector2(b_point.x - a_point.x, b_point.z - a_point.z)
+		var denominator := segment.length_squared()
+		var weight := 0.0 if denominator <= 0.0001 else clampf((flat_position - a).dot(segment) / denominator, 0.0, 1.0)
+		closest_distance = minf(closest_distance, flat_position.distance_to(a + segment * weight))
+	return closest_distance <= max_deviation
+
+
 func build_shared_location_route_from(start_position: Vector3, destination: Vector3) -> PackedVector3Array:
 	var points := PackedVector3Array()
 	# ارفض القيم غير المحدودة أو الإحداثيات خارج حدود عالم المدينة قبل حساب أقرب طريق.
