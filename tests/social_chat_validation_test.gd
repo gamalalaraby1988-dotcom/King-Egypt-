@@ -17,6 +17,64 @@ func _run_social_validation_tests() -> void:
 		quit(1)
 	)
 	print("SOCIAL_TEST_STAGE: autoload_ready")
+	# City collision contract: players and vehicles ignore each other, but both
+	# collide with static world geometry and solid service staff.
+	var collision_profile: Script = load("res://scripts/city_collision_profile.gd")
+	if collision_profile == null:
+		push_error("City collision profile could not be loaded.")
+		quit(1)
+		return
+	var collision_constants: Dictionary = collision_profile.get_script_constant_map()
+	var world_layer := int(collision_constants.get("WORLD_LAYER", 0))
+	var player_layer := int(collision_constants.get("PLAYER_LAYER", 0))
+	var vehicle_layer := int(collision_constants.get("VEHICLE_LAYER", 0))
+	var staff_layer := int(collision_constants.get("STAFF_LAYER", 0))
+	var player_mask := int(collision_constants.get("PLAYER_MASK", 0))
+	var vehicle_mask := int(collision_constants.get("VEHICLE_MASK", 0))
+	var staff_mask := int(collision_constants.get("STAFF_MASK", 0))
+	if world_layer != 1 or player_layer == 0 or vehicle_layer == 0 or staff_layer == 0:
+		push_error("City collision layers are missing or the static-world layer changed.")
+		quit(1)
+		return
+	if (player_mask & world_layer) == 0 or (vehicle_mask & world_layer) == 0 or (player_mask & staff_layer) == 0 or (vehicle_mask & staff_layer) == 0:
+		push_error("Players and vehicles must collide with static world geometry and staff.")
+		quit(1)
+		return
+	if (staff_mask & player_layer) == 0 or (staff_mask & vehicle_layer) == 0:
+		push_error("Solid staff must collide with both players and vehicles.")
+		quit(1)
+		return
+	if (player_mask & player_layer) != 0 or (vehicle_mask & vehicle_layer) != 0 or (player_mask & vehicle_layer) != 0 or (vehicle_mask & player_layer) != 0:
+		push_error("Players must ignore other players and vehicles, and vehicles must ignore players and vehicles.")
+		quit(1)
+		return
+	var player_scene: PackedScene = load("res://scenes/player.tscn")
+	var vehicle_scene: PackedScene = load("res://scenes/vehicle.tscn")
+	var player_instance := player_scene.instantiate() as CharacterBody3D
+	var vehicle_instance := vehicle_scene.instantiate() as CharacterBody3D
+	if player_instance == null or vehicle_instance == null or player_instance.collision_layer != player_layer or player_instance.collision_mask != player_mask or vehicle_instance.collision_layer != vehicle_layer or vehicle_instance.collision_mask != vehicle_mask:
+		push_error("Player or vehicle scenes do not apply the central collision profile.")
+		quit(1)
+		return
+	player_instance.free()
+	vehicle_instance.free()
+	for staff_script_path in ["res://scripts/service_npc.gd", "res://scripts/camp_animal_staff.gd"]:
+		var staff_script: Script = load(staff_script_path)
+		var staff_instance := Node3D.new()
+		staff_instance.set_script(staff_script)
+		root.add_child(staff_instance)
+		var staff_body := staff_instance.get_node_or_null("StaffCollisionBody") as StaticBody3D
+		if not is_instance_valid(staff_body) or staff_body.collision_layer != staff_layer or staff_body.collision_mask != staff_mask:
+			push_error("A staff script did not create a solid collision body: " + staff_script_path)
+			quit(1)
+			return
+		var staff_shape := staff_body.get_node_or_null("StaffCollisionShape") as CollisionShape3D
+		if not is_instance_valid(staff_shape) or not staff_shape.shape is CapsuleShape3D:
+			push_error("A staff collision body is missing its capsule shape: " + staff_script_path)
+			quit(1)
+			return
+		staff_instance.free()
+	print("SOCIAL_TEST_STAGE: city_collision_profile_complete")
 	var realtime_dedupe_hud_script: Script = load("res://scripts/city_hud.gd")
 	if realtime_dedupe_hud_script == null:
 		push_error("City HUD script could not be loaded for realtime message deduplication tests.")
