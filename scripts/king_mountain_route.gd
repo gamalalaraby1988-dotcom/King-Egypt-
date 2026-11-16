@@ -166,6 +166,15 @@ func _build_wayfinding_lights() -> void:
 		glow.omni_range = 8.0
 		glow.shadow_enabled = false
 		add_child(glow)
+	# أضواء منخفضة إضافية في منتصف كل مقطع لتقليل المناطق المظلمة بين الأعمدة.
+	for segment_index in range(ROUTE_POINTS.size() - 1):
+		var start: Vector3 = ROUTE_POINTS[segment_index]
+		var finish: Vector3 = ROUTE_POINTS[segment_index + 1]
+		var forward := (finish - start).normalized()
+		var side := Vector3.UP.cross(forward).normalized()
+		var side_sign := 1.0 if segment_index % 2 == 0 else -1.0
+		var marker_position: Vector3 = (start + finish) * 0.5 + side * side_sign * 5.6 + Vector3.UP * 1.1
+		_add_warm_light("MountainSegmentGuideGlow_%02d" % segment_index, marker_position, 0.42, 6.5)
 
 func _build_rock_outcrops() -> void:
 	# كتل صخرية زخرفية على مسافة آمنة خارج الحواجز.
