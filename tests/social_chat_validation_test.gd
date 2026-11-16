@@ -32,12 +32,17 @@ func _run_social_validation_tests() -> void:
 	var player_mask := int(collision_constants.get("PLAYER_MASK", 0))
 	var vehicle_mask := int(collision_constants.get("VEHICLE_MASK", 0))
 	var staff_mask := int(collision_constants.get("STAFF_MASK", 0))
+	var world_mask := int(collision_constants.get("WORLD_MASK", 0))
 	if world_layer != 1 or player_layer == 0 or vehicle_layer == 0 or staff_layer == 0:
 		push_error("City collision layers are missing or the static-world layer changed.")
 		quit(1)
 		return
 	if (player_mask & world_layer) == 0 or (vehicle_mask & world_layer) == 0 or (player_mask & staff_layer) == 0 or (vehicle_mask & staff_layer) == 0:
 		push_error("Players and vehicles must collide with static world geometry and staff.")
+		quit(1)
+		return
+	if (world_mask & player_layer) == 0 or (world_mask & vehicle_layer) == 0:
+		push_error("Static world colliders must accept both player and vehicle collision layers.")
 		quit(1)
 		return
 	if (staff_mask & player_layer) == 0 or (staff_mask & vehicle_layer) == 0:
@@ -80,7 +85,7 @@ func _run_social_validation_tests() -> void:
 	root.add_child(chest_instance)
 	var chest_body := chest_instance.get_node_or_null("ChestCollisionBody") as StaticBody3D
 	var chest_shape := chest_body.get_node_or_null("CollisionShape3D") as CollisionShape3D if is_instance_valid(chest_body) else null
-	if not is_instance_valid(chest_body) or chest_body.collision_layer != world_layer or chest_body.collision_mask != world_layer or not chest_body.is_in_group("city_world_geometry") or not is_instance_valid(chest_shape) or not chest_shape.shape is BoxShape3D:
+	if not is_instance_valid(chest_body) or chest_body.collision_layer != world_layer or chest_body.collision_mask != world_mask or not chest_body.is_in_group("city_world_geometry") or not is_instance_valid(chest_shape) or not chest_shape.shape is BoxShape3D:
 		push_error("The daily reward chest must have a solid world collision box.")
 		quit(1)
 		return
