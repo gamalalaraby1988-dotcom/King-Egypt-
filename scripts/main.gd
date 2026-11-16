@@ -806,8 +806,11 @@ func _create_summit_edge_barriers(root: Node3D, wall_color: Color, rail_color: C
 		var side_name := "Left" if side < 0.0 else "Right"
 		_create_box(root, "SummitSideSafetyWall_" + side_name, Vector3(wall_thickness, wall_height, edge_length), Vector3(side * edge_offset, wall_center_y, 0.0), wall_color, true)
 		_create_box(root, "SummitSideGoldRail_" + side_name, Vector3(0.22, rail_height, edge_length), Vector3(side * edge_offset, rail_center_y, 0.0), rail_color, true)
-		_create_box(root, "SummitFrontSafetyWall_" + side_name, Vector3(edge_length * 0.5, wall_height, wall_thickness), Vector3(side * edge_length * 0.25, wall_center_y, -edge_offset), wall_color, true)
-		_create_box(root, "SummitFrontGoldRail_" + side_name, Vector3(edge_length * 0.5, rail_height, 0.22), Vector3(side * edge_length * 0.25, rail_center_y, -edge_offset), rail_color, true)
+		# اترك فتحة مركزية واسعة متصلة بطريق الصعود، مع حماية جانبي المدخل.
+		var entrance_segment_length := edge_length * 0.36
+		var entrance_segment_center := edge_length * 0.5 - entrance_segment_length * 0.5
+		_create_box(root, "SummitFrontSafetyWall_" + side_name, Vector3(entrance_segment_length, wall_height, wall_thickness), Vector3(side * entrance_segment_center, wall_center_y, -edge_offset), wall_color, true)
+		_create_box(root, "SummitFrontGoldRail_" + side_name, Vector3(entrance_segment_length, rail_height, 0.22), Vector3(side * entrance_segment_center, rail_center_y, -edge_offset), rail_color, true)
 		_create_box(root, "SummitRearSafetyWall_" + side_name, Vector3(edge_length * 0.5, wall_height, wall_thickness), Vector3(side * edge_length * 0.25, wall_center_y, edge_offset), wall_color, true)
 		_create_box(root, "SummitRearGoldRail_" + side_name, Vector3(edge_length * 0.5, rail_height, 0.22), Vector3(side * edge_length * 0.25, rail_center_y, edge_offset), rail_color, true)
 
