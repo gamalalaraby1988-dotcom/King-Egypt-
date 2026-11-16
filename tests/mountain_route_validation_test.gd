@@ -68,6 +68,53 @@ func _run_mountain_route_tests() -> void:
 		quit(1)
 		return
 
-	print("King mountain summit signage, road reflectors, bend warnings, and rest-stop direction tests passed.")
+	# Verify the shared road is drivable and physically continuous for walking,
+	# scooters, and cars: every segment has a matching world collider and safe grade.
+	var route_points: Array = route_script.get_script_constant_map().get("ROUTE_POINTS", [])
+	if route_points.size() < 2:
+		push_error("The mountain route must contain a connected sequence of road points.")
+		quit(1)
+		return
+	for segment_index in range(route_points.size() - 1):
+		var segment_name := "MountainRoadSegment_%02d" % segment_index
+		var road_mesh := route.get_node_or_null(segment_name) as MeshInstance3D
+		var road_body := route.get_node_or_null(segment_name + "Collision") as StaticBody3D
+		if road_mesh == null or road_body == null:
+			push_error("Mountain road segment %d is missing its physical road surface." % segment_index)
+			quit(1)
+			return
+		var road_shape_node := road_body.get_node_or_null("CollisionShape3D") as CollisionShape3D
+		var road_shape := road_shape_node.shape as BoxShape3D if road_shape_node != null else null
+		if road_shape == null or not is_equal_approx(road_shape.size.x, 8.0):
+			push_error("Mountain road segment %d does not preserve the approved shared-road width." % segment_index)
+			quit(1)
+			return
+		if road_body.collision_layer != 1 or road_body.collision_mask != 7:
+			push_error("Mountain road segment %d does not use the shared world collision profile." % segment_index)
+			quit(1)
+			return
+		var delta: Vector3 = route_points[segment_index + 1] - route_points[segment_index]
+		var horizontal_length := Vector2(delta.x, delta.z).length()
+		var grade_degrees := rad_to_deg(atan2(absf(delta.y), maxf(horizontal_length, 0.001)))
+		if grade_degrees > 18.0:
+			push_error("Mountain road segment %d is too steep for the approved shared vehicle and pedestrian route." % segment_index)
+			quit(1)
+			return
+		for side in ["L", "R"]:
+			var guard_body := route.get_node_or_null("MountainGuardWall_%02d_%sCollision" % [segment_index, side]) as StaticBody3D
+			if guard_body == null:
+				push_error("Mountain road segment %d is missing a solid edge guard on side %s." % [segment_index, side])
+				quit(1)
+				return
+
+	for stop_index in range(2):
+		for fixture_name in ["MountainRestBay_%d" % stop_index, "MountainRestBench_%d" % stop_index, "MountainViewDeck_%d" % stop_index]:
+			var fixture_body := route.get_node_or_null(fixture_name + "Collision") as StaticBody3D
+			if fixture_body == null:
+				push_error("Mountain rest-stop fixture %s is missing its physical collider." % fixture_name)
+				quit(1)
+				return
+
+	print("King mountain route tests passed: summit signage, night guidance, shared-road grade and width, continuous collision guards, and solid rest-stop fixtures.")
 	route.queue_free()
 	quit(0)
