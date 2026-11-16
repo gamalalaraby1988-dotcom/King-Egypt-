@@ -255,6 +255,7 @@ func _add_oriented_box_to(parent: Node3D, name: String, size: Vector3, position:
 	body.name = name + "Collision"
 	CityCollisionProfile.apply_world_collision(body)
 	var shape_node := CollisionShape3D.new()
+	shape_node.name = "CollisionShape3D"
 	var shape := BoxShape3D.new()
 	shape.size = size
 	shape_node.shape = shape
