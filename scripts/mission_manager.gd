@@ -1523,6 +1523,13 @@ func get_landmark_route_points() -> PackedVector3Array:
 		result.append(landmark_route_points[index])
 	return result
 
+func cancel_shared_location_navigation() -> bool:
+	if not landmark_navigation_active or landmark_navigation_key != "shared_location":
+		return false
+	_cancel_shared_location_navigation_for_manual_input()
+	return true
+
+
 func can_start_shared_location_navigation() -> bool:
 	return not mission_running and not job_running
 
