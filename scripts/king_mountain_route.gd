@@ -237,14 +237,15 @@ func _build_rest_stops() -> void:
 		_add_oriented_box("MountainRestSignBoard_%d" % stop_number, Vector3(2.2, 0.9, 0.16), rest_sign_position, view_basis, Color(0.12, 0.18, 0.19), true)
 		var rest_sign_label := Label3D.new()
 		rest_sign_label.name = "MountainRestSignLabel_%d" % stop_number
-		rest_sign_label.text = "استراحة %d" % (stop_number + 1)
+		rest_sign_label.text = "استراحة %d\nتابع الصعود للقمة" % (stop_number + 1)
 		rest_sign_label.position = rest_sign_position + Vector3.UP * 0.02
 		rest_sign_label.rotation.y = atan2(forward.x, forward.z)
-		rest_sign_label.font_size = 42
+		rest_sign_label.font_size = 34
 		rest_sign_label.outline_size = 8
 		rest_sign_label.pixel_size = 0.006
 		rest_sign_label.modulate = Color(1.0, 0.86, 0.58)
 		add_child(rest_sign_label)
+		_add_warm_light("MountainRestSignGlow_%d" % stop_number, rest_sign_position + Vector3.UP * 0.85, 0.55, 5.5)
 		# منصة المشاهدة وحواجزها تتبع اتجاه المسار بدل محاور العالم، وتبقى جهة الاستراحة مفتوحة.
 		var view_center := pad_center + side * 5.2
 		_add_oriented_box("MountainViewDeck_%d" % stop_number, Vector3(8.0, 0.32, 7.0), view_center, view_basis, Color(0.61, 0.52, 0.39), true)
