@@ -17,6 +17,35 @@ func _run_social_validation_tests() -> void:
 		quit(1)
 	)
 	print("SOCIAL_TEST_STAGE: autoload_ready")
+	var city_hud_script: Script = load("res://scripts/city_hud.gd")
+	if city_hud_script == null:
+		push_error("City HUD script could not be loaded for realtime message deduplication tests.")
+		quit(1)
+		return
+	var realtime_dedupe_probe: Control = city_hud_script.new()
+	if not bool(realtime_dedupe_probe.call("_remember_realtime_message_id", "")):
+		push_error("Messages without IDs should remain processable.")
+		quit(1)
+		return
+	if not bool(realtime_dedupe_probe.call("_remember_realtime_message_id", "ci-message-1")) or bool(realtime_dedupe_probe.call("_remember_realtime_message_id", "ci-message-1")):
+		push_error("Realtime message IDs were not deduplicated.")
+		quit(1)
+		return
+	for message_index in range(501):
+		if not bool(realtime_dedupe_probe.call("_remember_realtime_message_id", "ci-message-" + str(message_index + 2))):
+			push_error("A new realtime message ID was incorrectly rejected.")
+			quit(1)
+			return
+	if realtime_dedupe_probe.get("_seen_realtime_message_order").size() != 500 or realtime_dedupe_probe.get("_seen_realtime_message_ids").size() != 500:
+		push_error("Realtime message deduplication storage exceeded its configured bound.")
+		quit(1)
+		return
+	if not bool(realtime_dedupe_probe.call("_remember_realtime_message_id", "ci-message-1")):
+		push_error("The oldest realtime message ID was not evicted from the bounded deduplication window.")
+		quit(1)
+		return
+	realtime_dedupe_probe.free()
+	print("SOCIAL_TEST_STAGE: realtime_message_dedupe_complete")
 	var mission_manager_script: Script = load("res://scripts/mission_manager.gd")
 	if mission_manager_script == null:
 		push_error("MissionManager script could not be loaded for shared-location route validation.")
