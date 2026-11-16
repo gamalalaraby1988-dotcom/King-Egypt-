@@ -15,6 +15,7 @@ const ROUTE_POINTS := [
 
 func _ready() -> void:
 	_build_mountain_base()
+	_build_city_approach()
 	_build_approach_gate()
 	_build_road()
 	_build_rest_stops()
@@ -36,6 +37,17 @@ func _build_mountain_base() -> void:
 	_add_box("MountainRockMassLower", Vector3(34.0, 10.0, 44.0), Vector3(20.0, 4.5, 128.0), Color(0.39, 0.34, 0.28), false)
 	_add_box("MountainRockMassMid", Vector3(30.0, 12.0, 42.0), Vector3(101.0, 10.0, 153.0), Color(0.34, 0.30, 0.25), false)
 	_add_box("MountainRockMassUpper", Vector3(34.0, 14.0, 38.0), Vector3(12.0, 18.0, 184.0), Color(0.43, 0.37, 0.29), false)
+
+
+
+func _build_city_approach() -> void:
+	# وصلة مباشرة من نهاية طريق المخيم إلى بوابة الجبل، دون فجوة ترابية.
+	var start := Vector3(45.0, 0.0, 76.5)
+	var finish := ROUTE_POINTS[0]
+	var delta := finish - start
+	var basis := Basis.looking_at(delta.normalized(), Vector3.UP)
+	var center := (start + finish) * 0.5
+	_add_oriented_box("MountainCityApproachRoad", Vector3(ROAD_WIDTH, ROAD_THICKNESS, delta.length() + 0.4), center, basis, Color(0.23, 0.23, 0.22), true)
 
 
 func _build_approach_gate() -> void:
