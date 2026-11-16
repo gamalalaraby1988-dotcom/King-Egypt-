@@ -143,6 +143,34 @@ func _run_mountain_route_tests() -> void:
 				quit(1)
 				return
 
+	# The summit must be a usable protected terrace, with its approach left open.
+	for summit_fixture in [
+		"MountainSummitPlatform",
+		"MountainSummitSideBarrier_-1",
+		"MountainSummitSideBarrier_1",
+		"MountainSummitRearBarrier",
+		"MountainSummitObeliskBase",
+		"MountainSummitObelisk",
+		"MountainSummitBench_-1",
+		"MountainSummitBench_1"
+	]:
+		var summit_fixture_body := route.get_node_or_null(summit_fixture + "Collision") as StaticBody3D
+		if summit_fixture_body == null:
+			push_error("Summit fixture %s is missing its physical collider." % summit_fixture)
+			quit(1)
+			return
+	if route.get_node_or_null("MountainSummitFrontBarrierCollision") != null:
+		push_error("The summit entrance must remain open to vehicles and pedestrians.")
+		quit(1)
+		return
+	var summit_platform_body := route.get_node_or_null("MountainSummitPlatformCollision") as StaticBody3D
+	var summit_platform_shape := summit_platform_body.get_node_or_null("CollisionShape3D") as CollisionShape3D
+	var summit_platform_box := summit_platform_shape.shape as BoxShape3D if summit_platform_shape != null else null
+	if summit_platform_box == null or summit_platform_box.size.x < 30.0 or summit_platform_box.size.z < 30.0:
+		push_error("The summit terrace is too small for a safe arrival and gathering area.")
+		quit(1)
+		return
+
 	print("King mountain route tests passed: summit signage, night guidance, shared-road grade and width, continuous collision guards, and solid rest-stop fixtures.")
 	route.queue_free()
 	quit(0)
