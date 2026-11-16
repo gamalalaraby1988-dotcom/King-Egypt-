@@ -96,6 +96,24 @@ func _run_social_validation_tests() -> void:
 				push_error("Mountain bend guard assembly was duplicated or incomplete: " + connector_visual_name)
 				quit(1)
 				return
+	# Gold wayfinding must remain visible through every bend, and warm lights must exist at rest stops and summit.
+	for turn_index in range(1, mountain_route_script.ROUTE_POINTS.size() - 1):
+		var turn_guide := mountain_route_probe.get_node_or_null("MountainTurnGuide_%02d" % turn_index) as MeshInstance3D
+		if not is_instance_valid(turn_guide):
+			push_error("Mountain bend is missing its continuous gold road guide: %02d" % turn_index)
+			quit(1)
+			return
+	for stop_number in range(2):
+		var rest_glow := mountain_route_probe.get_node_or_null("MountainRestGlow_%d" % stop_number) as OmniLight3D
+		if not is_instance_valid(rest_glow) or rest_glow.light_energy <= 0.0 or rest_glow.omni_range < 5.0:
+			push_error("Mountain rest stop is missing its warm navigation light: %d" % stop_number)
+			quit(1)
+			return
+	var summit_glow := mountain_route_probe.get_node_or_null("MountainSummitObeliskGlow") as OmniLight3D
+	if not is_instance_valid(summit_glow) or summit_glow.light_energy <= 0.0:
+		push_error("Mountain summit obelisk is missing its warm highlight.")
+		quit(1)
+		return
 	print("SOCIAL_TEST_STAGE: mountain_turn_guard_connectors_complete")
 	# The shared road surface must be continuous, solid, and within the vehicle's climb limit.
 	for segment_index in range(mountain_route_script.ROUTE_POINTS.size() - 1):
