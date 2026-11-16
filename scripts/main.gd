@@ -22,7 +22,6 @@ var interior_loading_message_key := "interior_loading"
 var interior_hidden_world_states: Dictionary = {}
 var city_vehicle: CharacterBody3D = null
 var vehicle_interaction_button: Button = null
-var party_station_notice: AcceptDialog = null
 var vehicle_summon_button: Button = null
 var showroom_layer: CanvasLayer = null
 var vehicle_occupied := false
@@ -1244,9 +1243,6 @@ func _get_nearby_party_station(actor: Node3D) -> Node3D:
 	return nearest
 
 func _show_party_station_notice() -> void:
-	if not is_instance_valid(party_station_notice):
-		party_station_notice = AcceptDialog.new()
-		party_station_notice.title = "محطة الحفلات"
-		party_station_notice.dialog_text = "تم الوصول إلى صندوق الحفلات. تشغيل الحفلة والدفع والإضاءة لمدة 15 ثانية تحتاج ربط خدمة الحفلات الخادمية؛ لم يتم خصم أي جواهر."
-		add_child(party_station_notice)
-	party_station_notice.popup_centered()
+	var city_hud := get_node_or_null("CityActionHUD")
+	if is_instance_valid(city_hud) and city_hud.has_method("open_party_station_window"):
+		city_hud.call("open_party_station_window")
