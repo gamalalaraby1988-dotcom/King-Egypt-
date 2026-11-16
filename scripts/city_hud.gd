@@ -44,6 +44,7 @@ var player_primary_action_button: Button
 var selected_player_is_friend := false
 var selected_player_id := ""
 var _pending_friend_request_player_code := ""
+var _sent_friend_requests: Dictionary = {}
 var _pending_player_moderation_action := ""
 var _pending_player_moderation_code := ""
 var group_members: Array[Dictionary] = [{"player_id":"local_leader", "display_name":"أنت", "is_leader":true}]
@@ -718,6 +719,21 @@ func _on_player_message() -> void:
 	close_player_interaction()
 
 
+static func resolve_friend_action_state(player_code: String, is_friend: bool, sending_code: String, sent_requests: Dictionary) -> Dictionary:
+	var target := player_code.strip_edges().to_upper()
+	if is_friend:
+		return {"text": "دعوة للمجموعة", "disabled": false, "status": ""}
+	if target.is_empty():
+		return {"text": "إضافة صديق", "disabled": true, "status": "رمز اللاعب غير متاح."}
+	if sending_code == target:
+		return {"text": "جارٍ إرسال الطلب...", "disabled": true, "status": "جارٍ إرسال طلب الصداقة إلى الخادم..."}
+	if sent_requests.has(target):
+		return {"text": "تم إرسال طلب الصداقة", "disabled": true, "status": "سبق إرسال طلب صداقة لهذا اللاعب. ينتظر الرد."}
+	if not sending_code.is_empty():
+		return {"text": "طلب آخر قيد التنفيذ", "disabled": true, "status": "انتظر انتهاء طلب الصداقة الحالي."}
+	return {"text": "إضافة صديق", "disabled": false, "status": ""}
+
+
 static func format_player_presence_status(player_data: Dictionary) -> String:
 	for key in ["is_online", "online"]:
 		if player_data.has(key) and player_data[key] is bool:
@@ -739,15 +755,11 @@ func open_player_interaction(player_data: Dictionary) -> void:
 	if is_instance_valid(player_block_button):
 		player_block_button.visible = not selected_player_id.is_empty()
 	selected_player_is_friend = bool(player_data.get("is_friend", false))
-	player_primary_action_button.disabled = not _pending_friend_request_player_code.is_empty() and not selected_player_is_friend
 	if selected_player_is_friend:
-		player_primary_action_button.text = "دعوة للمجموعة"
-	elif _pending_friend_request_player_code == selected_player_id:
-		player_primary_action_button.text = "جارٍ إرسال الطلب..."
-	elif not _pending_friend_request_player_code.is_empty():
-		player_primary_action_button.text = "طلب آخر قيد التنفيذ"
-	else:
-		player_primary_action_button.text = "إضافة صديق"
+		_sent_friend_requests.erase(selected_player_id)
+	var friend_action_state := resolve_friend_action_state(selected_player_id, selected_player_is_friend, _pending_friend_request_player_code, _sent_friend_requests)
+	player_primary_action_button.disabled = bool(friend_action_state.get("disabled", false))
+	player_primary_action_button.text = str(friend_action_state.get("text", "إضافة صديق"))
 	var clean_name := str(player_data.get("display_name", "لاعب")).strip_edges().substr(0, 24)
 	player_name_label.text = clean_name if not clean_name.is_empty() else "لاعب"
 	var clean_level := str(player_data.get("level", "—")).substr(0, 12)
@@ -755,7 +767,7 @@ func open_player_interaction(player_data: Dictionary) -> void:
 	player_status_label.text = format_player_presence_status(player_data)
 	var clean_avatar := str(player_data.get("avatar_text", "👤")).substr(0, 8)
 	player_avatar_label.text = clean_avatar if not clean_avatar.is_empty() else "👤"
-	player_action_status.text = "بيانات اللاعب غير صالحة؛ تعذر تنفيذ التفاعل." if selected_player_id.is_empty() else ""
+	player_action_status.text = "بيانات اللاعب غير صالحة؛ تعذر تنفيذ التفاعل." if selected_player_id.is_empty() else str(friend_action_state.get("status", ""))
 	player_report_row.visible = false
 	player_report_button.text = "إبلاغ"
 	player_report_details.text = ""
@@ -2105,6 +2117,7 @@ static func is_player_in_friend_list(player_code: String, friends: Array) -> boo
 func _sync_selected_player_friend_state(friends: Array) -> void:
 	if not _has_selected_player() or not is_player_in_friend_list(selected_player_id, friends):
 		return
+	_sent_friend_requests.erase(selected_player_id)
 	selected_player_is_friend = true
 	if is_instance_valid(player_primary_action_button):
 		player_primary_action_button.disabled = false
@@ -2223,11 +2236,15 @@ func _on_social_operation_completed(action: String, data: Variant) -> void:
 			if is_instance_valid(player_primary_action_button) and not selected_player_is_friend and selected_player_id == completed_player_code:
 				player_primary_action_button.disabled = request_result == "sent"
 				if request_result == "sent":
-					player_primary_action_button.text = "تم إرسال الطلب"
-					player_action_status.text = "تم إرسال طلب الصداقة بنجاح."
+					_sent_friend_requests[completed_player_code] = true
+					player_primary_action_button.disabled = true
+					player_primary_action_button.text = "تم إرسال طلب الصداقة"
+					player_action_status.text = "تم إرسال طلب صداقة لهذا اللاعب. ينتظر الرد."
 				else:
+					_sent_friend_requests.erase(completed_player_code)
+					player_primary_action_button.disabled = false
 					player_primary_action_button.text = "إضافة صديق"
-					player_action_status.text = "نتيجة طلب الصداقة: " + request_result
+					player_action_status.text = "لم يتم إرسال طلب الصداقة: " + request_result
 			elif is_instance_valid(player_primary_action_button) and not selected_player_is_friend:
 				player_primary_action_button.disabled = false
 				player_primary_action_button.text = "إضافة صديق"
