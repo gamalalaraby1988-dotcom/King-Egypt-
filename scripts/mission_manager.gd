@@ -1284,10 +1284,24 @@ func _update_landmark_route_deviation() -> void:
 		navigation_off_route_time = maxf(navigation_off_route_time - get_process_delta_time() * 2.0, 0.0)
 	if navigation_off_route_time < NAVIGATION_OFF_ROUTE_CONFIRM_TIME:
 		return
-	_build_landmark_route(landmark_navigation_target, landmark_navigation_key)
+	_recalculate_active_landmark_route()
 	navigation_off_route_time = 0.0
 	navigation_route_notice_remaining = 2.0
 	navigation_route_recalculated = true
+
+func _recalculate_active_landmark_route() -> bool:
+	if landmark_navigation_key == "shared_location":
+		# أعد بناء المسار من موقع اللاعب الحالي بنفس فحوص شبكة الطرق والحدود.
+		var validated_route := build_shared_location_route_from(player.global_position, landmark_navigation_target)
+		if validated_route.size() < 2:
+			_cancel_shared_location_navigation_for_manual_input()
+			return false
+		landmark_route_points = validated_route
+		landmark_route_index = 0
+		return true
+	_build_landmark_route(landmark_navigation_target, landmark_navigation_key)
+	return not landmark_route_points.is_empty()
+
 
 func _distance_to_remaining_route(position_3d: Vector3) -> float:
 	var player_point := Vector2(position_3d.x, position_3d.z)

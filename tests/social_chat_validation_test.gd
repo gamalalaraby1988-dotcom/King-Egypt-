@@ -124,6 +124,21 @@ func _run_social_validation_tests() -> void:
 		push_error("Arriving at a shared location did not stop movement and clear navigation state.")
 		quit(1)
 		return
+	# إعادة حساب المسار بعد الخروج عنه تستخدم مسار الموقع الآمن نفسه.
+	player_probe.global_position = Vector3.ZERO
+	route_probe.set("landmark_navigation_target", Vector3(48.0, 0.0, 48.0))
+	route_probe.set("landmark_navigation_key", "shared_location")
+	route_probe.set("landmark_navigation_active", true)
+	route_probe.set("landmark_route_points", PackedVector3Array([Vector3.ZERO, Vector3(1.0, 0.0, 1.0)]))
+	if not bool(route_probe.call("_recalculate_active_landmark_route")):
+		push_error("A valid shared-location route could not be recalculated after leaving the route.")
+		quit(1)
+		return
+	var recalculated_route: PackedVector3Array = route_probe.get("landmark_route_points")
+	if recalculated_route.size() < 2 or recalculated_route[recalculated_route.size() - 1].distance_to(Vector3(48.0, 0.0, 48.0)) > 0.1:
+		push_error("Off-route recalculation did not preserve the validated shared-location destination.")
+		quit(1)
+		return
 	# التدخل اليدوي يلغي توجيه الموقع فقط، دون فتح نافذة إلغاء مهمة.
 	player_probe.call("begin_auto_navigation")
 	player_probe.call("set_auto_navigation_direction", Vector3(0.0, 0.0, -1.0))
