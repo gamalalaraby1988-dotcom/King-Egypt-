@@ -37,7 +37,6 @@ func _run_social_validation_tests() -> void:
 		return
 	var riding_player: CharacterBody3D = riding_player_script.new()
 	riding_player.set("animal_riding", true)
-	root.add_child(riding_player)
 	route_probe.set("player", riding_player)
 	route_probe.set("landmark_navigation_active", true)
 	route_probe.set("landmark_navigation_target", Vector3(18.0, 0.0, 18.0))
