@@ -97,6 +97,38 @@ func _run_social_validation_tests() -> void:
 				quit(1)
 				return
 	print("SOCIAL_TEST_STAGE: mountain_turn_guard_connectors_complete")
+	# The shared road surface must be continuous, solid, and within the vehicle's climb limit.
+	for segment_index in range(mountain_route_script.ROUTE_POINTS.size() - 1):
+		var road_name := "MountainRoadSegment_%02d" % segment_index
+		var road_mesh := mountain_route_probe.get_node_or_null(road_name) as MeshInstance3D
+		var road_body := mountain_route_probe.get_node_or_null(road_name + "Collision") as StaticBody3D
+		var road_shape := road_body.get_node_or_null("CollisionShape3D") as CollisionShape3D if is_instance_valid(road_body) else null
+		if not is_instance_valid(road_mesh) or not is_instance_valid(road_body) or not is_instance_valid(road_shape) or not road_shape.shape is BoxShape3D:
+			push_error("Mountain shared road segment is missing its solid drivable surface: " + road_name)
+			quit(1)
+			return
+		var road_start: Vector3 = mountain_route_script.ROUTE_POINTS[segment_index]
+		var road_end: Vector3 = mountain_route_script.ROUTE_POINTS[segment_index + 1]
+		var road_delta: Vector3 = road_end - road_start
+		var horizontal_distance: float = Vector2(road_delta.x, road_delta.z).length()
+		var grade_degrees: float = rad_to_deg(atan2(absf(road_delta.y), maxf(horizontal_distance, 0.001)))
+		if grade_degrees > 38.0:
+			push_error("Mountain road grade exceeds the vehicle's configured floor angle: " + road_name)
+			quit(1)
+			return
+		if absf((road_shape.shape as BoxShape3D).size.x - 8.0) > 0.01:
+			push_error("Mountain shared road width changed unexpectedly: " + road_name)
+			quit(1)
+			return
+		if road_body.collision_layer != 1 or (road_body.collision_mask & 6) != 6:
+			push_error("Mountain road surface must collide with both players and vehicles: " + road_name)
+			quit(1)
+			return
+	var city_approach_body := mountain_route_probe.get_node_or_null("MountainCityApproachRoadCollision") as StaticBody3D
+	if not is_instance_valid(city_approach_body) or city_approach_body.get_node_or_null("CollisionShape3D") == null:
+		push_error("Mountain city approach is missing its solid connecting road.")
+		quit(1)
+		return
 	# Every straight road segment must keep continuous solid barriers on both sides.
 	for segment_index in range(mountain_route_script.ROUTE_POINTS.size() - 1):
 		for side_name in ["L", "R"]:
