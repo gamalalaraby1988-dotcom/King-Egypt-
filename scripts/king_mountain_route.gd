@@ -142,6 +142,8 @@ func _build_turn_aprons() -> void:
 			tangent = outgoing
 		var basis := Basis.looking_at(tangent, Vector3.UP)
 		_add_oriented_box("MountainTurnApron_%02d" % i, Vector3(9.2, ROAD_THICKNESS, 9.2), ROUTE_POINTS[i], basis, Color(0.25, 0.24, 0.22), true)
+		# وصلة إرشاد ذهبية فوق توسعة المنعطف حتى لا ينقطع خط الطريق بصريًا.
+		_add_oriented_box("MountainTurnGuide_%02d" % i, Vector3(0.10, 0.025, 7.6), ROUTE_POINTS[i] + Vector3.UP * (ROAD_THICKNESS * 0.5 + 0.025), basis, Color(0.70, 0.56, 0.30), false)
 
 func _build_wayfinding_lights() -> void:
 	# أعمدة إنارة وإرشاد خارج حافة الحواجز؛ لا تقترب من حيز قيادة المركبات.
