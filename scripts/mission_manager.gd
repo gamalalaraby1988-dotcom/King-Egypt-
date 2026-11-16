@@ -1377,13 +1377,24 @@ func _find_grid_route(start_node: Vector2, target_node: Vector2) -> Array[Vector
 	return reversed_path
 
 
+const SHARED_LOCATION_MAX_ROAD_CONNECTOR_DISTANCE := 20.0
+
+
 func build_shared_location_route_from(start_position: Vector3, destination: Vector3) -> PackedVector3Array:
 	var points := PackedVector3Array()
 	var start_node := _nearest_city_road_node(start_position)
 	var target_node := _nearest_city_road_node(destination)
+	var start_connector_distance := Vector2(start_position.x, start_position.z).distance_to(start_node)
+	var destination_connector_distance := Vector2(destination.x, destination.z).distance_to(target_node)
+	# لا نوجّه المركبة خارج شبكة طرق المدينة عبر وصلة مستقيمة طويلة.
+	if start_connector_distance > SHARED_LOCATION_MAX_ROAD_CONNECTOR_DISTANCE or destination_connector_distance > SHARED_LOCATION_MAX_ROAD_CONNECTOR_DISTANCE:
+		return points
+	var grid_route := _find_grid_route(start_node, target_node)
+	if grid_route.is_empty():
+		return points
 	points.append(Vector3(start_position.x, 0.0, start_position.z))
 	points.append(Vector3(start_node.x, 0.0, start_node.y))
-	for node in _find_grid_route(start_node, target_node):
+	for node in grid_route:
 		points.append(Vector3(node.x, 0.0, node.y))
 	points.append(Vector3(destination.x, 0.0, destination.z))
 	var compact := PackedVector3Array()

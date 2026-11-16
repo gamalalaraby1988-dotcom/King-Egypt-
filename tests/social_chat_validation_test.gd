@@ -10,6 +10,28 @@ func _run_social_validation_tests() -> void:
 		quit(1)
 	)
 	print("SOCIAL_TEST_STAGE: autoload_ready")
+	var mission_manager_script: Script = load("res://scripts/mission_manager.gd")
+	if mission_manager_script == null:
+		push_error("MissionManager script could not be loaded for shared-location route validation.")
+		quit(1)
+		return
+	var route_probe: Node = mission_manager_script.new()
+	var valid_shared_route: PackedVector3Array = route_probe.call("build_shared_location_route_from", Vector3.ZERO, Vector3(48.0, 0.0, 48.0))
+	if valid_shared_route.size() < 2 or valid_shared_route[0].distance_to(Vector3.ZERO) > 0.1 or valid_shared_route[valid_shared_route.size() - 1].distance_to(Vector3(48.0, 0.0, 48.0)) > 0.1:
+		push_error("A valid in-city shared-location scooter route was not built from road waypoints.")
+		quit(1)
+		return
+	var far_shared_route: PackedVector3Array = route_probe.call("build_shared_location_route_from", Vector3.ZERO, Vector3(200.0, 0.0, 0.0))
+	if not far_shared_route.is_empty():
+		push_error("A shared-location scooter route accepted a destination far outside the city road network.")
+		quit(1)
+		return
+	var offroad_start_route: PackedVector3Array = route_probe.call("build_shared_location_route_from", Vector3(200.0, 0.0, 0.0), Vector3.ZERO)
+	if not offroad_start_route.is_empty():
+		push_error("A shared-location scooter route accepted a starting position far outside the city road network.")
+		quit(1)
+		return
+	route_probe.free()
 	var social := root.get_node_or_null("SocialChatManager")
 	if social == null:
 		push_error("SocialChatManager autoload did not initialize.")
