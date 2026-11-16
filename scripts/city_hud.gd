@@ -1384,8 +1384,10 @@ func _share_current_location() -> void:
 	var sent := false
 	match str(destination.get("kind", "")):
 		"direct":
-			sent = _pending_direct_send_conversation_id = str(destination.get("conversation_id", ""))
+			_pending_direct_send_conversation_id = str(destination.get("conversation_id", ""))
 			sent = SocialChatManager.send_direct_message(_pending_direct_send_conversation_id, location_message)
+			if not sent:
+				_pending_direct_send_conversation_id = ""
 		"group":
 			sent = SocialChatManager.send_chat_message("group", location_message)
 		"public":
@@ -1946,6 +1948,8 @@ func _on_social_account_session_changed(_previous_user_id: String, current_user_
 	selected_friend_conversation_id = ""
 	_update_shared_location_button_state()
 	_pending_direct_open_player_code = ""
+	_pending_direct_read_conversation_id = ""
+	_pending_direct_send_conversation_id = ""
 	local_player_code = ""
 	_direct_conversation_to_friend.clear()
 	_friend_to_conversation.clear()
@@ -2222,8 +2226,8 @@ func _on_social_operation_completed(action: String, data: Variant) -> void:
 				if social_chat_channel != "الأصدقاء" or selected_friend_conversation_id != sent_conversation_id:
 					return
 				social_chat_input.clear()
-					_pending_direct_read_conversation_id = sent_conversation_id
-					SocialChatManager.read_direct_messages(sent_conversation_id)
+				_pending_direct_read_conversation_id = sent_conversation_id
+				SocialChatManager.read_direct_messages(sent_conversation_id)
 			else:
 				if social_chat_channel == "الأصدقاء" and selected_friend_conversation_id == sent_conversation_id:
 					social_chat_status.text = "لم تُرسل الرسالة؛ تحقق من الصداقة والاتصال."
