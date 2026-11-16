@@ -311,6 +311,39 @@ func _run_social_validation_tests() -> void:
 	main_probe.remove_child(route_probe)
 	main_probe.free()
 	route_probe.free()
+	var vehicle_controller_script: Script = load("res://scripts/vehicle_controller.gd")
+	if vehicle_controller_script == null:
+		push_error("Vehicle controller script could not be loaded for scooter follow validation.")
+		quit(1)
+		return
+	var vehicle_control_probe: CharacterBody3D = vehicle_controller_script.new()
+	vehicle_control_probe.set_auto_navigation_controls(3.0, 0.4)
+	if not is_equal_approx(float(vehicle_control_probe.get("auto_navigation_speed")), 3.0) or not bool(vehicle_control_probe.get("drive_pressed")) or bool(vehicle_control_probe.get("brake_pressed")) or not is_equal_approx(float(vehicle_control_probe.get("steering_input")), 0.4) or bool(vehicle_control_probe.get("auto_navigation_interrupted")):
+		push_error("Scooter auto-follow did not initialize its forward and steering controls correctly.")
+		quit(1)
+		return
+	vehicle_control_probe.set_brake(true)
+	if not bool(vehicle_control_probe.get("auto_navigation_interrupted")) or not is_equal_approx(float(vehicle_control_probe.get("auto_navigation_speed")), -1.0) or not bool(vehicle_control_probe.get("brake_pressed")):
+		push_error("Manual braking did not interrupt scooter auto-follow.")
+		quit(1)
+		return
+	vehicle_control_probe.set_auto_navigation_controls(9.0, 2.0)
+	if not is_equal_approx(float(vehicle_control_probe.get("auto_navigation_speed")), 6.0) or not is_equal_approx(float(vehicle_control_probe.get("steering_input")), 1.0):
+		push_error("Scooter auto-follow controls were not clamped to safe configured limits.")
+		quit(1)
+		return
+	vehicle_control_probe.set_steering(-0.5)
+	if not bool(vehicle_control_probe.get("auto_navigation_interrupted")) or not is_equal_approx(float(vehicle_control_probe.get("auto_navigation_speed")), -1.0):
+		push_error("Manual steering did not interrupt scooter auto-follow.")
+		quit(1)
+		return
+	vehicle_control_probe.set_auto_navigation_controls(2.0, -0.2)
+	vehicle_control_probe.clear_auto_navigation_controls()
+	if not is_equal_approx(float(vehicle_control_probe.get("auto_navigation_speed")), -1.0) or bool(vehicle_control_probe.get("drive_pressed")) or not bool(vehicle_control_probe.get("brake_pressed")) or not is_zero_approx(float(vehicle_control_probe.get("steering_input"))):
+		push_error("Clearing scooter auto-follow did not return controls to a safe stopped state.")
+		quit(1)
+		return
+	vehicle_control_probe.free()
 	var shared_location_hud_script: Script = load("res://scripts/city_hud.gd")
 	if shared_location_hud_script == null:
 		push_error("City HUD script could not be loaded for shared-location validation.")
