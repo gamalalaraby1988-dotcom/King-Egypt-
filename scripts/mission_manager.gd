@@ -1382,6 +1382,14 @@ const SHARED_LOCATION_MAX_ROAD_CONNECTOR_DISTANCE := 35.0
 
 func build_shared_location_route_from(start_position: Vector3, destination: Vector3) -> PackedVector3Array:
 	var points := PackedVector3Array()
+	# ارفض القيم غير المحدودة أو الإحداثيات خارج حدود عالم المدينة قبل حساب أقرب طريق.
+	for coordinate in [start_position.x, start_position.y, start_position.z, destination.x, destination.y, destination.z]:
+		if not is_finite(coordinate):
+			return points
+	if absf(start_position.x) > 250.0 or absf(start_position.z) > 250.0 or start_position.y < -10.0 or start_position.y > 100.0:
+		return points
+	if absf(destination.x) > 250.0 or absf(destination.z) > 250.0 or destination.y < -10.0 or destination.y > 100.0:
+		return points
 	var start_node := _nearest_city_road_node(start_position)
 	var target_node := _nearest_city_road_node(destination)
 	var start_connector_distance := Vector2(start_position.x, start_position.z).distance_to(start_node)

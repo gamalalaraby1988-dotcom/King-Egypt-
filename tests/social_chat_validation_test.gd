@@ -31,6 +31,21 @@ func _run_social_validation_tests() -> void:
 		push_error("A shared-location scooter route accepted a starting position far outside the city road network.")
 		quit(1)
 		return
+	var non_finite_start_route: PackedVector3Array = route_probe.call("build_shared_location_route_from", Vector3(INF, 0.0, 0.0), Vector3.ZERO)
+	if not non_finite_start_route.is_empty():
+		push_error("A shared-location route accepted an infinite starting coordinate.")
+		quit(1)
+		return
+	var non_finite_destination_route: PackedVector3Array = route_probe.call("build_shared_location_route_from", Vector3.ZERO, Vector3(0.0, NAN, 0.0))
+	if not non_finite_destination_route.is_empty():
+		push_error("A shared-location route accepted a NaN destination coordinate.")
+		quit(1)
+		return
+	var elevated_destination_route: PackedVector3Array = route_probe.call("build_shared_location_route_from", Vector3.ZERO, Vector3(0.0, 101.0, 0.0))
+	if not elevated_destination_route.is_empty():
+		push_error("A shared-location route accepted a destination outside the supported vertical world bounds.")
+		quit(1)
+		return
 	route_probe.free()
 	var shared_location_hud_script: Script = load("res://scripts/city_hud.gd")
 	if shared_location_hud_script == null:
