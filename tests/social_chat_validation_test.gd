@@ -218,6 +218,21 @@ func _run_social_validation_tests() -> void:
 		push_error("The public party announcement did not include a clear location and invitation.")
 		quit(1)
 		return
+	var party_chat_line := city_hud.format_public_chat_message("صاحب الحفلة", city_hud.build_party_announcement_body("المخيم"))
+	if not party_chat_line.contains("[صاحب الحفلة]") or not party_chat_line.contains("المخيم") or not party_chat_line.contains("بدأت حفلة"):
+		push_error("The public party chat line did not show the host name together with the party location.")
+		quit(1)
+		return
+	var own_party_history_line := city_hud.format_public_chat_message("صاحب الحفلة", city_hud.build_party_announcement_body("المخيم"))
+	if own_party_history_line.contains("[أنت]"):
+		push_error("A host's own party announcement history hid the actual host display name.")
+		quit(1)
+		return
+	var unsafe_party_line := city_hud.format_public_chat_message("[اسم]", "🎉 [المخيم]")
+	if unsafe_party_line.contains("[اسم]") or unsafe_party_line.contains("[المخيم]"):
+		push_error("A public party chat line allowed user-controlled BBCode brackets.")
+		quit(1)
+		return
 	if city_hud.can_receive_social_invitation_event("group_meeting_invite") or city_hud.can_receive_social_invitation_event("apartment_invite"):
 		push_error("An unsupported gather or apartment invitation event was allowed into the invitation overlay.")
 		quit(1)

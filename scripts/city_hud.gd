@@ -1108,6 +1108,14 @@ func build_party_announcement_body(location_name: String) -> String:
 		clean_location = "المدينة"
 	return "🎉 بدأت حفلة جديدة في %s! تعالوا شاركونا." % clean_location
 
+func format_public_chat_message(sender_name: String, message_body: String) -> String:
+	var clean_sender := sender_name.strip_edges().substr(0, 24)
+	if clean_sender.is_empty():
+		clean_sender = "لاعب"
+	var clean_body := message_body.strip_edges().replace("[", "(").replace("]", ")")
+	var safe_sender := clean_sender.replace("[", "(").replace("]", ")")
+	return "[color=gold][" + safe_sender + "][/color] " + clean_body + "\n"
+
 
 func announce_party_started_in_public_chat(station: Node3D) -> bool:
 	# يُستدعى فقط بعد تأكيد بدء الحفلة من خدمة الحفلات الخادمية.
@@ -1968,9 +1976,10 @@ func _on_social_operation_completed(action: String, data: Variant) -> void:
 				for item in ordered_chat:
 					if not item is Dictionary:
 						continue
-					var sender_name := "أنت" if bool(item.get("sender_is_me", false)) else str(item.get("sender_name", "لاعب"))
-					var safe_body := str(item.get("body", "")).replace("[", "(").replace("]", ")")
-					social_chat_log.append_text("[color=gold][" + sender_name + "][/color] " + safe_body + "\n")
+					var sender_name := str(item.get("sender_name", "")).strip_edges()
+					if sender_name.is_empty():
+						sender_name = "أنت" if bool(item.get("sender_is_me", false)) else "لاعب"
+					social_chat_log.append_text(format_public_chat_message(sender_name, str(item.get("body", ""))))
 			social_chat_status.text = "المحادثة متصلة بالخادم."
 		_:
 			social_chat_status.text = "اكتملت العملية: " + action
@@ -2091,8 +2100,7 @@ func _on_social_realtime_event(topic: String, event_name: String, payload: Dicti
 			_update_friend_unread_badge(active_friend_code)
 	_refresh_unread_indicators()
 	var sender := str(payload.get("sender_name", "لاعب"))
-	var safe_body := str(payload.get("body", "")).replace("[", "(").replace("]", ")")
-	social_chat_log.append_text("[color=gold][" + sender + "][/color] " + safe_body + "\n")
+	social_chat_log.append_text(format_public_chat_message(sender, str(payload.get("body", ""))))
 
 
 func _refresh_social_invite_cards(data: Variant) -> void:
