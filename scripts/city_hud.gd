@@ -691,10 +691,14 @@ func _on_player_message() -> void:
 	if not _has_selected_player():
 		player_action_status.text = "تعذر فتح المحادثة: رمز اللاعب غير متاح."
 		return
+	if not SocialChatManager._pending_action.is_empty():
+		player_action_status.text = "انتظر اكتمال عملية التواصل الحالية."
+		return
+	var target_code := selected_player_id
 	_apartment_invite_mode = false
 	social_chat_channel = "الأصدقاء"
-	selected_friend_code = selected_player_id
-	_pending_direct_open_player_code = selected_player_id
+	selected_friend_code = target_code
+	_pending_direct_open_player_code = target_code
 	selected_friend_conversation_id = ""
 	_update_shared_location_button_state()
 	if is_instance_valid(social_chat_log):
@@ -702,7 +706,11 @@ func _on_player_message() -> void:
 	if is_instance_valid(social_chat_status):
 		social_chat_status.text = "جارٍ فتح محادثة اللاعب..."
 	_open_social_chat_panel()
-	SocialChatManager.open_direct_conversation(selected_player_id)
+	if not SocialChatManager.open_direct_conversation(target_code):
+		if _pending_direct_open_player_code == target_code:
+			_pending_direct_open_player_code = ""
+			social_chat_status.text = "تعذر بدء فتح المحادثة. حاول مرة أخرى."
+		return
 	close_player_interaction()
 
 
@@ -2150,22 +2158,29 @@ func _on_social_operation_completed(action: String, data: Variant) -> void:
 					friend_search_input.clear()
 				_refresh_social_friends()
 		"direct_open":
+			var requested_friend_code := _pending_direct_open_player_code
+			_pending_direct_open_player_code = ""
 			if data is Array and not data.is_empty() and data[0] is Dictionary:
 				var result: Dictionary = data[0]
 				if bool(result.get("success", false)):
-					selected_friend_conversation_id = str(result.get("conversation_id", ""))
+					var conversation_id := str(result.get("conversation_id", "")).strip_edges()
+					if conversation_id.is_empty():
+						social_chat_status.text = "تعذر فتح المحادثة: لم يُرجع الخادم رقم المحادثة."
+						return
+					selected_friend_conversation_id = conversation_id
 					_update_shared_location_button_state()
-					if not _pending_direct_open_player_code.is_empty():
-						_direct_conversation_to_friend[selected_friend_conversation_id] = _pending_direct_open_player_code
-						_friend_to_conversation[_pending_direct_open_player_code] = selected_friend_conversation_id
-						_unread_direct_by_friend.erase(_pending_direct_open_player_code)
-						_update_friend_unread_badge(_pending_direct_open_player_code)
-						_pending_direct_open_player_code = ""
+					if not requested_friend_code.is_empty():
+						_direct_conversation_to_friend[conversation_id] = requested_friend_code
+						_friend_to_conversation[requested_friend_code] = conversation_id
+						_unread_direct_by_friend.erase(requested_friend_code)
+						_update_friend_unread_badge(requested_friend_code)
 					_refresh_unread_indicators()
-					SocialChatManager.subscribe_direct_chat(selected_friend_conversation_id)
-					SocialChatManager.read_direct_messages(selected_friend_conversation_id)
+					SocialChatManager.subscribe_direct_chat(conversation_id)
+					SocialChatManager.read_direct_messages(conversation_id)
 				else:
 					social_chat_status.text = "تعذر فتح المحادثة: " + str(result.get("error_code", "unknown"))
+			else:
+				social_chat_status.text = "تعذر فتح المحادثة: استجابة الخادم غير صالحة."
 		"direct_read":
 			if social_chat_channel != "الأصدقاء" or selected_friend_conversation_id.is_empty():
 				return
@@ -2304,6 +2319,11 @@ func _on_social_operation_failed(action: String, message: String) -> void:
 		if is_instance_valid(display_name_status):
 			display_name_status.text = "تعذر تنفيذ العملية: " + message
 		return
+	if action == "direct_open":
+		var failed_direct_code := _pending_direct_open_player_code
+		_pending_direct_open_player_code = ""
+		if not failed_direct_code.is_empty() and selected_friend_code == failed_direct_code and social_chat_channel == "الأصدقاء":
+			social_chat_status.text = "تعذر فتح المحادثة: " + message
 	if action == "block_player" or action == "report_player":
 		var failed_moderation_code := _pending_player_moderation_code
 		_pending_player_moderation_action = ""
