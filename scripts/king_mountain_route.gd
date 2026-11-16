@@ -187,9 +187,9 @@ func _build_rest_stops() -> void:
 		# منصة مشاهدة جانبية متصلة بفسحة الاستراحة، مع حواجز على الجهات المكشوفة.
 		var view_center := pad_center + side * 5.2
 		_add_box("MountainViewDeck_%d" % stop_number, Vector3(8.0, 0.32, 7.0), view_center, Color(0.61, 0.52, 0.39), true)
-		_add_box("MountainViewDeckOuterRail_%d" % stop_number, Vector3(8.0, 1.15, 0.38), view_center + side * 3.35 + Vector3.UP * 0.72, Color(0.48, 0.40, 0.31), true)
-		_add_box("MountainViewDeckLeftRail_%d" % stop_number, Vector3(0.38, 1.15, 6.8), view_center - side * 3.8 + Vector3(-4.0, 0.72, 0.0), Color(0.48, 0.40, 0.31), true)
-		_add_box("MountainViewDeckRightRail_%d" % stop_number, Vector3(0.38, 1.15, 6.8), view_center - side * 3.8 + Vector3(4.0, 0.72, 0.0), Color(0.48, 0.40, 0.31), true)
+		_add_box("MountainViewDeckOuterRail_%d" % stop_number, Vector3(0.38, 1.15, 7.0), view_center + side * 3.8 + Vector3.UP * 0.72, Color(0.48, 0.40, 0.31), true)
+		_add_box("MountainViewDeckLeftRail_%d" % stop_number, Vector3(8.0, 1.15, 0.38), view_center + Vector3(0.0, 0.72, -3.3), Color(0.48, 0.40, 0.31), true)
+		_add_box("MountainViewDeckRightRail_%d" % stop_number, Vector3(8.0, 1.15, 0.38), view_center + Vector3(0.0, 0.72, 3.3), Color(0.48, 0.40, 0.31), true)
 
 
 func _build_summit_terrace() -> void:
