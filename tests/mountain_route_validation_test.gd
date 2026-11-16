@@ -107,6 +107,34 @@ func _run_mountain_route_tests() -> void:
 				quit(1)
 				return
 
+	# Every bend must have a collidable apron and closed guard-wall joins on both sides.
+	for bend_index in range(1, route_points.size() - 1):
+		var apron_body := route.get_node_or_null("MountainTurnApron_%02dCollision" % bend_index) as StaticBody3D
+		if apron_body == null:
+			push_error("Mountain bend %d is missing its drivable apron collision." % bend_index)
+			quit(1)
+			return
+		for side in ["L", "R"]:
+			var connector_body := route.get_node_or_null("MountainTurnGuardConnector_%02d_%sCollision" % [bend_index, side]) as StaticBody3D
+			if connector_body == null:
+				push_error("Mountain bend %d has an unprotected guard-wall join on side %s." % [bend_index, side])
+				quit(1)
+				return
+
+	# The city approach and entrance must leave a vehicle-width opening into the climb.
+	var approach_body := route.get_node_or_null("MountainCityApproachRoadCollision") as StaticBody3D
+	var gate_left := route.get_node_or_null("KingsMountainEntranceGate/GateLeftPillarCollision") as StaticBody3D
+	var gate_right := route.get_node_or_null("KingsMountainEntranceGate/GateRightPillarCollision") as StaticBody3D
+	if approach_body == null or gate_left == null or gate_right == null:
+		push_error("The mountain approach or entrance gate is missing physical collision geometry.")
+		quit(1)
+		return
+	var gate_clear_width := absf(gate_right.global_position.x - gate_left.global_position.x) - 0.9
+	if gate_clear_width < 9.0:
+		push_error("The mountain gate opening is too narrow for the shared road and vehicle access.")
+		quit(1)
+		return
+
 	for stop_index in range(2):
 		for fixture_name in ["MountainRestBay_%d" % stop_index, "MountainRestBench_%d" % stop_index, "MountainViewDeck_%d" % stop_index]:
 			var fixture_body := route.get_node_or_null(fixture_name + "Collision") as StaticBody3D
