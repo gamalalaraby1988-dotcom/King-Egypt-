@@ -1,4 +1,6 @@
 extends Node3D
+
+const CollisionProfile = preload("res://scripts/city_collision_profile.gd")
 ## صندوق مكافأة يومي فرعوني؛ يمنح الاستلام بعد ربط خدمة المكافآت الخادمية.
 
 @export var interaction_radius: float = 3.5
@@ -8,6 +10,7 @@ func _ready() -> void:
 	add_to_group("city_interactables")
 	add_to_group("daily_reward_chests")
 	_build_chest()
+	CollisionProfile.add_world_box_collider(self, Vector3(1.62, 1.25, 1.12), Vector3(0, 0.625, 0), "ChestCollisionBody")
 
 func get_daily_reward_chest_data() -> Dictionary:
 	return {
