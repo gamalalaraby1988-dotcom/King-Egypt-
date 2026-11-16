@@ -60,6 +60,28 @@ func _run_social_validation_tests() -> void:
 	marker_probe.visible = true
 	route_probe.add_child(marker_probe)
 	route_probe.set("shared_location_marker", marker_probe)
+	var player_script: Script = load("res://scripts/player.gd")
+	if player_script == null:
+		push_error("Player script could not be loaded for auto-navigation cleanup validation.")
+		quit(1)
+		return
+	var player_probe: CharacterBody3D = player_script.new() as CharacterBody3D
+	if player_probe == null:
+		push_error("Player auto-navigation test instance could not be created.")
+		quit(1)
+		return
+	route_probe.add_child(player_probe)
+	route_probe.set("player", player_probe)
+	if not player_probe.call("begin_auto_navigation"):
+		push_error("Player did not enter shared-location auto-navigation test state.")
+		quit(1)
+		return
+	player_probe.call("set_auto_navigation_direction", Vector3(1.0, 0.0, 0.0))
+	player_probe.velocity = Vector3(4.0, 0.0, 2.0)
+	if not bool(player_probe.get("auto_navigation_active")):
+		push_error("Player auto-navigation did not activate before activity interruption.")
+		quit(1)
+		return
 	route_probe.set("landmark_navigation_key", "shared_location")
 	route_probe.set("landmark_navigation_active", true)
 	route_probe.set("landmark_route_points", valid_shared_route)
@@ -78,6 +100,10 @@ func _run_social_validation_tests() -> void:
 		return
 	if marker_probe.visible:
 		push_error("Starting an activity did not hide the shared-location marker.")
+		quit(1)
+		return
+	if bool(player_probe.get("auto_navigation_active")) or not (player_probe.get("auto_navigation_direction") as Vector3).is_zero_approx() or not is_zero_approx(player_probe.velocity.x) or not is_zero_approx(player_probe.velocity.z):
+		push_error("Starting an activity did not stop the player's automatic walking movement.")
 		quit(1)
 		return
 	if not is_zero_approx(float(route_probe.get("navigation_arrival_remaining"))) or not is_zero_approx(float(route_probe.get("navigation_off_route_time"))) or not is_zero_approx(float(route_probe.get("navigation_route_notice_remaining"))):
