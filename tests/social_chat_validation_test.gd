@@ -317,6 +317,32 @@ func _run_social_validation_tests() -> void:
 		quit(1)
 		return
 	var location_probe: Node = shared_location_hud_script.new()
+	var camera_forward := Vector3(0.0, 0.0, -1.0)
+	var camera_right := Vector3(1.0, 0.0, 0.0)
+	var arrow_cases := [
+		{"direction": Vector3(0.0, 0.0, -1.0), "expected": -PI * 0.5},
+		{"direction": Vector3(1.0, 0.0, 0.0), "expected": 0.0},
+		{"direction": Vector3(0.0, 0.0, 1.0), "expected": PI * 0.5},
+		{"direction": Vector3(-1.0, 0.0, 0.0), "expected": -PI}
+	]
+	for arrow_case in arrow_cases:
+		var arrow_rotation := float(location_probe.call("calculate_shared_location_arrow_rotation", arrow_case["direction"], camera_forward, camera_right))
+		if not is_equal_approx(wrapf(arrow_rotation - float(arrow_case["expected"]), -PI, PI), 0.0):
+			push_error("The shared-location direction arrow points incorrectly for a camera-relative cardinal direction.")
+			quit(1)
+			return
+	var rotated_camera_forward := Vector3(1.0, 0.0, 0.0)
+	var rotated_camera_right := Vector3(0.0, 0.0, 1.0)
+	var rotated_arrow := float(location_probe.call("calculate_shared_location_arrow_rotation", Vector3(1.0, 0.0, 0.0), rotated_camera_forward, rotated_camera_right))
+	if not is_equal_approx(rotated_arrow, -PI * 0.5):
+		push_error("The shared-location arrow did not account for a camera rotated by 90 degrees.")
+		quit(1)
+		return
+	var zero_basis_arrow := float(location_probe.call("calculate_shared_location_arrow_rotation", Vector3(1.0, 0.0, 0.0), Vector3.ZERO, camera_right))
+	if not is_equal_approx(zero_basis_arrow, 0.0):
+		push_error("The shared-location arrow calculation did not safely handle a degenerate camera basis.")
+		quit(1)
+		return
 	if not location_probe.call("parse_shared_location_message", "KINGLOC1|nan|0|0").is_empty():
 		push_error("A non-finite shared-location coordinate was accepted.")
 		quit(1)
