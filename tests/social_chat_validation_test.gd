@@ -309,8 +309,8 @@ func _run_social_validation_tests() -> void:
 	# فشل بناء وجهة جديدة بالاسكوتر يجب ألا يمحو مسارًا صالحًا قيد المتابعة.
 	var invalid_route_vehicle_script: Script = load("res://scripts/vehicle_controller.gd")
 	var invalid_route_vehicle: CharacterBody3D = invalid_route_vehicle_script.new() as CharacterBody3D
+	root.add_child(invalid_route_vehicle)
 	invalid_route_vehicle.global_position = Vector3(200.0, 0.0, 0.0)
-	main_probe.add_child(invalid_route_vehicle)
 	main_probe.set("city_vehicle", invalid_route_vehicle)
 	main_probe.set("vehicle_occupied", true)
 	var preserved_vehicle_route := PackedVector3Array([Vector3(4.0, 0.0, 4.0), Vector3(8.0, 0.0, 8.0)])
@@ -327,7 +327,7 @@ func _run_social_validation_tests() -> void:
 		quit(1)
 		return
 	main_probe.set("vehicle_occupied", false)
-	main_probe.remove_child(invalid_route_vehicle)
+	root.remove_child(invalid_route_vehicle)
 	invalid_route_vehicle.free()
 	main_probe.set("_shared_location_vehicle_following", true)
 	main_probe.set("_shared_location_vehicle_target", Vector3(24.0, 0.0, 24.0))
