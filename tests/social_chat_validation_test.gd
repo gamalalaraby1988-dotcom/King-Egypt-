@@ -67,6 +67,9 @@ func _run_social_validation_tests() -> void:
 		quit(1)
 		return
 	var player_probe: CharacterBody3D = player_script.new() as CharacterBody3D
+	var camera_pivot_probe := Node3D.new()
+	camera_pivot_probe.name = "CameraPivot"
+	player_probe.add_child(camera_pivot_probe)
 	if player_probe == null:
 		push_error("Player auto-navigation test instance could not be created.")
 		quit(1)
@@ -166,6 +169,7 @@ func _run_social_validation_tests() -> void:
 		return
 	route_probe.name = "MissionManager"
 	marker_probe.visible = true
+	root.remove_child(route_probe)
 	main_probe.add_child(route_probe)
 	main_probe.set("_shared_location_vehicle_following", true)
 	main_probe.set("_shared_location_vehicle_target", Vector3(24.0, 0.0, 24.0))
