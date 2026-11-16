@@ -1096,6 +1096,19 @@ func _run_social_validation_tests() -> void:
 		push_error("City HUD script could not be loaded for group-gather guard tests.")
 		quit(1)
 		return
+	var friend_list_fixture: Array = [{"player_code": "ABC1234XYZ", "display_name": "صديق"}]
+	if not city_hud_script.is_player_in_friend_list("abc1234xyz", friend_list_fixture):
+		push_error("A confirmed friend was not recognized in the refreshed friend list.")
+		quit(1)
+		return
+	if city_hud_script.is_player_in_friend_list("ZZZ9999YYY", friend_list_fixture):
+		push_error("An unrelated player was incorrectly recognized as a friend.")
+		quit(1)
+		return
+	if city_hud_script.is_player_in_friend_list("invalid", friend_list_fixture):
+		push_error("An invalid player code was recognized as a friend.")
+		quit(1)
+		return
 	if city_hud_script.format_player_presence_status({"is_online": true}) != "متصل الآن":
 		push_error("An explicitly online player was not shown as online.")
 		quit(1)
