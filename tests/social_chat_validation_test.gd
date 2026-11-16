@@ -143,6 +143,21 @@ func _run_social_validation_tests() -> void:
 		push_error("Off-route recalculation did not preserve the validated shared-location destination.")
 		quit(1)
 		return
+	# فشل إعادة حساب المسار يجب أن يلغي المتابعة دون عرض إشعار نجاح إعادة التوجيه.
+	marker_probe.visible = true
+	route_probe.set("landmark_navigation_target", Vector3(300.0, 0.0, 0.0))
+	route_probe.set("landmark_navigation_key", "shared_location")
+	route_probe.set("landmark_navigation_active", true)
+	route_probe.set("landmark_route_points", valid_shared_route)
+	route_probe.set("navigation_route_notice_remaining", 0.0)
+	if bool(route_probe.call("_recalculate_active_landmark_route")) or bool(route_probe.get("landmark_navigation_active")) or marker_probe.visible or not (route_probe.get("landmark_route_points") as PackedVector3Array).is_empty():
+		push_error("An invalid shared-location reroute did not safely cancel and clear navigation.")
+		quit(1)
+		return
+	if float(route_probe.get("navigation_route_notice_remaining")) != 0.0:
+		push_error("A failed shared-location reroute left a misleading reroute-success notice.")
+		quit(1)
+		return
 	# التدخل اليدوي يلغي توجيه الموقع فقط، دون فتح نافذة إلغاء مهمة.
 	player_probe.call("begin_auto_navigation")
 	player_probe.call("set_auto_navigation_direction", Vector3(0.0, 0.0, -1.0))

@@ -1284,7 +1284,9 @@ func _update_landmark_route_deviation() -> void:
 		navigation_off_route_time = maxf(navigation_off_route_time - get_process_delta_time() * 2.0, 0.0)
 	if navigation_off_route_time < NAVIGATION_OFF_ROUTE_CONFIRM_TIME:
 		return
-	_recalculate_active_landmark_route()
+	if not _recalculate_active_landmark_route():
+		navigation_off_route_time = 0.0
+		return
 	navigation_off_route_time = 0.0
 	navigation_route_notice_remaining = 2.0
 	navigation_route_recalculated = true
