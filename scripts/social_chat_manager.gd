@@ -13,6 +13,9 @@ var _pending_action := ""
 var _pending_user_id := ""
 var _pending_session_generation := -1
 var _rpc_queue: Array[Dictionary] = []
+var _friend_requests_poll_elapsed := 0.0
+var _friend_requests_poll_pending := false
+const FRIEND_REQUESTS_POLL_INTERVAL := 30.0
 var _realtime_socket: WebSocketPeer
 var _realtime_topics: Dictionary = {}
 var _realtime_join_refs: Dictionary = {}
@@ -40,6 +43,8 @@ func _ready() -> void:
 func _on_auth_session_changed(_previous_user_id: String, _current_user_id: String, _generation: int) -> void:
 	# Cancel in-flight RPC work before releasing its account/session ownership.
 	_rpc_queue.clear()
+	_friend_requests_poll_elapsed = 0.0
+	_friend_requests_poll_pending = false
 	if not _pending_action.is_empty():
 		_pending_action = ""
 		_pending_user_id = ""
@@ -96,7 +101,13 @@ func list_friends() -> bool:
 	return _rpc("list_test_friends", {}, "friends_list")
 
 func list_friend_requests() -> bool:
-	return _rpc("list_test_friend_requests", {}, "friend_requests_list")
+	if _friend_requests_poll_pending:
+		return false
+	var started := _rpc("list_test_friend_requests", {}, "friend_requests_list")
+	if started:
+		_friend_requests_poll_pending = true
+		_friend_requests_poll_elapsed = 0.0
+	return started
 
 func respond_friend_request(request_id: String, accept: bool) -> bool:
 	var clean_id := request_id.strip_edges().to_lower()
@@ -261,6 +272,8 @@ func _on_request_completed(result: int, response_code: int, _headers: PackedStri
 		request.queue_free()
 	if owns_pending_slot:
 		_start_next_queued_rpc()
+	if action == "friend_requests_list":
+		_friend_requests_poll_pending = false
 	# Request identity is immutable; an old callback can never inherit a newer account's pending metadata.
 	if not owns_pending_slot or action.is_empty():
 		return
@@ -348,6 +361,8 @@ func _process(delta: float) -> void:
 		realtime_status_changed.emit("تم إلغاء اشتراكات جلسة منتهية")
 	if not AuthManager.is_authenticated():
 		_rpc_queue.clear()
+		_friend_requests_poll_elapsed = 0.0
+		_friend_requests_poll_pending = false
 		if _realtime_socket != null and _realtime_socket.get_ready_state() != WebSocketPeer.STATE_CLOSED:
 			_realtime_socket.close()
 		_realtime_socket = null
@@ -361,6 +376,9 @@ func _process(delta: float) -> void:
 		_realtime_group_id = ""
 		_realtime_direct_id = ""
 		return
+	_friend_requests_poll_elapsed += maxf(0.0, delta)
+	if _friend_requests_poll_elapsed >= FRIEND_REQUESTS_POLL_INTERVAL and not _friend_requests_poll_pending:
+		list_friend_requests()
 	if _realtime_socket == null:
 		_realtime_retry_elapsed += delta
 		if _realtime_retry_elapsed >= _realtime_retry_delay:
