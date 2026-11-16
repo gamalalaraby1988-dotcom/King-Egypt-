@@ -50,6 +50,22 @@ func _run_social_validation_tests() -> void:
 			return
 	summit_builder.free()
 	summit_test_root.free()
+	var mountain_gate := mountain_route_script.new() as Node3D
+	if not is_instance_valid(mountain_gate):
+		push_error("Mountain gate test instance could not be created.")
+		quit(1)
+		return
+	root.add_child(mountain_gate)
+	await process_frame
+	var mountain_gate_node := mountain_gate.get_node_or_null("KingsMountainEntranceGate") as Node3D
+	var mountain_gate_title := mountain_gate_node.get_node_or_null("MountainGateTitle") as Label3D if is_instance_valid(mountain_gate_node) else null
+	var mountain_gate_subtitle := mountain_gate_node.get_node_or_null("MountainGateSubtitle") as Label3D if is_instance_valid(mountain_gate_node) else null
+	if not is_instance_valid(mountain_gate_title) or mountain_gate_title.text != "قمة الملوك" or not is_instance_valid(mountain_gate_subtitle) or mountain_gate_subtitle.text != "طريق الصعود":
+		push_error("Mountain entrance must clearly identify the Kings Summit ascent.")
+		quit(1)
+		return
+	mountain_gate.queue_free()
+	await process_frame
 	print("SOCIAL_TEST_STAGE: summit_edge_safety_complete")
 	# Every mountain-road bend must have solid guard connectors on both sides.
 	var mountain_route_script: Script = load("res://scripts/king_mountain_route.gd")
