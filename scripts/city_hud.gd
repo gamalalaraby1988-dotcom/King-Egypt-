@@ -2577,6 +2577,7 @@ func _on_social_operation_completed(action: String, data: Variant) -> void:
 				if is_instance_valid(friend_search_input):
 					friend_search_input.clear()
 				_refresh_social_friends()
+				SocialChatManager.list_friend_requests()
 		"direct_open":
 			var requested_friend_code := _pending_direct_open_player_code
 			_pending_direct_open_player_code = ""
