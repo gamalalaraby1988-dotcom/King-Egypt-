@@ -102,9 +102,6 @@ func _run_social_validation_tests() -> void:
 	root.add_child(rest_stop_probe)
 	await process_frame
 	rest_stop_probe.call("_build_rest_stops")
-	# Build rest stops explicitly if the scene lifecycle has not populated them yet.
-	if mountain_route_probe.get_node_or_null("MountainRestBay_0Collision") == null:
-		rest_stop_probe.call("_build_rest_stops")
 	# Both mountain rest bays and their scenic decks must be solid for players and vehicles.
 	for stop_number in range(2):
 		var required_fixtures := [
@@ -117,7 +114,7 @@ func _run_social_validation_tests() -> void:
 			"MountainViewDeckRightRail_%d" % stop_number
 		]
 		for fixture_name in required_fixtures:
-			var fixture_body := mountain_route_probe.get_node_or_null(fixture_name + "Collision") as StaticBody3D
+			var fixture_body := rest_stop_probe.get_node_or_null(fixture_name + "Collision") as StaticBody3D
 			var fixture_shape := fixture_body.get_node_or_null("CollisionShape3D") as CollisionShape3D if is_instance_valid(fixture_body) else null
 			if not is_instance_valid(fixture_body) or not is_instance_valid(fixture_shape) or not fixture_shape.shape is BoxShape3D:
 				push_error("Mountain rest stop fixture is missing solid collision: " + fixture_name)
@@ -128,7 +125,7 @@ func _run_social_validation_tests() -> void:
 				quit(1)
 				return
 	# The scenic deck must remain a distinct side platform, not replace the road segment.
-		var deck_visual := mountain_route_probe.get_node_or_null("MountainViewDeck_%d" % stop_number) as MeshInstance3D
+		var deck_visual := rest_stop_probe.get_node_or_null("MountainViewDeck_%d" % stop_number) as MeshInstance3D
 		if not is_instance_valid(deck_visual):
 			push_error("Mountain scenic viewpoint deck is missing: " + str(stop_number))
 			quit(1)
