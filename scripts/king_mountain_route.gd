@@ -63,6 +63,27 @@ func _build_approach_gate() -> void:
 	_add_box_to(gate, "GateRightPillar", Vector3(0.9, 4.6, 1.0), Vector3(5.0, 2.3, 0.0), Color(0.62, 0.50, 0.34), true)
 	_add_box_to(gate, "GateRoyalLintel", Vector3(10.8, 0.7, 1.1), Vector3(0.0, 4.65, 0.0), Color(0.82, 0.65, 0.29), true)
 	_add_box_to(gate, "GateNamePlate", Vector3(6.0, 0.8, 0.22), Vector3(0.0, 3.75, -0.62), Color(0.12, 0.18, 0.19), false)
+	var gate_title := Label3D.new()
+	gate_title.name = "MountainGateTitle"
+	gate_title.text = "قمة الملوك"
+	gate_title.position = Vector3(0.0, 3.75, -0.76)
+	gate_title.rotation.y = PI
+	gate_title.font_size = 64
+	gate_title.outline_size = 10
+	gate_title.pixel_size = 0.005
+	gate_title.modulate = Color(1.0, 0.84, 0.48)
+	gate_title.no_depth_test = false
+	gate.add_child(gate_title)
+	var gate_subtitle := Label3D.new()
+	gate_subtitle.name = "MountainGateSubtitle"
+	gate_subtitle.text = "طريق الصعود"
+	gate_subtitle.position = Vector3(0.0, 3.12, -0.76)
+	gate_subtitle.rotation.y = PI
+	gate_subtitle.font_size = 30
+	gate_subtitle.outline_size = 7
+	gate_subtitle.pixel_size = 0.005
+	gate_subtitle.modulate = Color(0.92, 0.87, 0.72)
+	gate.add_child(gate_subtitle)
 
 
 func _build_road() -> void:
