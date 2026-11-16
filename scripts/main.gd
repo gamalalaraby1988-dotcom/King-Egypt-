@@ -343,11 +343,13 @@ func begin_shared_location_navigation(destination: Vector3) -> bool:
 			return false
 		if not mission_manager.has_method("build_shared_location_route_from"):
 			return false
-		_shared_location_vehicle_route = mission_manager.call("build_shared_location_route_from", city_vehicle.global_position, destination)
-		if _shared_location_vehicle_route.size() < 2:
+		# ابنِ المسار في متغير مؤقت حتى لا تمحو محاولة فاشلة متابعةً جارية.
+		var requested_vehicle_route: PackedVector3Array = mission_manager.call("build_shared_location_route_from", city_vehicle.global_position, destination)
+		if requested_vehicle_route.size() < 2:
 			return false
 		# ألغِ أي متابعة مشي قديمة فقط بعد نجاح بناء مسار المركبة الجديد.
 		mission_manager.call("cancel_shared_location_navigation")
+		_shared_location_vehicle_route = requested_vehicle_route
 		_shared_location_vehicle_target = destination
 		_shared_location_vehicle_route_index = 0
 		_shared_location_vehicle_following = true
