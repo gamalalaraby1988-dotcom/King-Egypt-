@@ -210,6 +210,14 @@ func _run_social_validation_tests() -> void:
 		push_error("A supported group invitation event was rejected.")
 		quit(1)
 		return
+	if not city_hud.can_receive_social_invitation_event("chat_message") or not city_hud.can_receive_social_invitation_event("direct_message"):
+		push_error("Supported realtime chat messages were rejected before reaching the chat renderer.")
+		quit(1)
+		return
+	if city_hud.build_party_announcement_body("المخيم") != "🎉 بدأت حفلة جديدة في المخيم! تعالوا شاركونا." or city_hud.build_party_announcement_body("") != "🎉 بدأت حفلة جديدة في المدينة! تعالوا شاركونا.":
+		push_error("The public party announcement did not include a clear location and invitation.")
+		quit(1)
+		return
 	if city_hud.can_receive_social_invitation_event("group_meeting_invite") or city_hud.can_receive_social_invitation_event("apartment_invite"):
 		push_error("An unsupported gather or apartment invitation event was allowed into the invitation overlay.")
 		quit(1)

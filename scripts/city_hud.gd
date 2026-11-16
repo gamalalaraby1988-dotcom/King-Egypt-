@@ -1099,7 +1099,24 @@ func can_submit_group_invitation_response(pending_invite_id: String, invite_id: 
 
 
 func can_receive_social_invitation_event(event_name: String) -> bool:
-	return event_name == "group_invite"
+	return event_name in ["group_invite", "chat_message", "direct_message"]
+
+
+func build_party_announcement_body(location_name: String) -> String:
+	var clean_location := location_name.strip_edges()
+	if clean_location.is_empty():
+		clean_location = "المدينة"
+	return "🎉 بدأت حفلة جديدة في %s! تعالوا شاركونا." % clean_location
+
+
+func announce_party_started_in_public_chat(station: Node3D) -> bool:
+	# يُستدعى فقط بعد تأكيد بدء الحفلة من خدمة الحفلات الخادمية.
+	if not is_instance_valid(station) or not station.is_in_group("party_stations"):
+		return false
+	var location_name := str(station.get_meta("public_location_name", ""))
+	if location_name.strip_edges().is_empty() and station.name == "CampPartyStation":
+		location_name = "المخيم"
+	return SocialChatManager.send_chat_message("public", build_party_announcement_body(location_name))
 
 
 func can_accept_social_invitation_payload(topic: String, player_code: String, invite_id: String) -> bool:
@@ -2035,6 +2052,10 @@ func _on_social_realtime_event(topic: String, event_name: String, payload: Dicti
 			social_chat_dock_button.text = "💬 🔴"
 		return
 	if event_name != "chat_message" and event_name != "direct_message":
+		return
+	if event_name == "chat_message" and topic != "chat:public:messages" and not topic.begins_with("chat:group:"):
+		return
+	if event_name == "direct_message" and not topic.begins_with("chat:direct:"):
 		return
 	# Deduplicate before either rendering or incrementing unread counters.
 	var message_id := str(payload.get("message_id", ""))
