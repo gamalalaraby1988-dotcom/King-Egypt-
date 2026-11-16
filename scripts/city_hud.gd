@@ -44,6 +44,8 @@ var player_primary_action_button: Button
 var selected_player_is_friend := false
 var selected_player_id := ""
 var _pending_friend_request_player_code := ""
+var _pending_player_moderation_action := ""
+var _pending_player_moderation_code := ""
 var group_members: Array[Dictionary] = [{"player_id":"local_leader", "display_name":"أنت", "is_leader":true}]
 var pending_group_invites: Array[String] = []
 var group_popup: PanelContainer
@@ -781,22 +783,33 @@ func _on_player_block() -> void:
 	if not _has_selected_player():
 		player_action_status.text = "تعذر حظر اللاعب: رمز اللاعب غير صالح."
 		return
-	SocialChatManager.block_player(selected_player_id)
-	player_action_status.text = "جارٍ إرسال طلب الحظر إلى الخادم..."
+	if not _pending_player_moderation_action.is_empty():
+		player_action_status.text = "انتظر انتهاء إجراء الإشراف الحالي."
+		return
+	var target_code := selected_player_id
+	if SocialChatManager.block_player(target_code):
+		_pending_player_moderation_action = "block_player"
+		_pending_player_moderation_code = target_code
+		player_block_button.disabled = true
+		player_action_status.text = "جارٍ إرسال طلب الحظر إلى الخادم..."
 
 
 func _on_player_report() -> void:
 	if not _has_selected_player():
 		player_action_status.text = "تعذر تجهيز البلاغ: رمز اللاعب غير متاح."
 		return
-	player_report_requested.emit(selected_player_id)
+	if not _pending_player_moderation_action.is_empty():
+		player_action_status.text = "انتظر انتهاء إجراء الإشراف الحالي."
+		return
+	var target_code := selected_player_id
 	var reasons := ["harassment", "spam", "inappropriate_name", "cheating", "other"]
 	var reason: String = str(reasons[player_report_reason.selected]) if is_instance_valid(player_report_reason) else "other"
 	var details := player_report_details.text if is_instance_valid(player_report_details) else ""
-	SocialChatManager.report_player(selected_player_id, reason, details)
-	player_report_row.visible = false
-	player_report_button.text = "إبلاغ"
-	player_action_status.text = "جارٍ إرسال البلاغ إلى خادم الإشراف..."
+	if SocialChatManager.report_player(target_code, reason, details):
+		_pending_player_moderation_action = "report_player"
+		_pending_player_moderation_code = target_code
+		player_report_send_button.disabled = true
+		player_action_status.text = "جارٍ إرسال البلاغ إلى خادم الإشراف..."
 
 
 func _build_group_popup() -> void:
@@ -2040,13 +2053,26 @@ func _on_social_operation_completed(action: String, data: Variant) -> void:
 			if str(data) == "unblocked":
 				_refresh_blocked_players()
 		"report_player":
-			player_action_status.text = "نتيجة البلاغ: " + str(data)
-			if str(data) == "report_submitted":
+			var report_target := _pending_player_moderation_code
+			_pending_player_moderation_action = ""
+			_pending_player_moderation_code = ""
+			if is_instance_valid(player_report_send_button):
+				player_report_send_button.disabled = false
+			if selected_player_id == report_target:
+				player_action_status.text = "نتيجة البلاغ: " + str(data)
+			if str(data) == "report_submitted" and selected_player_id == report_target:
 				player_popup.visible = false
 		"block_player":
-			player_action_status.text = "نتيجة الحظر: " + str(data)
+			var blocked_target := _pending_player_moderation_code
+			_pending_player_moderation_action = ""
+			_pending_player_moderation_code = ""
+			if is_instance_valid(player_block_button):
+				player_block_button.disabled = false
+			if selected_player_id == blocked_target:
+				player_action_status.text = "نتيجة الحظر: " + str(data)
 			if str(data) == "blocked":
-				player_popup.visible = false
+				if selected_player_id == blocked_target:
+					player_popup.visible = false
 				_refresh_blocked_players()
 		"friends_list":
 			if data is Array and is_instance_valid(group_invite_popup) and group_invite_popup.visible:
@@ -2278,6 +2304,19 @@ func _on_social_operation_failed(action: String, message: String) -> void:
 		if is_instance_valid(display_name_status):
 			display_name_status.text = "تعذر تنفيذ العملية: " + message
 		return
+	if action == "block_player" or action == "report_player":
+		var failed_moderation_code := _pending_player_moderation_code
+		_pending_player_moderation_action = ""
+		_pending_player_moderation_code = ""
+		if is_instance_valid(player_block_button):
+			player_block_button.disabled = false
+		if is_instance_valid(player_report_send_button):
+			player_report_send_button.disabled = false
+		if action == "report_player" and selected_player_id == failed_moderation_code and is_instance_valid(player_report_row):
+			player_report_row.visible = true
+			player_report_button.text = "إخفاء البلاغ"
+		if is_instance_valid(player_action_status) and selected_player_id == failed_moderation_code:
+			player_action_status.text = "تعذر تنفيذ الإجراء: " + message
 	if action == "friend_request":
 		var failed_player_code := _pending_friend_request_player_code
 		_pending_friend_request_player_code = ""
