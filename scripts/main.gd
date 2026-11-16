@@ -352,8 +352,7 @@ func begin_shared_location_navigation(destination: Vector3) -> bool:
 		mission_manager.call("show_shared_location_marker", destination)
 		city_vehicle.call("set_auto_navigation_controls", 0.0, 0.0)
 		return true
-	var mission_manager := get_node_or_null("MissionManager")
-	if not is_instance_valid(mission_manager) or not mission_manager.has_method("navigate_to_landmark"):
+	if not mission_manager.has_method("navigate_to_landmark"):
 		return false
 	return bool(mission_manager.call("navigate_to_landmark", "shared_location", destination))
 
