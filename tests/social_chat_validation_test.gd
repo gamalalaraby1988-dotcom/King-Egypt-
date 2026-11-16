@@ -147,6 +147,33 @@ func _run_social_validation_tests() -> void:
 		push_error("Shared-location vehicle follow cleanup did not reset every state field and hide the marker.")
 		quit(1)
 		return
+	# النزول من المركبة يجب أن يمسح الهدف والفهرس أيضًا، حتى عند غياب لاعب الاختبار.
+	var vehicle_script: Script = load("res://scripts/vehicle_controller.gd")
+	var vehicle_probe := vehicle_script.new() as CharacterBody3D
+	if vehicle_probe == null:
+		push_error("Vehicle controller test instance could not be created.")
+		quit(1)
+		return
+	main_probe.add_child(vehicle_probe)
+	main_probe.set("city_vehicle", vehicle_probe)
+	main_probe.set("vehicle_occupied", true)
+	main_probe.set("_shared_location_vehicle_following", true)
+	main_probe.set("_shared_location_vehicle_target", Vector3(18.0, 0.0, 9.0))
+	main_probe.set("_shared_location_vehicle_route", PackedVector3Array([Vector3.ZERO, Vector3(18.0, 0.0, 9.0)]))
+	main_probe.set("_shared_location_vehicle_route_index", 1)
+	vehicle_probe.call("set_auto_navigation_controls", 2.5, 0.6)
+	marker_probe.visible = true
+	main_probe.call("_exit_player_vehicle")
+	if bool(main_probe.get("_shared_location_vehicle_following")) or not (main_probe.get("_shared_location_vehicle_target") as Vector3).is_zero_approx() or not (main_probe.get("_shared_location_vehicle_route") as PackedVector3Array).is_empty() or int(main_probe.get("_shared_location_vehicle_route_index")) != 0:
+		push_error("Exiting the vehicle left stale shared-location follow state.")
+		quit(1)
+		return
+	if marker_probe.visible or float(vehicle_probe.get("auto_navigation_speed")) >= 0.0 or bool(vehicle_probe.get("drive_pressed")) or not bool(vehicle_probe.get("brake_pressed")):
+		push_error("Exiting the vehicle did not stop auto-drive and hide the shared-location marker.")
+		quit(1)
+		return
+	main_probe.remove_child(vehicle_probe)
+	vehicle_probe.free()
 	main_probe.remove_child(route_probe)
 	main_probe.free()
 	route_probe.free()

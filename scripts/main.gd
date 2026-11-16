@@ -445,7 +445,8 @@ func _toggle_vehicle_use() -> void:
 		vehicle_interaction_button.visible = true
 
 func _recover_vehicle_occupancy() -> void:
-	# لا تترك حالة الركوب عالقة إذا حُذفت السيارة أو اللاعب أثناء القيادة.
+	# لا تترك حالة الركوب أو متابعة الموقع عالقة إذا حُذفت السيارة أو اللاعب.
+	_clear_shared_location_vehicle_follow()
 	var player := get_node_or_null("Player") as CharacterBody3D
 	if is_instance_valid(city_vehicle):
 		city_vehicle.call("set_drive", false)
@@ -480,12 +481,8 @@ func _recover_vehicle_occupancy() -> void:
 func _exit_player_vehicle() -> void:
 	if not vehicle_occupied:
 		return
-	if _shared_location_vehicle_following and is_instance_valid(city_vehicle):
-		city_vehicle.call("clear_auto_navigation_controls")
-		_shared_location_vehicle_following = false
-		_shared_location_vehicle_route = PackedVector3Array()
-		if is_instance_valid(get_node_or_null("MissionManager")):
-			get_node("MissionManager").call("hide_shared_location_marker")
+	# النزول من المركبة ينهي متابعة الموقع بالكامل قبل تبديل وسيلة الحركة.
+	_clear_shared_location_vehicle_follow()
 	var player := get_node_or_null("Player") as CharacterBody3D
 	if not is_instance_valid(player) or not is_instance_valid(city_vehicle):
 		return
