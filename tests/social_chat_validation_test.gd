@@ -107,7 +107,7 @@ func _run_social_validation_tests() -> void:
 			var deck_rail_shape := deck_rail_body.get_node_or_null("CollisionShape3D") as CollisionShape3D if is_instance_valid(deck_rail_body) else null
 			var gold_rail := mountain_route_probe.get_node_or_null("MountainViewDeck%sGoldRail_%d" % [rail_suffix, stop_number]) as MeshInstance3D
 			if not is_instance_valid(deck_rail) or not is_instance_valid(deck_rail_body) or not is_instance_valid(deck_rail_shape) or not is_instance_valid(gold_rail):
-				push_error("Mountain scenic viewpoint is missing a solid guarded edge or gold rail: " + deck_rail_name)
+				push_error("Mountain scenic viewpoint assembly incomplete: %s visual=%s body=%s shape=%s gold=%s" % [deck_rail_name, is_instance_valid(deck_rail), is_instance_valid(deck_rail_body), is_instance_valid(deck_rail_shape), is_instance_valid(gold_rail)])
 				quit(1)
 				return
 			if (deck_rail_body.collision_mask & 6) != 6:
