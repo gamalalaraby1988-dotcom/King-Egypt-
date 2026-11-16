@@ -594,10 +594,10 @@ func _build_party_station_popup() -> void:
 	party_station_popup.anchor_right = 0.5
 	party_station_popup.anchor_top = 0.5
 	party_station_popup.anchor_bottom = 0.5
-	party_station_popup.offset_left = -125
-	party_station_popup.offset_right = 125
-	party_station_popup.offset_top = -70
-	party_station_popup.offset_bottom = 70
+	party_station_popup.offset_left = -120
+	party_station_popup.offset_right = 120
+	party_station_popup.offset_top = -54
+	party_station_popup.offset_bottom = 54
 	party_station_popup.visible = false
 	party_station_popup.mouse_filter = Control.MOUSE_FILTER_STOP
 	var panel_style := StyleBoxFlat.new()
@@ -605,45 +605,45 @@ func _build_party_station_popup() -> void:
 	panel_style.border_color = Color(0.88, 0.68, 0.30, 0.98)
 	panel_style.set_border_width_all(1)
 	panel_style.set_corner_radius_all(12)
-	panel_style.content_margin_left = 8
-	panel_style.content_margin_right = 8
-	panel_style.content_margin_top = 6
-	panel_style.content_margin_bottom = 6
+	panel_style.content_margin_left = 6
+	panel_style.content_margin_right = 6
+	panel_style.content_margin_top = 4
+	panel_style.content_margin_bottom = 4
 	party_station_popup.add_theme_stylebox_override("panel", panel_style)
 	root.add_child(party_station_popup)
 	var content := VBoxContainer.new()
-	content.add_theme_constant_override("separation", 4)
+	content.add_theme_constant_override("separation", 2)
 	party_station_popup.add_child(content)
 	var heading_row := HBoxContainer.new()
 	content.add_child(heading_row)
 	var heading := Label.new()
 	heading.text = "♫ حفلة ملكية"
 	heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	heading.add_theme_font_size_override("font_size", 14)
+	heading.add_theme_font_size_override("font_size", 12)
 	heading.add_theme_color_override("font_color", Color(1.0, 0.82, 0.42))
 	heading.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	heading_row.add_child(heading)
 	var close := Button.new()
 	close.text = "×"
-	close.custom_minimum_size = Vector2(25, 24)
+	close.custom_minimum_size = Vector2(20, 20)
 	close.pressed.connect(close_party_station_window)
 	heading_row.add_child(close)
 	var price := Label.new()
 	price.text = "150 جوهرة  •  15 ثانية"
 	price.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	price.add_theme_font_size_override("font_size", 12)
+	price.add_theme_font_size_override("font_size", 10)
 	price.add_theme_color_override("font_color", Color(1.0, 0.84, 0.48))
 	content.add_child(price)
 	party_station_start_button = Button.new()
 	party_station_start_button.text = "إقامة حفلة"
-	party_station_start_button.custom_minimum_size.y = 32
+	party_station_start_button.custom_minimum_size.y = 27
 	party_station_start_button.disabled = true
 	party_station_start_button.tooltip_text = "تفعيل الحفلات ينتظر ربط خدمة الحفلات الخادمية."
 	content.add_child(party_station_start_button)
 	party_station_status = Label.new()
-	party_station_status.text = "التشغيل غير متاح حاليًا"
+	party_station_status.text = "الخدمة غير متصلة حاليًا"
 	party_station_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	party_station_status.add_theme_font_size_override("font_size", 9)
+	party_station_status.add_theme_font_size_override("font_size", 8)
 	party_station_status.add_theme_color_override("font_color", Color(1.0, 0.88, 0.68))
 	content.add_child(party_station_status)
 
