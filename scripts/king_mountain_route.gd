@@ -105,14 +105,22 @@ func _build_turn_guard_connectors() -> void:
 			var guard_name := "MountainTurnGuardConnector_%02d_%s" % [i, "L" if side_sign < 0.0 else "R"]
 			if get_node_or_null(guard_name + "Collision") != null:
 				continue
-			_add_oriented_box(
-				guard_name,
-				Vector3(0.56, 1.35, connector.length() + 0.35),
-				center,
-				basis,
-				Color(0.48, 0.40, 0.31),
-				true
-			)
+			var guard_size := Vector3(0.56, 1.35, connector.length() + 0.35)
+			var guard_color := Color(0.48, 0.40, 0.31)
+			# Build the visual and its collider explicitly here. This avoids relying on
+			# the generic box helper to create a separately named collision child.
+			_add_oriented_box(guard_name, guard_size, center, basis, guard_color, false)
+			var guard_body := StaticBody3D.new()
+			guard_body.name = guard_name + "Collision"
+			CityCollisionProfile.apply_world_collision(guard_body)
+			var guard_shape_node := CollisionShape3D.new()
+			guard_shape_node.name = "CollisionShape3D"
+			var guard_shape := BoxShape3D.new()
+			guard_shape.size = guard_size
+			guard_shape_node.shape = guard_shape
+			guard_body.transform = Transform3D(basis, center)
+			guard_body.add_child(guard_shape_node)
+			add_child(guard_body)
 
 
 func _build_turn_aprons() -> void:
