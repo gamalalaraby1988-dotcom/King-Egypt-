@@ -143,6 +143,21 @@ func _run_social_validation_tests() -> void:
 		push_error("Off-route recalculation did not preserve the validated shared-location destination.")
 		quit(1)
 		return
+	# تحديث التوجيه بعد الابتعاد يجب أن يعيد بناء المسار ويعرض إشعار إعادة الحساب فقط عند النجاح.
+	player_probe.global_position = Vector3(24.0, 0.0, 24.0)
+	route_probe.set("landmark_navigation_target", Vector3(48.0, 0.0, 48.0))
+	route_probe.set("landmark_navigation_key", "shared_location")
+	route_probe.set("landmark_navigation_active", true)
+	route_probe.set("landmark_route_points", PackedVector3Array([Vector3.ZERO, Vector3(1.0, 0.0, 1.0)]))
+	route_probe.set("landmark_route_index", 1)
+	route_probe.set("navigation_off_route_time", 1.25)
+	route_probe.call("_update_landmark_route_deviation")
+	var rerouted_points: PackedVector3Array = route_probe.get("landmark_route_points")
+	if not bool(route_probe.get("landmark_navigation_active")) or rerouted_points.size() < 2 or rerouted_points[rerouted_points.size() - 1].distance_to(Vector3(48.0, 0.0, 48.0)) > 0.1 or float(route_probe.get("navigation_route_notice_remaining")) <= 0.0:
+		push_error("A successful off-route update did not rebuild the safe route and show its recalculation notice.")
+		quit(1)
+		return
+	player_probe.global_position = Vector3.ZERO
 	# فشل إعادة حساب المسار يجب أن يلغي المتابعة دون عرض إشعار نجاح إعادة التوجيه.
 	marker_probe.visible = true
 	route_probe.set("landmark_navigation_target", Vector3(300.0, 0.0, 0.0))
