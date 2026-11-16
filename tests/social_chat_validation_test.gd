@@ -130,11 +130,16 @@ func _run_social_validation_tests() -> void:
 		var rest_sign_body := mountain_route_probe.get_node_or_null("MountainRestSignBoard_%dCollision" % stop_number) as StaticBody3D
 		var rest_sign_shape := rest_sign_body.get_node_or_null("CollisionShape3D") as CollisionShape3D if is_instance_valid(rest_sign_body) else null
 		var rest_sign_label := mountain_route_probe.get_node_or_null("MountainRestSignLabel_%d" % stop_number) as Label3D
-		if not is_instance_valid(rest_sign) or not is_instance_valid(rest_sign_body) or not is_instance_valid(rest_sign_shape) or not rest_sign_shape.shape is BoxShape3D or not is_instance_valid(rest_sign_label) or rest_sign_label.text != "استراحة %d" % (stop_number + 1):
+		if not is_instance_valid(rest_sign) or not is_instance_valid(rest_sign_body) or not is_instance_valid(rest_sign_shape) or not rest_sign_shape.shape is BoxShape3D or not is_instance_valid(rest_sign_label) or rest_sign_label.text != "استراحة %d\nتابع الصعود للقمة" % (stop_number + 1):
 			push_error("Mountain rest stop is missing its labeled physical sign: %d" % stop_number)
 			quit(1)
 			return
 	for stop_number in range(2):
+		var rest_sign_glow := mountain_route_probe.get_node_or_null("MountainRestSignGlow_%d" % stop_number) as OmniLight3D
+		if not is_instance_valid(rest_sign_glow) or rest_sign_glow.light_energy < 0.5 or rest_sign_glow.omni_range < 5.0:
+			push_error("Mountain rest direction sign is missing its warm visibility light: %d" % stop_number)
+			quit(1)
+			return
 		var rest_glow := mountain_route_probe.get_node_or_null("MountainRestGlow_%d" % stop_number) as OmniLight3D
 		if not is_instance_valid(rest_glow) or rest_glow.light_energy <= 0.0 or rest_glow.omni_range < 5.0:
 			push_error("Mountain rest stop is missing its warm navigation light: %d" % stop_number)
