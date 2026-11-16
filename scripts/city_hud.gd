@@ -2491,6 +2491,7 @@ func _on_social_operation_completed(action: String, data: Variant) -> void:
 			SocialChatManager.list_friends()
 		"friends_list":
 			if data is Array:
+				_render_friends_phone_list(data)
 				_sync_selected_player_friend_state(data)
 			if data is Array and is_instance_valid(group_invite_popup) and group_invite_popup.visible:
 				_refresh_group_invite_friends(data)
