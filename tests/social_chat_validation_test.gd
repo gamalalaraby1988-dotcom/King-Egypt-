@@ -21,6 +21,15 @@ func _run_social_validation_tests() -> void:
 		push_error("A valid in-city shared-location scooter route was not built from road waypoints.")
 		quit(1)
 		return
+	for route_index in range(1, valid_shared_route.size()):
+		var previous_point: Vector3 = valid_shared_route[route_index - 1]
+		var current_point: Vector3 = valid_shared_route[route_index]
+		var delta_x := absf(current_point.x - previous_point.x)
+		var delta_z := absf(current_point.z - previous_point.z)
+		if delta_x > 0.1 and delta_z > 0.1:
+			push_error("A shared-location scooter route contains a diagonal road segment instead of following the city grid.")
+			quit(1)
+			return
 	var far_shared_route: PackedVector3Array = route_probe.call("build_shared_location_route_from", Vector3.ZERO, Vector3(200.0, 0.0, 0.0))
 	if not far_shared_route.is_empty():
 		push_error("A shared-location scooter route accepted a destination far outside the city road network.")
