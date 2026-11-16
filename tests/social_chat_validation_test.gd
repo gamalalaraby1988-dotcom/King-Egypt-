@@ -413,7 +413,8 @@ func _run_social_validation_tests() -> void:
 	# بدء مهمة أو وظيفة أثناء متابعة الاسكوتر يجب أن ينهي المتابعة ويوقف المحرك.
 	for activity_case in [
 		{"mission_running": true, "job_running": false},
-		{"mission_running": false, "job_running": true}
+		{"mission_running": false, "job_running": true},
+		{"mission_running": true, "job_running": true}
 	]:
 		route_probe.set("mission_running", bool(activity_case["mission_running"]))
 		route_probe.set("job_running", bool(activity_case["job_running"]))
