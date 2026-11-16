@@ -73,6 +73,19 @@ func _run_social_validation_tests() -> void:
 		push_error("Route deviation validation failed while checking the remaining route segments.")
 		quit(1)
 		return
+	if bool(route_probe.call("is_position_near_shared_location_route", Vector3(INF, 0.0, 0.0), route_deviation_probe, 0, 8.0)):
+		push_error("Non-finite vehicle positions must never pass route deviation validation.")
+		quit(1)
+		return
+	var single_point_route := PackedVector3Array([Vector3(4.0, 0.0, 4.0)])
+	if not bool(route_probe.call("is_position_near_shared_location_route", Vector3(5.0, 0.0, 4.0), single_point_route, 0, 2.0)):
+		push_error("A one-point route should validate nearby positions without indexing a missing segment.")
+		quit(1)
+		return
+	if bool(route_probe.call("is_position_near_shared_location_route", Vector3(8.0, 0.0, 4.0), single_point_route, 0, 2.0)):
+		push_error("A one-point route should reject positions outside its allowed deviation.")
+		quit(1)
+		return
 	# افحص وصلات شبكة الطرق فقط؛ الوصلتان من/إلى الموقع قد تكونان مائلتين داخل الساحة الجانبية.
 	for route_index in range(1, valid_shared_route.size() - 2):
 		var previous_point: Vector3 = valid_shared_route[route_index - 1]
