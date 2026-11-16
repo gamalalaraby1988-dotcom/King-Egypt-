@@ -24,8 +24,10 @@ static func add_staff_collider(parent: Node3D, radius: float = 0.34, height: flo
 	var existing := parent.get_node_or_null("StaffCollisionBody") as StaticBody3D
 	if is_instance_valid(existing):
 		return existing
+	parent.add_to_group("city_world_geometry")
 	var body := StaticBody3D.new()
 	body.name = "StaffCollisionBody"
+	body.add_to_group("city_world_geometry")
 	body.collision_layer = STAFF_LAYER
 	body.collision_mask = STAFF_MASK
 	var collision_shape := CollisionShape3D.new()
