@@ -55,8 +55,8 @@ func _run_social_validation_tests() -> void:
 	var mountain_route_script: Script = load("res://scripts/king_mountain_route.gd")
 	var mountain_route_probe := Node3D.new()
 	mountain_route_probe.set_script(mountain_route_script)
-	root.add_child(mountain_route_probe)
-	await process_frame
+	# Call the builder directly: this validates generated geometry without relying on SceneTree _ready timing.
+	mountain_route_probe.call("_build_turn_guard_connectors")
 	for turn_index in range(1, 5):
 		for side_name in ["L", "R"]:
 			var connector_name := "MountainTurnGuardConnector_%02d_%sCollision" % [turn_index, side_name]
@@ -66,8 +66,7 @@ func _run_social_validation_tests() -> void:
 				push_error("Mountain route bend is missing a solid guard connector: " + connector_name)
 				quit(1)
 				return
-	mountain_route_probe.queue_free()
-	await process_frame
+	mountain_route_probe.free()
 	print("SOCIAL_TEST_STAGE: mountain_turn_guard_connectors_complete")
 	# City collision contract: players and vehicles ignore each other, but both
 	# collide with static world geometry and solid service staff.
