@@ -1330,6 +1330,11 @@ func _nearest_city_road_node(position_3d: Vector3) -> Vector2:
 	return best
 
 func _append_grid_route(start_node: Vector2, target_node: Vector2) -> void:
+	for node in _find_grid_route(start_node, target_node):
+		landmark_route_points.append(Vector3(node.x, 0.0, node.y))
+
+
+func _find_grid_route(start_node: Vector2, target_node: Vector2) -> Array[Vector2]:
 	var nodes: Array[Vector2] = []
 	for road_x in CITY_ROAD_COORDS:
 		for road_z in CITY_ROAD_COORDS:
@@ -1363,12 +1368,29 @@ func _append_grid_route(start_node: Vector2, target_node: Vector2) -> void:
 				previous[neighbor] = current
 	var reversed_path: Array[Vector2] = [target_node]
 	var cursor := target_node
-	while cursor != start_node and previous.has(cursor):
+	while cursor != start_node:
+		if not previous.has(cursor):
+			return []
 		cursor = previous[cursor]
 		reversed_path.append(cursor)
 	reversed_path.reverse()
-	for node in reversed_path:
-		landmark_route_points.append(Vector3(node.x, 0.0, node.y))
+	return reversed_path
+
+
+func build_shared_location_route_from(start_position: Vector3, destination: Vector3) -> PackedVector3Array:
+	var points := PackedVector3Array()
+	var start_node := _nearest_city_road_node(start_position)
+	var target_node := _nearest_city_road_node(destination)
+	points.append(Vector3(start_position.x, 0.0, start_position.z))
+	points.append(Vector3(start_node.x, 0.0, start_node.y))
+	for node in _find_grid_route(start_node, target_node):
+		points.append(Vector3(node.x, 0.0, node.y))
+	points.append(Vector3(destination.x, 0.0, destination.z))
+	var compact := PackedVector3Array()
+	for point in points:
+		if compact.is_empty() or compact[compact.size() - 1].distance_to(point) > 0.5:
+			compact.append(point)
+	return compact
 
 func _route_points_length(points: PackedVector3Array) -> float:
 	var total := 0.0

@@ -30,6 +30,8 @@ var showroom_layer: CanvasLayer = null
 var vehicle_occupied := false
 var _shared_location_vehicle_following := false
 var _shared_location_vehicle_target := Vector3.ZERO
+var _shared_location_vehicle_route := PackedVector3Array()
+var _shared_location_vehicle_route_index := 0
 var _vehicle_key_was_down := false
 var _player_saved_collision_layer := 1
 var _player_saved_collision_mask := 1
@@ -334,11 +336,17 @@ func begin_shared_location_navigation(destination: Vector3) -> bool:
 	if vehicle_occupied:
 		if not is_instance_valid(city_vehicle) or not city_vehicle.has_method("set_auto_navigation_controls"):
 			return false
+		var mission_manager := get_node_or_null("MissionManager")
+		if not is_instance_valid(mission_manager) or not mission_manager.has_method("build_shared_location_route_from"):
+			return false
+		_shared_location_vehicle_route = mission_manager.call("build_shared_location_route_from", city_vehicle.global_position, destination)
+		if _shared_location_vehicle_route.size() < 2:
+			return false
 		_shared_location_vehicle_target = destination
+		_shared_location_vehicle_route_index = 0
 		_shared_location_vehicle_following = true
-		if is_instance_valid(get_node_or_null("MissionManager")):
-			get_node("MissionManager").call("show_shared_location_marker", destination)
-		city_vehicle.call("set_auto_navigation_controls", 2.8, 0.0)
+		mission_manager.call("show_shared_location_marker", destination)
+		city_vehicle.call("set_auto_navigation_controls", 0.0, 0.0)
 		return true
 	var mission_manager := get_node_or_null("MissionManager")
 	if not is_instance_valid(mission_manager) or not mission_manager.has_method("navigate_to_landmark"):
@@ -351,27 +359,36 @@ func _update_shared_location_vehicle_follow() -> void:
 		return
 	if not vehicle_occupied or not is_instance_valid(city_vehicle):
 		_shared_location_vehicle_following = false
+		_shared_location_vehicle_route = PackedVector3Array()
 		return
 	if bool(city_vehicle.get("auto_navigation_interrupted")):
 		city_vehicle.call("clear_auto_navigation_controls")
 		_shared_location_vehicle_following = false
+		_shared_location_vehicle_route = PackedVector3Array()
 		if is_instance_valid(get_node_or_null("MissionManager")):
 			get_node("MissionManager").call("hide_shared_location_marker")
 		return
-	var direction := _shared_location_vehicle_target - city_vehicle.global_position
-	direction.y = 0.0
-	if direction.length() <= 2.5:
+	while _shared_location_vehicle_route_index < _shared_location_vehicle_route.size():
+		var waypoint: Vector3 = _shared_location_vehicle_route[_shared_location_vehicle_route_index]
+		var waypoint_delta := waypoint - city_vehicle.global_position
+		waypoint_delta.y = 0.0
+		if waypoint_delta.length() > 3.0:
+			break
+		_shared_location_vehicle_route_index += 1
+	if _shared_location_vehicle_route_index >= _shared_location_vehicle_route.size():
 		city_vehicle.call("clear_auto_navigation_controls")
 		_shared_location_vehicle_following = false
+		_shared_location_vehicle_route = PackedVector3Array()
 		if is_instance_valid(get_node_or_null("MissionManager")):
 			get_node("MissionManager").call("hide_shared_location_marker")
 		return
+	var direction: Vector3 = _shared_location_vehicle_route[_shared_location_vehicle_route_index] - city_vehicle.global_position
+	direction.y = 0.0
 	var desired_angle := atan2(direction.x, -direction.z)
 	var heading_error := wrapf(desired_angle - city_vehicle.global_rotation.y, -PI, PI)
 	var steering := clampf(heading_error * 1.15, -1.0, 1.0)
 	var speed := 2.8 if absf(heading_error) < 0.85 else 1.6
 	city_vehicle.call("set_auto_navigation_controls", speed, steering)
-
 
 func _toggle_vehicle_use() -> void:
 	if interior_transition_busy or is_instance_valid(interior_root):
@@ -456,6 +473,7 @@ func _exit_player_vehicle() -> void:
 	if _shared_location_vehicle_following and is_instance_valid(city_vehicle):
 		city_vehicle.call("clear_auto_navigation_controls")
 		_shared_location_vehicle_following = false
+		_shared_location_vehicle_route = PackedVector3Array()
 		if is_instance_valid(get_node_or_null("MissionManager")):
 			get_node("MissionManager").call("hide_shared_location_marker")
 	var player := get_node_or_null("Player") as CharacterBody3D
