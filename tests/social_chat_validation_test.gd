@@ -17,8 +17,8 @@ func _run_social_validation_tests() -> void:
 		quit(1)
 	)
 	print("SOCIAL_TEST_STAGE: autoload_ready")
-	var main_script: Script = load("res://scripts/main.gd")
-	if main_script == null or not main_script.is_position_inside_city_bounds(Vector3(0, 0, 0)) or not main_script.is_position_inside_city_bounds(Vector3(60, 0, 75)) or main_script.is_position_inside_city_bounds(Vector3(1000, 0, 1000)) or main_script.is_position_inside_city_bounds(Vector3(91, 0, 0)):
+	var city_bounds_script: Script = load("res://scripts/main.gd")
+	if city_bounds_script == null or not city_bounds_script.is_position_inside_city_bounds(Vector3(0, 0, 0)) or not city_bounds_script.is_position_inside_city_bounds(Vector3(60, 0, 75)) or city_bounds_script.is_position_inside_city_bounds(Vector3(1000, 0, 1000)) or city_bounds_script.is_position_inside_city_bounds(Vector3(91, 0, 0)):
 		push_error("Vehicle summon city-boundary visibility rules are incorrect.")
 		quit(1)
 		return
