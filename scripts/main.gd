@@ -1403,6 +1403,8 @@ func _material(color: Color) -> StandardMaterial3D:
 	material.roughness = 0.9
 	return material
 
+const CityCollisionProfile = preload("res://scripts/city_collision_profile.gd")
+
 func _create_box(parent: Node3D, name: String, size: Vector3, pos: Vector3, color: Color, collision: bool = false) -> void:
 	var mesh_instance := MeshInstance3D.new()
 	mesh_instance.name = name
@@ -1416,6 +1418,7 @@ func _create_box(parent: Node3D, name: String, size: Vector3, pos: Vector3, colo
 	if collision:
 		var body := StaticBody3D.new()
 		body.name = name + "Collision"
+		CityCollisionProfile.apply_world_collision(body)
 		body.add_to_group("city_world_geometry")
 		var shape_node := CollisionShape3D.new()
 		var shape := BoxShape3D.new()
