@@ -1313,6 +1313,35 @@ func _create_interior_exit_marker(root: Node3D) -> void:
 	exit_marker.position = Vector3(0, 0, 5.7)
 	exit_marker.add_to_group("interior_exit_interactables")
 	root.add_child(exit_marker)
+	# بوابة خروج مرئية تساعد اللاعب على اكتشاف نقطة فتح التنقل السريع.
+	# العناصر زخرفية بلا تصادم حتى لا تسد مسار اللاعب.
+	var portal_gold := Color(0.91, 0.69, 0.28)
+	_create_box(exit_marker, "ExitGateLeftPillar", Vector3(0.22, 2.9, 0.24), Vector3(-1.05, 1.45, 0.0), portal_gold)
+	_create_box(exit_marker, "ExitGateRightPillar", Vector3(0.22, 2.9, 0.24), Vector3(1.05, 1.45, 0.0), portal_gold)
+	_create_box(exit_marker, "ExitGateLintel", Vector3(2.32, 0.24, 0.24), Vector3(0.0, 2.92, 0.0), portal_gold)
+	_create_box(exit_marker, "ExitGateThreshold", Vector3(2.1, 0.08, 0.85), Vector3(0.0, 0.05, 0.12), portal_gold)
+	var portal := MeshInstance3D.new()
+	portal.name = "ExitGateGlow"
+	var portal_mesh := BoxMesh.new()
+	portal_mesh.size = Vector3(1.82, 2.62, 0.035)
+	portal.mesh = portal_mesh
+	portal.position = Vector3(0.0, 1.43, 0.02)
+	var portal_material := StandardMaterial3D.new()
+	portal_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	portal_material.albedo_color = Color(0.42, 0.66, 0.92, 0.16)
+	portal_material.emission_enabled = true
+	portal_material.emission = Color(0.22, 0.48, 0.82)
+	portal_material.emission_energy_multiplier = 0.65
+	portal.material_override = portal_material
+	exit_marker.add_child(portal)
+	var exit_label := Label3D.new()
+	exit_label.name = "ExitGateLabel"
+	exit_label.text = "🚪  التنقل والخروج"
+	exit_label.position = Vector3(0.0, 3.45, 0.0)
+	exit_label.font_size = 32
+	exit_label.pixel_size = 0.012
+	exit_label.modulate = Color(1.0, 0.88, 0.60)
+	exit_marker.add_child(exit_label)
 
 func _create_interior_staff(root: Node3D, building_title: String) -> void:
 	# الشقة ملكية خاصة؛ لا يظهر فيها موظف خدمة افتراضي.
