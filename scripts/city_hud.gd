@@ -2299,7 +2299,10 @@ func _on_social_operation_completed(action: String, data: Variant) -> void:
 				for member in data:
 					if member is Dictionary:
 						active_group_id = str(member.get("group_id", active_group_id))
-						group_members.append({"player_id": str(member.get("player_code", "")), "display_name": str(member.get("display_name", "لاعب")), "is_leader": bool(member.get("is_leader", false))})
+						var member_code := str(member.get("player_code", "")).strip_edges().to_upper()
+						if not member_code.is_empty():
+							pending_group_invites.erase(member_code)
+						group_members.append({"player_id": member_code, "display_name": str(member.get("display_name", "لاعب")), "is_leader": bool(member.get("is_leader", false))})
 			SocialChatManager.subscribe_group_chat(active_group_id)
 			if group_members.is_empty():
 				group_members = [{"player_id":"local_leader", "display_name":"أنت", "is_leader":true}]
@@ -2324,10 +2327,14 @@ func _on_social_operation_completed(action: String, data: Variant) -> void:
 			_pending_group_invite_code = ""
 			social_chat_status.text = "نتيجة دعوة المجموعة: " + str(data)
 			group_invite_status.text = "تم إرسال طلب الدعوة إلى الخادم." if str(data) == "sent" else "رد الخادم: " + str(data)
+			if str(data) != "sent" and not completed_group_invite_code.is_empty():
+				pending_group_invites.erase(completed_group_invite_code)
 			if not completed_group_invite_code.is_empty() and selected_player_id == completed_group_invite_code:
-				player_action_status.text = "تم إرسال دعوة المجموعة. ينتظر انضمام اللاعب بعد قبولها." if str(data) == "sent" else "نتيجة دعوة المجموعة: " + str(data)
+				player_action_status.text = "تم إرسال دعوة المجموعة. ينتظر انضمام اللاعب بعد قبولها." if str(data) == "sent" else "لم تُرسل الدعوة: " + str(data)
 				player_primary_action_button.disabled = str(data) == "sent"
 				player_primary_action_button.text = "تم إرسال الدعوة" if str(data) == "sent" else "دعوة للمجموعة"
+			_refresh_group_popup()
+			_refresh_group_invite_friends(_group_invite_friends_cache)
 			SocialChatManager.get_chat_group()
 		"group_invite_response":
 			social_chat_status.text = "نتيجة الرد على الدعوة: " + str(data)
