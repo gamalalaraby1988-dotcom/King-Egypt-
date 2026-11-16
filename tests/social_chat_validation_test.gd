@@ -510,6 +510,34 @@ func _run_social_validation_tests() -> void:
 		push_error("Shared-location routing did not recognize the explicit public and group channels.")
 		quit(1)
 		return
+	var location_button_probe := Button.new()
+	city_hud.set("social_chat_location_button", location_button_probe)
+	city_hud.set("social_chat_channel", "الأصدقاء")
+	city_hud.set("selected_friend_conversation_id", "")
+	city_hud.call("_update_shared_location_button_state")
+	if not location_button_probe.disabled:
+		push_error("The location-share button stayed enabled without an open direct conversation.")
+		quit(1)
+		return
+	city_hud.set("selected_friend_conversation_id", "conversation-123")
+	city_hud.call("_update_shared_location_button_state")
+	if location_button_probe.disabled:
+		push_error("The location-share button stayed disabled after a valid direct conversation was selected.")
+		quit(1)
+		return
+	city_hud.set("social_chat_channel", "غير معروف")
+	city_hud.call("_update_shared_location_button_state")
+	if not location_button_probe.disabled:
+		push_error("The location-share button stayed enabled for an unsupported chat channel.")
+		quit(1)
+		return
+	city_hud.set("social_chat_channel", "العامة")
+	city_hud.call("_update_shared_location_button_state")
+	if location_button_probe.disabled:
+		push_error("The location-share button was disabled in the explicit public channel.")
+		quit(1)
+		return
+	location_button_probe.free()
 	var location_message: String = city_hud.build_shared_location_message(Vector3(12.5, 0.0, -34.25))
 	var parsed_location: Dictionary = city_hud.parse_shared_location_message(location_message)
 	if parsed_location.is_empty() or (parsed_location["position"] as Vector3).distance_to(Vector3(12.5, 0.0, -34.25)) > 0.01:
