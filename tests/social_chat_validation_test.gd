@@ -233,6 +233,25 @@ func _run_social_validation_tests() -> void:
 		push_error("A public party chat line allowed user-controlled BBCode brackets.")
 		quit(1)
 		return
+	var location_message: String = city_hud.build_shared_location_message(Vector3(12.5, 0.0, -34.25))
+	var parsed_location: Dictionary = city_hud.parse_shared_location_message(location_message)
+	if parsed_location.is_empty() or (parsed_location["position"] as Vector3).distance_to(Vector3(12.5, 0.0, -34.25)) > 0.01:
+		push_error("A shared location message did not preserve the sender's in-city coordinates.")
+		quit(1)
+		return
+	var location_chat_line: String = city_hud.format_public_chat_message("صديق", location_message)
+	if not location_chat_line.contains("📍") or not location_chat_line.contains("متابعة") or not location_chat_line.contains("kingloc://"):
+		push_error("A shared location chat message did not render a clickable follow action.")
+		quit(1)
+		return
+	if not city_hud.parse_shared_location_uri("kingloc://12.5,0,-34.25").has("position"):
+		push_error("A shared location follow link could not be parsed.")
+		quit(1)
+		return
+	if not city_hud.parse_shared_location_message("KINGLOC1|9999|0|9999").is_empty():
+		push_error("An out-of-bounds shared location was accepted.")
+		quit(1)
+		return
 	if city_hud.can_receive_social_invitation_event("group_meeting_invite") or city_hud.can_receive_social_invitation_event("apartment_invite"):
 		push_error("An unsupported gather or apartment invitation event was allowed into the invitation overlay.")
 		quit(1)

@@ -65,6 +65,10 @@ var social_chat_panel: PanelContainer
 var social_chat_log: RichTextLabel
 var social_chat_input: LineEdit
 var social_chat_status: Label
+var social_chat_location_button: Button
+var shared_location_direction_arrow: Label
+var shared_location_follow_active := false
+var shared_location_follow_target := Vector3.ZERO
 var social_chat_channel := "العامة"
 var social_chat_unread := false
 var social_friends_box: VBoxContainer
@@ -130,6 +134,7 @@ func _ready() -> void:
 	_build_group_invite_popup()
 	_build_group_chat_popup()
 	_build_social_chat_panel()
+	_build_shared_location_direction_arrow()
 	_build_invitation_overlay()
 	_build_moderation_panel()
 	if not SocialChatManager.operation_completed.is_connected(_on_social_operation_completed):
@@ -155,6 +160,7 @@ func _process(_delta: float) -> void:
 	if _apartment_invite_mode and not _is_inside_private_apartment():
 		_apartment_invite_mode = false
 	_update_group_gather_visibility()
+	_update_shared_location_direction_arrow()
 
 func _build() -> void:
 	root = Control.new()
@@ -1108,13 +1114,145 @@ func build_party_announcement_body(location_name: String) -> String:
 		clean_location = "المدينة"
 	return "🎉 بدأت حفلة جديدة في %s! تعالوا شاركونا." % clean_location
 
+func build_shared_location_message(position: Vector3) -> String:
+	if absf(position.x) > 250.0 or absf(position.z) > 250.0 or position.y < -10.0 or position.y > 100.0:
+		return ""
+	return "KINGLOC1|%s|%s|%s" % [str(snappedf(position.x, 0.001)), str(snappedf(position.y, 0.001)), str(snappedf(position.z, 0.001))]
+
+
+func parse_shared_location_message(message_body: String) -> Dictionary:
+	var parts := message_body.strip_edges().split("|", false)
+	if parts.size() != 4 or parts[0] != "KINGLOC1":
+		return {}
+	for index in range(1, 4):
+		if not parts[index].is_valid_float():
+			return {}
+	var location := Vector3(float(parts[1]), float(parts[2]), float(parts[3]))
+	if absf(location.x) > 250.0 or absf(location.z) > 250.0 or location.y < -10.0 or location.y > 100.0:
+		return {}
+	return {"position": location}
+
+
+func parse_shared_location_uri(uri: String) -> Dictionary:
+	if not uri.begins_with("kingloc://"):
+		return {}
+	var coordinates := uri.trim_prefix("kingloc://").split(",", false)
+	if coordinates.size() != 3:
+		return {}
+	return parse_shared_location_message("KINGLOC1|%s|%s|%s" % [coordinates[0], coordinates[1], coordinates[2]])
+
+
 func format_public_chat_message(sender_name: String, message_body: String) -> String:
 	var clean_sender := sender_name.strip_edges().substr(0, 24)
 	if clean_sender.is_empty():
 		clean_sender = "لاعب"
-	var clean_body := message_body.strip_edges().replace("[", "(").replace("]", ")")
 	var safe_sender := clean_sender.replace("[", "(").replace("]", ")")
+	var location_data := parse_shared_location_message(message_body)
+	var clean_body := message_body.strip_edges().replace("[", "(").replace("]", ")")
+	if not location_data.is_empty():
+		var location: Vector3 = location_data["position"]
+		var location_uri := "kingloc://%s,%s,%s" % [str(snappedf(location.x, 0.001)), str(snappedf(location.y, 0.001)), str(snappedf(location.z, 0.001))]
+		clean_body = "📍 موقع مشترك — [url=%s]متابعة[/url]" % location_uri
 	return "[color=gold][" + safe_sender + "][/color] " + clean_body + "\n"
+
+
+func _build_shared_location_direction_arrow() -> void:
+	shared_location_direction_arrow = Label.new()
+	shared_location_direction_arrow.name = "SharedLocationDirectionArrow"
+	shared_location_direction_arrow.text = "➤"
+	shared_location_direction_arrow.anchor_left = 0.5
+	shared_location_direction_arrow.anchor_right = 0.5
+	shared_location_direction_arrow.anchor_top = 0.12
+	shared_location_direction_arrow.anchor_bottom = 0.12
+	shared_location_direction_arrow.offset_left = -9.0
+	shared_location_direction_arrow.offset_right = 9.0
+	shared_location_direction_arrow.offset_top = -9.0
+	shared_location_direction_arrow.offset_bottom = 9.0
+	shared_location_direction_arrow.add_theme_font_size_override("font_size", 13)
+	shared_location_direction_arrow.add_theme_color_override("font_color", Color(1.0, 0.78, 0.28))
+	shared_location_direction_arrow.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	shared_location_direction_arrow.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	shared_location_direction_arrow.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	shared_location_direction_arrow.visible = false
+	root.add_child(shared_location_direction_arrow)
+
+
+func _update_shared_location_direction_arrow() -> void:
+	if not is_instance_valid(shared_location_direction_arrow):
+		return
+	if not shared_location_follow_active:
+		shared_location_direction_arrow.visible = false
+		return
+	var actor: Node3D = main_scene.call("get_shared_location_navigation_actor") if is_instance_valid(main_scene) and main_scene.has_method("get_shared_location_navigation_actor") else null
+	if not is_instance_valid(actor):
+		shared_location_direction_arrow.visible = false
+		shared_location_follow_active = false
+		return
+	var delta := shared_location_follow_target - actor.global_position
+	delta.y = 0.0
+	if delta.length() <= 2.5:
+		shared_location_direction_arrow.visible = false
+		shared_location_follow_active = false
+		return
+	var camera := actor.get_node_or_null("CameraPivot/SpringArm3D/Camera3D") as Camera3D
+	if not is_instance_valid(camera):
+		camera = actor.get_node_or_null("VehicleCameraPivot/SpringArm3D/VehicleCamera") as Camera3D
+	if not is_instance_valid(camera):
+		shared_location_direction_arrow.visible = false
+		return
+	var forward := -camera.global_transform.basis.z
+	var right := camera.global_transform.basis.x
+	forward.y = 0.0
+	right.y = 0.0
+	forward = forward.normalized()
+	right = right.normalized()
+	var direction := delta.normalized()
+	var angle := atan2(direction.dot(right), direction.dot(forward))
+	shared_location_direction_arrow.rotation = angle - PI * 0.5
+	shared_location_direction_arrow.visible = true
+
+
+func _on_social_chat_meta_clicked(meta: Variant) -> void:
+	var location_data := parse_shared_location_uri(str(meta))
+	if location_data.is_empty():
+		return
+	var location: Vector3 = location_data["position"]
+	if not is_instance_valid(main_scene) or not main_scene.has_method("begin_shared_location_navigation"):
+		social_chat_status.text = "التوجيه إلى الموقع غير متاح حاليًا."
+		return
+	var started: bool = bool(main_scene.call("begin_shared_location_navigation", location))
+	if started:
+		shared_location_follow_target = location
+		shared_location_follow_active = true
+		social_chat_status.text = "بدأت متابعة الموقع. يمكنك إلغاء التوجيه من زر إلغاء الملاحة."
+	else:
+		social_chat_status.text = "تعذر بدء التوجيه؛ أوقف المهمة أو الوظيفة الحالية أولًا."
+
+
+func _share_current_location() -> void:
+	if not is_instance_valid(main_scene) or not main_scene.has_method("get_shared_location_navigation_actor"):
+		social_chat_status.text = "تعذر تحديد موقعك الحالي."
+		return
+	var actor: Node3D = main_scene.call("get_shared_location_navigation_actor")
+	if not is_instance_valid(actor):
+		social_chat_status.text = "تعذر تحديد موقعك الحالي."
+		return
+	var location_message := build_shared_location_message(actor.global_position)
+	if location_message.is_empty():
+		social_chat_status.text = "مشاركة الموقع متاحة داخل المدينة حاليًا."
+		return
+	var sent := false
+	if social_chat_channel == "الأصدقاء":
+		if selected_friend_conversation_id.is_empty():
+			social_chat_status.text = "اختر صديقًا أولًا لمشاركة موقعك."
+			return
+		sent = SocialChatManager.send_direct_message(selected_friend_conversation_id, location_message)
+	elif social_chat_channel == "المجموعة":
+		sent = SocialChatManager.send_chat_message("group", location_message)
+	else:
+		sent = SocialChatManager.send_chat_message("public", location_message)
+	if sent:
+		social_chat_status.text = "جارٍ إرسال موقعك إلى هذه المحادثة..."
 
 
 func announce_party_started_in_public_chat(station: Node3D) -> bool:
@@ -1436,20 +1574,32 @@ func _build_social_chat_panel() -> void:
 	conversation.add_child(social_group_invite_button)
 	social_chat_log = RichTextLabel.new()
 	social_chat_log.bbcode_enabled = true
+	social_chat_log.meta_clicked.connect(_on_social_chat_meta_clicked)
 	social_chat_log.scroll_following = true
 	social_chat_log.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	social_chat_log.text = "[color=gray]لا توجد رسائل متصلة بعد. ستظهر الرسائل عند ربط القناة بالخادم.[/color]"
 	conversation.add_child(social_chat_log)
+	var composer := HBoxContainer.new()
+	composer.add_theme_constant_override("separation", 4)
+	conversation.add_child(composer)
 	social_chat_input = LineEdit.new()
 	social_chat_input.placeholder_text = "اكتب رسالة..."
 	social_chat_input.add_theme_font_size_override("font_size", 12)
+	social_chat_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	social_chat_input.text_submitted.connect(_submit_social_chat_message)
-	conversation.add_child(social_chat_input)
+	composer.add_child(social_chat_input)
+	social_chat_location_button = Button.new()
+	social_chat_location_button.name = "ShareCurrentLocation"
+	social_chat_location_button.text = "📍"
+	social_chat_location_button.tooltip_text = "مشاركة موقعي في هذه المحادثة"
+	social_chat_location_button.custom_minimum_size = Vector2(38, 38)
+	social_chat_location_button.pressed.connect(_share_current_location)
+	composer.add_child(social_chat_location_button)
 	var send := Button.new()
 	send.text = "إرسال"
-	send.custom_minimum_size.y = 38
+	send.custom_minimum_size = Vector2(54, 38)
 	send.pressed.connect(func(): _submit_social_chat_message(social_chat_input.text))
-	conversation.add_child(send)
+	composer.add_child(send)
 
 	var emoji_row := HBoxContainer.new()
 	emoji_row.add_theme_constant_override("separation", 3)
@@ -1877,9 +2027,10 @@ func _on_social_operation_completed(action: String, data: Variant) -> void:
 				for item in ordered:
 					if not item is Dictionary:
 						continue
-					var sender := "أنت" if bool(item.get("sender_is_me", false)) else "الصديق"
-					var body := str(item.get("body", "")).replace("[", "(").replace("]", ")")
-					social_chat_log.append_text("[color=gold][" + sender + "][/color] " + body + "\n")
+					var sender := str(item.get("sender_name", "")).strip_edges()
+					if sender.is_empty():
+						sender = "أنت" if bool(item.get("sender_is_me", false)) else "الصديق"
+					social_chat_log.append_text(format_public_chat_message(sender, str(item.get("body", ""))))
 			social_chat_status.text = "محادثة الأصدقاء متصلة."
 		"direct_send":
 			if data is Array and not data.is_empty() and data[0] is Dictionary and bool(data[0].get("success", false)):

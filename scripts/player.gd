@@ -12,6 +12,9 @@ var mobile_sprint: bool = false
 var sitting := false
 var _sit_key_was_down := false
 var animal_riding := false
+var auto_navigation_active := false
+var auto_navigation_cancelled := false
+var auto_navigation_direction := Vector3.ZERO
 var ride_visual: Node3D = null
 @onready var camera_pivot: Node3D = $CameraPivot
 
@@ -26,6 +29,10 @@ func _physics_process(delta: float) -> void:
 	var input_vector := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
 	if mobile_move.length() > 0.08:
 		input_vector = mobile_move
+	if auto_navigation_active and input_vector.length() > 0.08:
+		auto_navigation_active = false
+		auto_navigation_cancelled = true
+		auto_navigation_direction = Vector3.ZERO
 	# أي إدخال حركة ينهي الجلوس فورًا، سواء من لوحة المفاتيح أو عصا الهاتف.
 	if sitting and input_vector.length() > 0.08:
 		sitting = false
@@ -51,6 +58,8 @@ func _physics_process(delta: float) -> void:
 	forward = forward.normalized()
 	right = right.normalized()
 	var world_direction := (right * direction.x + forward * -direction.z).normalized()
+	if auto_navigation_active and not auto_navigation_cancelled:
+		world_direction = auto_navigation_direction.normalized()
 	var running := Input.is_action_pressed("sprint") or mobile_sprint
 	var target_speed := (8.0 if running else 6.0) if animal_riding else (run_speed if running else walk_speed)
 	var target_velocity := world_direction * target_speed
@@ -70,6 +79,36 @@ func _physics_process(delta: float) -> void:
 	if planar_speed > 0.25:
 		motion_state = "run" if running else "walk"
 	_update_avatar_animation(motion_state, planar_speed)
+
+func begin_auto_navigation() -> bool:
+	if animal_riding:
+		return false
+	sitting = false
+	mobile_move = Vector2.ZERO
+	mobile_sprint = false
+	auto_navigation_cancelled = false
+	auto_navigation_active = true
+	auto_navigation_direction = Vector3.ZERO
+	return true
+
+
+func set_auto_navigation_direction(direction: Vector3) -> void:
+	if auto_navigation_active and not auto_navigation_cancelled:
+		auto_navigation_direction = Vector3(direction.x, 0.0, direction.z).normalized()
+
+
+func is_auto_navigation_cancelled() -> bool:
+	return auto_navigation_cancelled
+
+
+func end_auto_navigation() -> void:
+	auto_navigation_active = false
+	auto_navigation_cancelled = false
+	auto_navigation_direction = Vector3.ZERO
+	mobile_move = Vector2.ZERO
+	velocity.x = 0.0
+	velocity.z = 0.0
+
 
 func is_riding_animal() -> bool:
 	return animal_riding

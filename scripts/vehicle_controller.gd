@@ -13,6 +13,8 @@ var drive_pressed := false
 var brake_pressed := false
 var reverse_requested := false
 var steering_input := 0.0
+var auto_navigation_speed := -1.0
+var auto_navigation_interrupted := false
 
 func _physics_process(delta: float) -> void:
 	var target_speed := 0.0
@@ -21,8 +23,10 @@ func _physics_process(delta: float) -> void:
 		target_speed = 0.0
 	elif drive_pressed:
 		target_speed = -reverse_speed if reverse_requested else forward_speed
+	if auto_navigation_speed >= 0.0:
+		target_speed = auto_navigation_speed
 
-	var rate := braking if brake_pressed or not drive_pressed else acceleration
+	var rate := braking if brake_pressed or not drive_pressed or (auto_navigation_speed >= 0.0 and auto_navigation_speed <= 0.05) else acceleration
 	# السرعة المحلية للأمام هي المحور -Z.
 	var local_forward := -global_transform.basis.z
 	var desired := local_forward * target_speed
@@ -38,19 +42,49 @@ func _physics_process(delta: float) -> void:
 		velocity.y = 0.0
 	move_and_slide()
 
+func set_auto_navigation_controls(speed: float, steering: float) -> void:
+	auto_navigation_interrupted = false
+	auto_navigation_speed = clampf(speed, 0.0, 6.0)
+	drive_pressed = auto_navigation_speed > 0.05
+	brake_pressed = auto_navigation_speed <= 0.05
+	reverse_requested = false
+	steering_input = clampf(steering, -1.0, 1.0)
+
+
+func clear_auto_navigation_controls() -> void:
+	auto_navigation_speed = -1.0
+	drive_pressed = false
+	brake_pressed = true
+	reverse_requested = false
+	steering_input = 0.0
+	auto_navigation_interrupted = false
+
+
 func set_drive(value: bool) -> void:
+	if auto_navigation_speed >= 0.0:
+		auto_navigation_interrupted = true
+		auto_navigation_speed = -1.0
 	drive_pressed = value
 	if not value:
 		reverse_requested = false
 		steering_input = 0.0
 
 func set_brake(value: bool) -> void:
+	if auto_navigation_speed >= 0.0:
+		auto_navigation_interrupted = true
+		auto_navigation_speed = -1.0
 	brake_pressed = value
 	if value:
 		reverse_requested = false
 
 func set_reverse(value: bool) -> void:
+	if auto_navigation_speed >= 0.0:
+		auto_navigation_interrupted = true
+		auto_navigation_speed = -1.0
 	reverse_requested = value
 
 func set_steering(value: float) -> void:
+	if auto_navigation_speed >= 0.0:
+		auto_navigation_interrupted = true
+		auto_navigation_speed = -1.0
 	steering_input = clampf(value, -1.0, 1.0)

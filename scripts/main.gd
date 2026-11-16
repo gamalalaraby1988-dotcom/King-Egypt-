@@ -28,6 +28,8 @@ var interaction_marker_elapsed := 0.0
 var vehicle_summon_button: Button = null
 var showroom_layer: CanvasLayer = null
 var vehicle_occupied := false
+var _shared_location_vehicle_following := false
+var _shared_location_vehicle_target := Vector3.ZERO
 var _vehicle_key_was_down := false
 var _player_saved_collision_layer := 1
 var _player_saved_collision_mask := 1
@@ -101,6 +103,7 @@ func _process(_delta: float) -> void:
 		showroom_layer.visible = true
 	if vehicle_occupied and (not is_instance_valid(city_vehicle) or not is_instance_valid(get_node_or_null("Player"))):
 		_recover_vehicle_occupancy()
+	_update_shared_location_vehicle_follow()
 	if vehicle_occupied:
 		if is_instance_valid(vehicle_interaction_button):
 			vehicle_interaction_button.visible = true
@@ -310,6 +313,59 @@ func _summon_player_vehicle() -> void:
 	if is_instance_valid(vehicle_interaction_button):
 		vehicle_interaction_button.visible = true
 
+func get_shared_location_navigation_actor() -> Node3D:
+	if vehicle_occupied and is_instance_valid(city_vehicle):
+		return city_vehicle
+	return get_node_or_null("Player") as Node3D
+
+
+func begin_shared_location_navigation(destination: Vector3) -> bool:
+	if interior_transition_busy or is_instance_valid(interior_root):
+		return false
+	if absf(destination.x) > 250.0 or absf(destination.z) > 250.0 or destination.y < -10.0 or destination.y > 100.0:
+		return false
+	if vehicle_occupied:
+		if not is_instance_valid(city_vehicle) or not city_vehicle.has_method("set_auto_navigation_controls"):
+			return false
+		_shared_location_vehicle_target = destination
+		_shared_location_vehicle_following = true
+		if is_instance_valid(get_node_or_null("MissionManager")):
+			get_node("MissionManager").call("show_shared_location_marker", destination)
+		city_vehicle.call("set_auto_navigation_controls", 2.8, 0.0)
+		return true
+	var mission_manager := get_node_or_null("MissionManager")
+	if not is_instance_valid(mission_manager) or not mission_manager.has_method("navigate_to_landmark"):
+		return false
+	return bool(mission_manager.call("navigate_to_landmark", "shared_location", destination))
+
+
+func _update_shared_location_vehicle_follow() -> void:
+	if not _shared_location_vehicle_following:
+		return
+	if not vehicle_occupied or not is_instance_valid(city_vehicle):
+		_shared_location_vehicle_following = false
+		return
+	if bool(city_vehicle.get("auto_navigation_interrupted")):
+		city_vehicle.call("clear_auto_navigation_controls")
+		_shared_location_vehicle_following = false
+		if is_instance_valid(get_node_or_null("MissionManager")):
+			get_node("MissionManager").call("hide_shared_location_marker")
+		return
+	var direction := _shared_location_vehicle_target - city_vehicle.global_position
+	direction.y = 0.0
+	if direction.length() <= 2.5:
+		city_vehicle.call("clear_auto_navigation_controls")
+		_shared_location_vehicle_following = false
+		if is_instance_valid(get_node_or_null("MissionManager")):
+			get_node("MissionManager").call("hide_shared_location_marker")
+		return
+	var desired_angle := atan2(direction.x, -direction.z)
+	var heading_error := wrapf(desired_angle - city_vehicle.global_rotation.y, -PI, PI)
+	var steering := clampf(heading_error * 1.15, -1.0, 1.0)
+	var speed := 2.8 if absf(heading_error) < 0.85 else 1.6
+	city_vehicle.call("set_auto_navigation_controls", speed, steering)
+
+
 func _toggle_vehicle_use() -> void:
 	if interior_transition_busy or is_instance_valid(interior_root):
 		return
@@ -390,6 +446,11 @@ func _recover_vehicle_occupancy() -> void:
 func _exit_player_vehicle() -> void:
 	if not vehicle_occupied:
 		return
+	if _shared_location_vehicle_following and is_instance_valid(city_vehicle):
+		city_vehicle.call("clear_auto_navigation_controls")
+		_shared_location_vehicle_following = false
+		if is_instance_valid(get_node_or_null("MissionManager")):
+			get_node("MissionManager").call("hide_shared_location_marker")
 	var player := get_node_or_null("Player") as CharacterBody3D
 	if not is_instance_valid(player) or not is_instance_valid(city_vehicle):
 		return

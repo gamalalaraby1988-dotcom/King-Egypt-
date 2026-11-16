@@ -17,6 +17,7 @@ var landmark_navigation_name := ""
 var landmark_navigation_key := ""
 var landmark_route_points: PackedVector3Array = PackedVector3Array()
 var landmark_route_index := 0
+var shared_location_marker: Node3D = null
 var navigation_arrival_remaining := 0.0
 var navigation_off_route_time := 0.0
 var navigation_route_notice_remaining := 0.0
@@ -685,6 +686,23 @@ func _process(_delta: float) -> void:
 		if distance_to_target <= 2.2:
 			_complete_active_mission()
 	_update_navigation_hud()
+	_update_shared_location_auto_walk()
+
+
+func _update_shared_location_auto_walk() -> void:
+	if not landmark_navigation_active or landmark_navigation_key != "shared_location" or not is_instance_valid(player):
+		return
+	if player.has_method("is_auto_navigation_cancelled") and bool(player.call("is_auto_navigation_cancelled")):
+		_cancel_active_navigation()
+		return
+	_advance_landmark_route()
+	var waypoint := landmark_navigation_target
+	if landmark_route_index < landmark_route_points.size():
+		waypoint = landmark_route_points[landmark_route_index]
+	var direction := waypoint - player.global_position
+	direction.y = 0.0
+	if direction.length() > 0.1 and player.has_method("set_auto_navigation_direction"):
+		player.call("set_auto_navigation_direction", direction.normalized())
 
 
 func _update_interaction_target() -> void:
@@ -1204,6 +1222,10 @@ func _update_navigation_hud() -> void:
 	navigation_label.text = "%s %s   |   %s: %.0f م" % [CityLanguage.translate("navigation_destination"), destination_name, CityLanguage.translate("navigation_distance"), distance] if landmark_navigation_active and not mission_running and not job_running else "الوجهة: %s   |   المسافة: %.0f م" % [destination_name, distance]
 	if landmark_navigation_active and not mission_running and not job_running and Vector2(destination.x - player.global_position.x, destination.z - player.global_position.z).length() <= 2.0:
 		landmark_navigation_active = false
+		if landmark_navigation_key == "shared_location":
+			if is_instance_valid(player) and player.has_method("end_auto_navigation"):
+				player.call("end_auto_navigation")
+			hide_shared_location_marker()
 		landmark_route_points.clear()
 		landmark_route_index = 0
 		navigation_arrival_remaining = 2.5
@@ -1389,19 +1411,72 @@ func navigate_to_landmark(landmark_key: String, destination: Vector3) -> bool:
 	# الملاحة تنتهي عند المدخل أو لوحة الوظيفة بدل مركز المبنى.
 	landmark_navigation_target = get_landmark_entrance(landmark_key, destination)
 	landmark_navigation_key = landmark_key
-	landmark_navigation_name = CityLanguage.translate(landmark_key)
+	landmark_navigation_name = "الموقع المشترك" if landmark_key == "shared_location" else CityLanguage.translate(landmark_key)
 	navigation_arrival_remaining = 0.0
 	navigation_off_route_time = 0.0
 	navigation_route_notice_remaining = 0.0
 	_build_landmark_route(landmark_navigation_target, landmark_key)
 	landmark_navigation_active = true
+	if landmark_key == "shared_location":
+		if not player.has_method("begin_auto_navigation") or not bool(player.call("begin_auto_navigation")):
+			landmark_navigation_active = false
+			return false
+		show_shared_location_marker(landmark_navigation_target)
 	_update_navigation_hud()
 	return true
+
+
+func show_shared_location_marker(destination: Vector3) -> void:
+	if not is_instance_valid(shared_location_marker):
+		shared_location_marker = Node3D.new()
+		shared_location_marker.name = "SharedLocationWorldMarker"
+		var ring := MeshInstance3D.new()
+		var ring_mesh := TorusMesh.new()
+		ring_mesh.inner_radius = 0.42
+		ring_mesh.outer_radius = 0.58
+		ring_mesh.rings = 24
+		ring_mesh.ring_segments = 8
+		ring.mesh = ring_mesh
+		ring.rotation.x = PI * 0.5
+		var ring_material := StandardMaterial3D.new()
+		ring_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		ring_material.albedo_color = Color(1.0, 0.72, 0.2, 1.0)
+		ring_material.emission_enabled = true
+		ring_material.emission = Color(1.0, 0.58, 0.08)
+		ring_material.emission_energy_multiplier = 1.8
+		ring.material_override = ring_material
+		shared_location_marker.add_child(ring)
+		var pin := Label3D.new()
+		pin.text = "📍"
+		pin.position.y = 1.35
+		pin.font_size = 36
+		pin.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		shared_location_marker.add_child(pin)
+		add_child(shared_location_marker)
+	shared_location_marker.global_position = Vector3(destination.x, destination.y + 0.08, destination.z)
+	shared_location_marker.visible = true
+
+
+func hide_shared_location_marker() -> void:
+	if is_instance_valid(shared_location_marker):
+		shared_location_marker.visible = false
+
+
+func is_shared_location_navigation_active() -> bool:
+	return landmark_navigation_active and landmark_navigation_key == "shared_location"
+
+
+func get_shared_location_navigation_target() -> Vector3:
+	return landmark_navigation_target if is_shared_location_navigation_active() else Vector3.ZERO
 
 func _cancel_active_navigation() -> void:
 	if not mission_running and not job_running and not landmark_navigation_active:
 		return
 	landmark_navigation_active = false
+	if landmark_navigation_key == "shared_location":
+		if is_instance_valid(player) and player.has_method("end_auto_navigation"):
+			player.call("end_auto_navigation")
+		hide_shared_location_marker()
 	landmark_route_points.clear()
 	landmark_route_index = 0
 	navigation_arrival_remaining = 0.0
