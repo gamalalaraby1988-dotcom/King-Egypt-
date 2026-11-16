@@ -1459,6 +1459,10 @@ func get_landmark_route_points() -> PackedVector3Array:
 		result.append(landmark_route_points[index])
 	return result
 
+func can_start_shared_location_navigation() -> bool:
+	return not mission_running and not job_running
+
+
 func navigate_to_landmark(landmark_key: String, destination: Vector3) -> bool:
 	if mission_running or job_running:
 		return false

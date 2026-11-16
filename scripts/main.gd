@@ -333,11 +333,15 @@ func begin_shared_location_navigation(destination: Vector3) -> bool:
 		return false
 	if absf(destination.x) > 250.0 or absf(destination.z) > 250.0 or destination.y < -10.0 or destination.y > 100.0:
 		return false
+	var mission_manager := get_node_or_null("MissionManager")
+	if not is_instance_valid(mission_manager) or not mission_manager.has_method("can_start_shared_location_navigation"):
+		return false
+	if not bool(mission_manager.call("can_start_shared_location_navigation")):
+		return false
 	if vehicle_occupied:
 		if not is_instance_valid(city_vehicle) or not city_vehicle.has_method("set_auto_navigation_controls"):
 			return false
-		var mission_manager := get_node_or_null("MissionManager")
-		if not is_instance_valid(mission_manager) or not mission_manager.has_method("build_shared_location_route_from"):
+		if not mission_manager.has_method("build_shared_location_route_from"):
 			return false
 		_shared_location_vehicle_route = mission_manager.call("build_shared_location_route_from", city_vehicle.global_position, destination)
 		if _shared_location_vehicle_route.size() < 2:
@@ -360,6 +364,13 @@ func _update_shared_location_vehicle_follow() -> void:
 	if not vehicle_occupied or not is_instance_valid(city_vehicle):
 		_shared_location_vehicle_following = false
 		_shared_location_vehicle_route = PackedVector3Array()
+		return
+	var mission_manager := get_node_or_null("MissionManager")
+	if is_instance_valid(mission_manager) and (bool(mission_manager.get("mission_running")) or bool(mission_manager.get("job_running"))):
+		city_vehicle.call("clear_auto_navigation_controls")
+		_shared_location_vehicle_following = false
+		_shared_location_vehicle_route = PackedVector3Array()
+		mission_manager.call("hide_shared_location_marker")
 		return
 	if bool(city_vehicle.get("auto_navigation_interrupted")):
 		city_vehicle.call("clear_auto_navigation_controls")
