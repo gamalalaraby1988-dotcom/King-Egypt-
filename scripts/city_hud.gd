@@ -1219,14 +1219,24 @@ func _update_shared_location_direction_arrow() -> void:
 		return
 	var forward := -camera.global_transform.basis.z
 	var right := camera.global_transform.basis.x
-	forward.y = 0.0
-	right.y = 0.0
-	forward = forward.normalized()
-	right = right.normalized()
-	var direction := delta.normalized()
-	var angle := atan2(direction.dot(right), direction.dot(forward))
-	shared_location_direction_arrow.rotation = angle - PI * 0.5
+	shared_location_direction_arrow.rotation = calculate_shared_location_arrow_rotation(delta, forward, right)
 	shared_location_direction_arrow.visible = true
+
+
+func calculate_shared_location_arrow_rotation(target_delta: Vector3, camera_forward: Vector3, camera_right: Vector3) -> float:
+	var flat_direction := target_delta
+	flat_direction.y = 0.0
+	var flat_forward := camera_forward
+	flat_forward.y = 0.0
+	var flat_right := camera_right
+	flat_right.y = 0.0
+	if flat_direction.length_squared() <= 0.000001 or flat_forward.length_squared() <= 0.000001 or flat_right.length_squared() <= 0.000001:
+		return 0.0
+	flat_direction = flat_direction.normalized()
+	flat_forward = flat_forward.normalized()
+	flat_right = flat_right.normalized()
+	var angle := atan2(flat_direction.dot(flat_right), flat_direction.dot(flat_forward))
+	return angle - PI * 0.5
 
 
 func _on_social_chat_meta_clicked(meta: Variant) -> void:
