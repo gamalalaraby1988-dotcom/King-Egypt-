@@ -383,6 +383,7 @@ func _summon_player_vehicle() -> void:
 		city_vehicle.name = "PlayerVehicle"
 		city_vehicle.set_meta("vehicle_id", selected_vehicle_id)
 		add_child(city_vehicle)
+		CityCollisionProfile.apply_owned_vehicle_parked_collision(city_vehicle, get_node_or_null("Player") as CharacterBody3D)
 		city_vehicle.set_physics_process(false)
 		var vehicle_hud := city_vehicle.get_node_or_null("VehicleHUDLayer/VehicleHUD") as Control
 		if is_instance_valid(vehicle_hud):
@@ -402,6 +403,7 @@ func _summon_player_vehicle() -> void:
 	city_vehicle.global_position = summon_position
 	city_vehicle.global_rotation.y = player.global_rotation.y
 	city_vehicle.velocity = Vector3.ZERO
+	CityCollisionProfile.apply_owned_vehicle_parked_collision(city_vehicle, player)
 	city_vehicle.call("set_drive", false)
 	city_vehicle.call("set_brake", true)
 	city_vehicle.call("set_reverse", false)
@@ -543,6 +545,7 @@ func _toggle_vehicle_use() -> void:
 		mission_manager.call("cancel_shared_location_navigation")
 	_set_mobile_hud_active(false)
 	vehicle_occupied = true
+	CityCollisionProfile.apply_driven_vehicle_collision(city_vehicle)
 	_player_saved_collision_layer = player.collision_layer
 	_player_saved_collision_mask = player.collision_mask
 	player.set_mobile_move(Vector2.ZERO)
@@ -587,6 +590,8 @@ func _recover_vehicle_occupancy() -> void:
 		if is_instance_valid(vehicle_camera):
 			vehicle_camera.current = false
 	if is_instance_valid(player):
+		if is_instance_valid(city_vehicle):
+			CityCollisionProfile.apply_owned_vehicle_parked_collision(city_vehicle, player)
 		player.visible = true
 		player.collision_layer = _player_saved_collision_layer
 		player.collision_mask = _player_saved_collision_mask
@@ -612,6 +617,7 @@ func _exit_player_vehicle() -> void:
 		return
 	var side := city_vehicle.global_transform.basis.x.normalized()
 	var exit_position := city_vehicle.global_position + side * 2.1 + Vector3.UP * 0.15
+	CityCollisionProfile.apply_owned_vehicle_parked_collision(city_vehicle, player)
 	player.global_position = exit_position
 	player.velocity = Vector3.ZERO
 	player.visible = true
@@ -1530,6 +1536,7 @@ func _create_box(parent: Node3D, name: String, size: Vector3, pos: Vector3, colo
 		CityCollisionProfile.apply_world_collision(body)
 		body.add_to_group("city_world_geometry")
 		var shape_node := CollisionShape3D.new()
+		shape_node.name = "CollisionShape3D"
 		var shape := BoxShape3D.new()
 		shape.size = size
 		shape_node.shape = shape
