@@ -245,7 +245,7 @@ func _run_social_validation_tests() -> void:
 		push_error("Vehicle controller test instance could not be created.")
 		quit(1)
 		return
-	main_probe.add_child(vehicle_probe)
+	root.add_child(vehicle_probe)
 	main_probe.set("city_vehicle", vehicle_probe)
 	main_probe.set("vehicle_occupied", true)
 	main_probe.set("_shared_location_vehicle_following", true)
@@ -287,8 +287,26 @@ func _run_social_validation_tests() -> void:
 			push_error("Manual vehicle input did not stop auto-follow and clear its route and marker.")
 			quit(1)
 			return
+	# عند وصول الاسكوتر إلى آخر نقطة، يجب إنهاء التوجيه وإخفاء العلامة تلقائيًا.
+	main_probe.set("vehicle_occupied", true)
+	vehicle_probe.global_position = Vector3(18.0, 0.0, 9.0)
+	main_probe.set("_shared_location_vehicle_following", true)
+	main_probe.set("_shared_location_vehicle_target", Vector3(18.0, 0.0, 9.0))
+	main_probe.set("_shared_location_vehicle_route", PackedVector3Array([Vector3(18.0, 0.0, 9.0)]))
+	main_probe.set("_shared_location_vehicle_route_index", 0)
+	vehicle_probe.call("set_auto_navigation_controls", 2.5, 0.0)
+	marker_probe.visible = true
+	main_probe.call("_update_shared_location_vehicle_follow")
+	if bool(main_probe.get("_shared_location_vehicle_following")) or not (main_probe.get("_shared_location_vehicle_route") as PackedVector3Array).is_empty() or int(main_probe.get("_shared_location_vehicle_route_index")) != 0:
+		push_error("Reaching the final scooter waypoint did not complete shared-location navigation.")
+		quit(1)
+		return
+	if marker_probe.visible or float(vehicle_probe.get("auto_navigation_speed")) >= 0.0 or bool(vehicle_probe.get("drive_pressed")) or not bool(vehicle_probe.get("brake_pressed")):
+		push_error("Reaching the shared-location destination did not stop the scooter and hide its marker.")
+		quit(1)
+		return
 	main_probe.set("vehicle_occupied", false)
-	main_probe.remove_child(vehicle_probe)
+	root.remove_child(vehicle_probe)
 	vehicle_probe.free()
 	main_probe.remove_child(route_probe)
 	main_probe.free()
