@@ -17,12 +17,12 @@ func _run_social_validation_tests() -> void:
 		quit(1)
 	)
 	print("SOCIAL_TEST_STAGE: autoload_ready")
-	var city_hud_script: Script = load("res://scripts/city_hud.gd")
-	if city_hud_script == null:
+	var realtime_dedupe_hud_script: Script = load("res://scripts/city_hud.gd")
+	if realtime_dedupe_hud_script == null:
 		push_error("City HUD script could not be loaded for realtime message deduplication tests.")
 		quit(1)
 		return
-	var realtime_dedupe_probe: Control = city_hud_script.new()
+	var realtime_dedupe_probe: Control = realtime_dedupe_hud_script.new()
 	if not bool(realtime_dedupe_probe.call("_remember_realtime_message_id", "")):
 		push_error("Messages without IDs should remain processable.")
 		quit(1)
