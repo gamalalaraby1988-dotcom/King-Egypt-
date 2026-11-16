@@ -50,7 +50,8 @@ func _run_social_validation_tests() -> void:
 			return
 	summit_builder.free()
 	summit_test_root.free()
-	var mountain_gate := mountain_route_script.new() as Node3D
+	var mountain_gate_script: Script = load("res://scripts/king_mountain_route.gd")
+	var mountain_gate := mountain_gate_script.new() as Node3D
 	if not is_instance_valid(mountain_gate):
 		push_error("Mountain gate test instance could not be created.")
 		quit(1)
