@@ -1096,6 +1096,22 @@ func _run_social_validation_tests() -> void:
 		push_error("City HUD script could not be loaded for group-gather guard tests.")
 		quit(1)
 		return
+	var sent_friend_fixture: Dictionary = {"ABC1234XYZ": true}
+	var sent_state: Dictionary = city_hud_script.resolve_friend_action_state("abc1234xyz", false, "", sent_friend_fixture)
+	if str(sent_state.get("text", "")) != "تم إرسال طلب الصداقة" or not bool(sent_state.get("disabled", false)):
+		push_error("Reopening a player popup did not show the previously sent friend request.")
+		quit(1)
+		return
+	var sending_state: Dictionary = city_hud_script.resolve_friend_action_state("ABC1234XYZ", false, "ABC1234XYZ", {})
+	if str(sending_state.get("text", "")) != "جارٍ إرسال الطلب...":
+		push_error("An in-flight friend request did not show its sending state.")
+		quit(1)
+		return
+	var accepted_friend_state: Dictionary = city_hud_script.resolve_friend_action_state("ABC1234XYZ", true, "", sent_friend_fixture)
+	if str(accepted_friend_state.get("text", "")) != "دعوة للمجموعة" or bool(accepted_friend_state.get("disabled", true)):
+		push_error("A confirmed friend did not replace the sent request state with the group invite action.")
+		quit(1)
+		return
 	var friend_list_fixture: Array = [{"player_code": "ABC1234XYZ", "display_name": "صديق"}]
 	if not city_hud_script.is_player_in_friend_list("abc1234xyz", friend_list_fixture):
 		push_error("A confirmed friend was not recognized in the refreshed friend list.")
