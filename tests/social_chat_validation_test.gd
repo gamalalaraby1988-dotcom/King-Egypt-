@@ -30,6 +30,25 @@ func _run_social_validation_tests() -> void:
 		push_error("A rejected shared-location destination overwrote the player's existing navigation state.")
 		quit(1)
 		return
+	var player_script: Script = load("res://scripts/player.gd")
+	if player_script == null:
+		push_error("Player script could not be loaded for rejected auto-navigation validation.")
+		quit(1)
+		return
+	var riding_player: CharacterBody3D = player_script.new()
+	riding_player.set("animal_riding", true)
+	root.add_child(riding_player)
+	route_probe.set("player", riding_player)
+	route_probe.set("landmark_navigation_active", true)
+	route_probe.set("landmark_navigation_target", Vector3(18.0, 0.0, 18.0))
+	route_probe.set("landmark_navigation_key", "existing_landmark")
+	route_probe.set("landmark_navigation_name", "وجهة سابقة")
+	var rejected_riding_navigation: bool = route_probe.call("navigate_to_landmark", "shared_location", Vector3(48.0, 0.0, 48.0))
+	if rejected_riding_navigation or not bool(route_probe.get("landmark_navigation_active")) or route_probe.get("landmark_navigation_target") != Vector3(18.0, 0.0, 18.0) or str(route_probe.get("landmark_navigation_key")) != "existing_landmark" or str(route_probe.get("landmark_navigation_name")) != "وجهة سابقة":
+		push_error("A player unable to start auto-walking overwrote the existing navigation state.")
+		quit(1)
+		return
+	riding_player.free()
 	navigation_state_probe.free()
 	var valid_shared_route: PackedVector3Array = route_probe.call("build_shared_location_route_from", Vector3.ZERO, Vector3(48.0, 0.0, 48.0))
 	if valid_shared_route.size() < 2 or valid_shared_route[0].distance_to(Vector3.ZERO) > 0.1 or valid_shared_route[valid_shared_route.size() - 1].distance_to(Vector3(48.0, 0.0, 48.0)) > 0.1:
