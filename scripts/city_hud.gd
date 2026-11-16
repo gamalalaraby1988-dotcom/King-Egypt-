@@ -718,8 +718,21 @@ func _on_player_message() -> void:
 	close_player_interaction()
 
 
+static func format_player_presence_status(player_data: Dictionary) -> String:
+	for key in ["is_online", "online"]:
+		if player_data.has(key) and player_data[key] is bool:
+			return "متصل الآن" if bool(player_data[key]) else "غير متصل"
+	for key in ["presence", "status"]:
+		var value := str(player_data.get(key, "")).strip_edges().to_lower()
+		if value in ["online", "متصل"]:
+			return "متصل الآن"
+		if value in ["offline", "غير متصل"]:
+			return "غير متصل"
+	return "حالة الاتصال غير متاحة"
+
+
 func open_player_interaction(player_data: Dictionary) -> void:
-	# البيانات المتوقعة: player_id, display_name, level, account_age, avatar_text.
+	# البيانات المتوقعة: player_id, display_name, level, presence metadata, character_id.
 	selected_player_id = str(player_data.get("player_code", player_data.get("player_id", ""))).strip_edges().to_upper()
 	if not SocialChatManager.is_valid_player_code(selected_player_id):
 		selected_player_id = ""
@@ -739,7 +752,7 @@ func open_player_interaction(player_data: Dictionary) -> void:
 	player_name_label.text = clean_name if not clean_name.is_empty() else "لاعب"
 	var clean_level := str(player_data.get("level", "—")).substr(0, 12)
 	player_level_label.text = "المستوى %s" % clean_level
-	player_status_label.text = str(player_data.get("account_age", "")).strip_edges().substr(0, 40)
+	player_status_label.text = format_player_presence_status(player_data)
 	var clean_avatar := str(player_data.get("avatar_text", "👤")).substr(0, 8)
 	player_avatar_label.text = clean_avatar if not clean_avatar.is_empty() else "👤"
 	player_action_status.text = "بيانات اللاعب غير صالحة؛ تعذر تنفيذ التفاعل." if selected_player_id.is_empty() else ""
