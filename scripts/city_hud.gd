@@ -1245,6 +1245,21 @@ func _on_social_chat_meta_clicked(meta: Variant) -> void:
 		social_chat_status.text = "تعذر بدء التوجيه؛ أوقف المهمة أو الوظيفة الحالية أولًا."
 
 
+func resolve_shared_location_chat_destination(channel: String, conversation_id: String = "") -> Dictionary:
+	match channel:
+		"الأصدقاء":
+			var normalized_conversation_id := conversation_id.strip_edges()
+			if normalized_conversation_id.is_empty():
+				return {}
+			return {"kind": "direct", "conversation_id": normalized_conversation_id}
+		"المجموعة":
+			return {"kind": "group"}
+		"العامة":
+			return {"kind": "public"}
+		_:
+			return {}
+
+
 func _share_current_location() -> void:
 	if not is_instance_valid(main_scene) or not main_scene.has_method("get_shared_location_navigation_actor"):
 		social_chat_status.text = "تعذر تحديد موقعك الحالي."
@@ -1257,16 +1272,18 @@ func _share_current_location() -> void:
 	if location_message.is_empty():
 		social_chat_status.text = "مشاركة الموقع متاحة داخل المدينة حاليًا."
 		return
+	var destination := resolve_shared_location_chat_destination(social_chat_channel, selected_friend_conversation_id)
+	if destination.is_empty():
+		social_chat_status.text = "اختر محادثة صالحة أولًا لمشاركة موقعك."
+		return
 	var sent := false
-	if social_chat_channel == "الأصدقاء":
-		if selected_friend_conversation_id.is_empty():
-			social_chat_status.text = "اختر صديقًا أولًا لمشاركة موقعك."
-			return
-		sent = SocialChatManager.send_direct_message(selected_friend_conversation_id, location_message)
-	elif social_chat_channel == "المجموعة":
-		sent = SocialChatManager.send_chat_message("group", location_message)
-	else:
-		sent = SocialChatManager.send_chat_message("public", location_message)
+	match str(destination.get("kind", "")):
+		"direct":
+			sent = SocialChatManager.send_direct_message(str(destination.get("conversation_id", "")), location_message)
+		"group":
+			sent = SocialChatManager.send_chat_message("group", location_message)
+		"public":
+			sent = SocialChatManager.send_chat_message("public", location_message)
 	if sent:
 		social_chat_status.text = "جارٍ إرسال موقعك إلى هذه المحادثة..."
 

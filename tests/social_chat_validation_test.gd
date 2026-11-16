@@ -497,6 +497,19 @@ func _run_social_validation_tests() -> void:
 		push_error("A public party chat line allowed user-controlled BBCode brackets.")
 		quit(1)
 		return
+	var direct_location_destination: Dictionary = city_hud.resolve_shared_location_chat_destination("الأصدقاء", " conversation-123 ")
+	if direct_location_destination.get("kind", "") != "direct" or direct_location_destination.get("conversation_id", "") != "conversation-123":
+		push_error("Shared-location routing did not preserve the selected direct conversation.")
+		quit(1)
+		return
+	if not city_hud.resolve_shared_location_chat_destination("الأصدقاء", "").is_empty() or not city_hud.resolve_shared_location_chat_destination("غير معروف", "conversation-123").is_empty():
+		push_error("Shared-location routing accepted a missing or unsupported conversation instead of blocking a possible public disclosure.")
+		quit(1)
+		return
+	if city_hud.resolve_shared_location_chat_destination("العامة").get("kind", "") != "public" or city_hud.resolve_shared_location_chat_destination("المجموعة").get("kind", "") != "group":
+		push_error("Shared-location routing did not recognize the explicit public and group channels.")
+		quit(1)
+		return
 	var location_message: String = city_hud.build_shared_location_message(Vector3(12.5, 0.0, -34.25))
 	var parsed_location: Dictionary = city_hud.parse_shared_location_message(location_message)
 	if parsed_location.is_empty() or (parsed_location["position"] as Vector3).distance_to(Vector3(12.5, 0.0, -34.25)) > 0.01:
