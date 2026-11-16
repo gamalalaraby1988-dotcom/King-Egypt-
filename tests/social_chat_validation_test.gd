@@ -23,6 +23,11 @@ func _run_social_validation_tests() -> void:
 		quit(1)
 		return
 	print("SOCIAL_TEST_STAGE: vehicle_summon_city_bounds_complete")
+	if not city_bounds_script.is_vehicle_summon_position_road_safe(Vector3(12, 0, 14)) or city_bounds_script.is_vehicle_summon_position_road_safe(Vector3(40, 0, 0)) or city_bounds_script.is_vehicle_summon_position_road_safe(Vector3(0, 0, -30)):
+		push_error("Vehicle summon must avoid city road corridors.")
+		quit(1)
+		return
+	print("SOCIAL_TEST_STAGE: vehicle_summon_road_safety_complete")
 	# City collision contract: players and vehicles ignore each other, but both
 	# collide with static world geometry and solid service staff.
 	var collision_profile: Script = load("res://scripts/city_collision_profile.gd")
