@@ -613,9 +613,9 @@ func _create_interior_quick_travel_ui() -> void:
 	var entries := [
 		["⛺  المخيم", true],
 		["🏠  الشقة", true],
-		["𓉐  قمة الملوك", false],
-		["⚜  الميدان", false],
-		["⛵  السفينة", false],
+		["𓉐  قمة الملوك", true],
+		["⚜  الميدان", true],
+		["⛵  السفينة", true],
 		["🚪  الخروج خارج المبنى", true]
 	]
 	for index in range(entries.size()):
@@ -655,11 +655,111 @@ func _on_interior_quick_travel_selected(index: int) -> void:
 	elif index == 1:
 		_hide_interior_quick_travel_menu()
 		await _open_private_apartment()
+	elif index == 2:
+		_hide_interior_quick_travel_menu()
+		await _open_quick_travel_destination("قمة الملوك", "summit")
+	elif index == 3:
+		_hide_interior_quick_travel_menu()
+		await _open_quick_travel_destination("الميدان الملكي", "plaza")
+	elif index == 4:
+		_hide_interior_quick_travel_menu()
+		await _open_quick_travel_destination("السفينة الملكية", "ship")
 	elif index == 5:
 		_hide_interior_quick_travel_menu()
 		await return_from_building_interior()
 	else:
 		return
+
+func _open_quick_travel_destination(destination_name: String, destination_kind: String) -> void:
+	var body := interior_player
+	if not is_instance_valid(body) or not is_instance_valid(interior_root) or interior_transition_busy:
+		return
+	await return_from_building_interior()
+	if not is_inside_tree() or not is_instance_valid(body) or body.is_queued_for_deletion():
+		return
+	interior_transition_busy = true
+	interior_player = body
+	interior_return_transform = body.global_transform
+	body.set_physics_process(false)
+	_show_interior_loading(false)
+	_set_city_world_hidden(true)
+	_create_destination_scene(destination_name, destination_kind)
+	body.global_position = INTERIOR_WORLD_POSITION + Vector3(0, 1.05, 6.0)
+	body.velocity = Vector3.ZERO
+	body.rotation.y = PI
+	body.set_physics_process(true)
+	interior_transition_busy = false
+	_show_interior_loading(true)
+
+func _create_destination_scene(destination_name: String, destination_kind: String) -> void:
+	if is_instance_valid(interior_root):
+		interior_root.queue_free()
+	interior_root = Node3D.new()
+	interior_root.name = "Generated_" + destination_kind.capitalize()
+	interior_root.position = INTERIOR_WORLD_POSITION
+	add_child(interior_root)
+	var root := interior_root
+	var stone := Color(0.66, 0.56, 0.40)
+	var dark_stone := Color(0.34, 0.29, 0.23)
+	var gold := Color(0.88, 0.68, 0.27)
+	if destination_kind == "summit":
+		# منصة جبلية مرتفعة تطل على الأهرامات، مع درجات حجرية ومعبد ملكي.
+		_create_box(root, "SummitRockPlatform", Vector3(30, 1.2, 30), Vector3(0, -0.6, 0), Color(0.38, 0.34, 0.28), true)
+		_create_box(root, "SummitInnerTerrace", Vector3(22, 0.45, 22), Vector3(0, 0.2, 0), stone, true)
+		for side in [-1.0, 1.0]:
+			_create_box(root, "SummitCliff_%d" % int(side), Vector3(30, 5, 1.0), Vector3(0, -2.8, side * 14.5), dark_stone, true)
+			_create_box(root, "SummitPillar_%d" % int(side), Vector3(1.1, 5.2, 1.1), Vector3(side * 8.5, 2.6, -5.0), gold, true)
+		_create_box(root, "SummitTempleBase", Vector3(10, 0.8, 5), Vector3(0, 0.8, -5.2), dark_stone, true)
+		_create_box(root, "SummitTempleUpper", Vector3(8, 1.1, 4), Vector3(0, 1.7, -5.2), stone, true)
+		_create_box(root, "SummitObelisk", Vector3(0.8, 5.2, 0.8), Vector3(0, 3.8, -5.2), gold, true)
+		for x in [-3.2, -1.1, 1.1, 3.2]:
+			_create_box(root, "SummitFrontColumn_%d" % int(x * 10), Vector3(0.55, 3.0, 0.55), Vector3(x, 2.3, -2.8), gold, true)
+		_create_box(root, "SummitViewMarker", Vector3(8, 0.16, 0.25), Vector3(0, 0.48, 7.0), gold)
+	elif destination_kind == "plaza":
+		# ميدان مفتوح ببلاط حجري ونافورة مركزية وأعمدة ومقاعد جانبية.
+		_create_box(root, "RoyalPlazaGround", Vector3(30, 0.8, 30), Vector3(0, -0.4, 0), stone, true)
+		for x in [-10.0, -5.0, 0.0, 5.0, 10.0]:
+			for z in [-10.0, -5.0, 0.0, 5.0, 10.0]:
+				_create_box(root, "PlazaTile_%d_%d" % [int(x), int(z)], Vector3(4.8, 0.035, 4.8), Vector3(x, 0.02, z), Color(0.72, 0.63, 0.48))
+		_create_box(root, "PlazaFountainBase", Vector3(5.0, 0.5, 5.0), Vector3(0, 0.35, -1.0), dark_stone, true)
+		_create_box(root, "PlazaFountainWater", Vector3(3.8, 0.12, 3.8), Vector3(0, 0.68, -1.0), Color(0.12, 0.48, 0.62))
+		_create_box(root, "PlazaFountainColumn", Vector3(0.65, 1.8, 0.65), Vector3(0, 1.5, -1.0), gold, true)
+		for x in [-9.0, 9.0]:
+			for z in [-8.0, 7.0]:
+				_create_box(root, "PlazaMonument_%d_%d" % [int(x), int(z)], Vector3(1.2, 4.8, 1.2), Vector3(x, 2.4, z), gold, true)
+		for x in [-8.0, 8.0]:
+			_create_box(root, "PlazaBench_%d" % int(x), Vector3(4.0, 0.55, 0.9), Vector3(x, 0.48, 1.0), dark_stone, true)
+		_create_box(root, "PlazaRoyalGate", Vector3(12, 0.7, 0.7), Vector3(0, 4.2, -12.0), gold, true)
+	elif destination_kind == "ship":
+		# سطح سفينة ملكية راسية: سطح خشبي، بدن جانبي، درابزين وصاري وشراع.
+		_create_box(root, "RoyalShipDeck", Vector3(24, 0.8, 30), Vector3(0, 0, 0), Color(0.34, 0.20, 0.11), true)
+		_create_box(root, "RoyalShipHullLeft", Vector3(1.2, 2.5, 29), Vector3(-11.2, -1.25, 0), dark_stone, true)
+		_create_box(root, "RoyalShipHullRight", Vector3(1.2, 2.5, 29), Vector3(11.2, -1.25, 0), dark_stone, true)
+		_create_box(root, "RoyalShipBow", Vector3(20, 2.2, 1.4), Vector3(0, -1.0, -14.0), dark_stone, true)
+		for x in [-10.0, 10.0]:
+			_create_box(root, "ShipRail_%d" % int(x), Vector3(0.35, 1.1, 27), Vector3(x, 1.0, 0), gold, true)
+			for z in [-10.0, -4.0, 2.0, 8.0]:
+				_create_box(root, "ShipRailPost_%d_%d" % [int(x), int(z)], Vector3(0.35, 1.8, 0.35), Vector3(x, 0.9, z), gold, true)
+		_create_box(root, "ShipMast", Vector3(0.8, 13, 0.8), Vector3(0, 6.5, -1.0), gold, true)
+		_create_box(root, "ShipSail", Vector3(7.5, 7.0, 0.25), Vector3(0, 7.0, -1.0), Color(0.88, 0.82, 0.66))
+		_create_box(root, "ShipCaptainDeck", Vector3(8, 3.5, 5), Vector3(0, 2.1, 9.0), Color(0.43, 0.28, 0.16), true)
+		_create_box(root, "ShipSeaLeft", Vector3(30, 0.2, 34), Vector3(-25, -2.0, 0), Color(0.08, 0.28, 0.42))
+		_create_box(root, "ShipSeaRight", Vector3(30, 0.2, 34), Vector3(25, -2.0, 0), Color(0.08, 0.28, 0.42))
+	var title := Label3D.new()
+	title.name = "DestinationTitle"
+	title.text = "𓂀  " + destination_name + "  𓂀"
+	title.position = Vector3(0, 5.0, -12.0)
+	title.font_size = 48
+	title.pixel_size = 0.012
+	title.modulate = Color(1.0, 0.86, 0.52)
+	root.add_child(title)
+	_create_interior_exit_marker(root)
+	var light := OmniLight3D.new()
+	light.position = Vector3(0, 8.0, 0)
+	light.light_color = Color(1.0, 0.82, 0.58)
+	light.light_energy = 1.5
+	light.omni_range = 38.0
+	root.add_child(light)
 
 func _open_private_apartment() -> void:
 	# نسخة محلية أولية للشقة؛ لا تمثل زيارة أصدقاء أو ملكية مرتبطة بحساب خادمي.
