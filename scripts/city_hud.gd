@@ -2092,6 +2092,27 @@ func _on_social_friend_selected(player_code: String) -> void:
 			social_chat_status.text = "تعذر بدء فتح المحادثة. حاول مرة أخرى."
 
 
+static func is_player_in_friend_list(player_code: String, friends: Array) -> bool:
+	var target := player_code.strip_edges().to_upper()
+	if not SocialChatManager.is_valid_player_code(target):
+		return false
+	for friend in friends:
+		if friend is Dictionary and str(friend.get("player_code", "")).strip_edges().to_upper() == target:
+			return true
+	return false
+
+
+func _sync_selected_player_friend_state(friends: Array) -> void:
+	if not _has_selected_player() or not is_player_in_friend_list(selected_player_id, friends):
+		return
+	selected_player_is_friend = true
+	if is_instance_valid(player_primary_action_button):
+		player_primary_action_button.disabled = false
+		player_primary_action_button.text = "دعوة للمجموعة"
+	if is_instance_valid(player_action_status):
+		player_action_status.text = "أصبح هذا اللاعب ضمن قائمة أصدقائك."
+
+
 func _on_social_operation_completed(action: String, data: Variant) -> void:
 	match action:
 		"blocked_list":
@@ -2140,6 +2161,8 @@ func _on_social_operation_completed(action: String, data: Variant) -> void:
 					player_popup.visible = false
 				_refresh_blocked_players()
 		"friends_list":
+			if data is Array:
+				_sync_selected_player_friend_state(data)
 			if data is Array and is_instance_valid(group_invite_popup) and group_invite_popup.visible:
 				_refresh_group_invite_friends(data)
 			_friend_buttons.clear()
