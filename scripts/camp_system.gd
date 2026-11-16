@@ -68,9 +68,42 @@ func _build_camp() -> void:
 		animal_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 		animal.add_child(animal_label)
 		_box(self, "AnimalPenRail", Vector3(4.2, 0.18, 0.18), Vector3(x, 0.65, z + 1.4), Color(0.32, 0.20, 0.12))
+	# محطة حفلات جانبية في الجهة الشرقية؛ تبقى خارج المدخل والمظلة وحظائر الحيوانات.
+	_create_party_station(Vector3(12.0, 0.0, -3.0))
+
 	# الموظف عند مدخل المخيم
 	var staff := Node3D.new()
 	staff.name = "CampAnimalStaff"
 	staff.set_script(load("res://scripts/camp_animal_staff.gd"))
 	staff.position = Vector3(0, 0, -7.0)
 	add_child(staff)
+
+func _create_party_station(pos: Vector3) -> void:
+	var station := Node3D.new()
+	station.name = "CampPartyStation"
+	station.position = pos
+	station.add_to_group("party_stations")
+	add_child(station)
+	# قاعدة صغيرة لا تتجاوز مساحة الوقوف ولا تمتد إلى الممر.
+	_box(station, "PartyStationBase", Vector3(2.2, 0.28, 1.25), Vector3(0, 0.16, 0), Color(0.22, 0.15, 0.12))
+	_box(station, "PartyStationBody", Vector3(1.9, 1.25, 0.85), Vector3(0, 0.9, 0), Color(0.18, 0.12, 0.28))
+	_box(station, "PartyStationGoldTrim", Vector3(2.0, 0.09, 0.92), Vector3(0, 1.48, 0), Color(0.88, 0.68, 0.27))
+	var speaker := MeshInstance3D.new()
+	speaker.name = "PartySpeaker"
+	var speaker_mesh := CylinderMesh.new()
+	speaker_mesh.top_radius = 0.36
+	speaker_mesh.bottom_radius = 0.36
+	speaker_mesh.height = 0.12
+	speaker.mesh = speaker_mesh
+	speaker.rotation.x = PI / 2.0
+	speaker.position = Vector3(0, 0.92, -0.46)
+	speaker.material_override = _mat(Color(0.72, 0.48, 0.20))
+	station.add_child(speaker)
+	var marker := Label3D.new()
+	marker.name = "PartyMusicMarker"
+	marker.text = "♫"
+	marker.position = Vector3(0, 2.55, 0)
+	marker.font_size = 64
+	marker.modulate = Color(1.0, 0.78, 0.28)
+	marker.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	station.add_child(marker)
