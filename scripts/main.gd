@@ -795,13 +795,15 @@ func _create_summit_edge_barriers(root: Node3D, wall_color: Color, rail_color: C
 	var rail_center_y := wall_height + rail_height * 0.5 - 0.05
 	var edge_offset := 14.65
 	var edge_length := 29.3
-	for side in [-1.0, 1.0]:
-		_create_box(root, "SummitSideSafetyWall_%d" % int(side), Vector3(wall_thickness, wall_height, edge_length), Vector3(side * edge_offset, wall_center_y, 0.0), wall_color, true)
-		_create_box(root, "SummitSideGoldRail_%d" % int(side), Vector3(0.22, rail_height, edge_length), Vector3(side * edge_offset, rail_center_y, 0.0), rail_color, true)
-		_create_box(root, "SummitFrontSafetyWall_%d" % int(side), Vector3(edge_length * 0.5, wall_height, wall_thickness), Vector3(side * edge_length * 0.25, wall_center_y, -edge_offset), wall_color, true)
-		_create_box(root, "SummitFrontGoldRail_%d" % int(side), Vector3(edge_length * 0.5, rail_height, 0.22), Vector3(side * edge_length * 0.25, rail_center_y, -edge_offset), rail_color, true)
-		_create_box(root, "SummitRearSafetyWall_%d" % int(side), Vector3(edge_length * 0.5, wall_height, wall_thickness), Vector3(side * edge_length * 0.25, wall_center_y, edge_offset), wall_color, true)
-		_create_box(root, "SummitRearGoldRail_%d" % int(side), Vector3(edge_length * 0.5, rail_height, 0.22), Vector3(side * edge_length * 0.25, rail_center_y, edge_offset), rail_color, true)
+	for side_index in range(2):
+		var side := -1.0 if side_index == 0 else 1.0
+		var side_name := "Left" if side < 0.0 else "Right"
+		_create_box(root, "SummitSideSafetyWall_" + side_name, Vector3(wall_thickness, wall_height, edge_length), Vector3(side * edge_offset, wall_center_y, 0.0), wall_color, true)
+		_create_box(root, "SummitSideGoldRail_" + side_name, Vector3(0.22, rail_height, edge_length), Vector3(side * edge_offset, rail_center_y, 0.0), rail_color, true)
+		_create_box(root, "SummitFrontSafetyWall_" + side_name, Vector3(edge_length * 0.5, wall_height, wall_thickness), Vector3(side * edge_length * 0.25, wall_center_y, -edge_offset), wall_color, true)
+		_create_box(root, "SummitFrontGoldRail_" + side_name, Vector3(edge_length * 0.5, rail_height, 0.22), Vector3(side * edge_length * 0.25, rail_center_y, -edge_offset), rail_color, true)
+		_create_box(root, "SummitRearSafetyWall_" + side_name, Vector3(edge_length * 0.5, wall_height, wall_thickness), Vector3(side * edge_length * 0.25, wall_center_y, edge_offset), wall_color, true)
+		_create_box(root, "SummitRearGoldRail_" + side_name, Vector3(edge_length * 0.5, rail_height, 0.22), Vector3(side * edge_length * 0.25, rail_center_y, edge_offset), rail_color, true)
 
 
 func _create_destination_scene(destination_name: String, destination_kind: String) -> void:
