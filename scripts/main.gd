@@ -1425,6 +1425,34 @@ func _create_box(parent: Node3D, name: String, size: Vector3, pos: Vector3, colo
 		body.add_child(shape_node)
 		parent.add_child(body)
 
+
+# تصادمات العناصر الثابتة: تُستخدم للأجسام الصلبة فقط، وليس للنصوص أو المؤثرات.
+func _add_static_cylinder_collision(parent: Node3D, body_name: String, radius: float, height: float, pos: Vector3) -> void:
+	var body := StaticBody3D.new()
+	body.name = body_name
+	body.add_to_group("city_world_geometry")
+	var collision_shape := CollisionShape3D.new()
+	var cylinder := CylinderShape3D.new()
+	cylinder.radius = maxf(0.05, radius)
+	cylinder.height = maxf(0.1, height)
+	collision_shape.shape = cylinder
+	body.position = pos
+	body.add_child(collision_shape)
+	parent.add_child(body)
+
+func _add_static_box_collision(parent: Node3D, body_name: String, size: Vector3, pos: Vector3) -> void:
+	var body := StaticBody3D.new()
+	body.name = body_name
+	body.add_to_group("city_world_geometry")
+	var collision_shape := CollisionShape3D.new()
+	var box := BoxShape3D.new()
+	box.size = Vector3(maxf(0.05, size.x), maxf(0.05, size.y), maxf(0.05, size.z))
+	collision_shape.shape = box
+	body.position = pos
+	body.add_child(collision_shape)
+	parent.add_child(body)
+
+
 func _create_ground() -> void:
 	_create_box(self, "Ground", Vector3(180, 1, 180), Vector3(0, -0.55, 0), Color(0.34, 0.42, 0.31), true)
 
@@ -1544,7 +1572,7 @@ func _add_functional_building(manager: Node, title: String, mission: String, des
 	add_child(building)
 	_create_box(building, "BuildingBody", Vector3(8, 5, 7), Vector3(0, 2.5, 0), color, true)
 	_create_box(building, "Entrance", Vector3(1.5, 2.4, 0.12), Vector3(0, 1.2, 3.56), Color(0.12, 0.14, 0.18), false)
-	_create_box(building, "Sign", Vector3(5.0, 0.8, 0.16), Vector3(0, 4.25, 3.58), Color(0.10, 0.22, 0.25), false)
+	_create_box(building, "Sign", Vector3(5.0, 0.8, 0.16), Vector3(0, 4.25, 3.58), Color(0.10, 0.22, 0.25), true)
 	var sign_key := "shop"
 	if title == "المطعم":
 		sign_key = "restaurant"
@@ -1568,8 +1596,8 @@ func _create_job_board(title: String, description: String, pos: Vector3, target_
 	board.reward_xp = xp_reward
 	board.target_offset = target_offset
 	add_child(board)
-	_create_box(board, "JobBoardBase", Vector3(2.4, 1.5, 0.45), Vector3(0, 0.75, 0), Color(0.16, 0.22, 0.28), false)
-	_create_box(board, "JobBoardSign", Vector3(2.8, 1.1, 0.16), Vector3(0, 2.05, 0), Color(0.10, 0.22, 0.25), false)
+	_create_box(board, "JobBoardBase", Vector3(2.4, 1.5, 0.45), Vector3(0, 0.75, 0), Color(0.16, 0.22, 0.28), true)
+	_create_box(board, "JobBoardSign", Vector3(2.8, 1.1, 0.16), Vector3(0, 2.05, 0), Color(0.10, 0.22, 0.25), true)
 	var board_key := "city_guide"
 	if job_id == "courier_delivery":
 		board_key = "delivery"
@@ -1592,9 +1620,9 @@ func _create_direction_signpost(sign_name: String, pos: Vector3, left_key: Strin
 	sign_root.position = pos
 	sign_root.rotation.y = yaw
 	add_child(sign_root)
-	_create_box(sign_root, "StonePost", Vector3(0.35, 2.7, 0.35), Vector3(0, 1.35, 0), Color(0.66, 0.52, 0.32), false)
-	_create_box(sign_root, "DarkBoard", Vector3(6.2, 1.15, 0.22), Vector3(0, 2.65, 0), Color(0.08, 0.22, 0.23), false)
-	_create_box(sign_root, "GoldTopTrim", Vector3(6.3, 0.09, 0.27), Vector3(0, 3.25, 0), Color(0.88, 0.68, 0.30), false)
+	_create_box(sign_root, "StonePost", Vector3(0.35, 2.7, 0.35), Vector3(0, 1.35, 0), Color(0.66, 0.52, 0.32), true)
+	_create_box(sign_root, "DarkBoard", Vector3(6.2, 1.15, 0.22), Vector3(0, 2.65, 0), Color(0.08, 0.22, 0.23), true)
+	_create_box(sign_root, "GoldTopTrim", Vector3(6.3, 0.09, 0.27), Vector3(0, 3.25, 0), Color(0.88, 0.68, 0.30), true)
 	_add_sign_label(sign_root, left_key, Vector3(-1.45, 2.65, -0.13), 0.0, "← ")
 	_add_sign_label(sign_root, right_key, Vector3(1.45, 2.65, -0.13), 0.0, "→ ")
 
