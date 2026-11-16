@@ -517,6 +517,18 @@ func _run_social_validation_tests() -> void:
 		push_error("The shared-location arrow did not retain a stable heading when the camera pointed vertically.")
 		quit(1)
 		return
+	if not bool(location_probe.call("should_hide_shared_location_arrow", 2.1, false)):
+		push_error("The walking direction arrow remained visible after the walking arrival threshold.")
+		quit(1)
+		return
+	if bool(location_probe.call("should_hide_shared_location_arrow", 2.1, true)) or not bool(location_probe.call("should_hide_shared_location_arrow", 2.0, true)):
+		push_error("The scooter direction arrow did not stay visible until its 2-meter arrival threshold.")
+		quit(1)
+		return
+	if bool(location_probe.call("should_hide_shared_location_arrow", 2.5, false)):
+		push_error("The walking direction arrow disappeared before its arrival threshold.")
+		quit(1)
+		return
 	if not location_probe.call("parse_shared_location_message", "KINGLOC1|nan|0|0").is_empty():
 		push_error("A non-finite shared-location coordinate was accepted.")
 		quit(1)
