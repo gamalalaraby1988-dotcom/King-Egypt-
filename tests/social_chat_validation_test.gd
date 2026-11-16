@@ -80,7 +80,7 @@ func _run_social_validation_tests() -> void:
 	root.add_child(chest_instance)
 	var chest_body := chest_instance.get_node_or_null("ChestCollisionBody") as StaticBody3D
 	var chest_shape := chest_body.get_node_or_null("CollisionShape3D") as CollisionShape3D if is_instance_valid(chest_body) else null
-	if not is_instance_valid(chest_body) or chest_body.collision_layer != world_layer or chest_body.collision_mask != world_layer or not is_instance_valid(chest_shape) or not chest_shape.shape is BoxShape3D:
+	if not is_instance_valid(chest_body) or chest_body.collision_layer != world_layer or chest_body.collision_mask != world_layer or not chest_body.is_in_group("city_world_geometry") or not is_instance_valid(chest_shape) or not chest_shape.shape is BoxShape3D:
 		push_error("The daily reward chest must have a solid world collision box.")
 		quit(1)
 		return
