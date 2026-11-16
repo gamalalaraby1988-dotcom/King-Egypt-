@@ -1096,6 +1096,22 @@ func _run_social_validation_tests() -> void:
 		push_error("City HUD script could not be loaded for group-gather guard tests.")
 		quit(1)
 		return
+	if not city_hud_script.can_request_group_invite_for_player("ABC1234XYZ", 1, 4, false, false):
+		push_error("A valid new player could not be invited to an available group.")
+		quit(1)
+		return
+	if city_hud_script.can_request_group_invite_for_player("invalid", 1, 4, false, false):
+		push_error("A group invitation accepted an invalid player code.")
+		quit(1)
+		return
+	if city_hud_script.can_request_group_invite_for_player("ABC1234XYZ", 4, 4, false, false):
+		push_error("A full group allowed another invitation.")
+		quit(1)
+		return
+	if city_hud_script.can_request_group_invite_for_player("ABC1234XYZ", 2, 4, true, false) or city_hud_script.can_request_group_invite_for_player("ABC1234XYZ", 2, 4, false, true):
+		push_error("A group invitation allowed an existing member or duplicate pending invitation.")
+		quit(1)
+		return
 	var city_hud: CanvasLayer = city_hud_script.new()
 	var gather_scene := Node3D.new()
 	root.add_child(gather_scene)
