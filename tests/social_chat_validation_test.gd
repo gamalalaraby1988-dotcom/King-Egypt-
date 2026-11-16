@@ -552,6 +552,16 @@ func _run_social_validation_tests() -> void:
 		push_error("A shared location message did not preserve the sender's in-city coordinates.")
 		quit(1)
 		return
+	var boundary_location := Vector3(250.0, 100.0, -250.0)
+	if city_hud.build_shared_location_message(boundary_location).is_empty():
+		push_error("A shared location exactly on the supported world boundary was rejected.")
+		quit(1)
+		return
+	for invalid_position in [Vector3(250.001, 0.0, 0.0), Vector3(0.0, 100.001, 0.0), Vector3(0.0, -10.001, 0.0), Vector3(NAN, 0.0, 0.0), Vector3(0.0, 0.0, INF)]:
+		if not city_hud.build_shared_location_message(invalid_position).is_empty():
+			push_error("An out-of-bounds or non-finite shared location was serialized.")
+			quit(1)
+			return
 	var location_chat_line: String = city_hud.format_public_chat_message("صديق", location_message)
 	if not location_chat_line.contains("📍") or not location_chat_line.contains("متابعة") or not location_chat_line.contains("kingloc://"):
 		push_error("A shared location chat message did not render a clickable follow action.")
