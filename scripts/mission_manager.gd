@@ -797,24 +797,53 @@ func _interaction_action_key(target: Node3D) -> String:
 		return "interaction_shop"
 	return "interaction_talk"
 
+func _set_interaction_button_active(active: bool) -> void:
+	if not is_instance_valid(interact_button):
+		return
+	if not active:
+		for state_name in ["normal", "hover", "pressed", "disabled"]:
+			interact_button.remove_theme_stylebox_override(state_name)
+		return
+	for state_data in [
+		{"name": "normal", "color": Color(0.04, 0.34, 0.78)},
+		{"name": "hover", "color": Color(0.08, 0.46, 0.94)},
+		{"name": "pressed", "color": Color(0.02, 0.23, 0.58)},
+		{"name": "disabled", "color": Color(0.24, 0.27, 0.31)}
+	]:
+		var style := StyleBoxFlat.new()
+		style.bg_color = state_data["color"]
+		style.corner_radius_top_left = 12
+		style.corner_radius_top_right = 12
+		style.corner_radius_bottom_left = 12
+		style.corner_radius_bottom_right = 12
+		style.content_margin_left = 12.0
+		style.content_margin_right = 12.0
+		style.content_margin_top = 8.0
+		style.content_margin_bottom = 8.0
+		interact_button.add_theme_stylebox_override(state_data["name"], style)
+
 func _update_interaction_hud() -> void:
 	if not is_instance_valid(interact_button) or not is_instance_valid(prompt_label):
 		return
 	var city_root := get_tree().current_scene
 	if is_instance_valid(city_root) and is_instance_valid(city_root.get("interior_root")):
 		if is_instance_valid(nearest_interactable):
+			_set_interaction_button_active(true)
 			interact_button.text = CityLanguage.translate("interaction_enter")
 			prompt_label.text = "عند الباب — اضغط زر التفاعل لفتح التنقل السريع"
 			interact_button.visible = true
 		else:
+			_set_interaction_button_active(false)
 			interact_button.visible = false
 			prompt_label.text = ""
 		return
 	if is_instance_valid(player) and player.has_method("is_riding_animal") and player.is_riding_animal():
+		_set_interaction_button_active(true)
 		prompt_label.text = CityLanguage.translate("interaction_riding_prompt")
 		interact_button.text = CityLanguage.translate("interaction_dismount")
 		interact_button.visible = true
 	elif is_instance_valid(nearest_interactable):
+		_set_interaction_button_active(true)
 		var display_name := CityLanguage.translate("interaction_place")
 		if nearest_interactable.has_method("get_job_data"):
 			display_name = str(nearest_interactable.get_job_data().get("title", CityLanguage.translate("interaction_job_name")))
@@ -833,6 +862,7 @@ func _update_interaction_hud() -> void:
 		prompt_label.text = "%s %s — %s" % [CityLanguage.translate("interaction_near"), display_name, CityLanguage.translate("interaction_press_hint")]
 		interact_button.visible = true
 	else:
+		_set_interaction_button_active(false)
 		prompt_label.text = CityLanguage.translate("interaction_approach")
 		interact_button.text = CityLanguage.translate("interaction_button")
 		interact_button.visible = false
