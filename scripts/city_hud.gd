@@ -2487,7 +2487,7 @@ func _remember_realtime_message_id(message_id: String) -> bool:
 	_seen_realtime_message_ids[clean_id] = true
 	_seen_realtime_message_order.append(clean_id)
 	while _seen_realtime_message_order.size() > REALTIME_MESSAGE_DEDUPE_LIMIT:
-		var expired_id := _seen_realtime_message_order.pop_front()
+		var expired_id: String = str(_seen_realtime_message_order.pop_front())
 		_seen_realtime_message_ids.erase(expired_id)
 	return true
 
