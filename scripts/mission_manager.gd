@@ -1453,16 +1453,27 @@ func navigate_to_landmark(landmark_key: String, destination: Vector3) -> bool:
 	landmark_navigation_target = get_landmark_entrance(landmark_key, destination)
 	landmark_navigation_key = landmark_key
 	landmark_navigation_name = "الموقع المشترك" if landmark_key == "shared_location" else CityLanguage.translate(landmark_key)
+	var validated_shared_route := PackedVector3Array()
+	if landmark_key == "shared_location":
+		if not is_instance_valid(player):
+			return false
+		validated_shared_route = build_shared_location_route_from(player.global_position, landmark_navigation_target)
+		if validated_shared_route.size() < 2:
+			return false
 	navigation_arrival_remaining = 0.0
 	navigation_off_route_time = 0.0
 	navigation_route_notice_remaining = 0.0
 	_build_landmark_route(landmark_navigation_target, landmark_key)
-	landmark_navigation_active = true
 	if landmark_key == "shared_location":
+		# استخدم المسار الذي اجتاز فحص الإحداثيات والاتصال بشبكة الطرق للمشي أيضًا.
+		landmark_route_points = validated_shared_route
+		landmark_route_index = 0
 		if not player.has_method("begin_auto_navigation") or not bool(player.call("begin_auto_navigation")):
 			landmark_navigation_active = false
+			landmark_route_points.clear()
 			return false
 		show_shared_location_marker(landmark_navigation_target)
+	landmark_navigation_active = true
 	_update_navigation_hud()
 	return true
 
