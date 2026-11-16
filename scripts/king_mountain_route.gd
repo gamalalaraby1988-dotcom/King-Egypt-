@@ -102,8 +102,11 @@ func _build_turn_guard_connectors() -> void:
 				continue
 			var basis := Basis.looking_at(connector.normalized(), Vector3.UP)
 			var center := (incoming_edge + outgoing_edge) * 0.5 + Vector3.UP * 0.88
+			var guard_name := "MountainTurnGuardConnector_%02d_%s" % [i, "L" if side_sign < 0.0 else "R"]
+			if get_node_or_null(guard_name + "Collision") != null:
+				continue
 			_add_oriented_box(
-				"MountainTurnGuardConnector_%02d_%s" % [i, "L" if side_sign < 0.0 else "R"],
+				guard_name,
 				Vector3(0.56, 1.35, connector.length() + 0.35),
 				center,
 				basis,

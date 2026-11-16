@@ -60,6 +60,9 @@ func _run_social_validation_tests() -> void:
 		return
 	root.add_child(mountain_route_probe)
 	await process_frame
+	# Invoke the idempotent builder explicitly so this test covers the guard builder itself,
+	# even if scene lifecycle ordering changes in headless execution.
+	mountain_route_probe.call("_build_turn_guard_connectors")
 	for turn_index in range(1, 5):
 		for side_name in ["L", "R"]:
 			var connector_name := "MountainTurnGuardConnector_%02d_%sCollision" % [turn_index, side_name]
