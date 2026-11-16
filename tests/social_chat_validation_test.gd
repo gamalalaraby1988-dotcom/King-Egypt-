@@ -1096,6 +1096,18 @@ func _run_social_validation_tests() -> void:
 		push_error("City HUD script could not be loaded for group-gather guard tests.")
 		quit(1)
 		return
+	if city_hud_script.format_player_presence_status({"is_online": true}) != "متصل الآن":
+		push_error("An explicitly online player was not shown as online.")
+		quit(1)
+		return
+	if city_hud_script.format_player_presence_status({"presence": "offline"}) != "غير متصل":
+		push_error("An explicitly offline player was not shown as offline.")
+		quit(1)
+		return
+	if city_hud_script.format_player_presence_status({"account_age": "منذ شهر"}) != "حالة الاتصال غير متاحة":
+		push_error("Account age or missing presence metadata was incorrectly presented as online status.")
+		quit(1)
+		return
 	if not city_hud_script.can_request_group_invite_for_player("ABC1234XYZ", 1, 4, false, false):
 		push_error("A valid new player could not be invited to an available group.")
 		quit(1)
