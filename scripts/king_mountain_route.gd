@@ -84,6 +84,15 @@ func _build_approach_gate() -> void:
 	gate_subtitle.pixel_size = 0.005
 	gate_subtitle.modulate = Color(0.92, 0.87, 0.72)
 	gate.add_child(gate_subtitle)
+	# إضاءة مركزة على اسم القمة لتظل البوابة مقروءة ليلًا دون وهج على الطريق.
+	var gate_light := OmniLight3D.new()
+	gate_light.name = "MountainGateSignGlow"
+	gate_light.position = Vector3(0.0, 4.25, -1.35)
+	gate_light.light_color = Color(1.0, 0.78, 0.43)
+	gate_light.light_energy = 0.8
+	gate_light.omni_range = 7.0
+	gate_light.shadow_enabled = false
+	gate.add_child(gate_light)
 
 
 func _build_road() -> void:
