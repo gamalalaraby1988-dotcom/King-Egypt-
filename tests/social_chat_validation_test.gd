@@ -508,6 +508,19 @@ func _run_social_validation_tests() -> void:
 		push_error("A shared location chat message did not render a clickable follow action.")
 		quit(1)
 		return
+	if not location_chat_line.contains("[صديق]") or location_chat_line.contains("[أنت]"):
+		push_error("A shared-location history line did not preserve the original sender name.")
+		quit(1)
+		return
+	var unsafe_location_line: String = city_hud.format_public_chat_message("[لاعب]", location_message)
+	if unsafe_location_line.contains("[لاعب]") or not unsafe_location_line.contains("متابعة"):
+		push_error("A shared-location chat line allowed sender-controlled BBCode or lost its follow action.")
+		quit(1)
+		return
+	if not city_hud.parse_shared_location_uri("kingloc://12.5,nan,-34.25").is_empty() or not city_hud.parse_shared_location_uri("kingloc://12.5,0").is_empty():
+		push_error("A malformed shared-location follow URI was accepted.")
+		quit(1)
+		return
 	if not city_hud.parse_shared_location_uri("kingloc://12.5,0,-34.25").has("position"):
 		push_error("A shared location follow link could not be parsed.")
 		quit(1)
