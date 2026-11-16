@@ -92,6 +92,9 @@ func _create_auth_login_panel() -> void:
 	add_child(auth_panel)
 
 
+static func is_position_inside_city_bounds(position: Vector3, half_extent: float = 90.0) -> bool:
+	return absf(position.x) <= half_extent and absf(position.z) <= half_extent
+
 func _process(_delta: float) -> void:
 	# المركبات تخص مساحة المدينة؛ أخفِ أدواتها طوال الانتقال أو الوجود داخل مبنى.
 	if interior_transition_busy or is_instance_valid(interior_root):
@@ -115,15 +118,18 @@ func _process(_delta: float) -> void:
 		if is_instance_valid(vehicle_summon_button):
 			vehicle_summon_button.visible = false
 		return
-	if is_instance_valid(vehicle_summon_button):
-		vehicle_summon_button.visible = true
-		vehicle_summon_button.text = "إحضار السيارة" if CityLanguage.get_language() == "ar" else "Call vehicle"
 	var player := get_node_or_null("Player") as CharacterBody3D
 	if not is_instance_valid(player):
+		if is_instance_valid(vehicle_summon_button):
+			vehicle_summon_button.visible = false
 		if is_instance_valid(vehicle_interaction_button):
 			vehicle_interaction_button.visible = false
 		_update_interaction_target_marker(null)
 		return
+	var player_inside_city := is_position_inside_city_bounds(player.global_position)
+	if is_instance_valid(vehicle_summon_button):
+		vehicle_summon_button.visible = player_inside_city
+		vehicle_summon_button.text = "إحضار السيارة" if CityLanguage.get_language() == "ar" else "Call vehicle"
 	# أولوية العلامة: محطة الحفلة، ثم أقرب عنصر مدينة يملك مسار تفاعل قائمًا، ثم السيارة.
 	var nearby_party_station := _get_nearby_party_station(player)
 	var mission_manager := get_node_or_null("MissionManager")
@@ -273,12 +279,12 @@ func _create_player_vehicle() -> void:
 func _summon_player_vehicle() -> void:
 	if interior_transition_busy or is_instance_valid(interior_root) or vehicle_occupied:
 		return
+	var player := get_node_or_null("Player") as CharacterBody3D
+	if not is_instance_valid(player) or not is_position_inside_city_bounds(player.global_position):
+		return
 	var selected_vehicle_id := VehicleStoreManager.get_selected_vehicle_id()
 	if not VehicleStoreManager.has_vehicle(selected_vehicle_id):
 		push_warning("لا يمكن استدعاء مركبة غير مملوكة.")
-		return
-	var player := get_node_or_null("Player") as CharacterBody3D
-	if not is_instance_valid(player):
 		return
 	if not is_instance_valid(city_vehicle):
 		var packed := load("res://scenes/vehicle.tscn") as PackedScene
