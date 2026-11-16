@@ -562,6 +562,11 @@ func _run_social_validation_tests() -> void:
 			push_error("An out-of-bounds or non-finite shared location was serialized.")
 			quit(1)
 			return
+	for invalid_message in ["KINGLOC1|250.001|0|0", "KINGLOC1|0|100.001|0", "KINGLOC1|0|-10.001|0", "KINGLOC1|nan|0|0", "KINGLOC1|0|0|inf"]:
+		if not city_hud.parse_shared_location_message(invalid_message).is_empty():
+			push_error("An out-of-bounds or non-finite received shared location was accepted.")
+			quit(1)
+			return
 	var location_chat_line: String = city_hud.format_public_chat_message("صديق", location_message)
 	if not location_chat_line.contains("📍") or not location_chat_line.contains("متابعة") or not location_chat_line.contains("kingloc://"):
 		push_error("A shared location chat message did not render a clickable follow action.")
