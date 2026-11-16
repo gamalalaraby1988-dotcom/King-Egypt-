@@ -97,6 +97,31 @@ func _run_social_validation_tests() -> void:
 		return
 	player_instance.free()
 	vehicle_instance.free()
+	# A parked personal vehicle collides with its owner only, not other players.
+	var parked_owner := CharacterBody3D.new()
+	parked_owner.add_to_group("player")
+	var parked_other := CharacterBody3D.new()
+	parked_other.add_to_group("player")
+	var parked_vehicle := CharacterBody3D.new()
+	root.add_child(parked_owner)
+	root.add_child(parked_other)
+	root.add_child(parked_vehicle)
+	collision_profile.apply_owned_vehicle_parked_collision(parked_vehicle, parked_owner)
+	if parked_vehicle.collision_layer != world_layer or (parked_vehicle.collision_mask & player_layer) == 0 or parked_vehicle.get_collision_exceptions().has(parked_owner) or not parked_vehicle.get_collision_exceptions().has(parked_other):
+		push_error("Parked personal vehicle must collide with its owner and ignore other players.")
+		quit(1)
+		return
+	collision_profile.apply_driven_vehicle_collision(parked_vehicle)
+	if parked_vehicle.collision_layer != vehicle_layer or parked_vehicle.collision_mask != vehicle_mask:
+		push_error("Driving the personal vehicle did not restore the normal vehicle collision profile.")
+		quit(1)
+		return
+	root.remove_child(parked_owner)
+	root.remove_child(parked_other)
+	root.remove_child(parked_vehicle)
+	parked_owner.free()
+	parked_other.free()
+	parked_vehicle.free()
 	for staff_script_path in ["res://scripts/service_npc.gd", "res://scripts/camp_animal_staff.gd"]:
 		var staff_script: Script = load(staff_script_path)
 		var staff_instance := Node3D.new()
