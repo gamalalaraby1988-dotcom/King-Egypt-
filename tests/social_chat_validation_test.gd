@@ -607,6 +607,16 @@ func _run_social_validation_tests() -> void:
 		push_error("A shared location follow link could not be parsed.")
 		quit(1)
 		return
+	var boundary_uri_data: Dictionary = city_hud.parse_shared_location_uri("kingloc://250,100,-250")
+	if boundary_uri_data.is_empty() or (boundary_uri_data["position"] as Vector3).distance_to(Vector3(250.0, 100.0, -250.0)) > 0.01:
+		push_error("A valid shared-location follow link on the world boundary was rejected.")
+		quit(1)
+		return
+	var malformed_location_line: String = city_hud.format_public_chat_message("صديق", "KINGLOC1|250.001|0|0")
+	if malformed_location_line.contains("[url=kingloc://") or malformed_location_line.contains("متابعة"):
+		push_error("An invalid shared-location message was rendered as an actionable follow link.")
+		quit(1)
+		return
 	if not city_hud.parse_shared_location_message("KINGLOC1|9999|0|9999").is_empty():
 		push_error("An out-of-bounds shared location was accepted.")
 		quit(1)
