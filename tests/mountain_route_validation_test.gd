@@ -143,6 +143,32 @@ func _run_mountain_route_tests() -> void:
 				quit(1)
 				return
 
+	# Confirm the route remains visibly guided at night and the rest-stop wayfinding is present.
+	for route_light_index in range(route_points.size()):
+		var lamp_post := route.get_node_or_null("MountainWayfindingLampPost_%02dCollision" % route_light_index) as StaticBody3D
+		var lamp_glow := route.get_node_or_null("MountainWayfindingGlow_%02d" % route_light_index) as OmniLight3D
+		if lamp_post == null or lamp_glow == null or lamp_glow.omni_range < 7.0:
+			push_error("Mountain route waypoint %d is missing a solid lamp post or sufficient night lighting." % route_light_index)
+			quit(1)
+			return
+	for stop_index in range(2):
+		for fixture_name in ["MountainRestLantern_%d" % stop_index, "MountainRestSignBoard_%d" % stop_index]:
+			if route.get_node_or_null(fixture_name + "Collision") == null:
+				push_error("Rest stop %d is missing its solid wayfinding fixture %s." % [stop_index, fixture_name])
+				quit(1)
+				return
+		for glow_name in ["MountainRestGlow_%d" % stop_index, "MountainRestSignGlow_%d" % stop_index, "MountainRestArrowGlow_%d" % stop_index]:
+			var rest_glow := route.get_node_or_null(glow_name) as OmniLight3D
+			if rest_glow == null or rest_glow.light_energy <= 0.0:
+				push_error("Rest stop %d is missing its night guidance light %s." % [stop_index, glow_name])
+				quit(1)
+				return
+		var continue_arrow := route.get_node_or_null("MountainRestContinueArrow_%d" % stop_index) as Label3D
+		if continue_arrow == null or continue_arrow.text != "➤":
+			push_error("Rest stop %d is missing its uphill direction arrow." % stop_index)
+			quit(1)
+			return
+
 	# The summit must be a usable protected terrace, with its approach left open.
 	for summit_fixture in [
 		"MountainSummitPlatform",
