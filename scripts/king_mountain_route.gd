@@ -204,15 +204,23 @@ func _build_rest_stops() -> void:
 
 func _build_summit_terrace() -> void:
 	var summit: Vector3 = ROUTE_POINTS[ROUTE_POINTS.size() - 1]
-	_add_box("MountainSummitPlatform", Vector3(34.0, 1.0, 34.0), summit + Vector3(0.0, -0.5, 5.0), Color(0.52, 0.45, 0.35), true)
-	# الحواجز تحيط بالحواف وتترك مدخل الطريق مفتوحًا من الجهة الجنوبية.
-	for x in [-15.0, 15.0]:
-		_add_box("MountainSummitSideBarrier_%d" % int(x), Vector3(0.65, 1.6, 30.0), summit + Vector3(x, 0.8, 5.0), Color(0.36, 0.31, 0.25), true)
-	_add_box("MountainSummitRearBarrier", Vector3(30.0, 1.6, 0.65), summit + Vector3(0.0, 0.8, 21.0), Color(0.36, 0.31, 0.25), true)
-	_add_box("MountainSummitObeliskBase", Vector3(4.0, 0.6, 4.0), summit + Vector3(-9.0, 0.8, 7.0), Color(0.36, 0.31, 0.25), true)
-	_add_box("MountainSummitObelisk", Vector3(0.65, 5.0, 0.65), summit + Vector3(-9.0, 3.6, 7.0), Color(0.86, 0.68, 0.29), true)
-	for x in [-10.0, 10.0]:
-		_add_box("MountainSummitBench_%d" % int(x), Vector3(3.0, 0.5, 0.8), summit + Vector3(x, 0.45, 9.0), Color(0.32, 0.28, 0.23), true)
+	var summit_forward := (summit - ROUTE_POINTS[ROUTE_POINTS.size() - 2]).normalized()
+	var summit_side := Vector3.UP.cross(summit_forward).normalized()
+	var summit_basis := Basis(-summit_side, Vector3.UP, -summit_forward)
+	var platform_center := summit + Vector3.UP * -0.5 + summit_forward * 5.0
+	_add_oriented_box("MountainSummitPlatform", Vector3(34.0, 1.0, 34.0), platform_center, summit_basis, Color(0.52, 0.45, 0.35), true)
+	# الحواجز تتبع اتجاه الوصول الفعلي وتترك فتحة واسعة على امتداد طريق الصعود.
+	for side_sign in [-1.0, 1.0]:
+		var side_center := summit + summit_side * side_sign * 15.0 + Vector3.UP * 0.8 + summit_forward * 5.0
+		_add_oriented_box("MountainSummitSideBarrier_%d" % int(side_sign), Vector3(0.65, 1.6, 30.0), side_center, summit_basis, Color(0.36, 0.31, 0.25), true)
+	var rear_center := summit + summit_forward * 21.0 + Vector3.UP * 0.8
+	_add_oriented_box("MountainSummitRearBarrier", Vector3(30.0, 1.6, 0.65), rear_center, summit_basis, Color(0.36, 0.31, 0.25), true)
+	var obelisk_position := summit - summit_side * 9.0 + summit_forward * 7.0
+	_add_oriented_box("MountainSummitObeliskBase", Vector3(4.0, 0.6, 4.0), obelisk_position + Vector3.UP * 0.8, summit_basis, Color(0.36, 0.31, 0.25), true)
+	_add_oriented_box("MountainSummitObelisk", Vector3(0.65, 5.0, 0.65), obelisk_position + Vector3.UP * 3.6, summit_basis, Color(0.86, 0.68, 0.29), true)
+	for side_sign in [-1.0, 1.0]:
+		var bench_position := summit + summit_side * side_sign * 10.0 + summit_forward * 9.0
+		_add_oriented_box("MountainSummitBench_%d" % int(side_sign), Vector3(3.0, 0.5, 0.8), bench_position + Vector3.UP * 0.45, summit_basis, Color(0.32, 0.28, 0.23), true)
 
 
 func _add_box(name: String, size: Vector3, position: Vector3, color: Color, collision: bool) -> void:
