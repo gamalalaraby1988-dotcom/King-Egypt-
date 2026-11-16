@@ -191,6 +191,34 @@ func _run_social_validation_tests() -> void:
 		push_error("Starting an activity did not reset shared-navigation timers.")
 		quit(1)
 		return
+	# الانتقال إلى الاسكوتر يجب أن يلغي مسار مشاركة الموقع القديم فقط، لا أي ملاحة أخرى.
+	player_probe.call("begin_auto_navigation")
+	player_probe.call("set_auto_navigation_direction", Vector3(1.0, 0.0, 0.0))
+	route_probe.set("landmark_navigation_key", "shared_location")
+	route_probe.set("landmark_navigation_active", true)
+	route_probe.set("landmark_route_points", valid_shared_route)
+	route_probe.set("landmark_route_index", 1)
+	marker_probe.visible = true
+	if not bool(route_probe.call("cancel_shared_location_navigation")):
+		push_error("Explicit shared-location cancellation did not report that it cancelled an active route.")
+		quit(1)
+		return
+	if bool(route_probe.get("landmark_navigation_active")) or str(route_probe.get("landmark_navigation_key")) != "" or not (route_probe.get("landmark_route_points") as PackedVector3Array).is_empty() or marker_probe.visible or bool(player_probe.get("auto_navigation_active")):
+		push_error("Explicit shared-location cancellation left walking, route, or marker state active.")
+		quit(1)
+		return
+	if bool(route_probe.call("cancel_shared_location_navigation")):
+		push_error("Cancelling an already inactive shared-location route reported a false cancellation.")
+		quit(1)
+		return
+	route_probe.set("landmark_navigation_key", "existing_landmark")
+	route_probe.set("landmark_navigation_active", true)
+	if bool(route_probe.call("cancel_shared_location_navigation")) or not bool(route_probe.get("landmark_navigation_active")) or str(route_probe.get("landmark_navigation_key")) != "existing_landmark":
+		push_error("Shared-location cancellation incorrectly cleared an unrelated landmark route.")
+		quit(1)
+		return
+	route_probe.set("landmark_navigation_key", "shared_location")
+	route_probe.set("landmark_navigation_active", false)
 	# الوصول إلى الموقع يوقف المشي ويزيل العلامة والمسار ويبدأ مهلة الوصول.
 	player_probe.call("begin_auto_navigation")
 	player_probe.call("set_auto_navigation_direction", Vector3(0.0, 0.0, -1.0))
