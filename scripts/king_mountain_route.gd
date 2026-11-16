@@ -190,6 +190,7 @@ func _build_rest_stops() -> void:
 		_add_oriented_box("MountainRestBay_%d" % stop_number, Vector3(7.0, 0.32, 7.0), pad_center, view_basis, Color(0.56, 0.47, 0.36), true)
 		_add_oriented_box("MountainRestBench_%d" % stop_number, Vector3(2.8, 0.55, 0.75), pad_center + side * 0.9 + Vector3.UP * 0.42, view_basis, Color(0.30, 0.27, 0.23), true)
 		_add_box("MountainRestLantern_%d" % stop_number, Vector3(0.28, 2.4, 0.28), pad_center - side * 2.4 + Vector3.UP * 1.2, Color(0.78, 0.59, 0.27), true)
+		_add_warm_light("MountainRestGlow_%d" % stop_number, pad_center - side * 2.4 + Vector3.UP * 2.7, 0.85, 9.0)
 		# منصة المشاهدة وحواجزها تتبع اتجاه المسار بدل محاور العالم، وتبقى جهة الاستراحة مفتوحة.
 		var view_center := pad_center + side * 5.2
 		_add_oriented_box("MountainViewDeck_%d" % stop_number, Vector3(8.0, 0.32, 7.0), view_center, view_basis, Color(0.61, 0.52, 0.39), true)
@@ -220,9 +221,21 @@ func _build_summit_terrace() -> void:
 	var obelisk_position: Vector3 = summit - summit_side * 9.0 + summit_forward * 7.0
 	_add_oriented_box("MountainSummitObeliskBase", Vector3(4.0, 0.6, 4.0), obelisk_position + Vector3.UP * 0.8, summit_basis, Color(0.36, 0.31, 0.25), true)
 	_add_oriented_box("MountainSummitObelisk", Vector3(0.65, 5.0, 0.65), obelisk_position + Vector3.UP * 3.6, summit_basis, Color(0.86, 0.68, 0.29), true)
+	_add_warm_light("MountainSummitObeliskGlow", obelisk_position + Vector3.UP * 6.0, 1.1, 14.0)
 	for side_sign in [-1.0, 1.0]:
 		var bench_position: Vector3 = summit + summit_side * side_sign * 10.0 + summit_forward * 9.0
 		_add_oriented_box("MountainSummitBench_%d" % int(side_sign), Vector3(3.0, 0.5, 0.8), bench_position + Vector3.UP * 0.45, summit_basis, Color(0.32, 0.28, 0.23), true)
+
+
+func _add_warm_light(light_name: String, light_position: Vector3, energy: float, light_range: float) -> void:
+	var glow := OmniLight3D.new()
+	glow.name = light_name
+	glow.position = light_position
+	glow.light_color = Color(1.0, 0.76, 0.43)
+	glow.light_energy = energy
+	glow.omni_range = light_range
+	glow.shadow_enabled = false
+	add_child(glow)
 
 
 func _add_box(name: String, size: Vector3, position: Vector3, color: Color, collision: bool) -> void:
