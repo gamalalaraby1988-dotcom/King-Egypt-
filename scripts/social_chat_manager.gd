@@ -93,6 +93,16 @@ func change_my_display_name(new_name: String) -> bool:
 func list_friends() -> bool:
 	return _rpc("list_test_friends", {}, "friends_list")
 
+func list_friend_requests() -> bool:
+	return _rpc("list_test_friend_requests", {}, "friend_requests_list")
+
+func respond_friend_request(request_id: String, accept: bool) -> bool:
+	var clean_id := request_id.strip_edges().to_lower()
+	if not is_valid_invite_id(clean_id):
+		operation_failed.emit("friend_request_response", "معرّف طلب الصداقة غير صالح.")
+		return false
+	return _rpc("respond_test_friend_request", {"p_request_id": clean_id, "p_accept": accept}, "friend_request_response")
+
 func send_friend_request(player_code: String) -> bool:
 	return _rpc("send_test_friend_request", {"p_player_code": player_code}, "friend_request")
 
