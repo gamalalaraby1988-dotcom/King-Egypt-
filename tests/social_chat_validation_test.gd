@@ -410,6 +410,31 @@ func _run_social_validation_tests() -> void:
 			push_error("Manual vehicle input did not stop auto-follow and clear its route and marker.")
 			quit(1)
 			return
+	# بدء مهمة أو وظيفة أثناء متابعة الاسكوتر يجب أن ينهي المتابعة ويوقف المحرك.
+	for activity_case in [
+		{"mission_running": true, "job_running": false},
+		{"mission_running": false, "job_running": true}
+	]:
+		route_probe.set("mission_running", bool(activity_case["mission_running"]))
+		route_probe.set("job_running", bool(activity_case["job_running"]))
+		main_probe.set("vehicle_occupied", true)
+		main_probe.set("_shared_location_vehicle_following", true)
+		main_probe.set("_shared_location_vehicle_target", Vector3(18.0, 0.0, 9.0))
+		main_probe.set("_shared_location_vehicle_route", PackedVector3Array([Vector3.ZERO, Vector3(18.0, 0.0, 9.0)]))
+		main_probe.set("_shared_location_vehicle_route_index", 1)
+		vehicle_probe.call("set_auto_navigation_controls", 2.5, 0.6)
+		marker_probe.visible = true
+		main_probe.call("_update_shared_location_vehicle_follow")
+		if bool(main_probe.get("_shared_location_vehicle_following")) or not (main_probe.get("_shared_location_vehicle_route") as PackedVector3Array).is_empty() or marker_probe.visible:
+			push_error("Starting a mission or job did not cancel scooter shared-location following.")
+			quit(1)
+			return
+		if float(vehicle_probe.get("auto_navigation_speed")) >= 0.0 or bool(vehicle_probe.get("drive_pressed")) or not bool(vehicle_probe.get("brake_pressed")):
+			push_error("Starting a mission or job did not stop scooter auto-drive.")
+			quit(1)
+			return
+	route_probe.set("mission_running", false)
+	route_probe.set("job_running", false)
 	# لا تُنهِ متابعة الاسكوتر قبل الوصول الفعلي إلى نطاق الوجهة النهائي (2 متر).
 	main_probe.set("vehicle_occupied", true)
 	vehicle_probe.global_position = Vector3(18.0, 0.0, 11.5)
