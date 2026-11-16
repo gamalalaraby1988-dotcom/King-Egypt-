@@ -1377,7 +1377,7 @@ func _find_grid_route(start_node: Vector2, target_node: Vector2) -> Array[Vector
 	return reversed_path
 
 
-const SHARED_LOCATION_MAX_ROAD_CONNECTOR_DISTANCE := 20.0
+const SHARED_LOCATION_MAX_ROAD_CONNECTOR_DISTANCE := 35.0
 
 
 func build_shared_location_route_from(start_position: Vector3, destination: Vector3) -> PackedVector3Array:
