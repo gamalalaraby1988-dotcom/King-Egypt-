@@ -689,6 +689,19 @@ func _process(_delta: float) -> void:
 	_update_shared_location_auto_walk()
 
 
+func _complete_shared_location_navigation() -> void:
+	# الوصول ينهي الحركة تلقائيًا ويمسح كل عناصر متابعة الموقع.
+	landmark_navigation_active = false
+	if is_instance_valid(player) and player.has_method("end_auto_navigation"):
+		player.call("end_auto_navigation")
+	hide_shared_location_marker()
+	landmark_route_points.clear()
+	landmark_route_index = 0
+	navigation_arrival_remaining = 2.5
+	navigation_off_route_time = 0.0
+	navigation_route_notice_remaining = 0.0
+
+
 func _cancel_shared_location_navigation_for_manual_input() -> void:
 	# تدخل اللاعب يلغي مشاركة التوجيه فقط، ولا يعرض رسالة إلغاء مهمة أو وظيفة.
 	if is_instance_valid(player) and player.has_method("end_auto_navigation"):
@@ -1249,14 +1262,13 @@ func _update_navigation_hud() -> void:
 	navigation_arrow.rotation = relative_angle
 	navigation_label.text = "%s %s   |   %s: %.0f م" % [CityLanguage.translate("navigation_destination"), destination_name, CityLanguage.translate("navigation_distance"), distance] if landmark_navigation_active and not mission_running and not job_running else "الوجهة: %s   |   المسافة: %.0f م" % [destination_name, distance]
 	if landmark_navigation_active and not mission_running and not job_running and Vector2(destination.x - player.global_position.x, destination.z - player.global_position.z).length() <= 2.0:
-		landmark_navigation_active = false
 		if landmark_navigation_key == "shared_location":
-			if is_instance_valid(player) and player.has_method("end_auto_navigation"):
-				player.call("end_auto_navigation")
-			hide_shared_location_marker()
-		landmark_route_points.clear()
-		landmark_route_index = 0
-		navigation_arrival_remaining = 2.5
+			_complete_shared_location_navigation()
+		else:
+			landmark_navigation_active = false
+			landmark_route_points.clear()
+			landmark_route_index = 0
+			navigation_arrival_remaining = 2.5
 		navigation_label.text = "%s %s" % [CityLanguage.translate("navigation_arrived"), CityLanguage.translate(landmark_navigation_key)]
 		navigation_arrow.visible = false
 		navigation_cancel_button.visible = false

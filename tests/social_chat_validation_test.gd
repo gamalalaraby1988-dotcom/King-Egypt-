@@ -110,6 +110,20 @@ func _run_social_validation_tests() -> void:
 		push_error("Starting an activity did not reset shared-navigation timers.")
 		quit(1)
 		return
+	# الوصول إلى الموقع يوقف المشي ويزيل العلامة والمسار ويبدأ مهلة الوصول.
+	player_probe.call("begin_auto_navigation")
+	player_probe.call("set_auto_navigation_direction", Vector3(0.0, 0.0, -1.0))
+	player_probe.velocity = Vector3(3.0, 0.0, 1.0)
+	route_probe.set("landmark_navigation_key", "shared_location")
+	route_probe.set("landmark_navigation_active", true)
+	route_probe.set("landmark_route_points", valid_shared_route)
+	route_probe.set("landmark_route_index", 1)
+	marker_probe.visible = true
+	route_probe.call("_complete_shared_location_navigation")
+	if bool(route_probe.get("landmark_navigation_active")) or not (route_probe.get("landmark_route_points") as PackedVector3Array).is_empty() or int(route_probe.get("landmark_route_index")) != 0 or marker_probe.visible or bool(player_probe.get("auto_navigation_active")) or float(route_probe.get("navigation_arrival_remaining")) <= 0.0 or not player_probe.velocity.is_zero_approx():
+		push_error("Arriving at a shared location did not stop movement and clear navigation state.")
+		quit(1)
+		return
 	# التدخل اليدوي يلغي توجيه الموقع فقط، دون فتح نافذة إلغاء مهمة.
 	player_probe.call("begin_auto_navigation")
 	player_probe.call("set_auto_navigation_direction", Vector3(0.0, 0.0, -1.0))
