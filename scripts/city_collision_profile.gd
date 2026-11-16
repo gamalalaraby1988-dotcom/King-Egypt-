@@ -42,6 +42,7 @@ static func add_world_box_collider(parent: Node3D, size: Vector3, position: Vect
 	body.name = body_name
 	body.collision_layer = WORLD_LAYER
 	body.collision_mask = WORLD_LAYER
+	body.add_to_group("city_world_geometry")
 	var collision_shape := CollisionShape3D.new()
 	collision_shape.name = "CollisionShape3D"
 	var box := BoxShape3D.new()
