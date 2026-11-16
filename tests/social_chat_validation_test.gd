@@ -121,8 +121,9 @@ func _run_social_validation_tests() -> void:
 		var summit_side_mesh := mountain_route_probe.get_node_or_null(summit_side_name) as MeshInstance3D
 		var summit_side_body := mountain_route_probe.get_node_or_null(summit_side_name + "Collision") as StaticBody3D
 		var summit_side_shape := summit_side_body.get_node_or_null("CollisionShape3D") as CollisionShape3D if is_instance_valid(summit_side_body) else null
-		if not is_instance_valid(summit_side_mesh) or not is_instance_valid(summit_side_body) or not is_instance_valid(summit_side_shape):
-			push_error("Mountain summit is missing a rotated solid side barrier: " + summit_side_name)
+		var summit_side_gold := mountain_route_probe.get_node_or_null("MountainSummitSideGoldRail_%d" % side_sign) as MeshInstance3D
+		if not is_instance_valid(summit_side_mesh) or not is_instance_valid(summit_side_body) or not is_instance_valid(summit_side_shape) or not is_instance_valid(summit_side_gold):
+			push_error("Mountain summit is missing a rotated solid side barrier or gold top rail: " + summit_side_name)
 			quit(1)
 			return
 		if absf(summit_side_mesh.global_basis.z.normalized().dot(-summit_forward)) < 0.98:
@@ -131,8 +132,9 @@ func _run_social_validation_tests() -> void:
 			return
 	var summit_rear_mesh := mountain_route_probe.get_node_or_null("MountainSummitRearBarrier") as MeshInstance3D
 	var summit_rear_body := mountain_route_probe.get_node_or_null("MountainSummitRearBarrierCollision") as StaticBody3D
-	if not is_instance_valid(summit_rear_mesh) or not is_instance_valid(summit_rear_body):
-		push_error("Mountain summit rear edge is missing its aligned solid barrier.")
+	var summit_rear_gold := mountain_route_probe.get_node_or_null("MountainSummitRearGoldRail") as MeshInstance3D
+	if not is_instance_valid(summit_rear_mesh) or not is_instance_valid(summit_rear_body) or not is_instance_valid(summit_rear_gold):
+		push_error("Mountain summit rear edge is missing its aligned solid barrier or gold top rail.")
 		quit(1)
 		return
 	print("SOCIAL_TEST_STAGE: mountain_viewpoints_and_summit_alignment_complete")
