@@ -63,11 +63,20 @@ func _ready() -> void:
 		key_light.add_to_group("quality_shadow_light")
 	_create_interactive_buildings()
 	_create_camp()
+	_create_king_mountain_route()
 	_create_city_map()
 	_create_interior_transition_ui()
 	_create_player_vehicle()
 	_create_auth_login_panel()
 	_create_character_selection_ui()
+
+
+
+func _create_king_mountain_route() -> void:
+	var route := Node3D.new()
+	route.name = "KingsMountainRoute"
+	route.set_script(load("res://scripts/king_mountain_route.gd"))
+	add_child(route)
 
 
 func _create_character_selection_ui() -> void:
@@ -713,7 +722,7 @@ func _create_interior_quick_travel_ui() -> void:
 	var entries := [
 		["⛺  المخيم", true],
 		["🏠  الشقة", true],
-		["𓉐  قمة الملوك", true],
+		["𓉐  بوابة صعود الجبل", true],
 		["⚜  الميدان", true],
 		["⛵  السفينة", true],
 		["🚪  الخروج خارج المبنى", true]
@@ -776,6 +785,13 @@ func _open_quick_travel_destination(destination_name: String, destination_kind: 
 		return
 	await return_from_building_interior()
 	if not is_inside_tree() or not is_instance_valid(body) or body.is_queued_for_deletion():
+		return
+	if destination_kind == "summit":
+		# التنقل السريع يصل إلى بوابة الجبل فقط؛ الصعود إلى القمة يتم على الطريق الفعلي.
+		body.global_position = Vector3(45.0, 1.2, 85.5)
+		body.velocity = Vector3.ZERO
+		body.rotation.y = PI
+		body.set_physics_process(true)
 		return
 	interior_transition_busy = true
 	interior_player = body
