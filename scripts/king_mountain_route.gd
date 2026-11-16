@@ -318,6 +318,18 @@ func _build_rest_stops() -> void:
 		rest_sign_label.modulate = Color(1.0, 0.86, 0.58)
 		add_child(rest_sign_label)
 		_add_warm_light("MountainRestSignGlow_%d" % stop_number, rest_sign_position + Vector3.UP * 0.85, 0.55, 5.5)
+		# مؤشر اتجاه واضح عند الاستراحة يبين استمرار طريق الصعود للقمة.
+		var continue_arrow := Label3D.new()
+		continue_arrow.name = "MountainRestContinueArrow_%d" % stop_number
+		continue_arrow.text = "➤"
+		continue_arrow.position = rest_sign_position + forward * 1.0 + Vector3.UP * 1.35
+		continue_arrow.rotation.y = atan2(forward.x, forward.z)
+		continue_arrow.font_size = 58
+		continue_arrow.outline_size = 10
+		continue_arrow.pixel_size = 0.006
+		continue_arrow.modulate = Color(1.0, 0.78, 0.36)
+		add_child(continue_arrow)
+		_add_warm_light("MountainRestArrowGlow_%d" % stop_number, continue_arrow.position + Vector3.UP * 0.2, 0.42, 4.5)
 		# منصة المشاهدة وحواجزها تتبع اتجاه المسار بدل محاور العالم، وتبقى جهة الاستراحة مفتوحة.
 		var view_center := pad_center + side * 5.2
 		_add_oriented_box("MountainViewDeck_%d" % stop_number, Vector3(8.0, 0.32, 7.0), view_center, view_basis, Color(0.61, 0.52, 0.39), true)
