@@ -312,6 +312,9 @@ func _summon_player_vehicle() -> void:
 	# تظهر المركبة بجانب اللاعب عند الاستدعاء، ويمكن إحضارها مجددًا إذا تُركت بعيدًا.
 	var side := player.global_transform.basis.x.normalized()
 	var summon_position := player.global_position + side * 3.5
+	# Keep the summoned vehicle safely inside the playable city ground.
+	summon_position.x = clampf(summon_position.x, -87.0, 87.0)
+	summon_position.z = clampf(summon_position.z, -87.0, 87.0)
 	summon_position.y = player.global_position.y
 	city_vehicle.global_position = summon_position
 	city_vehicle.global_rotation.y = player.global_rotation.y
