@@ -97,6 +97,9 @@ func _run_social_validation_tests() -> void:
 				quit(1)
 				return
 	print("SOCIAL_TEST_STAGE: mountain_turn_guard_connectors_complete")
+	# Build rest stops explicitly if the scene lifecycle has not populated them yet.
+	if mountain_route_probe.get_node_or_null("MountainRestBay_0Collision") == null:
+		mountain_route_probe.call("_build_rest_stops")
 	# Both mountain rest bays and their scenic decks must be solid for players and vehicles.
 	for stop_number in range(2):
 		var required_fixtures := [
