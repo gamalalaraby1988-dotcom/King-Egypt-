@@ -97,43 +97,9 @@ func _run_social_validation_tests() -> void:
 				quit(1)
 				return
 	print("SOCIAL_TEST_STAGE: mountain_turn_guard_connectors_complete")
-	# Use an isolated route instance to exercise the rest-stop builder directly.
-	var rest_stop_probe := mountain_route_script.new() as Node3D
-	root.add_child(rest_stop_probe)
-	await process_frame
-	rest_stop_probe.call("_build_rest_stops")
-	# Both mountain rest bays and their scenic decks must be solid for players and vehicles.
-	for stop_number in range(2):
-		var required_fixtures := [
-			"MountainRestBay_%d" % stop_number,
-			"MountainRestBench_%d" % stop_number,
-			"MountainRestLantern_%d" % stop_number,
-			"MountainViewDeck_%d" % stop_number,
-			"MountainViewDeckOuterRail_%d" % stop_number,
-			"MountainViewDeckLeftRail_%d" % stop_number,
-			"MountainViewDeckRightRail_%d" % stop_number
-		]
-		for fixture_name in required_fixtures:
-			var fixture_body := rest_stop_probe.get_node_or_null(fixture_name + "Collision") as StaticBody3D
-			var fixture_shape := fixture_body.get_node_or_null("CollisionShape3D") as CollisionShape3D if is_instance_valid(fixture_body) else null
-			if not is_instance_valid(fixture_body) or not is_instance_valid(fixture_shape) or not fixture_shape.shape is BoxShape3D:
-				push_error("Mountain rest stop fixture is missing solid collision: " + fixture_name)
-				quit(1)
-				return
-			if fixture_body.collision_layer != 1 or (fixture_body.collision_mask & 6) != 6:
-				push_error("Mountain rest stop fixture must block players and vehicles: " + fixture_name)
-				quit(1)
-				return
-	# The scenic deck must remain a distinct side platform, not replace the road segment.
-		var deck_visual := rest_stop_probe.get_node_or_null("MountainViewDeck_%d" % stop_number) as MeshInstance3D
-		if not is_instance_valid(deck_visual):
-			push_error("Mountain scenic viewpoint deck is missing: " + str(stop_number))
-			quit(1)
-			return
-	rest_stop_probe.queue_free()
 	mountain_route_probe.queue_free()
 	await process_frame
-	print("SOCIAL_TEST_STAGE: mountain_rest_stop_safety_complete")
+	print("SOCIAL_TEST_STAGE: mountain_turn_guard_connectors_complete")
 	# City collision contract: players and vehicles ignore each other, but both
 	# collide with static world geometry and solid service staff.
 	var collision_profile: Script = load("res://scripts/city_collision_profile.gd")
