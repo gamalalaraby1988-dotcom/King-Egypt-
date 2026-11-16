@@ -785,6 +785,25 @@ func _open_quick_travel_destination(destination_name: String, destination_kind: 
 	interior_transition_busy = false
 	_show_interior_loading(true)
 
+
+func _create_summit_edge_barriers(root: Node3D, wall_color: Color, rail_color: Color) -> void:
+	# الحاجز الحجري المرتفع يتحمل اصطدام اللاعب والمركبة، والسياج الذهبي العلوي يكمل الحماية.
+	var wall_height := 1.55
+	var wall_thickness := 0.7
+	var wall_center_y := wall_height * 0.5
+	var rail_height := 0.22
+	var rail_center_y := wall_height + rail_height * 0.5 - 0.05
+	var edge_offset := 14.65
+	var edge_length := 29.3
+	for side in [-1.0, 1.0]:
+		_create_box(root, "SummitSideSafetyWall_%d" % int(side), Vector3(wall_thickness, wall_height, edge_length), Vector3(side * edge_offset, wall_center_y, 0.0), wall_color, true)
+		_create_box(root, "SummitSideGoldRail_%d" % int(side), Vector3(0.22, rail_height, edge_length), Vector3(side * edge_offset, rail_center_y, 0.0), rail_color, true)
+		_create_box(root, "SummitFrontSafetyWall_%d" % int(side), Vector3(edge_length * 0.5, wall_height, wall_thickness), Vector3(side * edge_length * 0.25, wall_center_y, -edge_offset), wall_color, true)
+		_create_box(root, "SummitFrontGoldRail_%d" % int(side), Vector3(edge_length * 0.5, rail_height, 0.22), Vector3(side * edge_length * 0.25, rail_center_y, -edge_offset), rail_color, true)
+		_create_box(root, "SummitRearSafetyWall_%d" % int(side), Vector3(edge_length * 0.5, wall_height, wall_thickness), Vector3(side * edge_length * 0.25, wall_center_y, edge_offset), wall_color, true)
+		_create_box(root, "SummitRearGoldRail_%d" % int(side), Vector3(edge_length * 0.5, rail_height, 0.22), Vector3(side * edge_length * 0.25, rail_center_y, edge_offset), rail_color, true)
+
+
 func _create_destination_scene(destination_name: String, destination_kind: String) -> void:
 	if is_instance_valid(interior_root):
 		interior_root.queue_free()
@@ -802,12 +821,8 @@ func _create_destination_scene(destination_name: String, destination_kind: Strin
 		var rail_gold := Color(0.76, 0.58, 0.27)
 		_create_box(root, "SummitRockPlatform", Vector3(38, 1.4, 38), Vector3(0, -0.7, 0), summit_stone, true)
 		_create_box(root, "SummitOpenViewingTerrace", Vector3(30, 0.35, 30), Vector3(0, 0.15, 0), stone, true)
-		# حواجز آمنة حول الحواف، مع إبقاء الواجهة الأمامية مفتوحة للإطلالة.
-		for side in [-1.0, 1.0]:
-			_create_box(root, "SummitSideSafetyWall_%d" % int(side), Vector3(0.55, 1.35, 29), Vector3(side * 14.8, 0.95, -0.5), dark_stone, true)
-			_create_box(root, "SummitSideGoldRail_%d" % int(side), Vector3(0.18, 0.18, 29), Vector3(side * 14.8, 1.72, -0.5), rail_gold, true)
-		_create_box(root, "SummitRearSafetyWall", Vector3(29.5, 1.35, 0.55), Vector3(0, 0.95, 14.8), dark_stone, true)
-		_create_box(root, "SummitRearGoldRail", Vector3(29.5, 0.18, 0.55), Vector3(0, 1.72, 14.8), rail_gold, true)
+		# حواجز حماية صلبة ومتصلة على الجهات الأربع؛ الواجهة تبقى مفتوحة بصريًا فوق الحاجز.
+		_create_summit_edge_barriers(root, dark_stone, rail_gold)
 		# أعمدة ذهبية زخرفية عند أطراف الشرفة، لا تسد خط النظر.
 		for x in [-12.0, 12.0]:
 			for z in [-11.0, 10.0]:
