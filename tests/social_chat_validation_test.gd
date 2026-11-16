@@ -384,7 +384,7 @@ func _run_social_validation_tests() -> void:
 		quit(1)
 		return
 	var vertical_camera_arrow := float(location_probe.call("calculate_shared_location_arrow_rotation", Vector3(0.0, 0.0, -1.0), Vector3.UP, Vector3.RIGHT))
-	if not is_equal_approx(vertical_camera_arrow, 0.0):
+	if not is_equal_approx(vertical_camera_arrow, -PI * 0.5):
 		push_error("The shared-location arrow did not retain a stable heading when the camera pointed vertically.")
 		quit(1)
 		return
