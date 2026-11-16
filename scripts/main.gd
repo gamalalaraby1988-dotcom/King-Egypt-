@@ -346,6 +346,8 @@ func begin_shared_location_navigation(destination: Vector3) -> bool:
 		_shared_location_vehicle_route = mission_manager.call("build_shared_location_route_from", city_vehicle.global_position, destination)
 		if _shared_location_vehicle_route.size() < 2:
 			return false
+		# ألغِ أي متابعة مشي قديمة فقط بعد نجاح بناء مسار المركبة الجديد.
+		mission_manager.call("cancel_shared_location_navigation")
 		_shared_location_vehicle_target = destination
 		_shared_location_vehicle_route_index = 0
 		_shared_location_vehicle_following = true
@@ -436,6 +438,10 @@ func _toggle_vehicle_use() -> void:
 		return
 	if player.get("animal_riding") == true or player.get("sitting") == true:
 		return
+	# لا نحتفظ بمسار المشي القديم عند الانتقال إلى الاسكوتر.
+	var mission_manager := get_node_or_null("MissionManager")
+	if is_instance_valid(mission_manager) and mission_manager.has_method("cancel_shared_location_navigation"):
+		mission_manager.call("cancel_shared_location_navigation")
 	_set_mobile_hud_active(false)
 	vehicle_occupied = true
 	_player_saved_collision_layer = player.collision_layer
