@@ -23,6 +23,7 @@ func _ready() -> void:
 	_build_wayfinding_lights()
 	_build_rock_outcrops()
 	_build_rest_stops()
+	_build_turn_direction_signs()
 	_build_summit_terrace()
 
 
@@ -256,6 +257,39 @@ func _build_rest_stops() -> void:
 		_add_oriented_box("MountainViewDeckOuterGoldRail_%d" % stop_number, Vector3(0.20, 0.14, 7.0), view_center + side * 3.8 + Vector3.UP * 1.37, view_basis, Color(0.82, 0.65, 0.29), false)
 		_add_oriented_box("MountainViewDeckLeftGoldRail_%d" % stop_number, Vector3(8.0, 0.14, 0.20), view_center - forward * 3.3 + Vector3.UP * 1.37, view_basis, Color(0.82, 0.65, 0.29), false)
 		_add_oriented_box("MountainViewDeckRightGoldRail_%d" % stop_number, Vector3(8.0, 0.14, 0.20), view_center + forward * 3.3 + Vector3.UP * 1.37, view_basis, Color(0.82, 0.65, 0.29), false)
+
+
+func _build_turn_direction_signs() -> void:
+	# لوحات تحذير على الكتف الخارجي للمنعطفات؛ تبقى خارج عرض الطريق والحواجز.
+	for route_index in range(1, ROUTE_POINTS.size() - 1):
+		var point: Vector3 = ROUTE_POINTS[route_index]
+		var incoming: Vector3 = (point - ROUTE_POINTS[route_index - 1]).normalized()
+		var outgoing: Vector3 = (ROUTE_POINTS[route_index + 1] - point).normalized()
+		var forward: Vector3 = (incoming + outgoing).normalized()
+		if forward.length_squared() < 0.001:
+			forward = outgoing
+		var side: Vector3 = Vector3.UP.cross(forward).normalized()
+		var turn_strength: float = incoming.cross(outgoing).y
+		var outer_sign: float = -1.0 if turn_strength > 0.0 else 1.0
+		var sign_position: Vector3 = point + side * outer_sign * 7.2 + Vector3.UP * 1.55
+		var sign_basis: Basis = Basis.looking_at(-forward, Vector3.UP)
+		var sign_root := Node3D.new()
+		sign_root.name = "MountainTurnWarning_%02d" % route_index
+		sign_root.position = sign_position
+		add_child(sign_root)
+		_add_box_to(sign_root, "WarningPost", Vector3(0.22, 2.8, 0.22), Vector3(0.0, -0.15, 0.0), Color(0.49, 0.39, 0.25), true)
+		_add_oriented_box_to(sign_root, "WarningBoard", Vector3(1.9, 1.05, 0.16), Vector3.ZERO, sign_basis, Color(0.12, 0.18, 0.19), true)
+		var warning_label := Label3D.new()
+		warning_label.name = "WarningLabel"
+		warning_label.text = "⚠  خفّف السرعة"
+		warning_label.position = Vector3(0.0, 0.0, -0.105)
+		warning_label.rotation.y = PI
+		warning_label.font_size = 30
+		warning_label.outline_size = 7
+		warning_label.pixel_size = 0.005
+		warning_label.modulate = Color(1.0, 0.84, 0.48)
+		sign_root.add_child(warning_label)
+		_add_warm_light("MountainTurnWarningGlow_%02d" % route_index, sign_position + Vector3.UP * 0.75, 0.42, 5.0)
 
 
 func _build_summit_terrace() -> void:
