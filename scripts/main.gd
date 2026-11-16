@@ -28,6 +28,9 @@ var interaction_marker_target: Node3D = null
 var interaction_target_marker: Node3D = null
 var interaction_marker_elapsed := 0.0
 var vehicle_summon_button: Button = null
+var _vehicle_summon_check_elapsed := 0.0
+var _vehicle_summon_position := Vector3.ZERO
+var _vehicle_summon_available := false
 var showroom_layer: CanvasLayer = null
 var vehicle_occupied := false
 var _shared_location_vehicle_following := false
@@ -95,6 +98,62 @@ func _create_auth_login_panel() -> void:
 static func is_position_inside_city_bounds(position: Vector3, half_extent: float = 90.0) -> bool:
 	return absf(position.x) <= half_extent and absf(position.z) <= half_extent
 
+static func is_vehicle_summon_position_road_safe(position: Vector3) -> bool:
+	# محاور الطرق الرئيسية وممراتها لا تصلح كنقطة إيقاف للسيارة.
+	return absf(position.x) > 6.5 and absf(position.z) > 6.5
+
+func _make_vehicle_summon_style(color: Color) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = color
+	style.corner_radius_top_left = 12
+	style.corner_radius_top_right = 12
+	style.corner_radius_bottom_left = 12
+	style.corner_radius_bottom_right = 12
+	style.content_margin_left = 14.0
+	style.content_margin_right = 14.0
+	style.content_margin_top = 8.0
+	style.content_margin_bottom = 8.0
+	return style
+
+func _find_suitable_vehicle_summon_position(player: CharacterBody3D) -> Variant:
+	if not is_instance_valid(player):
+		return null
+	var right := player.global_transform.basis.x.normalized()
+	var forward := -player.global_transform.basis.z.normalized()
+	var candidates: Array[Vector3] = [
+		player.global_position + right * 4.2,
+		player.global_position - right * 4.2,
+		player.global_position + forward * 5.2,
+		player.global_position - forward * 5.2
+	]
+	var shape := BoxShape3D.new()
+	shape.size = Vector3(2.8, 1.9, 5.2)
+	var space_state := get_world_3d().direct_space_state
+	for candidate in candidates:
+		if not is_position_inside_city_bounds(candidate, 85.0) or not is_vehicle_summon_position_road_safe(candidate):
+			continue
+		var query := PhysicsShapeQueryParameters3D.new()
+		query.shape = shape
+		query.transform = Transform3D(Basis.IDENTITY, candidate + Vector3.UP * 1.0)
+		query.collision_mask = 1 | 8 # عناصر المدينة الصلبة والموظفون فقط.
+		query.collide_with_bodies = true
+		query.collide_with_areas = false
+		var excluded: Array[RID] = [player.get_rid()]
+		if is_instance_valid(city_vehicle):
+			excluded.append(city_vehicle.get_rid())
+		query.exclude = excluded
+		if space_state.intersect_shape(query, 1).is_empty():
+			return candidate
+	return null
+
+func _refresh_vehicle_summon_availability(player: CharacterBody3D) -> void:
+	var candidate: Variant = _find_suitable_vehicle_summon_position(player)
+	_vehicle_summon_available = candidate is Vector3
+	if _vehicle_summon_available:
+		_vehicle_summon_position = candidate
+	if is_instance_valid(vehicle_summon_button):
+		vehicle_summon_button.disabled = not _vehicle_summon_available
+
 func _process(_delta: float) -> void:
 	# المركبات تخص مساحة المدينة؛ أخفِ أدواتها طوال الانتقال أو الوجود داخل مبنى.
 	if interior_transition_busy or is_instance_valid(interior_root):
@@ -130,6 +189,10 @@ func _process(_delta: float) -> void:
 	if is_instance_valid(vehicle_summon_button):
 		vehicle_summon_button.visible = player_inside_city
 		vehicle_summon_button.text = "إحضار السيارة" if CityLanguage.get_language() == "ar" else "Call vehicle"
+		_vehicle_summon_check_elapsed += _delta
+		if _vehicle_summon_check_elapsed >= 0.25:
+			_vehicle_summon_check_elapsed = 0.0
+			_refresh_vehicle_summon_availability(player)
 	# أولوية العلامة: محطة الحفلة، ثم أقرب عنصر مدينة يملك مسار تفاعل قائمًا، ثم السيارة.
 	var nearby_party_station := _get_nearby_party_station(player)
 	var mission_manager := get_node_or_null("MissionManager")
@@ -257,6 +320,10 @@ func _create_player_vehicle() -> void:
 	vehicle_summon_button.offset_right = 214
 	vehicle_summon_button.offset_top = 24
 	vehicle_summon_button.offset_bottom = 82
+	vehicle_summon_button.add_theme_stylebox_override("normal", _make_vehicle_summon_style(Color(0.04, 0.34, 0.78)))
+	vehicle_summon_button.add_theme_stylebox_override("hover", _make_vehicle_summon_style(Color(0.08, 0.46, 0.94)))
+	vehicle_summon_button.add_theme_stylebox_override("pressed", _make_vehicle_summon_style(Color(0.02, 0.23, 0.58)))
+	vehicle_summon_button.add_theme_stylebox_override("disabled", _make_vehicle_summon_style(Color(0.24, 0.27, 0.31)))
 	vehicle_summon_button.pressed.connect(_summon_player_vehicle)
 	layer.add_child(vehicle_summon_button)
 
@@ -282,6 +349,14 @@ func _summon_player_vehicle() -> void:
 	var player := get_node_or_null("Player") as CharacterBody3D
 	if not is_instance_valid(player) or not is_position_inside_city_bounds(player.global_position):
 		return
+	var safe_position: Variant = _find_suitable_vehicle_summon_position(player)
+	if not safe_position is Vector3:
+		_vehicle_summon_available = false
+		if is_instance_valid(vehicle_summon_button):
+			vehicle_summon_button.disabled = true
+		return
+	_vehicle_summon_position = safe_position
+	_vehicle_summon_available = true
 	var selected_vehicle_id := VehicleStoreManager.get_selected_vehicle_id()
 	if not VehicleStoreManager.has_vehicle(selected_vehicle_id):
 		push_warning("لا يمكن استدعاء مركبة غير مملوكة.")
@@ -310,11 +385,8 @@ func _summon_player_vehicle() -> void:
 	# سجل معرف المركبة المختارة مع الاستدعاء؛ لا يُسمح باختيار مركبة غير مملوكة.
 	city_vehicle.set_meta("vehicle_id", selected_vehicle_id)
 	# تظهر المركبة بجانب اللاعب عند الاستدعاء، ويمكن إحضارها مجددًا إذا تُركت بعيدًا.
-	var side := player.global_transform.basis.x.normalized()
-	var summon_position := player.global_position + side * 3.5
-	# Keep the summoned vehicle safely inside the playable city ground.
-	summon_position.x = clampf(summon_position.x, -87.0, 87.0)
-	summon_position.z = clampf(summon_position.z, -87.0, 87.0)
+	# Use the freshly validated clear parking position represented by the blue button.
+	var summon_position: Vector3 = _vehicle_summon_position
 	summon_position.y = player.global_position.y
 	city_vehicle.global_position = summon_position
 	city_vehicle.global_rotation.y = player.global_rotation.y
