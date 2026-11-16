@@ -672,6 +672,7 @@ func _on_player_message() -> void:
 	selected_friend_code = selected_player_id
 	_pending_direct_open_player_code = selected_player_id
 	selected_friend_conversation_id = ""
+	_update_shared_location_button_state()
 	if is_instance_valid(social_chat_log):
 		social_chat_log.clear()
 	if is_instance_valid(social_chat_status):
@@ -1844,6 +1845,7 @@ func _on_social_account_session_changed(_previous_user_id: String, current_user_
 	# friends, group, unread counters, or moderation state visible after a switch.
 	selected_friend_code = ""
 	selected_friend_conversation_id = ""
+	_update_shared_location_button_state()
 	_pending_direct_open_player_code = ""
 	local_player_code = ""
 	_direct_conversation_to_friend.clear()
@@ -1929,6 +1931,7 @@ func _on_social_friend_selected(player_code: String) -> void:
 	selected_friend_code = player_code
 	_pending_direct_open_player_code = player_code
 	selected_friend_conversation_id = ""
+	_update_shared_location_button_state()
 	social_chat_log.clear()
 	social_chat_status.text = "جارٍ فتح محادثة الصديق..."
 	if is_instance_valid(social_group_invite_button):
