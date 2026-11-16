@@ -97,9 +97,14 @@ func _run_social_validation_tests() -> void:
 				quit(1)
 				return
 	print("SOCIAL_TEST_STAGE: mountain_turn_guard_connectors_complete")
+	# Use an isolated route instance to exercise the rest-stop builder directly.
+	var rest_stop_probe := mountain_route_script.new() as Node3D
+	root.add_child(rest_stop_probe)
+	await process_frame
+	rest_stop_probe.call("_build_rest_stops")
 	# Build rest stops explicitly if the scene lifecycle has not populated them yet.
 	if mountain_route_probe.get_node_or_null("MountainRestBay_0Collision") == null:
-		mountain_route_probe.call("_build_rest_stops")
+		rest_stop_probe.call("_build_rest_stops")
 	# Both mountain rest bays and their scenic decks must be solid for players and vehicles.
 	for stop_number in range(2):
 		var required_fixtures := [
@@ -128,6 +133,7 @@ func _run_social_validation_tests() -> void:
 			push_error("Mountain scenic viewpoint deck is missing: " + str(stop_number))
 			quit(1)
 			return
+	rest_stop_probe.queue_free()
 	mountain_route_probe.queue_free()
 	await process_frame
 	print("SOCIAL_TEST_STAGE: mountain_rest_stop_safety_complete")
