@@ -634,9 +634,14 @@ func _on_player_primary_action() -> void:
 		return
 	if selected_player_is_friend:
 		_request_group_invite(selected_player_id)
-	else:
-		friend_add_requested.emit(selected_player_id)
-		player_action_status.text = "تم تجهيز طلب الإضافة؛ الإرسال الفعلي يحتاج اتصال الخادم."
+		return
+	if not AuthManager.is_authenticated():
+		player_action_status.text = "سجّل الدخول أولًا لإرسال طلب صداقة."
+		return
+	player_primary_action_button.disabled = true
+	player_action_status.text = "جارٍ إرسال طلب الصداقة إلى الخادم..."
+	if not SocialChatManager.send_friend_request(selected_player_id):
+		player_primary_action_button.disabled = false
 
 
 func _on_player_gift_party() -> void:
@@ -1727,9 +1732,19 @@ func _on_social_operation_completed(action: String, data: Variant) -> void:
 			else:
 				display_name_status.text = "تعذر تأكيد تغيير الاسم من الخادم."
 		"friend_request":
-			social_chat_status.text = "نتيجة طلب الصداقة: " + str(data)
-			if str(data) == "sent":
-				friend_search_input.clear()
+			var request_result := str(data)
+			if is_instance_valid(player_primary_action_button) and not selected_player_is_friend:
+				player_primary_action_button.disabled = request_result == "sent"
+				if request_result == "sent":
+					player_primary_action_button.text = "تم إرسال الطلب"
+					player_action_status.text = "تم إرسال طلب الصداقة بنجاح."
+				else:
+					player_action_status.text = "نتيجة طلب الصداقة: " + request_result
+			if is_instance_valid(social_chat_status):
+				social_chat_status.text = "نتيجة طلب الصداقة: " + request_result
+			if request_result == "sent":
+				if is_instance_valid(friend_search_input):
+					friend_search_input.clear()
 				_refresh_social_friends()
 		"direct_open":
 			if data is Array and not data.is_empty() and data[0] is Dictionary:
@@ -1883,6 +1898,12 @@ func _on_social_operation_failed(action: String, message: String) -> void:
 		if is_instance_valid(display_name_status):
 			display_name_status.text = "تعذر تنفيذ العملية: " + message
 		return
+	if action == "friend_request":
+		if is_instance_valid(player_primary_action_button) and not selected_player_is_friend:
+			player_primary_action_button.disabled = false
+			player_primary_action_button.text = "إضافة صديق"
+		if is_instance_valid(player_action_status):
+			player_action_status.text = "تعذر إرسال طلب الصداقة: " + message
 	if is_instance_valid(social_chat_status):
 		social_chat_status.text = "تعذر تنفيذ " + action + ": " + message
 	# Keep the account hydration chain sequential, but do not let one failed
