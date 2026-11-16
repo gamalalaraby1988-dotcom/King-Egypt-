@@ -1114,8 +1114,20 @@ func build_party_announcement_body(location_name: String) -> String:
 		clean_location = "المدينة"
 	return "🎉 بدأت حفلة جديدة في %s! تعالوا شاركونا." % clean_location
 
+func _is_shared_location_position_valid(position: Vector3) -> bool:
+	return (
+		is_finite(position.x)
+		and is_finite(position.y)
+		and is_finite(position.z)
+		and absf(position.x) <= 250.0
+		and absf(position.z) <= 250.0
+		and position.y >= -10.0
+		and position.y <= 100.0
+	)
+
+
 func build_shared_location_message(position: Vector3) -> String:
-	if absf(position.x) > 250.0 or absf(position.z) > 250.0 or position.y < -10.0 or position.y > 100.0:
+	if not _is_shared_location_position_valid(position):
 		return ""
 	return "KINGLOC1|%s|%s|%s" % [str(snappedf(position.x, 0.001)), str(snappedf(position.y, 0.001)), str(snappedf(position.z, 0.001))]
 
@@ -1128,7 +1140,7 @@ func parse_shared_location_message(message_body: String) -> Dictionary:
 		if not parts[index].is_valid_float():
 			return {}
 	var location := Vector3(float(parts[1]), float(parts[2]), float(parts[3]))
-	if absf(location.x) > 250.0 or absf(location.z) > 250.0 or location.y < -10.0 or location.y > 100.0:
+	if not _is_shared_location_position_valid(location):
 		return {}
 	return {"position": location}
 

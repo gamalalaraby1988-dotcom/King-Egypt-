@@ -32,6 +32,25 @@ func _run_social_validation_tests() -> void:
 		quit(1)
 		return
 	route_probe.free()
+	var city_hud_script: Script = load("res://scripts/city_hud.gd")
+	if city_hud_script == null:
+		push_error("City HUD script could not be loaded for shared-location validation.")
+		quit(1)
+		return
+	var location_probe: Node = city_hud_script.new()
+	if not location_probe.call("parse_shared_location_message", "KINGLOC1|nan|0|0").is_empty():
+		push_error("A non-finite shared-location coordinate was accepted.")
+		quit(1)
+		return
+	if not location_probe.call("parse_shared_location_message", "KINGLOC1|0|inf|0").is_empty():
+		push_error("An infinite shared-location coordinate was accepted.")
+		quit(1)
+		return
+	if not location_probe.call("build_shared_location_message", Vector3(INF, 0.0, 0.0)).is_empty():
+		push_error("A non-finite local position was encoded as a shared location.")
+		quit(1)
+		return
+	location_probe.free()
 	var social := root.get_node_or_null("SocialChatManager")
 	if social == null:
 		push_error("SocialChatManager autoload did not initialize.")
