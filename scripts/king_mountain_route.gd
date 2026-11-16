@@ -390,6 +390,37 @@ func _build_summit_terrace() -> void:
 	var rear_center: Vector3 = summit + summit_forward * 21.0 + Vector3.UP * 0.8
 	_add_oriented_box("MountainSummitRearBarrier", Vector3(30.0, 1.6, 0.65), rear_center, summit_basis, Color(0.36, 0.31, 0.25), true)
 	_add_oriented_box("MountainSummitRearGoldRail", Vector3(30.0, 0.14, 0.20), rear_center + Vector3.UP * 0.87, summit_basis, Color(0.82, 0.65, 0.29), false)
+	# لافتة تعريف القمة في نهاية الساحة، مواجهة للاعب القادم من طريق الصعود.
+	var summit_sign_center: Vector3 = rear_center - summit_forward * 0.48 + Vector3.UP * 1.55
+	_add_oriented_box(
+		"MountainSummitNameBoard",
+		Vector3(8.0, 1.65, 0.22),
+		summit_sign_center,
+		summit_basis,
+		Color(0.12, 0.17, 0.18),
+		false
+	)
+	var summit_title := Label3D.new()
+	summit_title.name = "MountainSummitTitle"
+	summit_title.text = "قمة الملوك"
+	summit_title.position = summit_sign_center + Vector3.UP * 0.22
+	summit_title.rotation.y = atan2(-summit_forward.x, -summit_forward.z)
+	summit_title.font_size = 64
+	summit_title.outline_size = 10
+	summit_title.pixel_size = 0.005
+	summit_title.modulate = Color(1.0, 0.84, 0.48)
+	add_child(summit_title)
+	var summit_subtitle := Label3D.new()
+	summit_subtitle.name = "MountainSummitSubtitle"
+	summit_subtitle.text = "منطقة المشاهدة الملكية"
+	summit_subtitle.position = summit_sign_center - Vector3.UP * 0.38
+	summit_subtitle.rotation.y = atan2(-summit_forward.x, -summit_forward.z)
+	summit_subtitle.font_size = 28
+	summit_subtitle.outline_size = 7
+	summit_subtitle.pixel_size = 0.005
+	summit_subtitle.modulate = Color(0.92, 0.87, 0.72)
+	add_child(summit_subtitle)
+	_add_warm_light("MountainSummitNameGlow", summit_sign_center + Vector3.UP * 1.25, 0.75, 8.0)
 	var obelisk_position: Vector3 = summit - summit_side * 9.0 + summit_forward * 7.0
 	_add_oriented_box("MountainSummitObeliskBase", Vector3(4.0, 0.6, 4.0), obelisk_position + Vector3.UP * 0.8, summit_basis, Color(0.36, 0.31, 0.25), true)
 	_add_oriented_box("MountainSummitObelisk", Vector3(0.65, 5.0, 0.65), obelisk_position + Vector3.UP * 3.6, summit_basis, Color(0.86, 0.68, 0.29), true)
