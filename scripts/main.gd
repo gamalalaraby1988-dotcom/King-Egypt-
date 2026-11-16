@@ -361,8 +361,15 @@ func _update_shared_location_vehicle_follow() -> void:
 	if not _shared_location_vehicle_following:
 		return
 	if not vehicle_occupied or not is_instance_valid(city_vehicle):
+		if is_instance_valid(city_vehicle) and city_vehicle.has_method("clear_auto_navigation_controls"):
+			city_vehicle.call("clear_auto_navigation_controls")
 		_shared_location_vehicle_following = false
+		_shared_location_vehicle_target = Vector3.ZERO
 		_shared_location_vehicle_route = PackedVector3Array()
+		_shared_location_vehicle_route_index = 0
+		var inactive_vehicle_manager := get_node_or_null("MissionManager")
+		if is_instance_valid(inactive_vehicle_manager) and inactive_vehicle_manager.has_method("hide_shared_location_marker"):
+			inactive_vehicle_manager.call("hide_shared_location_marker")
 		return
 	var mission_manager := get_node_or_null("MissionManager")
 	if is_instance_valid(mission_manager) and (bool(mission_manager.get("mission_running")) or bool(mission_manager.get("job_running"))):

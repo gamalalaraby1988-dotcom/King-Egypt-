@@ -110,6 +110,34 @@ func _run_social_validation_tests() -> void:
 		push_error("Starting an activity did not reset shared-navigation timers.")
 		quit(1)
 		return
+	var main_script: Script = load("res://scripts/main.gd")
+	if main_script == null:
+		push_error("Main scene script could not be loaded for vehicle-follow cleanup validation.")
+		quit(1)
+		return
+	var main_probe: Node3D = main_script.new() as Node3D
+	if main_probe == null:
+		push_error("Main scene test instance could not be created.")
+		quit(1)
+		return
+	route_probe.name = "MissionManager"
+	marker_probe.visible = true
+	main_probe.add_child(route_probe)
+	main_probe.set("_shared_location_vehicle_following", true)
+	main_probe.set("_shared_location_vehicle_target", Vector3(24.0, 0.0, 24.0))
+	main_probe.set("_shared_location_vehicle_route", PackedVector3Array([Vector3.ZERO, Vector3(24.0, 0.0, 24.0)]))
+	main_probe.set("_shared_location_vehicle_route_index", 1)
+	main_probe.call("_update_shared_location_vehicle_follow")
+	if bool(main_probe.get("_shared_location_vehicle_following")) or not (main_probe.get("_shared_location_vehicle_route") as PackedVector3Array).is_empty() or int(main_probe.get("_shared_location_vehicle_route_index")) != 0:
+		push_error("Losing vehicle occupancy did not clear the scooter's shared-location follow state.")
+		quit(1)
+		return
+	if marker_probe.visible or not (main_probe.get("_shared_location_vehicle_target") as Vector3).is_zero_approx():
+		push_error("Losing vehicle occupancy did not hide the shared-location marker and clear its target.")
+		quit(1)
+		return
+	main_probe.remove_child(route_probe)
+	main_probe.free()
 	route_probe.free()
 	var shared_location_hud_script: Script = load("res://scripts/city_hud.gd")
 	if shared_location_hud_script == null:
