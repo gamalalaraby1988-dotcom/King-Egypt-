@@ -18,6 +18,28 @@ static func apply_world_collision(body: CollisionObject3D) -> void:
 	body.collision_layer = WORLD_LAYER
 	body.collision_mask = WORLD_MASK
 
+static func apply_owned_vehicle_parked_collision(vehicle: CharacterBody3D, owner: CharacterBody3D) -> void:
+	if not is_instance_valid(vehicle) or not is_instance_valid(owner):
+		return
+	# السيارة المملوكة تُعامل كجسم صلب للاعبها فقط؛ نستثني بقية اللاعبين.
+	vehicle.collision_layer = WORLD_LAYER
+	vehicle.collision_mask = WORLD_MASK | PLAYER_LAYER
+	var tree := vehicle.get_tree()
+	if tree == null:
+		return
+	for player_node in tree.get_nodes_in_group("player"):
+		var other_player := player_node as CharacterBody3D
+		if is_instance_valid(other_player) and other_player != owner:
+			vehicle.add_collision_exception_with(other_player)
+
+
+static func apply_driven_vehicle_collision(vehicle: CharacterBody3D) -> void:
+	if not is_instance_valid(vehicle):
+		return
+	# أثناء القيادة تعود المركبة لطبقة المركبات؛ اللاعب داخلها غير مصادم.
+	vehicle.collision_layer = VEHICLE_LAYER
+	vehicle.collision_mask = VEHICLE_MASK
+
 static func add_staff_collider(parent: Node3D, radius: float = 0.34, height: float = 1.8) -> StaticBody3D:
 	if not is_instance_valid(parent):
 		return null
