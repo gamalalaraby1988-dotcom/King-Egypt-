@@ -1426,33 +1426,6 @@ func _create_box(parent: Node3D, name: String, size: Vector3, pos: Vector3, colo
 		parent.add_child(body)
 
 
-# تصادمات العناصر الثابتة: تُستخدم للأجسام الصلبة فقط، وليس للنصوص أو المؤثرات.
-func _add_static_cylinder_collision(parent: Node3D, body_name: String, radius: float, height: float, pos: Vector3) -> void:
-	var body := StaticBody3D.new()
-	body.name = body_name
-	body.add_to_group("city_world_geometry")
-	var collision_shape := CollisionShape3D.new()
-	var cylinder := CylinderShape3D.new()
-	cylinder.radius = maxf(0.05, radius)
-	cylinder.height = maxf(0.1, height)
-	collision_shape.shape = cylinder
-	body.position = pos
-	body.add_child(collision_shape)
-	parent.add_child(body)
-
-func _add_static_box_collision(parent: Node3D, body_name: String, size: Vector3, pos: Vector3) -> void:
-	var body := StaticBody3D.new()
-	body.name = body_name
-	body.add_to_group("city_world_geometry")
-	var collision_shape := CollisionShape3D.new()
-	var box := BoxShape3D.new()
-	box.size = Vector3(maxf(0.05, size.x), maxf(0.05, size.y), maxf(0.05, size.z))
-	collision_shape.shape = box
-	body.position = pos
-	body.add_child(collision_shape)
-	parent.add_child(body)
-
-
 func _create_ground() -> void:
 	_create_box(self, "Ground", Vector3(180, 1, 180), Vector3(0, -0.55, 0), Color(0.34, 0.42, 0.31), true)
 
