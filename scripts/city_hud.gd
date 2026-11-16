@@ -97,7 +97,9 @@ var social_group_create_button: Button
 var social_group_invite_button: Button
 var social_invites_box: VBoxContainer
 var social_chat_dock_button: Button
+const REALTIME_MESSAGE_DEDUPE_LIMIT := 500
 var _seen_realtime_message_ids: Dictionary = {}
+var _seen_realtime_message_order: Array[String] = []
 var _pending_group_invite_response_id := ""
 var _deferred_group_invite_responses: Array[Dictionary] = []
 var invitation_overlay: Control
@@ -1956,6 +1958,7 @@ func _on_social_account_session_changed(_previous_user_id: String, current_user_
 	_unread_direct_by_friend.clear()
 	_unread_group_messages = 0
 	_seen_realtime_message_ids.clear()
+	_seen_realtime_message_order.clear()
 	pending_group_invites.clear()
 	_pending_group_invite_response_id = ""
 	_deferred_group_invite_responses.clear()
@@ -2440,12 +2443,10 @@ func _on_social_realtime_event(topic: String, event_name: String, payload: Dicti
 		return
 	if event_name == "direct_message" and not topic.begins_with("chat:direct:"):
 		return
-	# Deduplicate before either rendering or incrementing unread counters.
+	# Keep deduplication bounded so long sessions cannot grow memory indefinitely.
 	var message_id := str(payload.get("message_id", ""))
-	if not message_id.is_empty() and _seen_realtime_message_ids.has(message_id):
+	if not _remember_realtime_message_id(message_id):
 		return
-	if not message_id.is_empty():
-		_seen_realtime_message_ids[message_id] = true
 	var active_group_topic := "chat:group:" + SocialChatManager._realtime_group_id
 	var should_show := false
 	if topic == "chat:public:messages" and social_chat_channel == "العامة" and social_chat_panel.visible:
@@ -2475,6 +2476,20 @@ func _on_social_realtime_event(topic: String, event_name: String, payload: Dicti
 	_refresh_unread_indicators()
 	var sender := str(payload.get("sender_name", "لاعب"))
 	social_chat_log.append_text(format_public_chat_message(sender, str(payload.get("body", ""))))
+
+
+func _remember_realtime_message_id(message_id: String) -> bool:
+	var clean_id := message_id.strip_edges()
+	if clean_id.is_empty():
+		return true
+	if _seen_realtime_message_ids.has(clean_id):
+		return false
+	_seen_realtime_message_ids[clean_id] = true
+	_seen_realtime_message_order.append(clean_id)
+	while _seen_realtime_message_order.size() > REALTIME_MESSAGE_DEDUPE_LIMIT:
+		var expired_id := _seen_realtime_message_order.pop_front()
+		_seen_realtime_message_ids.erase(expired_id)
+	return true
 
 
 func _refresh_social_invite_cards(data: Variant) -> void:
