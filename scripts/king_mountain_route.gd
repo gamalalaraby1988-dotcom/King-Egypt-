@@ -61,9 +61,9 @@ func _build_road() -> void:
 		_add_oriented_box("MountainRoadSegment_%02d" % i, Vector3(ROAD_WIDTH, ROAD_THICKNESS, length), center, basis, Color(0.23, 0.23, 0.22), true)
 		# حواجز صلبة على حافتي الطريق، مع فتح عرض الطريق بالكامل.
 		for side in [-1.0, 1.0]:
-			var rail_center := center + basis.x * side * (ROAD_WIDTH * 0.5 + 0.28) + basis.y * 0.88
+			var rail_center: Vector3 = center + basis.x * side * (ROAD_WIDTH * 0.5 + 0.28) + basis.y * 0.88
 			_add_oriented_box("MountainGuardWall_%02d_%s" % [i, "L" if side < 0.0 else "R"], Vector3(0.56, 1.35, length), rail_center, basis, Color(0.48, 0.40, 0.31), true)
-			var gold_center := rail_center + basis.y * 0.72
+			var gold_center: Vector3 = rail_center + basis.y * 0.72
 			_add_oriented_box("MountainGuardGoldRail_%02d_%s" % [i, "L" if side < 0.0 else "R"], Vector3(0.18, 0.16, length), gold_center, basis, Color(0.82, 0.65, 0.29), true)
 
 
@@ -82,7 +82,7 @@ func _build_rest_stops() -> void:
 
 
 func _build_summit_terrace() -> void:
-	var summit := ROUTE_POINTS[ROUTE_POINTS.size() - 1]
+	var summit: Vector3 = ROUTE_POINTS[ROUTE_POINTS.size() - 1]
 	_add_box("MountainSummitPlatform", Vector3(34.0, 1.0, 34.0), summit + Vector3(0.0, -0.5, 5.0), Color(0.52, 0.45, 0.35), true)
 	# الحواجز تحيط بالحواف وتترك مدخل الطريق مفتوحًا من الجهة الجنوبية.
 	for x in [-15.0, 15.0]:
