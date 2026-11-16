@@ -10,7 +10,7 @@ func _mat(color: Color) -> StandardMaterial3D:
 	m.roughness = 0.95
 	return m
 
-func _box(parent: Node3D, label: String, size: Vector3, pos: Vector3, color: Color) -> void:
+func _box(parent: Node3D, label: String, size: Vector3, pos: Vector3, color: Color, collision: bool = false) -> void:
 	var node := MeshInstance3D.new()
 	node.name = label
 	var mesh := BoxMesh.new()
@@ -19,11 +19,22 @@ func _box(parent: Node3D, label: String, size: Vector3, pos: Vector3, color: Col
 	node.position = pos
 	node.material_override = _mat(color)
 	parent.add_child(node)
+	if collision:
+		var body := StaticBody3D.new()
+		body.name = label + "Collision"
+		body.add_to_group("city_world_geometry")
+		var shape_node := CollisionShape3D.new()
+		var shape := BoxShape3D.new()
+		shape.size = size
+		shape_node.shape = shape
+		body.position = pos
+		body.add_child(shape_node)
+		parent.add_child(body)
 
 func _build_camp() -> void:
 	# أرضية المخيم وعلامة المدخل
 	_box(self, "CampGround", Vector3(34, 0.18, 28), Vector3(0, 0.0, 0), Color(0.62, 0.48, 0.30))
-	_box(self, "CampSign", Vector3(7, 2.2, 0.25), Vector3(0, 2.2, -13.7), Color(0.35, 0.20, 0.10))
+	_box(self, "CampSign", Vector3(7, 2.2, 0.25), Vector3(0, 2.2, -13.7), Color(0.35, 0.20, 0.10), true)
 	var sign_text := Label3D.new()
 	sign_text.text = "مخيم الحيوانات"
 	sign_text.position = Vector3(0, 2.25, -13.52)
@@ -34,7 +45,7 @@ func _build_camp() -> void:
 	_box(self, "CampCanopy", Vector3(9, 0.35, 6), Vector3(0, 3.2, 0), Color(0.76, 0.62, 0.38))
 	for x in [-4.0, 4.0]:
 		for z in [-2.5, 2.5]:
-			_box(self, "CanopyPost", Vector3(0.22, 3.2, 0.22), Vector3(x, 1.6, z), Color(0.30, 0.20, 0.12))
+			_box(self, "CanopyPost", Vector3(0.22, 3.2, 0.22), Vector3(x, 1.6, z), Color(0.30, 0.20, 0.12), true)
 	# ثمانية أماكن واضحة للحيوانات، مع مجسمات أولية خفيفة.
 	for i in range(8):
 		var animal := Node3D.new()
@@ -67,7 +78,7 @@ func _build_camp() -> void:
 		animal_label.font_size = 30
 		animal_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 		animal.add_child(animal_label)
-		_box(self, "AnimalPenRail", Vector3(4.2, 0.18, 0.18), Vector3(x, 0.65, z + 1.4), Color(0.32, 0.20, 0.12))
+		_box(self, "AnimalPenRail", Vector3(4.2, 0.18, 0.18), Vector3(x, 0.65, z + 1.4), Color(0.32, 0.20, 0.12), true)
 	# محطة حفلات جانبية في الجهة الشرقية؛ تبقى خارج المدخل والمظلة وحظائر الحيوانات.
 	_create_party_station(Vector3(12.0, 0.0, -3.0))
 
@@ -85,8 +96,8 @@ func _create_party_station(pos: Vector3) -> void:
 	station.add_to_group("party_stations")
 	add_child(station)
 	# قاعدة صغيرة لا تتجاوز مساحة الوقوف ولا تمتد إلى الممر.
-	_box(station, "PartyStationBase", Vector3(2.2, 0.28, 1.25), Vector3(0, 0.16, 0), Color(0.22, 0.15, 0.12))
-	_box(station, "PartyStationBody", Vector3(1.9, 1.25, 0.85), Vector3(0, 0.9, 0), Color(0.18, 0.12, 0.28))
+	_box(station, "PartyStationBase", Vector3(2.2, 0.28, 1.25), Vector3(0, 0.16, 0), Color(0.22, 0.15, 0.12), true)
+	_box(station, "PartyStationBody", Vector3(1.9, 1.25, 0.85), Vector3(0, 0.9, 0), Color(0.18, 0.12, 0.28), true)
 	_box(station, "PartyStationGoldTrim", Vector3(2.0, 0.09, 0.92), Vector3(0, 1.48, 0), Color(0.88, 0.68, 0.27))
 	var speaker := MeshInstance3D.new()
 	speaker.name = "PartySpeaker"
