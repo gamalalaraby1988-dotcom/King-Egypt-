@@ -22,6 +22,7 @@ var interior_loading_message_key := "interior_loading"
 var interior_hidden_world_states: Dictionary = {}
 var city_vehicle: CharacterBody3D = null
 var vehicle_interaction_button: Button = null
+var party_station_notice: AcceptDialog = null
 var vehicle_summon_button: Button = null
 var showroom_layer: CanvasLayer = null
 var vehicle_occupied := false
@@ -114,9 +115,13 @@ func _process(_delta: float) -> void:
 	if not is_instance_valid(player):
 		return
 	var close_enough := player.global_position.distance_to(city_vehicle.global_position) <= 5.0
+	var nearby_party_station := _get_nearby_party_station(player)
 	if is_instance_valid(vehicle_interaction_button):
-		vehicle_interaction_button.visible = close_enough
-		vehicle_interaction_button.text = "ركوب السيارة" if CityLanguage.get_language() == "ar" else "Enter vehicle"
+		vehicle_interaction_button.visible = close_enough or is_instance_valid(nearby_party_station)
+		if is_instance_valid(nearby_party_station):
+			vehicle_interaction_button.text = "إقامة حفلة" if CityLanguage.get_language() == "ar" else "Start party"
+		else:
+			vehicle_interaction_button.text = "ركوب السيارة" if CityLanguage.get_language() == "ar" else "Enter vehicle"
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.keycode == KEY_E:
@@ -224,9 +229,13 @@ func _toggle_vehicle_use() -> void:
 		_exit_player_vehicle()
 		return
 	var player := get_node_or_null("Player") as CharacterBody3D
-	if not is_instance_valid(player) or not is_instance_valid(city_vehicle):
+	if not is_instance_valid(player):
 		return
-	if player.global_position.distance_to(city_vehicle.global_position) > 5.0:
+	var nearby_party_station := _get_nearby_party_station(player)
+	if is_instance_valid(nearby_party_station):
+		_show_party_station_notice()
+		return
+	if not is_instance_valid(city_vehicle) or player.global_position.distance_to(city_vehicle.global_position) > 5.0:
 		return
 	if player.get("animal_riding") == true or player.get("sitting") == true:
 		return
@@ -1219,3 +1228,25 @@ func _create_camp() -> void:
 	camp.position = Vector3(60, 0, 75)
 	camp.set_script(load("res://scripts/camp_system.gd"))
 	add_child(camp)
+
+func _get_nearby_party_station(actor: Node3D) -> Node3D:
+	if not is_instance_valid(actor):
+		return null
+	var nearest: Node3D = null
+	var nearest_distance := 4.5
+	for candidate in get_tree().get_nodes_in_group("party_stations"):
+		if not candidate is Node3D or not is_instance_valid(candidate):
+			continue
+		var distance := actor.global_position.distance_to((candidate as Node3D).global_position)
+		if distance <= nearest_distance:
+			nearest = candidate as Node3D
+			nearest_distance = distance
+	return nearest
+
+func _show_party_station_notice() -> void:
+	if not is_instance_valid(party_station_notice):
+		party_station_notice = AcceptDialog.new()
+		party_station_notice.title = "محطة الحفلات"
+		party_station_notice.dialog_text = "تم الوصول إلى صندوق الحفلات. تشغيل الحفلة والدفع والإضاءة لمدة 15 ثانية تحتاج ربط خدمة الحفلات الخادمية؛ لم يتم خصم أي جواهر."
+		add_child(party_station_notice)
+	party_station_notice.popup_centered()
