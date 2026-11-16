@@ -409,7 +409,10 @@ func _update_shared_location_vehicle_follow() -> void:
 		var waypoint: Vector3 = _shared_location_vehicle_route[_shared_location_vehicle_route_index]
 		var waypoint_delta := waypoint - city_vehicle.global_position
 		waypoint_delta.y = 0.0
-		if waypoint_delta.length() > 3.0:
+		# نقاط الانعطاف تُجتاز بهامش 3 أمتار، لكن الوجهة النهائية تحتاج دقة 2 متر مثل المشي.
+		var final_waypoint := _shared_location_vehicle_route_index == _shared_location_vehicle_route.size() - 1
+		var waypoint_reach_distance := 2.0 if final_waypoint else 3.0
+		if waypoint_delta.length() > waypoint_reach_distance:
 			break
 		_shared_location_vehicle_route_index += 1
 	if _shared_location_vehicle_route_index >= _shared_location_vehicle_route.size():
