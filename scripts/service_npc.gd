@@ -1,4 +1,6 @@
 extends Node3D
+
+const CollisionProfile = preload("res://scripts/city_collision_profile.gd")
 ## مالك متجر أو موظف خدمة ثابت وخفيف على الأداء.
 
 @export var character_name: String = "موظف"
@@ -13,6 +15,7 @@ func _ready() -> void:
 	add_to_group("city_interactables")
 	add_to_group("city_service_staff")
 	_build_visual()
+	CollisionProfile.add_staff_collider(self, 0.34, 1.8)
 
 func _build_visual() -> void:
 	var material := StandardMaterial3D.new()
