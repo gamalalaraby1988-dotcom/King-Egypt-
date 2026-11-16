@@ -87,7 +87,7 @@ func _input(event: InputEvent) -> void:
 			_release(event.index)
 	elif event is InputEventScreenDrag:
 		if event.index == drive_touch:
-			var delta := event.position - reverse_start
+			var delta: Vector2 = event.position - reverse_start
 			reverse_active = delta.y > 65.0
 		elif event.index == steering_touch:
 			var center := steering_rect.position.x + steering_rect.size.x / 2.0
