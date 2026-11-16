@@ -249,6 +249,9 @@ func _start_rpc_request(queued_request: Dictionary) -> bool:
 			_pending_user_id = ""
 			_pending_session_generation = -1
 		request.queue_free()
+		if action == "friend_requests_list":
+			_friend_requests_poll_pending = false
+			_friend_requests_poll_elapsed = 0.0
 		operation_failed.emit(action, "تعذر بدء الاتصال بالخادم.")
 		return false
 	return true
