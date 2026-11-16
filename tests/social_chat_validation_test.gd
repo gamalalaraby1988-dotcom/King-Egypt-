@@ -96,8 +96,6 @@ func _run_social_validation_tests() -> void:
 				push_error("Mountain bend guard assembly was duplicated or incomplete: " + connector_visual_name)
 				quit(1)
 				return
-	mountain_route_probe.queue_free()
-	await process_frame
 	print("SOCIAL_TEST_STAGE: mountain_turn_guard_connectors_complete")
 	# Both mountain rest bays and their scenic decks must be solid for players and vehicles.
 	for stop_number in range(2):
