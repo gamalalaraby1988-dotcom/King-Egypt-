@@ -519,10 +519,18 @@ func _run_social_validation_tests() -> void:
 		push_error("The location-share button stayed enabled without an open direct conversation.")
 		quit(1)
 		return
+	if location_button_probe.tooltip_text != "اختر محادثة صالحة أولًا لمشاركة موقعك":
+		push_error("The disabled location-share button did not explain how to enable it.")
+		quit(1)
+		return
 	city_hud.set("selected_friend_conversation_id", "conversation-123")
 	city_hud.call("_update_shared_location_button_state")
 	if location_button_probe.disabled:
 		push_error("The location-share button stayed disabled after a valid direct conversation was selected.")
+		quit(1)
+		return
+	if location_button_probe.tooltip_text != "مشاركة موقعي في هذه المحادثة":
+		push_error("The enabled location-share button did not show its current action.")
 		quit(1)
 		return
 	city_hud.set("social_chat_channel", "غير معروف")
