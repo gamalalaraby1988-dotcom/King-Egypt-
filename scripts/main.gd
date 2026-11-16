@@ -99,8 +99,14 @@ static func is_position_inside_city_bounds(position: Vector3, half_extent: float
 	return absf(position.x) <= half_extent and absf(position.z) <= half_extent
 
 static func is_vehicle_summon_position_road_safe(position: Vector3) -> bool:
-	# محاور الطرق الرئيسية وممراتها لا تصلح كنقطة إيقاف للسيارة.
-	return absf(position.x) > 6.5 and absf(position.z) > 6.5
+	# اترك مسافة أمان حول الشارعين الرئيسيين.
+	if absf(position.x) <= 8.0 or absf(position.z) <= 8.0:
+		return false
+	# تجنب أيضًا الشوارع الفرعية عند x/z = ±24 و±72.
+	for road_center in [-72.0, -24.0, 24.0, 72.0]:
+		if absf(position.x - road_center) <= 5.5 or absf(position.z - road_center) <= 5.5:
+			return false
+	return true
 
 func _make_vehicle_summon_style(color: Color) -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
