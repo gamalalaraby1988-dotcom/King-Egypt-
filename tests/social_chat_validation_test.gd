@@ -30,12 +30,12 @@ func _run_social_validation_tests() -> void:
 		push_error("A rejected shared-location destination overwrote the player's existing navigation state.")
 		quit(1)
 		return
-	var player_script: Script = load("res://scripts/player.gd")
-	if player_script == null:
+	var riding_player_script: Script = load("res://scripts/player.gd")
+	if riding_player_script == null:
 		push_error("Player script could not be loaded for rejected auto-navigation validation.")
 		quit(1)
 		return
-	var riding_player: CharacterBody3D = player_script.new()
+	var riding_player: CharacterBody3D = riding_player_script.new()
 	riding_player.set("animal_riding", true)
 	root.add_child(riding_player)
 	route_probe.set("player", riding_player)
