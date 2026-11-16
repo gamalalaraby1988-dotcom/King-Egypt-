@@ -109,6 +109,12 @@ func _run_social_validation_tests() -> void:
 			push_error("Mountain rest stop is missing its warm navigation light: %d" % stop_number)
 			quit(1)
 			return
+	for segment_index in range(mountain_route_script.ROUTE_POINTS.size() - 1):
+		var segment_glow := mountain_route_probe.get_node_or_null("MountainSegmentGuideGlow_%02d" % segment_index) as OmniLight3D
+		if not is_instance_valid(segment_glow) or segment_glow.light_energy <= 0.0 or segment_glow.omni_range < 5.0:
+			push_error("Mountain road segment is missing its intermediate guide light: %d" % segment_index)
+			quit(1)
+			return
 	var summit_glow := mountain_route_probe.get_node_or_null("MountainSummitObeliskGlow") as OmniLight3D
 	if not is_instance_valid(summit_glow) or summit_glow.light_energy <= 0.0:
 		push_error("Mountain summit obelisk is missing its warm highlight.")
