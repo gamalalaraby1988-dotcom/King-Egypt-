@@ -196,6 +196,10 @@ func _build_rest_stops() -> void:
 		_add_oriented_box("MountainViewDeckOuterRail_%d" % stop_number, Vector3(0.38, 1.15, 7.0), view_center + side * 3.8 + Vector3.UP * 0.72, view_basis, Color(0.48, 0.40, 0.31), true)
 		_add_oriented_box("MountainViewDeckLeftRail_%d" % stop_number, Vector3(8.0, 1.15, 0.38), view_center - forward * 3.3 + Vector3.UP * 0.72, view_basis, Color(0.48, 0.40, 0.31), true)
 		_add_oriented_box("MountainViewDeckRightRail_%d" % stop_number, Vector3(8.0, 1.15, 0.38), view_center + forward * 3.3 + Vector3.UP * 0.72, view_basis, Color(0.48, 0.40, 0.31), true)
+		# درابزين ذهبي علوي متصل مع الحواجز الحجرية دون إضافة عوائق عند فتحة الدخول.
+		_add_oriented_box("MountainViewDeckOuterGoldRail_%d" % stop_number, Vector3(0.20, 0.14, 7.0), view_center + side * 3.8 + Vector3.UP * 1.37, view_basis, Color(0.82, 0.65, 0.29), false)
+		_add_oriented_box("MountainViewDeckLeftGoldRail_%d" % stop_number, Vector3(8.0, 0.14, 0.20), view_center - forward * 3.3 + Vector3.UP * 1.37, view_basis, Color(0.82, 0.65, 0.29), false)
+		_add_oriented_box("MountainViewDeckRightGoldRail_%d" % stop_number, Vector3(8.0, 0.14, 0.20), view_center + forward * 3.3 + Vector3.UP * 1.37, view_basis, Color(0.82, 0.65, 0.29), false)
 
 
 func _build_summit_terrace() -> void:
