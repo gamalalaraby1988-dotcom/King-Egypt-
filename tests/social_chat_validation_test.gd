@@ -51,6 +51,24 @@ func _run_social_validation_tests() -> void:
 	summit_builder.free()
 	summit_test_root.free()
 	print("SOCIAL_TEST_STAGE: summit_edge_safety_complete")
+	# Every mountain-road bend must have solid guard connectors on both sides.
+	var mountain_route_script: Script = load("res://scripts/king_mountain_route.gd")
+	var mountain_route_probe := Node3D.new()
+	mountain_route_probe.set_script(mountain_route_script)
+	root.add_child(mountain_route_probe)
+	await process_frame
+	for turn_index in range(1, 5):
+		for side_name in ["L", "R"]:
+			var connector_name := "MountainTurnGuardConnector_%02d_%sCollision" % [turn_index, side_name]
+			var connector_body := mountain_route_probe.get_node_or_null(connector_name) as StaticBody3D
+			var connector_shape := connector_body.get_node_or_null("CollisionShape3D") as CollisionShape3D if is_instance_valid(connector_body) else null
+			if not is_instance_valid(connector_body) or not is_instance_valid(connector_shape) or connector_shape.shape == null:
+				push_error("Mountain route bend is missing a solid guard connector: " + connector_name)
+				quit(1)
+				return
+	mountain_route_probe.queue_free()
+	await process_frame
+	print("SOCIAL_TEST_STAGE: mountain_turn_guard_connectors_complete")
 	# City collision contract: players and vehicles ignore each other, but both
 	# collide with static world geometry and solid service staff.
 	var collision_profile: Script = load("res://scripts/city_collision_profile.gd")

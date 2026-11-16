@@ -18,6 +18,7 @@ func _ready() -> void:
 	_build_city_approach()
 	_build_approach_gate()
 	_build_road()
+	_build_turn_guard_connectors()
 	_build_turn_aprons()
 	_build_wayfinding_lights()
 	_build_rock_outcrops()
@@ -82,6 +83,33 @@ func _build_road() -> void:
 			_add_oriented_box("MountainGuardWall_%02d_%s" % [i, "L" if side < 0.0 else "R"], Vector3(0.56, 1.35, length), rail_center, basis, Color(0.48, 0.40, 0.31), true)
 			var gold_center: Vector3 = rail_center + basis.y * 0.72
 			_add_oriented_box("MountainGuardGoldRail_%02d_%s" % [i, "L" if side < 0.0 else "R"], Vector3(0.18, 0.16, length), gold_center, basis, Color(0.82, 0.65, 0.29), true)
+
+
+
+func _build_turn_guard_connectors() -> void:
+	# تصل حواجز المنعطفات ببعضها حتى لا تبقى فتحات عند التقاء مقاطع الطريق.
+	for i in range(1, ROUTE_POINTS.size() - 1):
+		var point: Vector3 = ROUTE_POINTS[i]
+		var incoming: Vector3 = (point - ROUTE_POINTS[i - 1]).normalized()
+		var outgoing: Vector3 = (ROUTE_POINTS[i + 1] - point).normalized()
+		var incoming_side := Vector3.UP.cross(incoming).normalized()
+		var outgoing_side := Vector3.UP.cross(outgoing).normalized()
+		for side_sign in [-1.0, 1.0]:
+			var incoming_edge: Vector3 = point + incoming_side * side_sign * (ROAD_WIDTH * 0.5 + 0.28)
+			var outgoing_edge: Vector3 = point + outgoing_side * side_sign * (ROAD_WIDTH * 0.5 + 0.28)
+			var connector := outgoing_edge - incoming_edge
+			if connector.length() < 0.5:
+				continue
+			var basis := Basis.looking_at(connector.normalized(), Vector3.UP)
+			var center := (incoming_edge + outgoing_edge) * 0.5 + Vector3.UP * 0.88
+			_add_oriented_box(
+				"MountainTurnGuardConnector_%02d_%s" % [i, "L" if side_sign < 0.0 else "R"],
+				Vector3(0.56, 1.35, connector.length() + 0.35),
+				center,
+				basis,
+				Color(0.48, 0.40, 0.31),
+				true
+			)
 
 
 func _build_turn_aprons() -> void:
