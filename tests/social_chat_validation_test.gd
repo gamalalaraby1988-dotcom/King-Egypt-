@@ -263,6 +263,31 @@ func _run_social_validation_tests() -> void:
 		push_error("Exiting the vehicle did not stop auto-drive and hide the shared-location marker.")
 		quit(1)
 		return
+	# أي تدخل يدوي من أزرار المركبة يجب أن يوقف متابعة الموقع فورًا.
+	main_probe.set("vehicle_occupied", true)
+	for control_case in [
+		{"method": "set_drive", "args": [true]},
+		{"method": "set_brake", "args": [true]},
+		{"method": "set_reverse", "args": [true]},
+		{"method": "set_steering", "args": [0.5]}
+	]:
+		main_probe.set("_shared_location_vehicle_following", true)
+		main_probe.set("_shared_location_vehicle_target", Vector3(18.0, 0.0, 9.0))
+		main_probe.set("_shared_location_vehicle_route", PackedVector3Array([Vector3.ZERO, Vector3(18.0, 0.0, 9.0)]))
+		main_probe.set("_shared_location_vehicle_route_index", 1)
+		vehicle_probe.call("set_auto_navigation_controls", 2.5, 0.6)
+		marker_probe.visible = true
+		vehicle_probe.callv(str(control_case["method"]), control_case["args"])
+		if not bool(vehicle_probe.get("auto_navigation_interrupted")):
+			push_error("A manual vehicle control did not mark shared-location following as interrupted.")
+			quit(1)
+			return
+		main_probe.call("_update_shared_location_vehicle_follow")
+		if bool(main_probe.get("_shared_location_vehicle_following")) or not (main_probe.get("_shared_location_vehicle_route") as PackedVector3Array).is_empty() or marker_probe.visible:
+			push_error("Manual vehicle input did not stop auto-follow and clear its route and marker.")
+			quit(1)
+			return
+	main_probe.set("vehicle_occupied", false)
 	main_probe.remove_child(vehicle_probe)
 	vehicle_probe.free()
 	main_probe.remove_child(route_probe)
