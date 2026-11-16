@@ -33,9 +33,9 @@ func _build_mountain_base() -> void:
 	# امتداد أرضي صلب خلف المخيم حتى لا ينتهي العالم عند حافة شبكة المدينة.
 	_add_box("MountainFooting", Vector3(112.0, 0.8, 150.0), Vector3(56.0, -0.75, 151.0), Color(0.28, 0.25, 0.21), true)
 	# كتل صخرية جانبية متدرجة تعطي الجبل كتلة بصرية دون سد طريق الصعود.
-	_add_box("MountainRockMassLower", Vector3(34.0, 10.0, 44.0), Vector3(42.0, 4.5, 128.0), Color(0.39, 0.34, 0.28), false)
-	_add_box("MountainRockMassMid", Vector3(30.0, 12.0, 42.0), Vector3(87.0, 10.0, 153.0), Color(0.34, 0.30, 0.25), false)
-	_add_box("MountainRockMassUpper", Vector3(34.0, 14.0, 38.0), Vector3(54.0, 18.0, 184.0), Color(0.43, 0.37, 0.29), false)
+	_add_box("MountainRockMassLower", Vector3(34.0, 10.0, 44.0), Vector3(20.0, 4.5, 128.0), Color(0.39, 0.34, 0.28), false)
+	_add_box("MountainRockMassMid", Vector3(30.0, 12.0, 42.0), Vector3(101.0, 10.0, 153.0), Color(0.34, 0.30, 0.25), false)
+	_add_box("MountainRockMassUpper", Vector3(34.0, 14.0, 38.0), Vector3(12.0, 18.0, 184.0), Color(0.43, 0.37, 0.29), false)
 
 
 func _build_approach_gate() -> void:
