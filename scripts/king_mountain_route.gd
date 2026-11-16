@@ -178,10 +178,10 @@ func _build_rest_stops() -> void:
 	for stop_number in range(stop_indices.size()):
 		var route_index: int = stop_indices[stop_number]
 		var point: Vector3 = ROUTE_POINTS[route_index]
-		var incoming := (point - ROUTE_POINTS[route_index - 1]).normalized()
-		var outgoing := (ROUTE_POINTS[route_index + 1] - point).normalized()
+		var incoming: Vector3 = (point - ROUTE_POINTS[route_index - 1]).normalized()
+		var outgoing: Vector3 = (ROUTE_POINTS[route_index + 1] - point).normalized()
 		# استخدم مماس منتصف المنعطف حتى تصطف الفسحة مع الطريق من الجهتين.
-		var forward := (incoming + outgoing).normalized()
+		var forward: Vector3 = (incoming + outgoing).normalized()
 		if forward.length_squared() < 0.001:
 			forward = outgoing
 		var side := Vector3.UP.cross(forward).normalized()
