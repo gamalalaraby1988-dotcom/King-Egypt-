@@ -1230,7 +1230,12 @@ func calculate_shared_location_arrow_rotation(target_delta: Vector3, camera_forw
 	flat_forward.y = 0.0
 	var flat_right := camera_right
 	flat_right.y = 0.0
-	if flat_direction.length_squared() <= 0.000001 or flat_forward.length_squared() <= 0.000001 or flat_right.length_squared() <= 0.000001:
+	if flat_direction.length_squared() <= 0.000001 or flat_right.length_squared() <= 0.000001:
+		return 0.0
+	# عند توجيه الكاميرا عموديًا تقريبًا، استنتج الأمام الأفقي من اليمين.
+	if flat_forward.length_squared() <= 0.000001:
+		flat_forward = Vector3.UP.cross(flat_right)
+	if flat_forward.length_squared() <= 0.000001:
 		return 0.0
 	flat_direction = flat_direction.normalized()
 	flat_forward = flat_forward.normalized()
