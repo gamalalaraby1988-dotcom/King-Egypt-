@@ -106,15 +106,14 @@ func _process(_delta: float) -> void:
 	if is_instance_valid(vehicle_summon_button):
 		vehicle_summon_button.visible = true
 		vehicle_summon_button.text = "إحضار السيارة" if CityLanguage.get_language() == "ar" else "Call vehicle"
-	if not is_instance_valid(city_vehicle):
+	var player := get_node_or_null("Player") as CharacterBody3D
+	if not is_instance_valid(player):
 		if is_instance_valid(vehicle_interaction_button):
 			vehicle_interaction_button.visible = false
 		return
-	var player := get_node_or_null("Player") as CharacterBody3D
-	if not is_instance_valid(player):
-		return
-	var close_enough := player.global_position.distance_to(city_vehicle.global_position) <= 5.0
+	# محطة الحفلة مستقلة عن وجود سيارة مستدعاة؛ لا نخفي زر التفاعل عند غياب المركبة.
 	var nearby_party_station := _get_nearby_party_station(player)
+	var close_enough := is_instance_valid(city_vehicle) and player.global_position.distance_to(city_vehicle.global_position) <= 5.0
 	if is_instance_valid(vehicle_interaction_button):
 		vehicle_interaction_button.visible = close_enough or is_instance_valid(nearby_party_station)
 		if is_instance_valid(nearby_party_station):
