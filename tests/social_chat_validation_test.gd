@@ -68,8 +68,32 @@ func _run_social_validation_tests() -> void:
 			var connector_name := "MountainTurnGuardConnector_%02d_%sCollision" % [turn_index, side_name]
 			var connector_body := mountain_route_probe.get_node_or_null(connector_name) as StaticBody3D
 			var connector_shape := connector_body.get_node_or_null("CollisionShape3D") as CollisionShape3D if is_instance_valid(connector_body) else null
-			if not is_instance_valid(connector_body) or not is_instance_valid(connector_shape) or connector_shape.shape == null:
-				push_error("Mountain route bend is missing a solid guard connector: " + connector_name)
+			var connector_visual_name := connector_name.trim_suffix("Collision")
+			var connector_visual := mountain_route_probe.get_node_or_null(connector_visual_name) as MeshInstance3D
+			var connector_gold_rail := mountain_route_probe.get_node_or_null(connector_visual_name + "GoldRail") as MeshInstance3D
+			if not is_instance_valid(connector_body) or not is_instance_valid(connector_shape) or not connector_shape.shape is BoxShape3D:
+				push_error("Mountain route bend is missing a solid box guard connector: " + connector_name)
+				quit(1)
+				return
+			if connector_body.collision_layer != 1 or (connector_body.collision_mask & 6) != 6:
+				push_error("Mountain bend guard must block both player and vehicle layers: " + connector_name)
+				quit(1)
+				return
+			if not is_instance_valid(connector_visual) or not is_instance_valid(connector_gold_rail):
+				push_error("Mountain bend guard is missing its visible stone or gold rail: " + connector_visual_name)
+				quit(1)
+				return
+	# Calling the builder again must not duplicate any of the eight bend assemblies.
+	mountain_route_probe.call("_build_turn_guard_connectors")
+	for turn_index in range(1, 5):
+		for side_name in ["L", "R"]:
+			var connector_visual_name := "MountainTurnGuardConnector_%02d_%s" % [turn_index, side_name]
+			var assembly_count := 0
+			for child in mountain_route_probe.get_children():
+				if child.name == connector_visual_name or child.name == connector_visual_name + "GoldRail" or child.name == connector_visual_name + "Collision":
+					assembly_count += 1
+			if assembly_count != 3:
+				push_error("Mountain bend guard assembly was duplicated or incomplete: " + connector_visual_name)
 				quit(1)
 				return
 	mountain_route_probe.queue_free()

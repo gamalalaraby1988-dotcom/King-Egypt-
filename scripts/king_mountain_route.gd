@@ -110,6 +110,15 @@ func _build_turn_guard_connectors() -> void:
 			# Build the visual and its collider explicitly here. This avoids relying on
 			# the generic box helper to create a separately named collision child.
 			_add_oriented_box(guard_name, guard_size, center, basis, guard_color, false)
+			# Continue the gold safety rail across the bend so the barrier reads as one line.
+			_add_oriented_box(
+				guard_name + "GoldRail",
+				Vector3(0.18, 0.16, connector.length() + 0.35),
+				center + basis.y * 0.72,
+				basis,
+				Color(0.82, 0.65, 0.29),
+				false
+			)
 			var guard_body := StaticBody3D.new()
 			guard_body.name = guard_name + "Collision"
 			CityCollisionProfile.apply_world_collision(guard_body)
