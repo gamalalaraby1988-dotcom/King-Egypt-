@@ -33,9 +33,9 @@ func _run_social_validation_tests() -> void:
 	var summit_test_root := Node3D.new()
 	summit_builder.call("_create_summit_edge_barriers", summit_test_root, Color(0.3, 0.3, 0.3), Color(0.8, 0.6, 0.2))
 	var summit_barrier_names := [
-		"SummitSideSafetyWall_-1", "SummitSideSafetyWall_1",
-		"SummitFrontSafetyWall_-1", "SummitFrontSafetyWall_1",
-		"SummitRearSafetyWall_-1", "SummitRearSafetyWall_1"
+		"SummitSideSafetyWall_Left", "SummitSideSafetyWall_Right",
+		"SummitFrontSafetyWall_Left", "SummitFrontSafetyWall_Right",
+		"SummitRearSafetyWall_Left", "SummitRearSafetyWall_Right"
 	]
 	for barrier_name in summit_barrier_names:
 		var barrier_body := summit_test_root.get_node_or_null(barrier_name + "Collision") as StaticBody3D
