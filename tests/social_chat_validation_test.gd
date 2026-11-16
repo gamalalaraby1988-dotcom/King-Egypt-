@@ -17,6 +17,12 @@ func _run_social_validation_tests() -> void:
 		quit(1)
 	)
 	print("SOCIAL_TEST_STAGE: autoload_ready")
+	var main_script: Script = load("res://scripts/main.gd")
+	if main_script == null or not main_script.is_position_inside_city_bounds(Vector3(0, 0, 0)) or not main_script.is_position_inside_city_bounds(Vector3(60, 0, 75)) or main_script.is_position_inside_city_bounds(Vector3(1000, 0, 1000)) or main_script.is_position_inside_city_bounds(Vector3(91, 0, 0)):
+		push_error("Vehicle summon city-boundary visibility rules are incorrect.")
+		quit(1)
+		return
+	print("SOCIAL_TEST_STAGE: vehicle_summon_city_bounds_complete")
 	# City collision contract: players and vehicles ignore each other, but both
 	# collide with static world geometry and solid service staff.
 	var collision_profile: Script = load("res://scripts/city_collision_profile.gd")
