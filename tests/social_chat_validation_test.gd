@@ -23,8 +23,8 @@ func _run_social_validation_tests() -> void:
 		quit(1)
 		return
 	print("SOCIAL_TEST_STAGE: vehicle_summon_city_bounds_complete")
-	if not city_bounds_script.is_vehicle_summon_position_road_safe(Vector3(12, 0, 14)) or city_bounds_script.is_vehicle_summon_position_road_safe(Vector3(40, 0, 0)) or city_bounds_script.is_vehicle_summon_position_road_safe(Vector3(0, 0, -30)):
-		push_error("Vehicle summon must avoid city road corridors.")
+	if not city_bounds_script.is_vehicle_summon_position_road_safe(Vector3(12, 0, 14)) or city_bounds_script.is_vehicle_summon_position_road_safe(Vector3(40, 0, 0)) or city_bounds_script.is_vehicle_summon_position_road_safe(Vector3(0, 0, -30)) or city_bounds_script.is_vehicle_summon_position_road_safe(Vector3(24, 0, 30)) or city_bounds_script.is_vehicle_summon_position_road_safe(Vector3(30, 0, -24)):
+		push_error("Vehicle summon must avoid main and side street corridors.")
 		quit(1)
 		return
 	print("SOCIAL_TEST_STAGE: vehicle_summon_road_safety_complete")
