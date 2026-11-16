@@ -180,7 +180,7 @@ func _build_rest_stops() -> void:
 		var next_point: Vector3 = ROUTE_POINTS[stop_indices[stop_number] + 1]
 		var forward := (next_point - point).normalized()
 		var side := Vector3.UP.cross(forward).normalized()
-		var view_basis := Basis(side, Vector3.UP, -forward)
+		var view_basis := Basis(-side, Vector3.UP, -forward)
 		var pad_center := point + side * 8.5 + Vector3.UP * 0.12
 		_add_oriented_box("MountainRestBay_%d" % stop_number, Vector3(7.0, 0.32, 7.0), pad_center, view_basis, Color(0.56, 0.47, 0.36), true)
 		_add_oriented_box("MountainRestBench_%d" % stop_number, Vector3(2.8, 0.55, 0.75), pad_center + side * 0.9 + Vector3.UP * 0.42, view_basis, Color(0.30, 0.27, 0.23), true)
