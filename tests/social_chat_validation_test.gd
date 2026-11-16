@@ -598,6 +598,11 @@ func _run_social_validation_tests() -> void:
 		push_error("A malformed shared-location follow URI was accepted.")
 		quit(1)
 		return
+	for invalid_location_uri in ["kingloc://250.001,0,0", "kingloc://0,100.001,0", "kingloc://0,-10.001,0", "kingloc://1e309,0,0", "kingloc://12.5,0,-34.25,extra"]:
+		if not city_hud.parse_shared_location_uri(invalid_location_uri).is_empty():
+			push_error("A malformed, non-finite, or out-of-bounds shared-location URI was accepted.")
+			quit(1)
+			return
 	if not city_hud.parse_shared_location_uri("kingloc://12.5,0,-34.25").has("position"):
 		push_error("A shared location follow link could not be parsed.")
 		quit(1)
