@@ -44,7 +44,7 @@ func _run_social_validation_tests() -> void:
 			push_error("Summit edge barrier is missing a solid collision shape: " + barrier_name)
 			quit(1)
 			return
-		if (barrier_body.collision_mask & world_layer) == 0:
+		if (barrier_body.collision_mask & 1) == 0:
 			push_error("Summit safety barrier does not block player/vehicle world collision: " + barrier_name)
 			quit(1)
 			return
