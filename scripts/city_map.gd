@@ -366,6 +366,7 @@ func _draw() -> void:
 	_draw_region_boundaries()
 	_draw_landmark_route()
 	_draw_landmark_labels(rect)
+	_draw_party_station_markers(rect)
 	for node in get_tree().get_nodes_in_group("city_interactables"):
 		if not is_instance_valid(node) or node.is_queued_for_deletion() or not node is Node3D:
 			continue
@@ -385,6 +386,19 @@ func _draw() -> void:
 	draw_string(ThemeDB.fallback_font, Vector2(9, 36), region_label, HORIZONTAL_ALIGNMENT_LEFT, map_size.x - 18.0, 11, Color(0.95, 0.83, 0.55))
 	_draw_compass_and_scale()
 	_draw_map_legend()
+
+
+func _draw_party_station_markers(map_rect: Rect2) -> void:
+	# تظهر محطات الحفلات الموجودة فعليًا فقط، دون إضافة مواقع وهمية للخريطة.
+	for station in get_tree().get_nodes_in_group("party_stations"):
+		if not is_instance_valid(station) or station.is_queued_for_deletion() or not station is Node3D:
+			continue
+		var point := _world_to_map((station as Node3D).global_position)
+		if not map_rect.has_point(point):
+			continue
+		draw_circle(point, 7.0, Color(0.95, 0.72, 0.28, 0.98))
+		draw_circle(point, 4.5, Color(0.12, 0.09, 0.16, 0.98))
+		draw_string(ThemeDB.fallback_font, point + Vector2(-4.0, 4.0), "♫", HORIZONTAL_ALIGNMENT_LEFT, 12.0, 10, Color(1.0, 0.88, 0.48))
 
 
 func _draw_landmark_route() -> void:
@@ -456,7 +470,7 @@ func _draw_staff_marker(point: Vector2) -> void:
 func _draw_map_legend() -> void:
 	var font := ThemeDB.fallback_font
 	var font_size := 9
-	var first_y := map_size.y - 37.0
+	var first_y := map_size.y - 48.0
 	var row_gap := 11.0
 	var text_color := Color(0.92, 0.9, 0.82)
 	draw_colored_polygon(PackedVector2Array([Vector2(11, first_y - 4), Vector2(15, first_y), Vector2(11, first_y + 4), Vector2(7, first_y)]), Color(0.95, 0.72, 0.25))
@@ -467,6 +481,9 @@ func _draw_map_legend() -> void:
 	var staff_y := job_y + row_gap
 	draw_circle(Vector2(11, staff_y), 4.0, Color(0.45, 0.9, 0.55))
 	draw_string(font, Vector2(20, staff_y + 3), CityLanguage.translate("map_staff"), HORIZONTAL_ALIGNMENT_LEFT, map_size.x - 28.0, font_size, text_color)
+	var party_y := staff_y + row_gap
+	draw_circle(Vector2(11, party_y), 5.0, Color(0.95, 0.72, 0.28))
+	draw_string(font, Vector2(20, party_y + 3), "♫ محطات الحفلات", HORIZONTAL_ALIGNMENT_LEFT, map_size.x - 28.0, font_size, text_color)
 
 func _draw_compass_and_scale() -> void:
 	var font := ThemeDB.fallback_font
