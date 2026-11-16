@@ -18,6 +18,7 @@ func _ready() -> void:
 	_build_city_approach()
 	_build_approach_gate()
 	_build_road()
+	_build_turn_approach_markings()
 	_build_turn_guard_connectors()
 	_build_turn_aprons()
 	_build_wayfinding_lights()
@@ -134,6 +135,29 @@ func _build_road() -> void:
 				marker.material_override = marker_material
 				add_child(marker)
 
+
+
+func _build_turn_approach_markings() -> void:
+	# شرائط ذهبية مسطحة على سطح الطريق قبل كل منعطف؛ تنبّه السائق دون مطبات أو تصادم.
+	for turn_index in range(1, ROUTE_POINTS.size() - 1):
+		var start: Vector3 = ROUTE_POINTS[turn_index - 1]
+		var bend: Vector3 = ROUTE_POINTS[turn_index]
+		var direction: Vector3 = (bend - start).normalized()
+		var basis: Basis = Basis.looking_at(direction, Vector3.UP)
+		var segment_length: float = start.distance_to(bend)
+		for stripe_index in range(3):
+			var distance_before_turn: float = 3.0 + float(2 - stripe_index) * 1.25
+			if distance_before_turn >= segment_length - 2.0:
+				continue
+			var stripe_position: Vector3 = bend - direction * distance_before_turn + Vector3.UP * (ROAD_THICKNESS * 0.5 + 0.035)
+			_add_oriented_box(
+				"MountainTurnApproachStripe_%02d_%02d" % [turn_index, stripe_index],
+				Vector3(ROAD_WIDTH - 1.2, 0.035, 0.24),
+				stripe_position,
+				basis,
+				Color(0.76, 0.61, 0.32),
+				false
+			)
 
 
 func _build_turn_guard_connectors() -> void:
