@@ -1234,6 +1234,13 @@ func calculate_shared_location_arrow_rotation(target_delta: Vector3, camera_forw
 		return 0.0
 	flat_direction = flat_direction.normalized()
 	flat_forward = flat_forward.normalized()
+	# أزل مركبة الأمام من اليمين أولًا؛ إسقاط أساس الكاميرا المائل على
+	# المستوى الأفقي قد يجعلهما غير متعامدين ويشوّه زاوية السهم.
+	flat_right -= flat_forward * flat_right.dot(flat_forward)
+	if flat_right.length_squared() <= 0.000001:
+		flat_right = flat_forward.cross(Vector3.UP)
+	if flat_right.length_squared() <= 0.000001:
+		return 0.0
 	flat_right = flat_right.normalized()
 	var angle := atan2(flat_direction.dot(flat_right), flat_direction.dot(flat_forward))
 	return angle - PI * 0.5
