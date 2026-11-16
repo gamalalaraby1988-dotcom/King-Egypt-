@@ -1,4 +1,6 @@
 extends Node3D
+
+const CityCollisionProfile = preload("res://scripts/city_collision_profile.gd")
 ## مخيم بسيط يضم ثمانية أماكن للحيوانات وموظف التأجير.
 
 func _ready() -> void:
@@ -22,6 +24,7 @@ func _box(parent: Node3D, label: String, size: Vector3, pos: Vector3, color: Col
 	if collision:
 		var body := StaticBody3D.new()
 		body.name = label + "Collision"
+		CityCollisionProfile.apply_world_collision(body)
 		body.add_to_group("city_world_geometry")
 		var shape_node := CollisionShape3D.new()
 		var shape := BoxShape3D.new()
