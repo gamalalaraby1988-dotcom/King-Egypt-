@@ -16,6 +16,7 @@ func _run_social_validation_tests() -> void:
 		quit(1)
 		return
 	var route_probe: Node = mission_manager_script.new()
+	get_tree().root.add_child(route_probe)
 	var valid_shared_route: PackedVector3Array = route_probe.call("build_shared_location_route_from", Vector3.ZERO, Vector3(48.0, 0.0, 48.0))
 	if valid_shared_route.size() < 2 or valid_shared_route[0].distance_to(Vector3.ZERO) > 0.1 or valid_shared_route[valid_shared_route.size() - 1].distance_to(Vector3(48.0, 0.0, 48.0)) > 0.1:
 		push_error("A valid in-city shared-location scooter route was not built from road waypoints.")
