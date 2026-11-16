@@ -112,6 +112,17 @@ var moderation_status_label: Label
 var display_name_panel: PanelContainer
 var display_name_input: LineEdit
 var display_name_status: Label
+var friends_phone_panel: PanelContainer
+var friends_phone_name_label: Label
+var friends_phone_code_label: Label
+var friends_phone_status: Label
+var friends_phone_search: LineEdit
+var friends_phone_friends_box: VBoxContainer
+var friends_phone_incoming_box: VBoxContainer
+var friends_phone_outgoing_box: VBoxContainer
+var friends_phone_pages: Dictionary = {}
+var friends_phone_active_tab := "friends"
+var friends_phone_avatar_label: Label
 
 const GROUP_MAX_MEMBERS := 4
 const GROUP_CHAT_MAX_LENGTH := 300
@@ -315,6 +326,249 @@ func _open_section(section: String) -> void:
 					break
 	popup.visible = true
 
+func _open_friends_phone_panel() -> void:
+	if is_instance_valid(phone_popup):
+		phone_popup.visible = false
+	if is_instance_valid(popup):
+		popup.visible = false
+	if not is_instance_valid(friends_phone_panel):
+		_build_friends_phone_panel()
+	friends_phone_panel.visible = true
+	_set_friends_phone_tab("friends")
+	if AuthManager.is_authenticated():
+		SocialChatManager.get_my_display_name()
+		SocialChatManager.list_friends()
+		SocialChatManager.list_friend_requests()
+		friends_phone_status.text = "جارٍ تحميل بيانات الأصدقاء من الخادم..."
+	else:
+		friends_phone_status.text = "سجّل الدخول لعرض أصدقائك وطلبات الصداقة."
+
+func _build_friends_phone_panel() -> void:
+	friends_phone_panel = PanelContainer.new()
+	friends_phone_panel.name = "FriendsManagementPhonePanel"
+	friends_phone_panel.anchor_left = 0.5
+	friends_phone_panel.anchor_right = 0.5
+	friends_phone_panel.anchor_top = 0.5
+	friends_phone_panel.anchor_bottom = 0.5
+	friends_phone_panel.offset_left = -190
+	friends_phone_panel.offset_right = 190
+	friends_phone_panel.offset_top = -285
+	friends_phone_panel.offset_bottom = 285
+	friends_phone_panel.visible = false
+	friends_phone_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	friends_phone_panel.add_theme_stylebox_override("panel", _friends_phone_style(Color("#101b2a"), Color("#c49a45"), 3))
+	root.add_child(friends_phone_panel)
+	var outer := VBoxContainer.new()
+	outer.add_theme_constant_override("separation", 7)
+	friends_phone_panel.add_child(outer)
+	var header := HBoxContainer.new()
+	outer.add_child(header)
+	var title := Label.new()
+	title.text = "𓂀  الأصدقاء  𓂀"
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_color_override("font_color", Color("#e8c46b"))
+	title.add_theme_font_size_override("font_size", 20)
+	header.add_child(title)
+	var close := Button.new()
+	close.text = "✕"
+	close.pressed.connect(func(): friends_phone_panel.visible = false)
+	header.add_child(close)
+	var profile := PanelContainer.new()
+	profile.add_theme_stylebox_override("panel", _friends_phone_style(Color("#1b2a3e"), Color("#8e713e"), 1))
+	outer.add_child(profile)
+	var profile_row := HBoxContainer.new()
+	profile.add_child(profile_row)
+	friends_phone_avatar_label = Label.new()
+	friends_phone_avatar_label.text = "👤"
+	friends_phone_avatar_label.custom_minimum_size = Vector2(54, 54)
+	friends_phone_avatar_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	friends_phone_avatar_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	friends_phone_avatar_label.add_theme_font_size_override("font_size", 30)
+	profile_row.add_child(friends_phone_avatar_label)
+	var profile_text := VBoxContainer.new()
+	profile_text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	profile_row.add_child(profile_text)
+	friends_phone_name_label = Label.new()
+	friends_phone_name_label.text = "اسم اللاعب"
+	friends_phone_name_label.add_theme_color_override("font_color", Color("#f1d17b"))
+	profile_text.add_child(friends_phone_name_label)
+	friends_phone_code_label = Label.new()
+	friends_phone_code_label.text = "رمز اللاعب: —"
+	profile_text.add_child(friends_phone_code_label)
+	var edit_profile := Button.new()
+	edit_profile.text = "✏️"
+	edit_profile.tooltip_text = "تعديل الاسم والصورة"
+	edit_profile.custom_minimum_size = Vector2(48, 48)
+	edit_profile.pressed.connect(_open_friends_profile_editor)
+	profile_row.add_child(edit_profile)
+	var tabs := HBoxContainer.new()
+	tabs.add_theme_constant_override("separation", 4)
+	outer.add_child(tabs)
+	var tab_group := ButtonGroup.new()
+	tab_group.allow_unpress = false
+	for tab in [{"id":"friends","caption":"الأصدقاء"},{"id":"incoming","caption":"الواردة"},{"id":"outgoing","caption":"المرسلة"}]:
+		var tab_button := Button.new()
+		tab_button.text = str(tab.caption)
+		tab_button.toggle_mode = true
+		tab_button.button_group = tab_group
+		tab_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		tab_button.pressed.connect(_set_friends_phone_tab.bind(str(tab.id)))
+		tabs.add_child(tab_button)
+		friends_phone_pages[str(tab.id)] = {"button":tab_button}
+	var page_scroll := ScrollContainer.new()
+	page_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	page_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	outer.add_child(page_scroll)
+	for tab_id in ["friends", "incoming", "outgoing"]:
+		var page := VBoxContainer.new()
+		page.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		page.add_theme_constant_override("separation", 6)
+		page_scroll.add_child(page)
+		friends_phone_pages[tab_id]["page"] = page
+	var friends_page: VBoxContainer = friends_phone_pages["friends"]["page"]
+	friends_phone_search = LineEdit.new()
+	friends_phone_search.placeholder_text = "ابحث برمز اللاعب (10 أحرف)"
+	friends_phone_search.max_length = 10
+	friends_page.add_child(friends_phone_search)
+	var search_button := Button.new()
+	search_button.text = "إرسال طلب صداقة"
+	search_button.pressed.connect(_send_friend_request_from_friends_phone)
+	friends_page.add_child(search_button)
+	friends_phone_friends_box = VBoxContainer.new()
+	friends_phone_friends_box.add_theme_constant_override("separation", 5)
+	friends_page.add_child(friends_phone_friends_box)
+	friends_phone_incoming_box = friends_phone_pages["incoming"]["page"]
+	friends_phone_outgoing_box = friends_phone_pages["outgoing"]["page"]
+	friends_phone_status = Label.new()
+	friends_phone_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	friends_phone_status.add_theme_color_override("font_color", Color("#e8c46b"))
+	outer.add_child(friends_phone_status)
+	var footer := Button.new()
+	footer.text = "العودة إلى الهاتف"
+	footer.pressed.connect(func(): friends_phone_panel.visible = false)
+	outer.add_child(footer)
+	_set_friends_phone_tab("friends")
+
+func _set_friends_phone_tab(tab_id: String) -> void:
+	friends_phone_active_tab = tab_id
+	for key in friends_phone_pages:
+		var entry: Dictionary = friends_phone_pages[key]
+		if entry.has("page"):
+			(entry["page"] as Control).visible = str(key) == tab_id
+		if entry.has("button"):
+			(entry["button"] as Button).button_pressed = str(key) == tab_id
+
+func _send_friend_request_from_friends_phone() -> void:
+	var code := friends_phone_search.text.strip_edges().to_upper() if is_instance_valid(friends_phone_search) else ""
+	if not SocialChatManager.is_valid_player_code(code):
+		friends_phone_status.text = "أدخل رمز لاعب صحيحًا مكوّنًا من 10 أحرف."
+		return
+	if SocialChatManager.send_friend_request(code):
+		friends_phone_status.text = "جارٍ إرسال طلب الصداقة..."
+
+func _open_friends_profile_editor() -> void:
+	if not is_instance_valid(display_name_panel):
+		return
+	_open_display_name_panel()
+	friends_phone_status.text = "يمكن تعديل الاسم من هنا. اختيار صورة الشخصية سيُفعّل بعد ربط حفظ الشخصية الجاهزة بملف اللاعب."
+
+func _friends_phone_style(background: Color, border: Color, border_width: int) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = background
+	style.border_color = border
+	style.set_border_width_all(border_width)
+	style.set_corner_radius_all(12)
+	style.content_margin_left = 8
+	style.content_margin_right = 8
+	style.content_margin_top = 7
+	style.content_margin_bottom = 7
+	return style
+
+func _render_friends_phone_list(data: Array) -> void:
+	for child in friends_phone_friends_box.get_children():
+		child.queue_free()
+	for friend in data:
+		if not friend is Dictionary:
+			continue
+		var code := str(friend.get("player_code", ""))
+		var name := str(friend.get("display_name", "صديق"))
+		var row := HBoxContainer.new()
+		friends_phone_friends_box.add_child(row)
+		var info := Label.new()
+		info.text = "👤  %s\n%s" % [name, code]
+		info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(info)
+		var chat := Button.new()
+		chat.text = "محادثة"
+		chat.pressed.connect(_on_social_friend_selected.bind(code))
+		row.add_child(chat)
+		var remove := Button.new()
+		remove.text = "حذف"
+		remove.disabled = true
+		remove.tooltip_text = "الحذف يحتاج إجراءً خادميًا آمنًا غير متاح حاليًا."
+		row.add_child(remove)
+	if friends_phone_friends_box.get_child_count() == 0:
+		var empty := Label.new()
+		empty.text = "لا يوجد أصدقاء بعد."
+		friends_phone_friends_box.add_child(empty)
+
+func _render_friends_phone_requests(data: Array) -> void:
+	for box in [friends_phone_incoming_box, friends_phone_outgoing_box]:
+		for child in box.get_children():
+			child.queue_free()
+	var incoming_count := 0
+	var outgoing_count := 0
+	for request in data:
+		if not request is Dictionary:
+			continue
+		var direction := str(request.get("direction", ""))
+		var request_id := str(request.get("request_id", ""))
+		var code := str(request.get("player_code", ""))
+		var name := str(request.get("display_name", "لاعب"))
+		var target_box := friends_phone_incoming_box if direction == "incoming" else friends_phone_outgoing_box if direction == "outgoing" else null
+		if target_box == null:
+			continue
+		if direction == "incoming":
+			incoming_count += 1
+		else:
+			outgoing_count += 1
+		var row := VBoxContainer.new()
+		target_box.add_child(row)
+		var label := Label.new()
+		label.text = "👤  %s\n%s" % [name, code]
+		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		row.add_child(label)
+		var actions := HBoxContainer.new()
+		row.add_child(actions)
+		if direction == "incoming":
+			var accept := Button.new()
+			accept.text = "قبول"
+			accept.pressed.connect(func(): SocialChatManager.respond_friend_request(request_id, true))
+			actions.add_child(accept)
+			var decline := Button.new()
+			decline.text = "رفض"
+			decline.pressed.connect(func(): SocialChatManager.respond_friend_request(request_id, false))
+			actions.add_child(decline)
+		else:
+			var pending := Button.new()
+			pending.text = "قيد الانتظار"
+			pending.disabled = true
+			actions.add_child(pending)
+			var cancel := Button.new()
+			cancel.text = "إلغاء"
+			cancel.disabled = true
+			cancel.tooltip_text = "إلغاء الطلب يحتاج إجراءً خادميًا غير متاح حاليًا."
+			actions.add_child(cancel)
+	if incoming_count == 0:
+		var empty_in := Label.new()
+		empty_in.text = "لا توجد طلبات واردة."
+		friends_phone_incoming_box.add_child(empty_in)
+	if outgoing_count == 0:
+		var empty_out := Label.new()
+		empty_out.text = "لا توجد طلبات مرسلة."
+		friends_phone_outgoing_box.add_child(empty_out)
+
 func _open_vehicle_store_phone() -> void:
 	if is_instance_valid(popup):
 		popup.visible = false
@@ -342,6 +596,10 @@ func _build_vehicle_store_phone() -> void:
 	phone_popup.add_child(content)
 	var heading := Label.new()
 	heading.text = "هاتف اللاعب — متجر المركبات"
+	var friends_button := Button.new()
+	friends_button.text = "👥  إدارة الأصدقاء"
+	friends_button.pressed.connect(_open_friends_phone_panel)
+	content.add_child(friends_button)
 	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	heading.add_theme_font_size_override("font_size", 20)
 	content.add_child(heading)
@@ -2173,6 +2431,14 @@ func _on_social_operation_completed(action: String, data: Variant) -> void:
 				if selected_player_id == blocked_target:
 					player_popup.visible = false
 				_refresh_blocked_players()
+		"friend_requests_list":
+			if data is Array:
+				_render_friends_phone_requests(data)
+				friends_phone_status.text = "تم تحميل طلبات الصداقة الواردة والمرسلة."
+		"friend_request_response":
+			friends_phone_status.text = "تم تحديث حالة طلب الصداقة من الخادم."
+			SocialChatManager.list_friend_requests()
+			SocialChatManager.list_friends()
 		"friends_list":
 			if data is Array:
 				_sync_selected_player_friend_state(data)
@@ -2203,6 +2469,10 @@ func _on_social_operation_completed(action: String, data: Variant) -> void:
 			social_chat_status.text = "تم تحميل قائمة الأصدقاء من الخادم."
 			SocialChatManager.get_chat_group()
 		"display_name_get":
+			if is_instance_valid(friends_phone_name_label) and data is Array and not data.is_empty() and data[0] is Dictionary:
+				var loaded_profile: Dictionary = data[0]
+				friends_phone_name_label.text = str(loaded_profile.get("display_name", "اسم اللاعب"))
+				friends_phone_code_label.text = "رمز اللاعب: " + local_player_code
 			if is_instance_valid(display_name_status):
 				if data is Array and not data.is_empty() and data[0] is Dictionary:
 					var profile: Dictionary = data[0]
@@ -2215,6 +2485,8 @@ func _on_social_operation_completed(action: String, data: Variant) -> void:
 				var result: Dictionary = data[0]
 				if bool(result.get("success", false)):
 					display_name_input.text = str(result.get("current_display_name", ""))
+					if is_instance_valid(friends_phone_name_label):
+						friends_phone_name_label.text = display_name_input.text
 					display_name_status.text = "تم تغيير الاسم بنجاح. التغيير التالي بعد منتصف الليل بتوقيت مصر."
 				else:
 					var code := str(result.get("error_code", "unknown"))
