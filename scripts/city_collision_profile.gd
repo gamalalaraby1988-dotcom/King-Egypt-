@@ -7,9 +7,16 @@ const PLAYER_LAYER: int = 1 << 1
 const VEHICLE_LAYER: int = 1 << 2
 const STAFF_LAYER: int = 1 << 3
 
+const WORLD_MASK: int = WORLD_LAYER | PLAYER_LAYER | VEHICLE_LAYER
 const PLAYER_MASK: int = WORLD_LAYER | STAFF_LAYER
 const VEHICLE_MASK: int = WORLD_LAYER | STAFF_LAYER
 const STAFF_MASK: int = PLAYER_LAYER | VEHICLE_LAYER
+
+static func apply_world_collision(body: CollisionObject3D) -> void:
+	if not is_instance_valid(body):
+		return
+	body.collision_layer = WORLD_LAYER
+	body.collision_mask = WORLD_MASK
 
 static func add_staff_collider(parent: Node3D, radius: float = 0.34, height: float = 1.8) -> StaticBody3D:
 	if not is_instance_valid(parent):
@@ -40,8 +47,7 @@ static func add_world_box_collider(parent: Node3D, size: Vector3, position: Vect
 		return existing
 	var body := StaticBody3D.new()
 	body.name = body_name
-	body.collision_layer = WORLD_LAYER
-	body.collision_mask = WORLD_LAYER
+	apply_world_collision(body)
 	body.add_to_group("city_world_geometry")
 	var collision_shape := CollisionShape3D.new()
 	collision_shape.name = "CollisionShape3D"
