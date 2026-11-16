@@ -176,9 +176,14 @@ func _build_rest_stops() -> void:
 	# فسحات جانبية خارج مسار المركبات؛ لا توضع المقاعد على الطريق.
 	var stop_indices := [1, 3]
 	for stop_number in range(stop_indices.size()):
-		var point: Vector3 = ROUTE_POINTS[stop_indices[stop_number]]
-		var next_point: Vector3 = ROUTE_POINTS[stop_indices[stop_number] + 1]
-		var forward := (next_point - point).normalized()
+		var route_index: int = stop_indices[stop_number]
+		var point: Vector3 = ROUTE_POINTS[route_index]
+		var incoming := (point - ROUTE_POINTS[route_index - 1]).normalized()
+		var outgoing := (ROUTE_POINTS[route_index + 1] - point).normalized()
+		# استخدم مماس منتصف المنعطف حتى تصطف الفسحة مع الطريق من الجهتين.
+		var forward := (incoming + outgoing).normalized()
+		if forward.length_squared() < 0.001:
+			forward = outgoing
 		var side := Vector3.UP.cross(forward).normalized()
 		var view_basis := Basis(-side, Vector3.UP, -forward)
 		var pad_center := point + side * 8.5 + Vector3.UP * 0.12
