@@ -567,9 +567,26 @@ func _make_friend_request_avatar(character_id: String) -> Control:
 		fallback.add_theme_font_size_override("font_size", 34)
 		frame.add_child(fallback)
 		return frame
+	var character_id_pattern := RegEx.new()
+	character_id_pattern.compile("^[A-Za-z0-9_-]{1,48}$")
+	if character_id_pattern.search(character_id) == null:
+		var fallback := Label.new()
+		fallback.text = "👤"
+		fallback.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		fallback.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		fallback.add_theme_font_size_override("font_size", 34)
+		frame.add_child(fallback)
+		return frame
 	var final_path := "res://assets/characters/%s/character.tscn" % character_id
-	var scene_path := final_path if ResourceLoader.exists(final_path) else "res://scenes/characters/avatar_visual.tscn"
-	var packed := load(scene_path) as PackedScene
+	if not ResourceLoader.exists(final_path):
+		var fallback := Label.new()
+		fallback.text = "👤"
+		fallback.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		fallback.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		fallback.add_theme_font_size_override("font_size", 34)
+		frame.add_child(fallback)
+		return frame
+	var packed := load(final_path) as PackedScene
 	if packed == null:
 		var fallback := Label.new()
 		fallback.text = "👤"
