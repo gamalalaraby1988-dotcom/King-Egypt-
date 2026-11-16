@@ -444,97 +444,159 @@ func _refresh_wallet() -> void:
 
 
 func _build_player_interaction_popup() -> void:
-	# نافذة مستقلة عن لوحة الأصدقاء؛ تظهر عند استدعاء open_player_interaction من تفاعل الشخصية.
+	# نافذة تفاعل صغيرة في منتصف الشاشة، مع إبقاء المدينة ظاهرة حولها.
 	player_popup = PanelContainer.new()
 	player_popup.name = "PlayerInteractionPopup"
 	player_popup.anchor_left = 0.5
 	player_popup.anchor_right = 0.5
 	player_popup.anchor_top = 0.5
 	player_popup.anchor_bottom = 0.5
-	player_popup.offset_left = -190
-	player_popup.offset_right = 190
-	player_popup.offset_top = -235
-	player_popup.offset_bottom = 235
+	player_popup.offset_left = -158
+	player_popup.offset_right = 158
+	player_popup.offset_top = -132
+	player_popup.offset_bottom = 132
 	player_popup.visible = false
 	player_popup.mouse_filter = Control.MOUSE_FILTER_STOP
 	var panel_style := StyleBoxFlat.new()
-	panel_style.bg_color = Color(0.31, 0.23, 0.66, 0.98)
-	panel_style.border_color = Color(0.78, 0.65, 0.98, 1.0)
-	panel_style.set_border_width_all(3)
-	panel_style.set_corner_radius_all(28)
-	panel_style.content_margin_left = 22
-	panel_style.content_margin_right = 22
-	panel_style.content_margin_top = 18
-	panel_style.content_margin_bottom = 18
+	panel_style.bg_color = Color(0.12, 0.10, 0.22, 0.89)
+	panel_style.border_color = Color(0.78, 0.65, 0.98, 0.95)
+	panel_style.set_border_width_all(2)
+	panel_style.set_corner_radius_all(16)
+	panel_style.content_margin_left = 10
+	panel_style.content_margin_right = 10
+	panel_style.content_margin_top = 8
+	panel_style.content_margin_bottom = 8
 	player_popup.add_theme_stylebox_override("panel", panel_style)
 	root.add_child(player_popup)
 
 	var content := VBoxContainer.new()
-	content.add_theme_constant_override("separation", 9)
+	content.add_theme_constant_override("separation", 5)
 	player_popup.add_child(content)
-	var top := HBoxContainer.new()
-	top.alignment = BoxContainer.ALIGNMENT_END
-	content.add_child(top)
-	var close := Button.new()
-	close.text = "✕"
-	close.custom_minimum_size = Vector2(42, 38)
-	close.pressed.connect(func(): player_popup.visible = false)
-	top.add_child(close)
+
+	var heading := HBoxContainer.new()
+	heading.add_theme_constant_override("separation", 7)
+	content.add_child(heading)
 	player_avatar_label = Label.new()
 	player_avatar_label.text = "👤"
+	player_avatar_label.custom_minimum_size = Vector2(38, 38)
+	player_avatar_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	player_avatar_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	player_avatar_label.add_theme_font_size_override("font_size", 54)
-	content.add_child(player_avatar_label)
+	player_avatar_label.add_theme_font_size_override("font_size", 27)
+	heading.add_child(player_avatar_label)
+
+	var identity := VBoxContainer.new()
+	identity.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	identity.add_theme_constant_override("separation", 0)
+	heading.add_child(identity)
 	player_name_label = Label.new()
 	player_name_label.text = "اسم اللاعب"
-	player_name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	player_name_label.add_theme_font_size_override("font_size", 23)
+	player_name_label.add_theme_font_size_override("font_size", 15)
 	player_name_label.add_theme_color_override("font_color", Color.WHITE)
-	content.add_child(player_name_label)
+	identity.add_child(player_name_label)
 	player_level_label = Label.new()
-	player_level_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	player_level_label.add_theme_font_size_override("font_size", 11)
 	player_level_label.add_theme_color_override("font_color", Color(0.88, 0.85, 1.0))
-	content.add_child(player_level_label)
+	identity.add_child(player_level_label)
 	player_status_label = Label.new()
-	player_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	player_status_label.add_theme_font_size_override("font_size", 10)
 	player_status_label.add_theme_color_override("font_color", Color(0.88, 0.85, 1.0))
-	content.add_child(player_status_label)
+	identity.add_child(player_status_label)
+
+	var close := Button.new()
+	close.text = "✕"
+	close.custom_minimum_size = Vector2(30, 30)
+	close.pressed.connect(close_player_interaction)
+	heading.add_child(close)
+
+	var primary_row := HBoxContainer.new()
+	primary_row.add_theme_constant_override("separation", 5)
+	content.add_child(primary_row)
 	player_primary_action_button = Button.new()
 	player_primary_action_button.text = "إضافة صديق"
-	player_primary_action_button.custom_minimum_size.y = 52
-	player_primary_action_button.add_theme_font_size_override("font_size", 22)
+	player_primary_action_button.custom_minimum_size.y = 36
+	player_primary_action_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	player_primary_action_button.add_theme_font_size_override("font_size", 13)
 	player_primary_action_button.pressed.connect(_on_player_primary_action)
-	content.add_child(player_primary_action_button)
+	primary_row.add_child(player_primary_action_button)
+
 	var gift_party := Button.new()
-	gift_party.text = "إهداء حفلة"
-	gift_party.custom_minimum_size.y = 52
-	gift_party.add_theme_font_size_override("font_size", 22)
+	gift_party.text = "🎉 إهداء حفلة"
+	gift_party.custom_minimum_size.y = 36
+	gift_party.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	gift_party.add_theme_font_size_override("font_size", 13)
 	gift_party.pressed.connect(_on_player_gift_party)
-	content.add_child(gift_party)
+	primary_row.add_child(gift_party)
+
+	var secondary_row := HBoxContainer.new()
+	secondary_row.add_theme_constant_override("separation", 4)
+	content.add_child(secondary_row)
+	var message_button := Button.new()
+	message_button.text = "رسالة"
+	message_button.custom_minimum_size.y = 31
+	message_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	message_button.add_theme_font_size_override("font_size", 11)
+	message_button.pressed.connect(_on_player_message)
+	secondary_row.add_child(message_button)
 	player_block_button = Button.new()
 	player_block_button.name = "BlockSelectedPlayer"
-	player_block_button.text = "حظر اللاعب"
+	player_block_button.text = "حظر"
+	player_block_button.custom_minimum_size.y = 31
+	player_block_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	player_block_button.add_theme_font_size_override("font_size", 11)
 	player_block_button.pressed.connect(_on_player_block)
-	content.add_child(player_block_button)
+	secondary_row.add_child(player_block_button)
+	var report_button := Button.new()
+	report_button.text = "إبلاغ"
+	report_button.custom_minimum_size.y = 31
+	report_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	report_button.add_theme_font_size_override("font_size", 11)
+	report_button.pressed.connect(_on_player_report)
+	secondary_row.add_child(report_button)
+
+	var report_row := HBoxContainer.new()
+	report_row.add_theme_constant_override("separation", 4)
+	content.add_child(report_row)
 	player_report_reason = OptionButton.new()
-	player_report_reason.add_item("مضايقة أو إساءة", 0)
-	player_report_reason.add_item("رسائل مزعجة / سبام", 1)
+	player_report_reason.add_item("مضايقة", 0)
+	player_report_reason.add_item("سبام", 1)
 	player_report_reason.add_item("اسم غير مناسب", 2)
-	player_report_reason.add_item("غش أو استغلال", 3)
-	player_report_reason.add_item("سبب آخر", 4)
-	content.add_child(player_report_reason)
+	player_report_reason.add_item("غش", 3)
+	player_report_reason.add_item("أخرى", 4)
+	player_report_reason.custom_minimum_size = Vector2(92, 30)
+	player_report_reason.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	player_report_reason.add_theme_font_size_override("font_size", 10)
+	report_row.add_child(player_report_reason)
 	player_report_details = LineEdit.new()
-	player_report_details.placeholder_text = "تفاصيل إضافية (اختياري)"
-	content.add_child(player_report_details)
-	var report := Button.new()
-	report.text = "⚠ إرسال البلاغ"
-	report.pressed.connect(_on_player_report)
-	content.add_child(report)
+	player_report_details.placeholder_text = "تفاصيل البلاغ (اختياري)"
+	player_report_details.custom_minimum_size.y = 30
+	player_report_details.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	player_report_details.add_theme_font_size_override("font_size", 10)
+	report_row.add_child(player_report_details)
+
 	player_action_status = Label.new()
 	player_action_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	player_action_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	player_action_status.add_theme_font_size_override("font_size", 10)
 	player_action_status.add_theme_color_override("font_color", Color(1.0, 0.91, 0.69))
 	content.add_child(player_action_status)
+
+
+func _on_player_message() -> void:
+	if not _has_selected_player():
+		player_action_status.text = "تعذر فتح المحادثة: رمز اللاعب غير متاح."
+		return
+	_apartment_invite_mode = false
+	social_chat_channel = "الأصدقاء"
+	selected_friend_code = selected_player_id
+	_pending_direct_open_player_code = selected_player_id
+	selected_friend_conversation_id = ""
+	if is_instance_valid(social_chat_log):
+		social_chat_log.clear()
+	if is_instance_valid(social_chat_status):
+		social_chat_status.text = "جارٍ فتح محادثة اللاعب..."
+	_open_social_chat_panel()
+	SocialChatManager.open_direct_conversation(selected_player_id)
+	close_player_interaction()
 
 
 func open_player_interaction(player_data: Dictionary) -> void:
@@ -545,7 +607,7 @@ func open_player_interaction(player_data: Dictionary) -> void:
 	if is_instance_valid(player_block_button):
 		player_block_button.visible = not selected_player_id.is_empty()
 	selected_player_is_friend = bool(player_data.get("is_friend", false))
-	player_primary_action_button.text = "إضافة للمجموعة" if selected_player_is_friend else "إضافة صديق"
+	player_primary_action_button.text = "دعوة للمجموعة" if selected_player_is_friend else "إضافة صديق"
 	var clean_name := str(player_data.get("display_name", "لاعب")).strip_edges().substr(0, 24)
 	player_name_label.text = clean_name if not clean_name.is_empty() else "لاعب"
 	var clean_level := str(player_data.get("level", "—")).substr(0, 12)
