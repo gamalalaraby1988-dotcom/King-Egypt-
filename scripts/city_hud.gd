@@ -1183,6 +1183,10 @@ func _update_shared_location_direction_arrow() -> void:
 	if not shared_location_follow_active:
 		shared_location_direction_arrow.visible = false
 		return
+	if is_instance_valid(main_scene) and main_scene.has_method("is_shared_location_navigation_active") and not bool(main_scene.call("is_shared_location_navigation_active")):
+		shared_location_direction_arrow.visible = false
+		shared_location_follow_active = false
+		return
 	var actor: Node3D = main_scene.call("get_shared_location_navigation_actor") if is_instance_valid(main_scene) and main_scene.has_method("get_shared_location_navigation_actor") else null
 	if not is_instance_valid(actor):
 		shared_location_direction_arrow.visible = false
@@ -1224,7 +1228,7 @@ func _on_social_chat_meta_clicked(meta: Variant) -> void:
 	if started:
 		shared_location_follow_target = location
 		shared_location_follow_active = true
-		social_chat_status.text = "بدأت متابعة الموقع. يمكنك إلغاء التوجيه من زر إلغاء الملاحة."
+		social_chat_status.text = "بدأت متابعة الموقع. يمكنك إيقافها بالتحكم اليدوي."
 	else:
 		social_chat_status.text = "تعذر بدء التوجيه؛ أوقف المهمة أو الوظيفة الحالية أولًا."
 

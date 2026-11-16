@@ -319,6 +319,13 @@ func get_shared_location_navigation_actor() -> Node3D:
 	return get_node_or_null("Player") as Node3D
 
 
+func is_shared_location_navigation_active() -> bool:
+	if _shared_location_vehicle_following:
+		return true
+	var mission_manager := get_node_or_null("MissionManager")
+	return is_instance_valid(mission_manager) and mission_manager.has_method("is_shared_location_navigation_active") and bool(mission_manager.call("is_shared_location_navigation_active"))
+
+
 func begin_shared_location_navigation(destination: Vector3) -> bool:
 	if interior_transition_busy or is_instance_valid(interior_root):
 		return false
