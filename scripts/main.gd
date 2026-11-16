@@ -315,6 +315,7 @@ func _create_player_vehicle() -> void:
 	vehicle_summon_button = Button.new()
 	vehicle_summon_button.name = "VehicleSummonButton"
 	vehicle_summon_button.text = "إحضار السيارة"
+	vehicle_summon_button.disabled = true
 	vehicle_summon_button.custom_minimum_size = Vector2(190, 58)
 	vehicle_summon_button.anchor_left = 0.0
 	vehicle_summon_button.anchor_right = 0.0
