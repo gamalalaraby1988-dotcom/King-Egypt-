@@ -57,6 +57,19 @@ func _run_social_validation_tests() -> void:
 		push_error("A shared-location route accepted a destination outside the supported vertical world bounds.")
 		quit(1)
 		return
+	for invalid_route_pair in [
+		[Vector3(251.0, 0.0, 0.0), Vector3.ZERO],
+		[Vector3.ZERO, Vector3(-251.0, 0.0, 0.0)],
+		[Vector3(0.0, -10.1, 0.0), Vector3.ZERO],
+		[Vector3.ZERO, Vector3(0.0, -10.1, 0.0)],
+		[Vector3(0.0, 0.0, 251.0), Vector3.ZERO],
+		[Vector3.ZERO, Vector3(0.0, 0.0, -251.0)]
+	]:
+		var rejected_route: PackedVector3Array = route_probe.call("build_shared_location_route_from", invalid_route_pair[0], invalid_route_pair[1])
+		if not rejected_route.is_empty():
+			push_error("A shared-location route accepted a start or destination outside the world coordinate bounds.")
+			quit(1)
+			return
 	var marker_probe := Node3D.new()
 	marker_probe.visible = true
 	route_probe.add_child(marker_probe)
