@@ -1286,6 +1286,8 @@ func _share_current_location() -> void:
 			sent = SocialChatManager.send_chat_message("public", location_message)
 	if sent:
 		social_chat_status.text = "جارٍ إرسال موقعك إلى هذه المحادثة..."
+	else:
+		social_chat_status.text = "تعذر إرسال موقعك الآن. حاول مرة أخرى."
 
 
 func announce_party_started_in_public_chat(station: Node3D) -> bool:
