@@ -97,6 +97,45 @@ func _run_social_validation_tests() -> void:
 				quit(1)
 				return
 	print("SOCIAL_TEST_STAGE: mountain_turn_guard_connectors_complete")
+	# Scenic decks must retain their approach opening while all exposed edges are solid
+	# and receive the decorative gold top rail.
+	for stop_number in range(2):
+		for rail_suffix in ["Outer", "Left", "Right"]:
+			var deck_rail_name := "MountainViewDeck%sRail_%d" % [rail_suffix, stop_number]
+			var deck_rail := mountain_route_probe.get_node_or_null(deck_rail_name) as MeshInstance3D
+			var deck_rail_body := mountain_route_probe.get_node_or_null(deck_rail_name + "Collision") as StaticBody3D
+			var deck_rail_shape := deck_rail_body.get_node_or_null("CollisionShape3D") as CollisionShape3D if is_instance_valid(deck_rail_body) else null
+			var gold_rail := mountain_route_probe.get_node_or_null("MountainViewDeck%sGoldRail_%d" % [rail_suffix, stop_number]) as MeshInstance3D
+			if not is_instance_valid(deck_rail) or not is_instance_valid(deck_rail_body) or not is_instance_valid(deck_rail_shape) or not is_instance_valid(gold_rail):
+				push_error("Mountain scenic viewpoint is missing a solid guarded edge or gold rail: " + deck_rail_name)
+				quit(1)
+				return
+			if (deck_rail_body.collision_mask & 6) != 6:
+				push_error("Mountain scenic viewpoint rail must block players and vehicles: " + deck_rail_name)
+				quit(1)
+				return
+	# Summit edge walls must follow the final route tangent, not world-axis alignment.
+	var summit_forward: Vector3 = (mountain_route_script.ROUTE_POINTS[5] - mountain_route_script.ROUTE_POINTS[4]).normalized()
+	for side_sign in [-1, 1]:
+		var summit_side_name := "MountainSummitSideBarrier_%d" % side_sign
+		var summit_side_mesh := mountain_route_probe.get_node_or_null(summit_side_name) as MeshInstance3D
+		var summit_side_body := mountain_route_probe.get_node_or_null(summit_side_name + "Collision") as StaticBody3D
+		var summit_side_shape := summit_side_body.get_node_or_null("CollisionShape3D") as CollisionShape3D if is_instance_valid(summit_side_body) else null
+		if not is_instance_valid(summit_side_mesh) or not is_instance_valid(summit_side_body) or not is_instance_valid(summit_side_shape):
+			push_error("Mountain summit is missing a rotated solid side barrier: " + summit_side_name)
+			quit(1)
+			return
+		if absf(summit_side_mesh.global_basis.z.normalized().dot(-summit_forward)) < 0.98:
+			push_error("Mountain summit side barrier is not aligned with the final approach tangent: " + summit_side_name)
+			quit(1)
+			return
+	var summit_rear_mesh := mountain_route_probe.get_node_or_null("MountainSummitRearBarrier") as MeshInstance3D
+	var summit_rear_body := mountain_route_probe.get_node_or_null("MountainSummitRearBarrierCollision") as StaticBody3D
+	if not is_instance_valid(summit_rear_mesh) or not is_instance_valid(summit_rear_body):
+		push_error("Mountain summit rear edge is missing its aligned solid barrier.")
+		quit(1)
+		return
+	print("SOCIAL_TEST_STAGE: mountain_viewpoints_and_summit_alignment_complete")
 	mountain_route_probe.queue_free()
 	await process_frame
 	print("SOCIAL_TEST_STAGE: mountain_turn_guard_connectors_complete")
