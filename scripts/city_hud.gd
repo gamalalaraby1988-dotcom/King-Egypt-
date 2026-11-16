@@ -2023,16 +2023,23 @@ func _on_social_friend_selected(player_code: String) -> void:
 		_apartment_invite_mode = false
 		social_chat_status.text = "تم اختيار الصديق، لكن لم تُرسل دعوة: خدمة دعوات الشقق الخادمية غير موجودة بعد."
 		return
+	var target_code := player_code.strip_edges().to_upper()
+	if not SocialChatManager.is_valid_player_code(target_code):
+		social_chat_status.text = "تعذر فتح المحادثة: رمز الصديق غير صالح."
+		return
 	social_chat_channel = "الأصدقاء"
-	selected_friend_code = player_code
-	_pending_direct_open_player_code = player_code
+	selected_friend_code = target_code
+	_pending_direct_open_player_code = target_code
 	selected_friend_conversation_id = ""
 	_update_shared_location_button_state()
 	social_chat_log.clear()
 	social_chat_status.text = "جارٍ فتح محادثة الصديق..."
 	if is_instance_valid(social_group_invite_button):
 		social_group_invite_button.visible = (social_chat_channel == "المجموعة")
-	SocialChatManager.open_direct_conversation(player_code)
+	if not SocialChatManager.open_direct_conversation(target_code):
+		if _pending_direct_open_player_code == target_code:
+			_pending_direct_open_player_code = ""
+			social_chat_status.text = "تعذر بدء فتح المحادثة. حاول مرة أخرى."
 
 
 func _on_social_operation_completed(action: String, data: Variant) -> void:
@@ -2167,16 +2174,18 @@ func _on_social_operation_completed(action: String, data: Variant) -> void:
 					if conversation_id.is_empty():
 						social_chat_status.text = "تعذر فتح المحادثة: لم يُرجع الخادم رقم المحادثة."
 						return
-					selected_friend_conversation_id = conversation_id
-					_update_shared_location_button_state()
 					if not requested_friend_code.is_empty():
 						_direct_conversation_to_friend[conversation_id] = requested_friend_code
 						_friend_to_conversation[requested_friend_code] = conversation_id
+					var request_is_still_selected := social_chat_channel == "الأصدقاء" and selected_friend_code == requested_friend_code
+					if request_is_still_selected:
+						selected_friend_conversation_id = conversation_id
+						_update_shared_location_button_state()
 						_unread_direct_by_friend.erase(requested_friend_code)
 						_update_friend_unread_badge(requested_friend_code)
-					_refresh_unread_indicators()
-					SocialChatManager.subscribe_direct_chat(conversation_id)
-					SocialChatManager.read_direct_messages(conversation_id)
+						_refresh_unread_indicators()
+						SocialChatManager.subscribe_direct_chat(conversation_id)
+						SocialChatManager.read_direct_messages(conversation_id)
 				else:
 					social_chat_status.text = "تعذر فتح المحادثة: " + str(result.get("error_code", "unknown"))
 			else:
