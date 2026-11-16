@@ -32,12 +32,12 @@ func _run_social_validation_tests() -> void:
 		quit(1)
 		return
 	route_probe.free()
-	var city_hud_script: Script = load("res://scripts/city_hud.gd")
-	if city_hud_script == null:
+	var shared_location_hud_script: Script = load("res://scripts/city_hud.gd")
+	if shared_location_hud_script == null:
 		push_error("City HUD script could not be loaded for shared-location validation.")
 		quit(1)
 		return
-	var location_probe: Node = city_hud_script.new()
+	var location_probe: Node = shared_location_hud_script.new()
 	if not location_probe.call("parse_shared_location_message", "KINGLOC1|nan|0|0").is_empty():
 		push_error("A non-finite shared-location coordinate was accepted.")
 		quit(1)
