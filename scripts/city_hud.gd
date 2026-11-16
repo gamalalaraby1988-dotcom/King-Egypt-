@@ -123,6 +123,8 @@ var friends_phone_outgoing_box: VBoxContainer
 var friends_phone_pages: Dictionary = {}
 var friends_phone_active_tab := "friends"
 var friends_phone_avatar_label: Label
+var friends_phone_badge: Label
+var friends_phone_incoming_count := 0
 
 const GROUP_MAX_MEMBERS := 4
 const GROUP_CHAT_MAX_LENGTH := 300
@@ -569,6 +571,18 @@ func _render_friends_phone_requests(data: Array) -> void:
 		empty_out.text = "لا توجد طلبات مرسلة."
 		friends_phone_outgoing_box.add_child(empty_out)
 
+	friends_phone_incoming_count = incoming_count
+	_update_friends_phone_request_badge()
+
+func _update_friends_phone_request_badge() -> void:
+	if is_instance_valid(friends_phone_badge):
+		friends_phone_badge.text = str(friends_phone_incoming_count)
+		friends_phone_badge.visible = friends_phone_incoming_count > 0
+	if friends_phone_pages.has("incoming"):
+		var entry: Dictionary = friends_phone_pages["incoming"]
+		if entry.has("button") and is_instance_valid(entry["button"]):
+			(entry["button"] as Button).text = "الواردة" if friends_phone_incoming_count == 0 else "الواردة (%d)" % friends_phone_incoming_count
+
 func _open_vehicle_store_phone() -> void:
 	if is_instance_valid(popup):
 		popup.visible = false
@@ -596,10 +610,23 @@ func _build_vehicle_store_phone() -> void:
 	phone_popup.add_child(content)
 	var heading := Label.new()
 	heading.text = "هاتف اللاعب — متجر المركبات"
+	var friends_button_row := HBoxContainer.new()
+	friends_button_row.add_theme_constant_override("separation", 8)
+	content.add_child(friends_button_row)
 	var friends_button := Button.new()
 	friends_button.text = "👥  إدارة الأصدقاء"
+	friends_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	friends_button.pressed.connect(_open_friends_phone_panel)
-	content.add_child(friends_button)
+	friends_button_row.add_child(friends_button)
+	friends_phone_badge = Label.new()
+	friends_phone_badge.text = "0"
+	friends_phone_badge.visible = false
+	friends_phone_badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	friends_phone_badge.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	friends_phone_badge.custom_minimum_size = Vector2(30, 28)
+	friends_phone_badge.add_theme_color_override("font_color", Color("#ffffff"))
+	friends_phone_badge.add_theme_stylebox_override("normal", _friends_phone_style(Color("#c62828"), Color("#ff7777"), 1))
+	friends_button_row.add_child(friends_phone_badge)
 	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	heading.add_theme_font_size_override("font_size", 20)
 	content.add_child(heading)
