@@ -28,6 +28,29 @@ func _run_social_validation_tests() -> void:
 		quit(1)
 		return
 	print("SOCIAL_TEST_STAGE: vehicle_summon_road_safety_complete")
+	# Verify all four summit edges have solid barriers that stop both characters and vehicles.
+	var summit_builder: Node3D = city_bounds_script.new()
+	var summit_test_root := Node3D.new()
+	summit_builder.call("_create_summit_edge_barriers", summit_test_root, Color(0.3, 0.3, 0.3), Color(0.8, 0.6, 0.2))
+	var summit_barrier_names := [
+		"SummitSideSafetyWall_-1", "SummitSideSafetyWall_1",
+		"SummitFrontSafetyWall_-1", "SummitFrontSafetyWall_1",
+		"SummitRearSafetyWall_-1", "SummitRearSafetyWall_1"
+	]
+	for barrier_name in summit_barrier_names:
+		var barrier_body := summit_test_root.get_node_or_null(barrier_name + "Collision") as StaticBody3D
+		var barrier_shape := barrier_body.get_node_or_null("CollisionShape3D") as CollisionShape3D if is_instance_valid(barrier_body) else null
+		if not is_instance_valid(barrier_body) or not is_instance_valid(barrier_shape) or barrier_shape.shape == null:
+			push_error("Summit edge barrier is missing a solid collision shape: " + barrier_name)
+			quit(1)
+			return
+		if (barrier_body.collision_mask & world_layer) == 0:
+			push_error("Summit safety barrier does not block player/vehicle world collision: " + barrier_name)
+			quit(1)
+			return
+	summit_builder.free()
+	summit_test_root.free()
+	print("SOCIAL_TEST_STAGE: summit_edge_safety_complete")
 	# City collision contract: players and vehicles ignore each other, but both
 	# collide with static world geometry and solid service staff.
 	var collision_profile: Script = load("res://scripts/city_collision_profile.gd")
