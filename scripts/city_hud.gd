@@ -1249,7 +1249,9 @@ func _on_social_chat_meta_clicked(meta: Variant) -> void:
 func _update_shared_location_button_state() -> void:
 	if not is_instance_valid(social_chat_location_button):
 		return
-	social_chat_location_button.disabled = resolve_shared_location_chat_destination(social_chat_channel, selected_friend_conversation_id).is_empty()
+	var can_share := not resolve_shared_location_chat_destination(social_chat_channel, selected_friend_conversation_id).is_empty()
+	social_chat_location_button.disabled = not can_share
+	social_chat_location_button.tooltip_text = "مشاركة موقعي في هذه المحادثة" if can_share else "اختر محادثة صالحة أولًا لمشاركة موقعك"
 
 
 func resolve_shared_location_chat_destination(channel: String, conversation_id: String = "") -> Dictionary:
