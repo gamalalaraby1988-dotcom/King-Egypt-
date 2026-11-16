@@ -194,6 +194,23 @@ func _build_turn_aprons() -> void:
 		_add_oriented_box("MountainTurnApron_%02d" % i, Vector3(9.2, ROAD_THICKNESS, 9.2), ROUTE_POINTS[i], basis, Color(0.25, 0.24, 0.22), true)
 		# وصلة إرشاد ذهبية فوق توسعة المنعطف حتى لا ينقطع خط الطريق بصريًا.
 		_add_oriented_box("MountainTurnGuide_%02d" % i, Vector3(0.10, 0.025, 7.6), ROUTE_POINTS[i] + Vector3.UP * (ROAD_THICKNESS * 0.5 + 0.025), basis, Color(0.70, 0.56, 0.30), false)
+		# عواكس إضافية عند المنعطفات حتى لا تنقطع علامات الحواف بين المقاطع.
+		for side_sign in [-1.0, 1.0]:
+			var reflector := MeshInstance3D.new()
+			reflector.name = "MountainTurnEdgeReflector_%02d_%s" % [i, "L" if side_sign < 0.0 else "R"]
+			var reflector_mesh := BoxMesh.new()
+			reflector_mesh.size = Vector3(0.14, 0.38, 0.22)
+			reflector.mesh = reflector_mesh
+			var reflector_position: Vector3 = ROUTE_POINTS[i] + basis.x * side_sign * (ROAD_WIDTH * 0.5 + 0.62) + Vector3.UP * 1.05
+			reflector.transform = Transform3D(basis, reflector_position)
+			var reflector_material := StandardMaterial3D.new()
+			reflector_material.albedo_color = Color(1.0, 0.72, 0.28)
+			reflector_material.emission_enabled = true
+			reflector_material.emission = Color(1.0, 0.55, 0.16)
+			reflector_material.emission_energy_multiplier = 0.8
+			reflector.mesh = reflector_mesh
+			reflector.material_override = reflector_material
+			add_child(reflector)
 
 func _build_wayfinding_lights() -> void:
 	# أعمدة إنارة وإرشاد خارج حافة الحواجز؛ لا تقترب من حيز قيادة المركبات.
