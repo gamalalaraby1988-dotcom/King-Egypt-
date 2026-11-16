@@ -216,6 +216,17 @@ func _build_turn_aprons() -> void:
 			tangent = outgoing
 		var basis := Basis.looking_at(tangent, Vector3.UP)
 		_add_oriented_box("MountainTurnApron_%02d" % i, Vector3(9.2, ROAD_THICKNESS, 9.2), ROUTE_POINTS[i], basis, Color(0.25, 0.24, 0.22), true)
+		# حافة ذهبية مرئية على جانبي توسعة المنعطف لتوضح حدود المسار عند الالتفاف.
+		for side_sign in [-1.0, 1.0]:
+			var edge_position: Vector3 = ROUTE_POINTS[i] + basis.x * side_sign * (ROAD_WIDTH * 0.5 + 0.48) + Vector3.UP * (ROAD_THICKNESS * 0.5 + 0.045)
+			_add_oriented_box(
+				"MountainTurnApronEdgeGuide_%02d_%s" % [i, "L" if side_sign < 0.0 else "R"],
+				Vector3(0.12, 0.035, 8.4),
+				edge_position,
+				basis,
+				Color(0.78, 0.62, 0.33),
+				false
+			)
 		# وصلة إرشاد ذهبية فوق توسعة المنعطف حتى لا ينقطع خط الطريق بصريًا.
 		_add_oriented_box("MountainTurnGuide_%02d" % i, Vector3(0.10, 0.025, 7.6), ROUTE_POINTS[i] + Vector3.UP * (ROAD_THICKNESS * 0.5 + 0.025), basis, Color(0.70, 0.56, 0.30), false)
 		# عواكس إضافية عند المنعطفات حتى لا تنقطع علامات الحواف بين المقاطع.
