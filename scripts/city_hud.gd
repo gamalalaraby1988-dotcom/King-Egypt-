@@ -548,6 +548,70 @@ func _render_friends_phone_list(data: Array) -> void:
 		empty.text = "لا يوجد أصدقاء بعد."
 		friends_phone_friends_box.add_child(empty)
 
+
+func _make_friend_request_avatar(character_id: String) -> Control:
+	var frame := PanelContainer.new()
+	frame.name = "FriendRequestAvatar"
+	frame.custom_minimum_size = Vector2(76, 76)
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color("#172638")
+	style.border_color = Color("#c49a45")
+	style.set_border_width_all(2)
+	style.set_corner_radius_all(12)
+	frame.add_theme_stylebox_override("panel", style)
+	if character_id.is_empty():
+		var fallback := Label.new()
+		fallback.text = "👤"
+		fallback.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		fallback.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		fallback.add_theme_font_size_override("font_size", 34)
+		frame.add_child(fallback)
+		return frame
+	var final_path := "res://assets/characters/%s/character.tscn" % character_id
+	var scene_path := final_path if ResourceLoader.exists(final_path) else "res://scenes/characters/avatar_visual.tscn"
+	var packed := load(scene_path) as PackedScene
+	if packed == null:
+		var fallback := Label.new()
+		fallback.text = "👤"
+		fallback.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		fallback.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		frame.add_child(fallback)
+		return frame
+	var viewport_container := SubViewportContainer.new()
+	viewport_container.custom_minimum_size = Vector2(76, 76)
+	viewport_container.stretch = true
+	frame.add_child(viewport_container)
+	var viewport := SubViewport.new()
+	viewport.size = Vector2i(152, 152)
+	viewport.transparent_bg = true
+	viewport_container.add_child(viewport)
+	var world := Node3D.new()
+	viewport.add_child(world)
+	var light := DirectionalLight3D.new()
+	light.rotation_degrees = Vector3(-25, -20, 0)
+	light.light_energy = 1.2
+	world.add_child(light)
+	var camera := Camera3D.new()
+	camera.position = Vector3(0, 1.15, 3.8)
+	camera.look_at(Vector3(0, 1.0, 0), Vector3.UP)
+	camera.current = true
+	world.add_child(camera)
+	var avatar := packed.instantiate() as Node3D
+	if avatar == null:
+		viewport_container.queue_free()
+		var fallback := Label.new()
+		fallback.text = "👤"
+		fallback.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		fallback.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		frame.add_child(fallback)
+		return frame
+	avatar.scale = Vector3.ONE * 0.82
+	world.add_child(avatar)
+	if avatar.has_method("apply_character_identity"):
+		avatar.call("apply_character_identity", character_id)
+	return frame
+
+
 func _render_friends_phone_requests(data: Array) -> void:
 	for box in [friends_phone_incoming_box, friends_phone_outgoing_box]:
 		for child in box.get_children():
@@ -568,14 +632,20 @@ func _render_friends_phone_requests(data: Array) -> void:
 			incoming_count += 1
 		else:
 			outgoing_count += 1
-		var row := VBoxContainer.new()
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 10)
 		target_box.add_child(row)
+		var character_id := str(request.get("selected_character_id", request.get("character_id", ""))).strip_edges()
+		row.add_child(_make_friend_request_avatar(character_id))
+		var details := VBoxContainer.new()
+		details.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(details)
 		var label := Label.new()
-		label.text = "👤  %s\n%s" % [name, code]
+		label.text = "%s\\n%s" % [name, code]
 		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		row.add_child(label)
+		details.add_child(label)
 		var actions := HBoxContainer.new()
-		row.add_child(actions)
+		details.add_child(actions)
 		if direction == "incoming":
 			var accept := Button.new()
 			accept.text = "قبول"
