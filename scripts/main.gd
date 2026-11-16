@@ -382,6 +382,25 @@ func _update_shared_location_vehicle_follow() -> void:
 	if bool(city_vehicle.get("auto_navigation_interrupted")):
 		_clear_shared_location_vehicle_follow()
 		return
+	if is_instance_valid(mission_manager) and mission_manager.has_method("is_position_near_shared_location_route"):
+		var remains_on_route := bool(mission_manager.call(
+			"is_position_near_shared_location_route",
+			city_vehicle.global_position,
+			_shared_location_vehicle_route,
+			_shared_location_vehicle_route_index,
+			8.0
+		))
+		if not remains_on_route:
+			var recalculated_route: PackedVector3Array = mission_manager.call(
+				"build_shared_location_route_from",
+				city_vehicle.global_position,
+				_shared_location_vehicle_target
+			)
+			if recalculated_route.size() < 2:
+				_clear_shared_location_vehicle_follow()
+				return
+			_shared_location_vehicle_route = recalculated_route
+			_shared_location_vehicle_route_index = 0
 	while _shared_location_vehicle_route_index < _shared_location_vehicle_route.size():
 		var waypoint: Vector3 = _shared_location_vehicle_route[_shared_location_vehicle_route_index]
 		var waypoint_delta := waypoint - city_vehicle.global_position
