@@ -402,6 +402,20 @@ func _run_social_validation_tests() -> void:
 			push_error("Manual vehicle input did not stop auto-follow and clear its route and marker.")
 			quit(1)
 			return
+	# لا تُنهِ متابعة الاسكوتر قبل الوصول الفعلي إلى نطاق الوجهة النهائي (2 متر).
+	main_probe.set("vehicle_occupied", true)
+	vehicle_probe.global_position = Vector3(18.0, 0.0, 11.5)
+	main_probe.set("_shared_location_vehicle_following", true)
+	main_probe.set("_shared_location_vehicle_target", Vector3(18.0, 0.0, 9.0))
+	main_probe.set("_shared_location_vehicle_route", PackedVector3Array([Vector3.ZERO, Vector3(18.0, 0.0, 9.0)]))
+	main_probe.set("_shared_location_vehicle_route_index", 1)
+	vehicle_probe.call("set_auto_navigation_controls", 2.5, 0.0)
+	marker_probe.visible = true
+	main_probe.call("_update_shared_location_vehicle_follow")
+	if not bool(main_probe.get("_shared_location_vehicle_following")) or int(main_probe.get("_shared_location_vehicle_route_index")) != 1 or not marker_probe.visible:
+		push_error("Scooter navigation completed while still 2.5 meters from the final destination.")
+		quit(1)
+		return
 	# عند وصول الاسكوتر إلى آخر نقطة، يجب إنهاء التوجيه وإخفاء العلامة تلقائيًا.
 	main_probe.set("vehicle_occupied", true)
 	vehicle_probe.global_position = Vector3(18.0, 0.0, 9.0)
