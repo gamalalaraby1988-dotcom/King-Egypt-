@@ -2361,6 +2361,7 @@ func _on_social_account_session_changed(_previous_user_id: String, current_user_
 func _on_social_authenticated(_user_id: String, _email: String) -> void:
 	SocialChatManager.connect_realtime()
 	SocialChatManager.get_realtime_identity()
+	SocialChatManager.list_friend_requests()
 
 
 func _refresh_social_friends() -> void:
