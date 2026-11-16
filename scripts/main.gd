@@ -134,7 +134,7 @@ func _find_suitable_vehicle_summon_position(player: CharacterBody3D) -> Variant:
 			continue
 		var query := PhysicsShapeQueryParameters3D.new()
 		query.shape = shape
-		query.transform = Transform3D(Basis.IDENTITY, candidate + Vector3.UP * 1.0)
+		query.transform = Transform3D(Basis(Vector3.UP, player.global_rotation.y), candidate + Vector3.UP * 1.0)
 		query.collision_mask = 1 | 8 # عناصر المدينة الصلبة والموظفون فقط.
 		query.collide_with_bodies = true
 		query.collide_with_areas = false
