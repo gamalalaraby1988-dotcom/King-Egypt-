@@ -12,6 +12,7 @@ var _http: HTTPRequest
 var _pending_action := ""
 var _pending_user_id := ""
 var _pending_session_generation := -1
+var _rpc_queue: Array[Dictionary] = []
 var _realtime_socket: WebSocketPeer
 var _realtime_topics: Dictionary = {}
 var _realtime_join_refs: Dictionary = {}
@@ -38,6 +39,7 @@ func _ready() -> void:
 
 func _on_auth_session_changed(_previous_user_id: String, _current_user_id: String, _generation: int) -> void:
 	# Cancel in-flight RPC work before releasing its account/session ownership.
+	_rpc_queue.clear()
 	if not _pending_action.is_empty():
 		_pending_action = ""
 		_pending_user_id = ""
@@ -189,13 +191,28 @@ func _rpc(function_name: String, payload: Dictionary, action: String) -> bool:
 	if not AuthManager.is_authenticated():
 		operation_failed.emit(action, "سجّل الدخول أولًا.")
 		return false
-	if not _pending_action.is_empty() or is_instance_valid(_http):
-		operation_failed.emit(action, "هناك طلب اجتماعي آخر قيد التنفيذ.")
-		return false
 	var request_user_id := AuthManager.get_authenticated_user_id()
 	var request_generation := AuthManager.get_session_generation()
 	if not _request_session_is_current(request_user_id, request_generation):
 		operation_failed.emit(action, "انتهت جلسة الحساب؛ سجّل الدخول مرة أخرى.")
+		return false
+	var queued_request := {
+		"function_name": function_name,
+		"payload": payload.duplicate(true),
+		"action": action,
+		"user_id": request_user_id,
+		"generation": request_generation
+	}
+	if not _pending_action.is_empty() or is_instance_valid(_http):
+		_rpc_queue.append(queued_request)
+		return true
+	return _start_rpc_request(queued_request)
+
+func _start_rpc_request(queued_request: Dictionary) -> bool:
+	var action := str(queued_request.get("action", ""))
+	var request_user_id := str(queued_request.get("user_id", ""))
+	var request_generation := int(queued_request.get("generation", -1))
+	if not _request_session_is_current(request_user_id, request_generation):
 		return false
 	var request := HTTPRequest.new()
 	request.name = "SocialRpcHTTPRequest"
@@ -212,8 +229,8 @@ func _rpc(function_name: String, payload: Dictionary, action: String) -> bool:
 		"Content-Type: application/json",
 		"Accept: application/json"
 	])
-	var endpoint := SUPABASE_URL + "/rest/v1/rpc/" + function_name
-	var error := request.request(endpoint, headers, HTTPClient.METHOD_POST, JSON.stringify(payload))
+	var endpoint := SUPABASE_URL + "/rest/v1/rpc/" + str(queued_request.get("function_name", ""))
+	var error := request.request(endpoint, headers, HTTPClient.METHOD_POST, JSON.stringify(queued_request.get("payload", {})))
 	if error != OK:
 		if _http == request:
 			_http = null
@@ -225,6 +242,14 @@ func _rpc(function_name: String, payload: Dictionary, action: String) -> bool:
 		return false
 	return true
 
+func _start_next_queued_rpc() -> void:
+	while _rpc_queue.size() > 0:
+		var queued_request: Dictionary = _rpc_queue.pop_front()
+		if not _request_session_is_current(str(queued_request.get("user_id", "")), int(queued_request.get("generation", -1))):
+			continue
+		if _start_rpc_request(queued_request):
+			return
+
 func _on_request_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray, action: String, request_user_id: String, request_generation: int, request: HTTPRequest) -> void:
 	var owns_pending_slot := _http == request
 	if owns_pending_slot:
@@ -234,6 +259,8 @@ func _on_request_completed(result: int, response_code: int, _headers: PackedStri
 		_pending_session_generation = -1
 	if is_instance_valid(request):
 		request.queue_free()
+	if owns_pending_slot:
+		_start_next_queued_rpc()
 	# Request identity is immutable; an old callback can never inherit a newer account's pending metadata.
 	if not owns_pending_slot or action.is_empty():
 		return
@@ -320,6 +347,7 @@ func _process(delta: float) -> void:
 		_realtime_retry_elapsed = 0.0
 		realtime_status_changed.emit("تم إلغاء اشتراكات جلسة منتهية")
 	if not AuthManager.is_authenticated():
+		_rpc_queue.clear()
 		if _realtime_socket != null and _realtime_socket.get_ready_state() != WebSocketPeer.STATE_CLOSED:
 			_realtime_socket.close()
 		_realtime_socket = null
