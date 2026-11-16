@@ -24,6 +24,7 @@ var city_vehicle: CharacterBody3D = null
 var vehicle_interaction_button: Button = null
 var interaction_marker_target: Node3D = null
 var interaction_target_marker: Node3D = null
+var interaction_marker_elapsed := 0.0
 var vehicle_summon_button: Button = null
 var showroom_layer: CanvasLayer = null
 var vehicle_occupied := false
@@ -160,11 +161,30 @@ func _update_interaction_target_marker(target: Node3D) -> void:
 		dot_material.emission_energy_multiplier = 2.4
 		dot.material_override = dot_material
 		interaction_target_marker.add_child(dot)
+		var halo := MeshInstance3D.new()
+		halo.name = "GlowHalo"
+		var halo_mesh := TorusMesh.new()
+		halo_mesh.inner_radius = 0.22
+		halo_mesh.outer_radius = 0.29
+		halo_mesh.rings = 24
+		halo_mesh.ring_segments = 8
+		halo.mesh = halo_mesh
+		halo.rotation.x = PI * 0.5
+		halo.position.y = -0.12
+		var halo_material := StandardMaterial3D.new()
+		halo_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		halo_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		halo_material.albedo_color = Color(1.0, 0.72, 0.24, 0.38)
+		halo_material.emission_enabled = true
+		halo_material.emission = Color(1.0, 0.58, 0.12)
+		halo_material.emission_energy_multiplier = 1.2
+		halo.material_override = halo_material
+		interaction_target_marker.add_child(halo)
 		var glow := OmniLight3D.new()
 		glow.name = "GlowLight"
 		glow.light_color = Color(1.0, 0.72, 0.24)
-		glow.light_energy = 0.8
-		glow.omni_range = 2.8
+		glow.light_energy = 0.65
+		glow.omni_range = 1.8
 		interaction_target_marker.add_child(glow)
 	if is_instance_valid(interaction_marker_target) and interaction_marker_target != target:
 		if interaction_target_marker.get_parent() == interaction_marker_target:
@@ -174,7 +194,20 @@ func _update_interaction_target_marker(target: Node3D) -> void:
 			interaction_target_marker.get_parent().remove_child(interaction_target_marker)
 		target.add_child(interaction_target_marker)
 	interaction_marker_target = target
-	interaction_target_marker.position = Vector3(0.0, 2.0 if target.is_in_group("party_stations") else 1.65, 0.0)
+	interaction_marker_elapsed += get_process_delta_time()
+	var pulse := (sin(interaction_marker_elapsed * 3.2) + 1.0) * 0.5
+	interaction_target_marker.position = Vector3(0.0, (2.0 if target.is_in_group("party_stations") else 1.65) + pulse * 0.07, 0.0)
+	var dot := interaction_target_marker.get_node_or_null("GlowDot") as MeshInstance3D
+	if is_instance_valid(dot):
+		var dot_scale := 0.94 + pulse * 0.12
+		dot.scale = Vector3.ONE * dot_scale
+	var halo_node := interaction_target_marker.get_node_or_null("GlowHalo") as MeshInstance3D
+	if is_instance_valid(halo_node):
+		var halo_scale := 0.94 + pulse * 0.14
+		halo_node.scale = Vector3(halo_scale, halo_scale, halo_scale)
+	var glow_node := interaction_target_marker.get_node_or_null("GlowLight") as OmniLight3D
+	if is_instance_valid(glow_node):
+		glow_node.light_energy = 0.45 + pulse * 0.28
 	interaction_target_marker.visible = true
 
 
