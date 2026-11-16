@@ -56,6 +56,34 @@ func _run_social_validation_tests() -> void:
 		push_error("A shared-location route accepted a destination outside the supported vertical world bounds.")
 		quit(1)
 		return
+	var marker_probe := Node3D.new()
+	marker_probe.visible = true
+	route_probe.add_child(marker_probe)
+	route_probe.set("shared_location_marker", marker_probe)
+	route_probe.set("landmark_navigation_key", "shared_location")
+	route_probe.set("landmark_navigation_active", true)
+	route_probe.set("landmark_route_points", valid_shared_route)
+	route_probe.set("landmark_route_index", 1)
+	route_probe.set("navigation_arrival_remaining", 2.0)
+	route_probe.set("navigation_off_route_time", 1.5)
+	route_probe.set("navigation_route_notice_remaining", 3.0)
+	route_probe.call("_stop_shared_location_navigation_for_activity")
+	if bool(route_probe.get("landmark_navigation_active")) or str(route_probe.get("landmark_navigation_key")) != "":
+		push_error("Starting an activity did not clear shared-location navigation state.")
+		quit(1)
+		return
+	if not (route_probe.get("landmark_route_points") as PackedVector3Array).is_empty() or int(route_probe.get("landmark_route_index")) != 0:
+		push_error("Starting an activity did not clear the shared-location route and waypoint index.")
+		quit(1)
+		return
+	if marker_probe.visible:
+		push_error("Starting an activity did not hide the shared-location marker.")
+		quit(1)
+		return
+	if not is_zero_approx(float(route_probe.get("navigation_arrival_remaining"))) or not is_zero_approx(float(route_probe.get("navigation_off_route_time"))) or not is_zero_approx(float(route_probe.get("navigation_route_notice_remaining"))):
+		push_error("Starting an activity did not reset shared-navigation timers.")
+		quit(1)
+		return
 	route_probe.free()
 	var shared_location_hud_script: Script = load("res://scripts/city_hud.gd")
 	if shared_location_hud_script == null:
