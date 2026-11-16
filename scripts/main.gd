@@ -116,13 +116,21 @@ func _process(_delta: float) -> void:
 			vehicle_interaction_button.visible = false
 		_update_interaction_target_marker(null)
 		return
-	# محطة الحفلة مستقلة عن وجود سيارة مستدعاة؛ لا نخفي زر التفاعل عند غياب المركبة.
+	# أولوية العلامة: محطة الحفلة، ثم أقرب عنصر مدينة يملك مسار تفاعل قائمًا، ثم السيارة.
 	var nearby_party_station := _get_nearby_party_station(player)
+	var mission_manager := get_node_or_null("MissionManager")
+	var nearby_city_interactable: Node3D = null
+	if is_instance_valid(mission_manager):
+		var manager_target: Variant = mission_manager.get("nearest_interactable")
+		if manager_target is Node3D and is_instance_valid(manager_target):
+			nearby_city_interactable = manager_target
 	var close_enough := is_instance_valid(city_vehicle) and player.global_position.distance_to(city_vehicle.global_position) <= 5.0
-	var interaction_target: Node3D = nearby_party_station if is_instance_valid(nearby_party_station) else (city_vehicle if close_enough else null)
+	var interaction_target: Node3D = nearby_party_station if is_instance_valid(nearby_party_station) else (nearby_city_interactable if is_instance_valid(nearby_city_interactable) else (city_vehicle if close_enough else null))
 	_update_interaction_target_marker(interaction_target)
+	# زر المركبة الإضافي مخصص للمحطة والسيارة فقط؛ بقية عناصر المدينة تستخدم زر MissionManager القائم.
 	if is_instance_valid(vehicle_interaction_button):
-		vehicle_interaction_button.visible = is_instance_valid(interaction_target)
+		var vehicle_or_party_target := is_instance_valid(nearby_party_station) or (is_instance_valid(city_vehicle) and close_enough and not is_instance_valid(nearby_city_interactable))
+		vehicle_interaction_button.visible = vehicle_or_party_target
 		if is_instance_valid(nearby_party_station):
 			vehicle_interaction_button.text = "إقامة حفلة" if CityLanguage.get_language() == "ar" else "Start party"
 		else:
