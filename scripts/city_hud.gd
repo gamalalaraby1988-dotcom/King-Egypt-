@@ -641,7 +641,7 @@ func _render_friends_phone_requests(data: Array) -> void:
 		details.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(details)
 		var label := Label.new()
-		label.text = "%s\\n%s" % [name, code]
+		label.text = "%s\n%s" % [name, code]
 		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		details.add_child(label)
 		var actions := HBoxContainer.new()
