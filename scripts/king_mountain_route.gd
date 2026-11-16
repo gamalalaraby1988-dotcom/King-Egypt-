@@ -213,8 +213,10 @@ func _build_summit_terrace() -> void:
 	for side_sign in [-1.0, 1.0]:
 		var side_center := summit + summit_side * side_sign * 15.0 + Vector3.UP * 0.8 + summit_forward * 5.0
 		_add_oriented_box("MountainSummitSideBarrier_%d" % int(side_sign), Vector3(0.65, 1.6, 30.0), side_center, summit_basis, Color(0.36, 0.31, 0.25), true)
+		_add_oriented_box("MountainSummitSideGoldRail_%d" % int(side_sign), Vector3(0.20, 0.14, 30.0), side_center + Vector3.UP * 0.87, summit_basis, Color(0.82, 0.65, 0.29), false)
 	var rear_center := summit + summit_forward * 21.0 + Vector3.UP * 0.8
 	_add_oriented_box("MountainSummitRearBarrier", Vector3(30.0, 1.6, 0.65), rear_center, summit_basis, Color(0.36, 0.31, 0.25), true)
+	_add_oriented_box("MountainSummitRearGoldRail", Vector3(30.0, 0.14, 0.20), rear_center + Vector3.UP * 0.87, summit_basis, Color(0.82, 0.65, 0.29), false)
 	var obelisk_position := summit - summit_side * 9.0 + summit_forward * 7.0
 	_add_oriented_box("MountainSummitObeliskBase", Vector3(4.0, 0.6, 4.0), obelisk_position + Vector3.UP * 0.8, summit_basis, Color(0.36, 0.31, 0.25), true)
 	_add_oriented_box("MountainSummitObelisk", Vector3(0.65, 5.0, 0.65), obelisk_position + Vector3.UP * 3.6, summit_basis, Color(0.86, 0.68, 0.29), true)
