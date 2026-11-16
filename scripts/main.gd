@@ -731,20 +731,65 @@ func _create_destination_scene(destination_name: String, destination_kind: Strin
 			_create_box(root, "PlazaBench_%d" % int(x), Vector3(4.0, 0.55, 0.9), Vector3(x, 0.48, 1.0), dark_stone, true)
 		_create_box(root, "PlazaRoyalGate", Vector3(12, 0.7, 0.7), Vector3(0, 4.2, -12.0), gold, true)
 	elif destination_kind == "ship":
-		# سطح سفينة ملكية راسية: سطح خشبي، بدن جانبي، درابزين وصاري وشراع.
-		_create_box(root, "RoyalShipDeck", Vector3(24, 0.8, 30), Vector3(0, 0, 0), Color(0.34, 0.20, 0.11), true)
-		_create_box(root, "RoyalShipHullLeft", Vector3(1.2, 2.5, 29), Vector3(-11.2, -1.25, 0), dark_stone, true)
-		_create_box(root, "RoyalShipHullRight", Vector3(1.2, 2.5, 29), Vector3(11.2, -1.25, 0), dark_stone, true)
-		_create_box(root, "RoyalShipBow", Vector3(20, 2.2, 1.4), Vector3(0, -1.0, -14.0), dark_stone, true)
-		for x in [-10.0, 10.0]:
-			_create_box(root, "ShipRail_%d" % int(x), Vector3(0.35, 1.1, 27), Vector3(x, 1.0, 0), gold, true)
-			for z in [-10.0, -4.0, 2.0, 8.0]:
-				_create_box(root, "ShipRailPost_%d_%d" % [int(x), int(z)], Vector3(0.35, 1.8, 0.35), Vector3(x, 0.9, z), gold, true)
-		_create_box(root, "ShipMast", Vector3(0.8, 13, 0.8), Vector3(0, 6.5, -1.0), gold, true)
-		_create_box(root, "ShipSail", Vector3(7.5, 7.0, 0.25), Vector3(0, 7.0, -1.0), Color(0.88, 0.82, 0.66))
-		_create_box(root, "ShipCaptainDeck", Vector3(8, 3.5, 5), Vector3(0, 2.1, 9.0), Color(0.43, 0.28, 0.16), true)
-		_create_box(root, "ShipSeaLeft", Vector3(30, 0.2, 34), Vector3(-25, -2.0, 0), Color(0.08, 0.28, 0.42))
-		_create_box(root, "ShipSeaRight", Vector3(30, 0.2, 34), Vector3(25, -2.0, 0), Color(0.08, 0.28, 0.42))
+		# القاعة الرئيسية لسفينة الحضارات الخمس؛ مساحة واحدة بلا طوابق أو سلالم.
+		var ivory := Color(0.91, 0.87, 0.76)
+		var royal_gold := Color(0.88, 0.67, 0.25)
+		var red := Color(0.58, 0.12, 0.10)
+		var jade := Color(0.18, 0.43, 0.34)
+		var blue := Color(0.18, 0.34, 0.52)
+		_create_box(root, "FiveCivilizationsHallFloor", Vector3(34, 0.7, 28), Vector3(0, -0.35, 0), ivory, true)
+		_create_box(root, "FiveCivilizationsHallCeiling", Vector3(34, 0.65, 28), Vector3(0, 8.2, 0), ivory, true)
+		for x in [-16.0, 16.0]:
+			_create_box(root, "ShipHallSideWall_%d" % int(x), Vector3(0.7, 8.5, 28), Vector3(x, 4.0, 0), ivory, true)
+			_create_box(root, "ShipHallGoldBand_%d" % int(x), Vector3(0.18, 0.28, 27.5), Vector3(x * 0.97, 7.35, 0), royal_gold)
+		for z in [-13.5, 13.5]:
+			_create_box(root, "ShipHallEndWall_%d" % int(z), Vector3(32, 8.5, 0.7), Vector3(0, 4.0, z), ivory, true)
+			_create_box(root, "ShipHallEndGoldBand_%d" % int(z), Vector3(31.5, 0.28, 0.18), Vector3(0, 7.35, z * 0.97), royal_gold)
+		for x in [-13.0, -7.0, 7.0, 13.0]:
+			_create_box(root, "ShipHallColumn_%d" % int(x), Vector3(0.75, 7.0, 0.75), Vector3(x, 3.5, -1.0), royal_gold, true)
+			_create_box(root, "ShipHallCapital_%d" % int(x), Vector3(1.35, 0.45, 1.35), Vector3(x, 7.1, -1.0), ivory, true)
+		# خمسة مداخل مستقلة على الجدار الخلفي، لكل حضارة لون وهوية واضحة.
+		var gate_x := [-12.0, -6.0, 0.0, 6.0, 12.0]
+		var gate_colors := [Color(0.78, 0.62, 0.34), blue, jade, red, Color(0.52, 0.35, 0.62)]
+		var gate_names := ["Greek", "Roman", "Japanese", "Chinese", "French"]
+		for i in range(5):
+			var gx: float = gate_x[i]
+			var gc: Color = gate_colors[i]
+			var gn: String = gate_names[i]
+			_create_box(root, gn + "GateTop", Vector3(4.4, 0.45, 0.55), Vector3(gx, 5.2, -10.8), royal_gold, true)
+			_create_box(root, gn + "GateLeft", Vector3(0.45, 5.2, 0.55), Vector3(gx - 2.0, 2.6, -10.8), gc, true)
+			_create_box(root, gn + "GateRight", Vector3(0.45, 5.2, 0.55), Vector3(gx + 2.0, 2.6, -10.8), gc, true)
+			_create_box(root, gn + "GateGlow", Vector3(3.35, 3.8, 0.12), Vector3(gx, 2.65, -11.1), gc)
+			_create_box(root, gn + "GameMachine", Vector3(1.5, 1.65, 0.85), Vector3(gx, 0.95, -6.2), royal_gold, true)
+			_create_box(root, gn + "MachineScreen", Vector3(1.18, 0.72, 0.12), Vector3(gx, 1.22, -5.72), gc)
+			_create_box(root, gn + "Seat", Vector3(1.25, 0.55, 0.8), Vector3(gx, 0.42, -3.8), dark_stone, true)
+			_create_box(root, gn + "AchievementWing", Vector3(3.4, 2.1, 0.22), Vector3(gx, 3.0, -8.9), ivory, true)
+			_create_box(root, gn + "AchievementTrim", Vector3(3.5, 0.14, 0.3), Vector3(gx, 4.12, -8.82), royal_gold)
+		# ملامح الحضارات على القاعة دون تحويلها إلى خمس غرف منفصلة.
+		# اليونانية: تيجان أعمدة؛ الرومانية: أقواس مستطيلة؛ اليابانية: سقف مائل متدرج.
+		_create_box(root, "GreekMarblePediment", Vector3(4.8, 0.65, 0.8), Vector3(-12.0, 5.75, -10.7), ivory, true)
+		_create_box(root, "RomanArchUpper", Vector3(4.8, 0.5, 0.7), Vector3(-6.0, 5.65, -10.65), royal_gold, true)
+		_create_box(root, "JapaneseRoofLower", Vector3(5.0, 0.28, 1.1), Vector3(6.0, 5.55, -10.6), jade, true)
+		_create_box(root, "JapaneseRoofUpper", Vector3(4.1, 0.28, 0.9), Vector3(6.0, 5.92, -10.6), royal_gold, true)
+		_create_box(root, "ChineseRedLintel", Vector3(5.0, 0.35, 0.85), Vector3(0.0, 5.55, -10.55), red, true)
+		_create_box(root, "FrenchRoyalCrest", Vector3(2.0, 1.0, 0.3), Vector3(12.0, 5.8, -10.6), royal_gold, true)
+		# مجسم ذهبي مركزي يجمع رموز الحضارات الخمس، في قلب القاعة.
+		_create_box(root, "FiveCivilizationsEmblemBase", Vector3(4.0, 0.45, 4.0), Vector3(0, 0.25, 1.0), dark_stone, true)
+		_create_box(root, "FiveCivilizationsGoldenStatueCore", Vector3(1.0, 3.4, 1.0), Vector3(0, 2.1, 1.0), royal_gold, true)
+		_create_box(root, "FiveCivilizationsEmblemCrossA", Vector3(4.0, 0.28, 0.28), Vector3(0, 3.45, 1.0), royal_gold, true)
+		_create_box(root, "FiveCivilizationsEmblemCrossB", Vector3(0.28, 4.0, 0.28), Vector3(0, 3.45, 1.0), royal_gold, true)
+		_create_box(root, "FiveCivilizationsEmblemRing", Vector3(2.6, 0.22, 2.6), Vector3(0, 4.0, 1.0), ivory, true)
+		# أجنحة عرض الإنجازات الخمسة موزعة على جانبي القاعة.
+		for i in range(5):
+			var wing_x: float = -12.0 + float(i) * 6.0
+			_create_box(root, "AchievementDisplayWing_%d" % i, Vector3(3.6, 2.6, 0.25), Vector3(wing_x, 2.4, 8.8), ivory, true)
+			_create_box(root, "AchievementDisplayGold_%d" % i, Vector3(3.7, 0.16, 0.32), Vector3(wing_x, 3.78, 8.7), royal_gold)
+		# ممر مركزي واسع يبقى خاليًا للحركة من نقطة الدخول إلى البوابات.
+		_create_box(root, "ShipHallCentralAisleTrim", Vector3(1.0, 0.06, 17.0), Vector3(0, 0.04, 0), royal_gold)
+		_create_box(root, "ShipHallBowWindow", Vector3(12.0, 4.0, 0.25), Vector3(0, 5.0, 13.05), blue)
+		_create_box(root, "ShipHallBowWindowFrame", Vector3(13.0, 0.35, 0.55), Vector3(0, 7.15, 12.8), royal_gold)
+		_create_box(root, "ShipHallPortSideAccent", Vector3(0.3, 3.0, 20.0), Vector3(-15.45, 4.0, 0), royal_gold)
+		_create_box(root, "ShipHallStarboardSideAccent", Vector3(0.3, 3.0, 20.0), Vector3(15.45, 4.0, 0), royal_gold)
 	var title := Label3D.new()
 	title.name = "DestinationTitle"
 	title.text = "𓂀  " + destination_name + "  𓂀"
