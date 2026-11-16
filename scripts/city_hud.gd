@@ -1245,6 +1245,12 @@ func _on_social_chat_meta_clicked(meta: Variant) -> void:
 		social_chat_status.text = "تعذر بدء التوجيه؛ أوقف المهمة أو الوظيفة الحالية أولًا."
 
 
+func _update_shared_location_button_state() -> void:
+	if not is_instance_valid(social_chat_location_button):
+		return
+	social_chat_location_button.disabled = resolve_shared_location_chat_destination(social_chat_channel, selected_friend_conversation_id).is_empty()
+
+
 func resolve_shared_location_chat_destination(channel: String, conversation_id: String = "") -> Dictionary:
 	match channel:
 		"الأصدقاء":
@@ -1630,6 +1636,7 @@ func _build_social_chat_panel() -> void:
 	social_chat_location_button.custom_minimum_size = Vector2(38, 38)
 	social_chat_location_button.pressed.connect(_share_current_location)
 	composer.add_child(social_chat_location_button)
+	_update_shared_location_button_state()
 	var send := Button.new()
 	send.text = "إرسال"
 	send.custom_minimum_size = Vector2(54, 38)
@@ -2037,6 +2044,7 @@ func _on_social_operation_completed(action: String, data: Variant) -> void:
 				var result: Dictionary = data[0]
 				if bool(result.get("success", false)):
 					selected_friend_conversation_id = str(result.get("conversation_id", ""))
+					_update_shared_location_button_state()
 					if not _pending_direct_open_player_code.is_empty():
 						_direct_conversation_to_friend[selected_friend_conversation_id] = _pending_direct_open_player_code
 						_friend_to_conversation[_pending_direct_open_player_code] = selected_friend_conversation_id
@@ -2443,6 +2451,7 @@ func _select_social_chat_channel(channel: String) -> void:
 		return
 	social_chat_channel = channel
 	selected_friend_conversation_id = ""
+	_update_shared_location_button_state()
 	if is_instance_valid(social_chat_log):
 		social_chat_log.clear()
 	if channel == "الأصدقاء":
