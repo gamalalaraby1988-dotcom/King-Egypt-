@@ -1207,7 +1207,8 @@ func _update_shared_location_direction_arrow() -> void:
 		return
 	var delta := shared_location_follow_target - actor.global_position
 	delta.y = 0.0
-	if delta.length() <= 2.5:
+	var is_vehicle := bool(main_scene.get("vehicle_occupied")) if is_instance_valid(main_scene) else false
+	if should_hide_shared_location_arrow(delta.length(), is_vehicle):
 		shared_location_direction_arrow.visible = false
 		shared_location_follow_active = false
 		return
@@ -1221,6 +1222,12 @@ func _update_shared_location_direction_arrow() -> void:
 	var right := camera.global_transform.basis.x
 	shared_location_direction_arrow.rotation = calculate_shared_location_arrow_rotation(delta, forward, right)
 	shared_location_direction_arrow.visible = true
+
+
+func should_hide_shared_location_arrow(distance: float, is_vehicle: bool) -> bool:
+	# يجب أن يظل السهم ظاهرًا حتى نفس حد الوصول الفعلي لكل وسيلة حركة.
+	var arrival_distance := 2.0 if is_vehicle else 2.5
+	return not is_finite(distance) or distance <= arrival_distance
 
 
 func calculate_shared_location_arrow_rotation(target_delta: Vector3, camera_forward: Vector3, camera_right: Vector3) -> float:
