@@ -17,6 +17,20 @@ func _run_social_validation_tests() -> void:
 		return
 	var route_probe: Node = mission_manager_script.new()
 	root.add_child(route_probe)
+	var navigation_state_probe := Node3D.new()
+	navigation_state_probe.position = Vector3.ZERO
+	root.add_child(navigation_state_probe)
+	route_probe.set("player", navigation_state_probe)
+	route_probe.set("landmark_navigation_active", true)
+	route_probe.set("landmark_navigation_target", Vector3(12.0, 0.0, 12.0))
+	route_probe.set("landmark_navigation_key", "existing_landmark")
+	route_probe.set("landmark_navigation_name", "وجهة سابقة")
+	var rejected_navigation_started: bool = route_probe.call("navigate_to_landmark", "shared_location", Vector3(200.0, 0.0, 0.0))
+	if rejected_navigation_started or not bool(route_probe.get("landmark_navigation_active")) or route_probe.get("landmark_navigation_target") != Vector3(12.0, 0.0, 12.0) or str(route_probe.get("landmark_navigation_key")) != "existing_landmark" or str(route_probe.get("landmark_navigation_name")) != "وجهة سابقة":
+		push_error("A rejected shared-location destination overwrote the player's existing navigation state.")
+		quit(1)
+		return
+	navigation_state_probe.free()
 	var valid_shared_route: PackedVector3Array = route_probe.call("build_shared_location_route_from", Vector3.ZERO, Vector3(48.0, 0.0, 48.0))
 	if valid_shared_route.size() < 2 or valid_shared_route[0].distance_to(Vector3.ZERO) > 0.1 or valid_shared_route[valid_shared_route.size() - 1].distance_to(Vector3(48.0, 0.0, 48.0)) > 0.1:
 		push_error("A valid in-city shared-location scooter route was not built from road waypoints.")
