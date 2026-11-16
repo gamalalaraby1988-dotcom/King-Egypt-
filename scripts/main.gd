@@ -22,6 +22,8 @@ var interior_loading_message_key := "interior_loading"
 var interior_hidden_world_states: Dictionary = {}
 var city_vehicle: CharacterBody3D = null
 var vehicle_interaction_button: Button = null
+var interaction_marker_target: Node3D = null
+var interaction_target_marker: Node3D = null
 var vehicle_summon_button: Button = null
 var showroom_layer: CanvasLayer = null
 var vehicle_occupied := false
@@ -88,6 +90,7 @@ func _process(_delta: float) -> void:
 	if interior_transition_busy or is_instance_valid(interior_root):
 		if is_instance_valid(vehicle_interaction_button):
 			vehicle_interaction_button.visible = false
+		_update_interaction_target_marker(null)
 		if is_instance_valid(vehicle_summon_button):
 			vehicle_summon_button.visible = false
 		if is_instance_valid(showroom_layer):
@@ -100,6 +103,7 @@ func _process(_delta: float) -> void:
 	if vehicle_occupied:
 		if is_instance_valid(vehicle_interaction_button):
 			vehicle_interaction_button.visible = true
+		_update_interaction_target_marker(null)
 		if is_instance_valid(vehicle_summon_button):
 			vehicle_summon_button.visible = false
 		return
@@ -110,16 +114,61 @@ func _process(_delta: float) -> void:
 	if not is_instance_valid(player):
 		if is_instance_valid(vehicle_interaction_button):
 			vehicle_interaction_button.visible = false
+		_update_interaction_target_marker(null)
 		return
 	# محطة الحفلة مستقلة عن وجود سيارة مستدعاة؛ لا نخفي زر التفاعل عند غياب المركبة.
 	var nearby_party_station := _get_nearby_party_station(player)
 	var close_enough := is_instance_valid(city_vehicle) and player.global_position.distance_to(city_vehicle.global_position) <= 5.0
+	var interaction_target: Node3D = nearby_party_station if is_instance_valid(nearby_party_station) else (city_vehicle if close_enough else null)
+	_update_interaction_target_marker(interaction_target)
 	if is_instance_valid(vehicle_interaction_button):
-		vehicle_interaction_button.visible = close_enough or is_instance_valid(nearby_party_station)
+		vehicle_interaction_button.visible = is_instance_valid(interaction_target)
 		if is_instance_valid(nearby_party_station):
 			vehicle_interaction_button.text = "إقامة حفلة" if CityLanguage.get_language() == "ar" else "Start party"
 		else:
 			vehicle_interaction_button.text = "ركوب السيارة" if CityLanguage.get_language() == "ar" else "Enter vehicle"
+
+
+func _update_interaction_target_marker(target: Node3D) -> void:
+	if not is_instance_valid(target):
+		if is_instance_valid(interaction_target_marker):
+			interaction_target_marker.visible = false
+		interaction_marker_target = null
+		return
+	if not is_instance_valid(interaction_target_marker):
+		interaction_target_marker = Node3D.new()
+		interaction_target_marker.name = "GlowingInteractionPoint"
+		var dot := MeshInstance3D.new()
+		dot.name = "GlowDot"
+		var dot_mesh := SphereMesh.new()
+		dot_mesh.radius = 0.16
+		dot_mesh.height = 0.32
+		dot.mesh = dot_mesh
+		var dot_material := StandardMaterial3D.new()
+		dot_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		dot_material.albedo_color = Color(1.0, 0.78, 0.25, 1.0)
+		dot_material.emission_enabled = true
+		dot_material.emission = Color(1.0, 0.62, 0.12)
+		dot_material.emission_energy_multiplier = 2.4
+		dot.material_override = dot_material
+		interaction_target_marker.add_child(dot)
+		var glow := OmniLight3D.new()
+		glow.name = "GlowLight"
+		glow.light_color = Color(1.0, 0.72, 0.24)
+		glow.light_energy = 0.8
+		glow.omni_range = 2.8
+		interaction_target_marker.add_child(glow)
+	if is_instance_valid(interaction_marker_target) and interaction_marker_target != target:
+		if interaction_target_marker.get_parent() == interaction_marker_target:
+			interaction_marker_target.remove_child(interaction_target_marker)
+	if interaction_target_marker.get_parent() != target:
+		if is_instance_valid(interaction_target_marker.get_parent()):
+			interaction_target_marker.get_parent().remove_child(interaction_target_marker)
+		target.add_child(interaction_target_marker)
+	interaction_marker_target = target
+	interaction_target_marker.position = Vector3(0.0, 2.0 if target.is_in_group("party_stations") else 1.65, 0.0)
+	interaction_target_marker.visible = true
+
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.keycode == KEY_E:
