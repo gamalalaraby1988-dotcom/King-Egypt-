@@ -1,5 +1,7 @@
 extends Node3D
 
+const CityCollisionProfile = preload("res://scripts/city_collision_profile.gd")
+
 @export var city_half_size: int = 3
 @export var block_spacing: float = 24.0
 
@@ -1402,8 +1404,6 @@ func _material(color: Color) -> StandardMaterial3D:
 	material.albedo_color = color
 	material.roughness = 0.9
 	return material
-
-const CityCollisionProfile = preload("res://scripts/city_collision_profile.gd")
 
 func _create_box(parent: Node3D, name: String, size: Vector3, pos: Vector3, color: Color, collision: bool = false) -> void:
 	var mesh_instance := MeshInstance3D.new()
