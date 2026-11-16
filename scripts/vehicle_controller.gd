@@ -16,6 +16,12 @@ var steering_input := 0.0
 var auto_navigation_speed := -1.0
 var auto_navigation_interrupted := false
 
+func _ready() -> void:
+	# يحافظ على تماس المركبة مع سطح الطريق عند صعود المنحدرات والهبوط منها.
+	floor_snap_length = 0.8
+	floor_max_angle = deg_to_rad(38.0)
+	floor_constant_speed = true
+
 func _physics_process(delta: float) -> void:
 	var target_speed := 0.0
 	# الفرامل لها الأولوية دائمًا، حتى إذا ظل زر القيادة مضغوطًا.
