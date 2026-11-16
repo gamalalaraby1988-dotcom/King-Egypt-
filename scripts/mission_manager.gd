@@ -1517,6 +1517,9 @@ func navigate_to_landmark(landmark_key: String, destination: Vector3) -> bool:
 		validated_shared_route = build_shared_location_route_from(player.global_position, requested_target)
 		if validated_shared_route.size() < 2:
 			return false
+		# لا تستبدل وجهة سابقة إذا تعذّر على اللاعب بدء الحركة التلقائية.
+		if not player.has_method("begin_auto_navigation") or not bool(player.call("begin_auto_navigation")):
+			return false
 	landmark_navigation_target = requested_target
 	landmark_navigation_key = landmark_key
 	landmark_navigation_name = "الموقع المشترك" if landmark_key == "shared_location" else CityLanguage.translate(landmark_key)
@@ -1528,10 +1531,6 @@ func navigate_to_landmark(landmark_key: String, destination: Vector3) -> bool:
 		# استخدم المسار الذي اجتاز فحص الإحداثيات والاتصال بشبكة الطرق للمشي أيضًا.
 		landmark_route_points = validated_shared_route
 		landmark_route_index = 0
-		if not player.has_method("begin_auto_navigation") or not bool(player.call("begin_auto_navigation")):
-			landmark_navigation_active = false
-			landmark_route_points.clear()
-			return false
 		show_shared_location_marker(landmark_navigation_target)
 	landmark_navigation_active = true
 	_update_navigation_hud()
