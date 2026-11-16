@@ -21,7 +21,6 @@ var shared_location_marker: Node3D = null
 var navigation_arrival_remaining := 0.0
 var navigation_off_route_time := 0.0
 var navigation_route_notice_remaining := 0.0
-var navigation_route_recalculated := false
 const NAVIGATION_OFF_ROUTE_DISTANCE := 12.0
 const NAVIGATION_OFF_ROUTE_CONFIRM_TIME := 1.25
 var completed_jobs: Dictionary = {}
@@ -1289,7 +1288,6 @@ func _update_landmark_route_deviation() -> void:
 		return
 	navigation_off_route_time = 0.0
 	navigation_route_notice_remaining = 2.0
-	navigation_route_recalculated = true
 
 func _recalculate_active_landmark_route() -> bool:
 	if landmark_navigation_key == "shared_location":
