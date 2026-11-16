@@ -24,6 +24,14 @@ func _run_social_validation_tests() -> void:
 		return
 	var route_probe: Node = mission_manager_script.new()
 	root.add_child(route_probe)
+	if bool(route_probe.call("should_cancel_shared_location_walk_for_activity", false, false)):
+		push_error("Shared-location walking was cancelled without an active mission or job.")
+		quit(1)
+		return
+	if not bool(route_probe.call("should_cancel_shared_location_walk_for_activity", true, false)) or not bool(route_probe.call("should_cancel_shared_location_walk_for_activity", false, true)) or not bool(route_probe.call("should_cancel_shared_location_walk_for_activity", true, true)):
+		push_error("Shared-location walking was not cancelled when a mission or job became active.")
+		quit(1)
+		return
 	var navigation_state_probe := Node3D.new()
 	navigation_state_probe.position = Vector3.ZERO
 	root.add_child(navigation_state_probe)
