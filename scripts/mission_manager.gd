@@ -716,8 +716,16 @@ func _cancel_shared_location_navigation_for_manual_input() -> void:
 	_update_navigation_hud()
 
 
+func should_cancel_shared_location_walk_for_activity(has_active_mission: bool, has_active_job: bool) -> bool:
+	return has_active_mission or has_active_job
+
+
 func _update_shared_location_auto_walk() -> void:
 	if not landmark_navigation_active or landmark_navigation_key != "shared_location" or not is_instance_valid(player):
+		return
+	# لا تستمر متابعة الموقع بالتوازي مع بدء مهمة أو وظيفة أثناء الحركة.
+	if should_cancel_shared_location_walk_for_activity(mission_running, job_running):
+		_cancel_shared_location_navigation_for_manual_input()
 		return
 	if player.has_method("is_auto_navigation_cancelled") and bool(player.call("is_auto_navigation_cancelled")):
 		_cancel_shared_location_navigation_for_manual_input()
