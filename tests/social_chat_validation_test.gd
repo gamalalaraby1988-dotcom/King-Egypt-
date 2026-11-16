@@ -65,6 +65,11 @@ func _run_social_validation_tests() -> void:
 		push_error("Mountain entrance must clearly identify the Kings Summit ascent.")
 		quit(1)
 		return
+	var mountain_gate_glow := mountain_gate_node.get_node_or_null("MountainGateSignGlow") as OmniLight3D if is_instance_valid(mountain_gate_node) else null
+	if not is_instance_valid(mountain_gate_glow) or mountain_gate_glow.light_energy <= 0.0 or mountain_gate_glow.omni_range < 5.0:
+		push_error("Mountain entrance sign is missing its focused warm lighting.")
+		quit(1)
+		return
 	mountain_gate.queue_free()
 	await process_frame
 	print("SOCIAL_TEST_STAGE: summit_edge_safety_complete")
