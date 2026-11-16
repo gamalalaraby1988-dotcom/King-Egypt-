@@ -56,6 +56,23 @@ func _run_social_validation_tests() -> void:
 		push_error("A valid in-city shared-location scooter route was not built from road waypoints.")
 		quit(1)
 		return
+	var route_deviation_probe := PackedVector3Array([Vector3.ZERO, Vector3(10.0, 0.0, 0.0), Vector3(20.0, 0.0, 0.0)])
+	if not bool(route_probe.call("is_position_near_shared_location_route", Vector3(5.0, 0.0, 1.0), route_deviation_probe, 0, 8.0)):
+		push_error("A scooter positioned beside its active route was incorrectly marked as deviated.")
+		quit(1)
+		return
+	if bool(route_probe.call("is_position_near_shared_location_route", Vector3(5.0, 0.0, 12.0), route_deviation_probe, 0, 8.0)):
+		push_error("A scooter far from its active route was not detected as deviated.")
+		quit(1)
+		return
+	if bool(route_probe.call("is_position_near_shared_location_route", Vector3(5.0, 0.0, 1.0), route_deviation_probe, 0, -1.0)):
+		push_error("Invalid route deviation limits should be rejected.")
+		quit(1)
+		return
+	if not bool(route_probe.call("is_position_near_shared_location_route", Vector3(15.0, 0.0, 1.0), route_deviation_probe, 1, 8.0)):
+		push_error("Route deviation validation failed while checking the remaining route segments.")
+		quit(1)
+		return
 	# افحص وصلات شبكة الطرق فقط؛ الوصلتان من/إلى الموقع قد تكونان مائلتين داخل الساحة الجانبية.
 	for route_index in range(1, valid_shared_route.size() - 2):
 		var previous_point: Vector3 = valid_shared_route[route_index - 1]
