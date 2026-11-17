@@ -770,6 +770,8 @@ func _create_interior_quick_travel_ui() -> void:
 		travel_button.text = str(entry[0])
 		travel_button.custom_minimum_size = Vector2(270, 48)
 		travel_button.disabled = not bool(entry[1])
+		if index == 6:
+			travel_button.visible = false
 		travel_button.pressed.connect(_on_interior_quick_travel_selected.bind(index))
 		content.add_child(travel_button)
 		interior_quick_travel_buttons.append(travel_button)
@@ -803,7 +805,7 @@ func _hide_interior_quick_travel_menu() -> void:
 func _on_interior_quick_travel_selected(index: int) -> void:
 	if index == 0:
 		_hide_interior_quick_travel_menu()
-		await return_from_building_interior(Vector3(60.0, 0.15, 68.0))
+		await return_from_building_interior(Vector3(60.0, 0.15, 60.0))
 	elif index == 1:
 		_hide_interior_quick_travel_menu()
 		await _open_private_apartment()
