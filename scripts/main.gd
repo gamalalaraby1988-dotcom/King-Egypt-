@@ -133,14 +133,21 @@ func _make_vehicle_summon_style(color: Color) -> StyleBoxFlat:
 func _find_suitable_vehicle_summon_position(player: CharacterBody3D) -> Variant:
 	if not is_instance_valid(player):
 		return null
-	var right := player.global_transform.basis.x.normalized()
-	var forward := -player.global_transform.basis.z.normalized()
-	var candidates: Array[Vector3] = [
-		player.global_position + right * 4.2,
-		player.global_position - right * 4.2,
-		player.global_position + forward * 5.2,
-		player.global_position - forward * 5.2
-	]
+	# ابحث عن موقف آمن بجوار الطريق حتى لو كان اللاعب واقفًا فوق الطريق نفسه.
+	# الإزاحات الثابتة على محاور العالم تمنع اعتماد النتيجة على اتجاه الكاميرا.
+	var offsets: Array[Vector2] = []
+	for distance in [9.0, 11.0, 13.0, 15.0]:
+		offsets.append_array([
+			Vector2(distance, 0.0), Vector2(-distance, 0.0),
+			Vector2(0.0, distance), Vector2(0.0, -distance),
+			Vector2(distance * 0.7071, distance * 0.7071),
+			Vector2(-distance * 0.7071, distance * 0.7071),
+			Vector2(distance * 0.7071, -distance * 0.7071),
+			Vector2(-distance * 0.7071, -distance * 0.7071)
+		])
+	var candidates: Array[Vector3] = []
+	for offset in offsets:
+		candidates.append(player.global_position + Vector3(offset.x, 0.0, offset.y))
 	var shape := BoxShape3D.new()
 	shape.size = Vector3(2.8, 1.9, 5.2)
 	var space_state := get_world_3d().direct_space_state
