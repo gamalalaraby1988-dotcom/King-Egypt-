@@ -1053,7 +1053,7 @@ func enter_building_interior(building: Node3D, actor: Node3D) -> void:
 	if not bool(building_data.get("requires_interior", false)):
 		return
 	# نظام المدينة الرئيسي هو المصدر الوحيد لحالة الانتقال؛ امنع الانتقال من وضعية غير آمنة.
-	if bool(body.get("sitting")) or bool(body.get("animal_riding")):
+	if bool(body.get("sitting")) or bool(body.get("animal_riding")) or bool(body.get("scooter_riding")):
 		return
 	var manager := get_node_or_null("MissionManager")
 	if is_instance_valid(manager) and (bool(manager.get("mission_running")) or bool(manager.get("job_running"))):
