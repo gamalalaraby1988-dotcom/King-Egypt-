@@ -3,7 +3,6 @@ extends Node3D
 
 const SANDSTONE := Color(0.76, 0.64, 0.46)
 const LIGHT_STONE := Color(0.88, 0.77, 0.58)
-const GOLD := Color(0.78, 0.59, 0.27)
 const DARK_STONE := Color(0.31, 0.25, 0.19)
 
 func _ready() -> void:
@@ -29,12 +28,12 @@ func _build_pyramid(node_name: String, at: Vector3, base_width: float, height: f
 	mesh_instance.add_to_group("city_world_geometry")
 	var mesh := CylinderMesh.new()
 	mesh.top_radius = 0.08
+	# Four unrotated radial segments produce a square footprint matching the collider.
 	mesh.bottom_radius = base_width * 0.70710678
 	mesh.height = height
 	mesh.radial_segments = 4
 	mesh_instance.mesh = mesh
 	mesh_instance.position.y = height * 0.5
-	mesh_instance.rotation.y = PI * 0.25
 	mesh_instance.material_override = _material(tint)
 	pyramid.add_child(mesh_instance)
 
@@ -80,6 +79,18 @@ func _build_sphinx() -> void:
 	head.material_override = _material(LIGHT_STONE)
 	head.add_to_group("city_world_geometry")
 	sphinx.add_child(head)
+
+	# A single conservative collider covers the decorative statue silhouette.
+	var collision := StaticBody3D.new()
+	collision.name = "SphinxCollision"
+	collision.add_to_group("city_world_geometry")
+	var shape_node := CollisionShape3D.new()
+	var shape := BoxShape3D.new()
+	shape.size = Vector3(4.8, 3.1, 2.5)
+	shape_node.shape = shape
+	shape_node.position = Vector3(-0.3, 1.55, -0.05)
+	collision.add_child(shape_node)
+	sphinx.add_child(collision)
 
 func _add_box(parent: Node3D, node_name: String, size: Vector3, at: Vector3, tint: Color) -> void:
 	var instance := MeshInstance3D.new()
