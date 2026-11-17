@@ -2449,6 +2449,16 @@ func _on_social_account_session_changed(_previous_user_id: String, current_user_
 	group_follow_enabled = false
 	if is_instance_valid(invitation_overlay):
 		invitation_overlay.call("clear_pending_invitations")
+	if is_instance_valid(friends_phone_friends_box):
+		for child in friends_phone_friends_box.get_children():
+			child.queue_free()
+		var friends_empty := Label.new()
+		friends_empty.text = "جارٍ تحميل أصدقاء الحساب..." if not current_user_id.is_empty() else "سجّل الدخول لعرض أصدقائك."
+		friends_phone_friends_box.add_child(friends_empty)
+	if is_instance_valid(friends_phone_search):
+		friends_phone_search.clear()
+	if is_instance_valid(friends_phone_status):
+		friends_phone_status.text = "جارٍ تجهيز بيانات الحساب..." if not current_user_id.is_empty() else "سجّل الدخول لعرض أصدقائك وطلبات الصداقة."
 	if is_instance_valid(blocked_players_box):
 		for child in blocked_players_box.get_children():
 			child.queue_free()
