@@ -5,7 +5,7 @@ const CityCollisionProfile = preload("res://scripts/city_collision_profile.gd")
 const ROAD_WIDTH := 8.0
 const ROAD_THICKNESS := 0.42
 const ROUTE_POINTS := [
-	Vector3(45.0, -0.05, 88.0),
+	Vector3(45.0, -0.16, 88.0),
 	Vector3(72.0, 6.5, 110.0),
 	Vector3(72.0, 13.0, 134.0),
 	Vector3(38.0, 19.5, 156.0),
@@ -48,7 +48,7 @@ func _build_mountain_base() -> void:
 
 func _build_city_approach() -> void:
 	# وصلة مباشرة من نهاية طريق المخيم إلى بوابة الجبل، دون فجوة ترابية.
-	var start := Vector3(45.0, -0.05, 76.5)
+	var start := Vector3(45.0, -0.16, 76.5)
 	var finish := ROUTE_POINTS[0]
 	var delta := finish - start
 	var basis := Basis.looking_at(delta.normalized(), Vector3.UP)
