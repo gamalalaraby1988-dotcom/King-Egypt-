@@ -65,7 +65,7 @@ func _build_pyramid(node_name: String, at: Vector3, base_width: float, height: f
 func _build_sphinx() -> void:
 	var sphinx := Node3D.new()
 	sphinx.name = "DecorativeSphinx"
-	sphinx.position = Vector3(30.0, 0.0, 43.0)
+	sphinx.position = Vector3(24.0, 0.0, 43.0)
 	add_child(sphinx)
 	_add_box(sphinx, "SphinxBase", Vector3(4.8, 0.45, 2.5), Vector3(0.0, 0.24, 0.0), DARK_STONE)
 	_add_box(sphinx, "SphinxBody", Vector3(3.8, 1.05, 1.65), Vector3(0.0, 0.95, 0.0), SANDSTONE)
