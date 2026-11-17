@@ -806,7 +806,7 @@ func _open_quick_travel_destination(destination_name: String, destination_kind: 
 		return
 	if destination_kind == "summit":
 		# التنقل السريع يصل إلى بوابة الجبل فقط؛ الصعود إلى القمة يتم على الطريق الفعلي.
-		body.global_position = Vector3(45.0, 1.2, 85.5)
+		body.global_position = Vector3(90.0, 1.2, 96.5)
 		body.velocity = Vector3.ZERO
 		body.rotation.y = PI
 		body.set_physics_process(true)
@@ -1786,7 +1786,7 @@ func _create_service_staff(display_name: String, role: String, dialogue: String,
 	add_child(staff)
 
 func _create_camp() -> void:
-	# طريق واضح يصل المخيم بالطريق الرئيسي مع تجنب كتل المباني.
+	# طريق المخيم الأصلي يظل مستقلًا؛ وصلة الجبل تتفرع خارجه ولا تمر بين الحظائر.
 	_create_box(self, "CampRoad_Entry", Vector3(32, 0.08, 5), Vector3(16, 0.01, 0), Color(0.12, 0.13, 0.15), true)
 	_create_box(self, "CampRoad_North", Vector3(5, 0.08, 75), Vector3(30, 0.01, 37.5), Color(0.12, 0.13, 0.15), true)
 	_create_box(self, "CampRoad_Camp", Vector3(30, 0.08, 5), Vector3(45, 0.01, 75), Color(0.12, 0.13, 0.15), true)
