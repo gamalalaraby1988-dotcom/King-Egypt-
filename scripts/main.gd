@@ -143,8 +143,8 @@ func _find_suitable_vehicle_summon_position(player: CharacterBody3D) -> Variant:
 	right = right.normalized()
 	forward = forward.normalized()
 	var candidates: Array[Vector3] = []
-	for distance in [3.8, 4.6, 5.4, 6.2, 7.0]:
-		var diagonal := distance * 0.7071
+	# ابدأ بالجانبين الأقرب جدًا للاعب، ثم وسّع البحث فقط عند وجود عائق.
+	for distance in [2.2, 2.6, 3.0, 3.4, 3.8]:
 		var offsets := [
 			right * distance,
 			-right * distance,
