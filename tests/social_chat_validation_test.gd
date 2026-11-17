@@ -1195,6 +1195,8 @@ func _run_social_validation_tests() -> void:
 		push_error("Unsupported group member removal changed local membership or failed to explain the backend limitation.")
 		quit(1)
 		return
+	city_hud.group_invite_status.free()
+	city_hud.group_invite_status = null
 	city_hud.group_meeting_status = Label.new()
 	city_hud.call("_request_group_gather_invite")
 	if city_hud.group_meeting_status.text != "لم تُرسل الدعوة: خدمة التجمع بين الأجهزة غير مفعّلة بعد.":
