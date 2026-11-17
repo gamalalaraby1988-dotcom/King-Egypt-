@@ -569,6 +569,10 @@ func _toggle_vehicle_use() -> void:
 	if is_instance_valid(mission_manager) and mission_manager.has_method("cancel_shared_location_navigation"):
 		mission_manager.call("cancel_shared_location_navigation")
 	_set_mobile_hud_active(false)
+	var touch_hud := get_node_or_null("MobileHUD/TouchControls") as Control
+	if is_instance_valid(touch_hud):
+		touch_hud.set("vehicle_control_target", city_vehicle)
+		touch_hud.visible = true
 	vehicle_occupied = true
 	CityCollisionProfile.apply_driven_vehicle_collision(city_vehicle)
 	_player_saved_collision_layer = player.collision_layer
@@ -586,9 +590,12 @@ func _toggle_vehicle_use() -> void:
 	city_vehicle.call("set_brake", false)
 	city_vehicle.call("set_drive", false)
 	city_vehicle.set_physics_process(true)
+	# أزرار STEER/DRIVE/BRAKE غير معتمدة؛ القيادة تتم بعصا الحركة المعتادة.
 	var vehicle_hud := city_vehicle.get_node_or_null("VehicleHUDLayer/VehicleHUD") as Control
 	if is_instance_valid(vehicle_hud):
-		vehicle_hud.visible = true
+		if vehicle_hud.has_method("_clear_controls"):
+			vehicle_hud.call("_clear_controls")
+		vehicle_hud.visible = false
 	var vehicle_camera := city_vehicle.get_node_or_null("VehicleCameraPivot/SpringArm3D/VehicleCamera") as Camera3D
 	if is_instance_valid(vehicle_camera):
 		vehicle_camera.current = true
@@ -666,6 +673,9 @@ func _exit_player_vehicle() -> void:
 	city_vehicle.call("set_steering", 0.0)
 	city_vehicle.set_physics_process(false)
 	vehicle_occupied = false
+	var touch_hud := get_node_or_null("MobileHUD/TouchControls") as Control
+	if is_instance_valid(touch_hud):
+		touch_hud.set("vehicle_control_target", null)
 	_set_mobile_hud_active(true)
 	if is_instance_valid(vehicle_interaction_button):
 		vehicle_interaction_button.text = "ركوب السيارة" if CityLanguage.get_language() == "ar" else "Enter vehicle"
