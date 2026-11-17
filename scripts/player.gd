@@ -66,12 +66,17 @@ func _physics_process(delta: float) -> void:
 	right.y = 0.0
 	forward = forward.normalized()
 	right = right.normalized()
-	var world_direction := (right * direction.x + forward * -direction.z).normalized()
+	var world_direction := (right * direction.x + forward * -direction.z)
+	var movement_strength := clampf(input_vector.length(), 0.0, 1.0)
+	if world_direction.length() > 0.001:
+		world_direction = world_direction.normalized()
 	if auto_navigation_active and not auto_navigation_cancelled:
 		world_direction = auto_navigation_direction.normalized()
+		movement_strength = 1.0
 	var running := Input.is_action_pressed("sprint") or mobile_sprint
 	var target_speed := (8.0 if running else 6.0) if animal_riding else (run_speed if running else walk_speed)
-	var target_velocity := world_direction * target_speed
+	# احتفظ بمقدار ميل العصا: دفع خفيف = حركة بطيئة، ودفع كامل = السرعة الكاملة.
+	var target_velocity := world_direction * target_speed * movement_strength
 	velocity.x = move_toward(velocity.x, target_velocity.x, acceleration * delta)
 	velocity.z = move_toward(velocity.z, target_velocity.z, acceleration * delta)
 
