@@ -739,9 +739,17 @@ func _respond_to_friend_request_from_phone(request_id: String, accept_request: b
 	accept_button.text = "جارٍ التنفيذ..." if accept_request else "قبول"
 	decline_button.text = "جارٍ التنفيذ..." if not accept_request else "رفض"
 	if not SocialChatManager.respond_friend_request(request_id, accept_request):
-		# The failure signal handles the user-facing message and refresh below.
+		# A synchronous rejection can happen before an HTTP request is queued.
+		# Restore this row immediately; the failure signal still reports the reason.
+		if is_instance_valid(accept_button):
+			accept_button.disabled = false
+			accept_button.text = "قبول"
+		if is_instance_valid(decline_button):
+			decline_button.disabled = false
+			decline_button.text = "رفض"
 		return
-	friends_phone_status.text = "جارٍ تحديث طلب الصداقة من الخادم..."
+	if is_instance_valid(friends_phone_status):
+		friends_phone_status.text = "جارٍ تحديث طلب الصداقة من الخادم..."
 
 func _update_friends_phone_request_badge() -> void:
 	if is_instance_valid(friends_phone_badge):
