@@ -30,6 +30,10 @@ var party_station_status: Label
 var emote_sit_button: Button
 var scooter_icon: Control
 var party_station_start_button: Button
+var party_countdown_label: Label
+var party_countdown_timer: Timer
+var party_countdown_host_name := ""
+var party_countdown_ends_at_unix := 0
 var player_name_label: Label
 var player_level_label: Label
 var player_status_label: Label
@@ -149,7 +153,7 @@ const SECTIONS := {
 	"group": ["مجموعتي", "مجموعة صغيرة من أربعة لاعبين كحد أقصى: قائد وثلاثة أعضاء."],
 	"chat": ["المحادثة", "افتح محادثة مجموعتك للتواصل مع أعضائها. الرسائل بين الأجهزة تحتاج اتصال الخادم."],
 	"emotes": ["التعبيرات والحركات", "اختر تعبير وجه أو حركة اجتماعية للشخصية. الحركات المتاحة تظهر هنا عند ربط مكتبة التعبيرات."],
-	"party": ["حفلة في المدينة", "مدة الحفلة 15 ثانية. يحصل اللاعبون الموجودون داخل حدود دائرة الحفلة المضيئة على المكافآت حسب مستوياتهم. نظام التشغيل والإهداء المتصل يحتاج خدمة الحفلات الخادمية."],
+	"party": ["حفلة في المدينة", "مدة الحفلة 20 ثانية. يحصل اللاعبون الموجودون داخل حدود دائرة الحفلة المضيئة على المكافآت حسب مستوياتهم. نظام التشغيل والإهداء المتصل يحتاج خدمة الحفلات الخادمية."],
 	"pets": ["الحيوانات الأليفة", "تابع حيوانك الأليف ومهرجان الحيوانات، وطوّر الحيوان المؤقت للوصول إلى القط الفرعوني الذهبي."],
 	"settings": ["الإعدادات", "اضبط اللغة والصوت وجودة الرسوم بما يناسب جهازك."],
 }
@@ -1247,7 +1251,7 @@ func _build_party_station_popup() -> void:
 	close.pressed.connect(close_party_station_window)
 	heading_row.add_child(close)
 	var price := Label.new()
-	price.text = "150 جوهرة  •  15 ثانية"
+	price.text = "150 جوهرة  •  20 ثانية"
 	price.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	price.add_theme_font_size_override("font_size", 10)
 	price.add_theme_color_override("font_color", Color(1.0, 0.84, 0.48))
@@ -2382,6 +2386,20 @@ func _build_social_chat_panel() -> void:
 	social_chat_log.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	social_chat_log.text = "[color=gray]لا توجد رسائل متصلة بعد. ستظهر الرسائل عند ربط القناة بالخادم.[/color]"
 	conversation.add_child(social_chat_log)
+	party_countdown_label = Label.new()
+	party_countdown_label.name = "PublicPartyCountdown"
+	party_countdown_label.visible = false
+	party_countdown_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	party_countdown_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	party_countdown_label.add_theme_font_size_override("font_size", 11)
+	party_countdown_label.add_theme_color_override("font_color", Color(1.0, 0.82, 0.42))
+	conversation.add_child(party_countdown_label)
+	party_countdown_timer = Timer.new()
+	party_countdown_timer.name = "PublicPartyCountdownTimer"
+	party_countdown_timer.wait_time = 1.0
+	party_countdown_timer.one_shot = false
+	party_countdown_timer.timeout.connect(_on_party_countdown_tick)
+	conversation.add_child(party_countdown_timer)
 	var composer := HBoxContainer.new()
 	composer.add_theme_constant_override("separation", 4)
 	conversation.add_child(composer)
@@ -2791,7 +2809,7 @@ func _on_social_operation_completed(action: String, data: Variant) -> void:
 			party_station_start_button.disabled = false
 			if data is Array and not data.is_empty() and data[0] is Dictionary:
 				var party_result: Dictionary = data[0]
-				party_station_status.text = "بدأت الحفلة على الخادم. تنتهي بعد 15 ثانية."
+				party_station_status.text = "بدأت الحفلة على الخادم. تنتهي بعد 20 ثانية."
 				party_station_popup.visible = false
 			else:
 				party_station_status.text = "استجابة الخادم غير مكتملة؛ لم يتم تأكيد بدء الحفلة."
@@ -3208,6 +3226,36 @@ func _on_social_realtime_status(status: String) -> void:
 		social_chat_status.text = status
 
 
+
+func _start_party_countdown(host_name: String, ends_at: String) -> void:
+	if not is_instance_valid(party_countdown_label) or not is_instance_valid(party_countdown_timer):
+		return
+	party_countdown_host_name = host_name.strip_edges()
+	if party_countdown_host_name.is_empty():
+		party_countdown_host_name = "لاعب"
+	party_countdown_ends_at_unix = Time.get_unix_time_from_datetime_string(ends_at) if not ends_at.is_empty() else 0
+	if party_countdown_ends_at_unix <= 0:
+		party_countdown_ends_at_unix = int(Time.get_unix_time_from_system()) + 20
+	party_countdown_label.visible = true
+	_update_party_countdown_label()
+	party_countdown_timer.start()
+
+func _on_party_countdown_tick() -> void:
+	_update_party_countdown_label()
+	if int(Time.get_unix_time_from_system()) >= party_countdown_ends_at_unix:
+		party_countdown_timer.stop()
+		party_countdown_label.text = "🎉 انتهت حفلة %s" % party_countdown_host_name
+		var finished_party_end := party_countdown_ends_at_unix
+		await get_tree().create_timer(2.0).timeout
+		if is_instance_valid(party_countdown_label) and party_countdown_ends_at_unix == finished_party_end:
+			party_countdown_label.visible = false
+
+func _update_party_countdown_label() -> void:
+	if not is_instance_valid(party_countdown_label):
+		return
+	var remaining := maxi(0, party_countdown_ends_at_unix - int(Time.get_unix_time_from_system()))
+	party_countdown_label.text = "🎉 حفلة %s | تنتهي خلال %d ثانية" % [party_countdown_host_name, remaining]
+
 func _on_social_realtime_event(topic: String, event_name: String, payload: Dictionary) -> void:
 	if topic == "party:city:events" and event_name == "party_started":
 		if social_chat_channel == "العامة" and is_instance_valid(social_chat_log):
@@ -3215,6 +3263,7 @@ func _on_social_realtime_event(topic: String, event_name: String, payload: Dicti
 			if party_host_name.is_empty():
 				party_host_name = "لاعب"
 			social_chat_log.append_text(format_public_chat_message(party_host_name, "🎉 أقام حفلة في المدينة!"))
+			_start_party_countdown(party_host_name, str(payload.get("ends_at", "")))
 			if is_instance_valid(social_chat_status):
 				social_chat_status.text = "وصل إشعار حفلة جديد من الخادم."
 		return
