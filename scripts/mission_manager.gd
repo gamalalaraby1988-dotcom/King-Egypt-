@@ -818,10 +818,10 @@ func _set_interaction_button_active(active: bool) -> void:
 			interact_button.remove_theme_stylebox_override(state_name)
 		return
 	for state_data in [
-		{"name": "normal", "color": Color(0.04, 0.34, 0.78)},
-		{"name": "hover", "color": Color(0.08, 0.46, 0.94)},
-		{"name": "pressed", "color": Color(0.02, 0.23, 0.58)},
-		{"name": "disabled", "color": Color(0.24, 0.27, 0.31)}
+		{"name": "normal", "color": Color("#5b431e")},
+		{"name": "hover", "color": Color("#735522")},
+		{"name": "pressed", "color": Color("#3d2d17")},
+		{"name": "disabled", "color": Color("#514b40")}
 	]:
 		var style := StyleBoxFlat.new()
 		style.bg_color = state_data["color"]
