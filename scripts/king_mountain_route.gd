@@ -5,8 +5,8 @@ const CityCollisionProfile = preload("res://scripts/city_collision_profile.gd")
 const ROAD_WIDTH := 8.0
 const ROAD_THICKNESS := 0.42
 const ROUTE_POINTS := [
-	Vector3(45.0, -0.16, 88.0),
-	Vector3(72.0, 6.5, 110.0),
+	Vector3(90.0, -0.16, 99.0),
+	Vector3(72.0, 6.5, 121.0),
 	Vector3(72.0, 13.0, 134.0),
 	Vector3(38.0, 19.5, 156.0),
 	Vector3(38.0, 26.0, 180.0),
@@ -47,19 +47,52 @@ func _build_mountain_base() -> void:
 
 
 func _build_city_approach() -> void:
-	# وصلة مباشرة من نهاية طريق المخيم إلى بوابة الجبل، دون فجوة ترابية.
-	var start := Vector3(45.0, -0.16, 76.5)
-	var finish := ROUTE_POINTS[0]
-	var delta := finish - start
-	var basis := Basis.looking_at(delta.normalized(), Vector3.UP)
-	var center := (start + finish) * 0.5
-	_add_oriented_box("MountainCityApproachRoad", Vector3(ROAD_WIDTH, ROAD_THICKNESS, delta.length() + 0.4), center, basis, Color(0.23, 0.23, 0.22), true)
+	# التفاف خارج حدود المخيم: ننزل بمحاذاة جانبه الغربي ثم نتجه جنوبه إلى ساحة الانتقال.
+	# لا تمر الوصلة بين الحظائر أو المظلة، وتبقى على منسوب سطح الطرق الحالي.
+	var connector_points := [
+		Vector3(30.0, -0.16, 75.0),
+		Vector3(30.0, -0.16, 99.0),
+		ROUTE_POINTS[0]
+	]
+	for i in range(connector_points.size() - 1):
+		var start: Vector3 = connector_points[i]
+		var finish: Vector3 = connector_points[i + 1]
+		var delta := finish - start
+		var basis := Basis.looking_at(delta.normalized(), Vector3.UP)
+		var center := (start + finish) * 0.5
+		_add_oriented_box(
+			"MountainCityApproachRoad_%02d" % i,
+			Vector3(ROAD_WIDTH, ROAD_THICKNESS, delta.length() + 0.4),
+			center,
+			basis,
+			Color(0.23, 0.23, 0.22),
+			true
+		)
+	# توسعة عند الانعطاف من طريق المدينة، ثم ساحة واسعة للوقوف والدوران قبل البوابة.
+	_add_oriented_box(
+		"MountainConnectorTurnApron",
+		Vector3(10.0, ROAD_THICKNESS, 10.0),
+		connector_points[1],
+		Basis.IDENTITY,
+		Color(0.25, 0.24, 0.22),
+		true
+	)
+	_add_oriented_box(
+		"MountainTransitionPlaza",
+		Vector3(24.0, ROAD_THICKNESS, 16.0),
+		Vector3(82.0, -0.16, 99.0),
+		Basis.IDENTITY,
+		Color(0.30, 0.28, 0.24),
+		true
+	)
 
 
 func _build_approach_gate() -> void:
 	var gate := Node3D.new()
 	gate.name = "KingsMountainEntranceGate"
 	gate.position = ROUTE_POINTS[0]
+	# اجعل فتحة البوابة بمحاذاة الوصلة القادمة من الغرب، لا تقطع الطريق عرضيًا.
+	gate.rotation.y = PI * 0.5
 	add_child(gate)
 	_add_box_to(gate, "GateLeftPillar", Vector3(0.9, 4.6, 1.0), Vector3(-5.0, 2.3, 0.0), Color(0.62, 0.50, 0.34), true)
 	_add_box_to(gate, "GateRightPillar", Vector3(0.9, 4.6, 1.0), Vector3(5.0, 2.3, 0.0), Color(0.62, 0.50, 0.34), true)
