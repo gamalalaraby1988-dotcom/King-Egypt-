@@ -56,6 +56,7 @@ const APARTMENT_FURNITURE_GROUPS := [
 func _ready() -> void:
 	_create_ground()
 	_create_city()
+	_create_party_station()
 	_create_city_signage()
 	_create_mobile_hud()
 	var key_light := get_node_or_null("DirectionalLight3D")
@@ -1776,6 +1777,19 @@ func _create_camp() -> void:
 	camp.position = Vector3(60, 0, 75)
 	camp.set_script(load("res://scripts/camp_system.gd"))
 	add_child(camp)
+
+func _create_party_station() -> void:
+	# محطة الحفلات التجريبية في الساحة المركزية، خارج مسارات الطرق ومداخل المباني.
+	var station := Node3D.new()
+	station.name = "RoyalPartyStation"
+	station.position = Vector3(7.5, 0.0, -7.5)
+	station.add_to_group("party_stations")
+	add_child(station)
+	_create_box(station, "PartyStationBase", Vector3(2.8, 0.32, 2.8), Vector3(0, 0.16, 0), Color(0.22, 0.17, 0.11), true)
+	_create_box(station, "PartyStationGoldTrim", Vector3(2.35, 0.10, 2.35), Vector3(0, 0.37, 0), Color(0.88, 0.67, 0.28), false)
+	_create_box(station, "PartyStationPillar", Vector3(0.85, 1.65, 0.85), Vector3(0, 1.22, 0), Color(0.76, 0.66, 0.48), true)
+	_create_box(station, "PartyStationCrown", Vector3(1.45, 0.22, 1.45), Vector3(0, 2.12, 0), Color(0.94, 0.75, 0.34), false)
+	_create_box(station, "PartyStationBeacon", Vector3(0.42, 0.65, 0.42), Vector3(0, 2.55, 0), Color(0.10, 0.66, 0.66), false)
 
 func _get_nearby_party_station(actor: Node3D) -> Node3D:
 	if not is_instance_valid(actor):
