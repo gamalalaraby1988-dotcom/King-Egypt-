@@ -20,6 +20,15 @@ var ride_visual: Node3D = null
 
 func _ready() -> void:
 	add_to_group("player")
+	# افصل دوران الكاميرا عن دوران جسم اللاعب؛ حتى لا تدور الكاميرا
+	# حوله كلما استدار أثناء تحريك عصا التحكم.
+	camera_pivot.top_level = true
+	camera_pivot.global_position = global_position + Vector3(0.0, 1.55, 0.0)
+
+func _process(_delta: float) -> void:
+	# تظل الكاميرا متبعة لموضع اللاعب دون وراثة دورانه.
+	if is_instance_valid(camera_pivot):
+		camera_pivot.global_position = global_position + Vector3(0.0, 1.55, 0.0)
 
 func _physics_process(delta: float) -> void:
 	var sit_key_down := Input.is_key_pressed(KEY_C)
