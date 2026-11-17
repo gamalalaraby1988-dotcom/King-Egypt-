@@ -12,6 +12,8 @@ var mobile_sprint: bool = false
 var sitting := false
 var _sit_key_was_down := false
 var animal_riding := false
+var scooter_riding := false
+var scooter_visual: Node3D = null
 var auto_navigation_active := false
 var auto_navigation_cancelled := false
 var auto_navigation_direction := Vector3.ZERO
@@ -75,7 +77,7 @@ func _physics_process(delta: float) -> void:
 		movement_strength = 1.0
 	var keyboard_running := Input.is_action_pressed("sprint")
 	# لا يوجد زر جري مستقل على الهاتف: تزداد السرعة تدريجيًا مع ميل العصا.
-	var target_speed := (8.0 if keyboard_running else 6.0) if animal_riding else (run_speed if keyboard_running else lerpf(walk_speed, run_speed, movement_strength))
+	var target_speed := (8.0 if keyboard_running else 6.0) if animal_riding else (7.5 if scooter_riding else (run_speed if keyboard_running else lerpf(walk_speed, run_speed, movement_strength)))
 	var target_velocity := world_direction * target_speed * movement_strength
 	velocity.x = move_toward(velocity.x, target_velocity.x, acceleration * delta)
 	velocity.z = move_toward(velocity.z, target_velocity.z, acceleration * delta)
@@ -92,7 +94,7 @@ func _physics_process(delta: float) -> void:
 	var motion_state := "idle"
 	if planar_speed > 0.25:
 		motion_state = "run" if keyboard_running or (mobile_move.length() > 0.08 and movement_strength > 0.78) else "walk"
-	_update_avatar_animation(motion_state, planar_speed)
+	_update_avatar_animation("sit" if scooter_riding else motion_state, planar_speed)
 
 func begin_auto_navigation() -> bool:
 	if animal_riding:
@@ -126,6 +128,97 @@ func end_auto_navigation() -> void:
 
 func is_riding_animal() -> bool:
 	return animal_riding
+
+func is_riding_scooter() -> bool:
+	return scooter_riding
+
+
+func start_scooter_ride() -> bool:
+	if scooter_riding or animal_riding or sitting or auto_navigation_active:
+		return false
+	sitting = false
+	mobile_move = Vector2.ZERO
+	scooter_riding = true
+	var avatar := get_node_or_null("AvatarVisual") as Node3D
+	if is_instance_valid(avatar):
+		avatar.position.y = 0.38
+		if avatar.has_method("set_motion_state"):
+			avatar.set_motion_state("sit", 0.0)
+	_create_scooter_visual()
+	return true
+
+
+func end_scooter_ride() -> void:
+	if not scooter_riding:
+		return
+	scooter_riding = false
+	mobile_move = Vector2.ZERO
+	velocity.x = 0.0
+	velocity.z = 0.0
+	if is_instance_valid(scooter_visual):
+		scooter_visual.queue_free()
+	scooter_visual = null
+	var avatar := get_node_or_null("AvatarVisual") as Node3D
+	if is_instance_valid(avatar):
+		avatar.position.y = 0.0
+		if avatar.has_method("set_motion_state"):
+			avatar.set_motion_state("idle", 0.0)
+
+
+func _create_scooter_visual() -> void:
+	if is_instance_valid(scooter_visual):
+		scooter_visual.queue_free()
+	scooter_visual = Node3D.new()
+	scooter_visual.name = "PlayerScooterVisual"
+	add_child(scooter_visual)
+	var dark_material := StandardMaterial3D.new()
+	dark_material.albedo_color = Color(0.10, 0.13, 0.17)
+	dark_material.metallic = 0.45
+	var gold_material := StandardMaterial3D.new()
+	gold_material.albedo_color = Color(0.82, 0.62, 0.25)
+	gold_material.metallic = 0.55
+	var deck := MeshInstance3D.new()
+	var deck_mesh := BoxMesh.new()
+	deck_mesh.size = Vector3(0.30, 0.10, 0.92)
+	deck.mesh = deck_mesh
+	deck.position = Vector3(0.0, 0.18, 0.12)
+	deck.material_override = gold_material
+	scooter_visual.add_child(deck)
+	for wheel_z in [-0.34, 0.57]:
+		var wheel := MeshInstance3D.new()
+		var wheel_mesh := CylinderMesh.new()
+		wheel_mesh.top_radius = 0.19
+		wheel_mesh.bottom_radius = 0.19
+		wheel_mesh.height = 0.10
+		wheel.mesh = wheel_mesh
+		wheel.rotation.z = PI / 2.0
+		wheel.position = Vector3(0.0, 0.19, wheel_z)
+		wheel.material_override = dark_material
+		scooter_visual.add_child(wheel)
+	var stem := MeshInstance3D.new()
+	var stem_mesh := CylinderMesh.new()
+	stem_mesh.top_radius = 0.035
+	stem_mesh.bottom_radius = 0.045
+	stem_mesh.height = 0.92
+	stem.mesh = stem_mesh
+	stem.position = Vector3(0.0, 0.66, -0.35)
+	stem.material_override = gold_material
+	scooter_visual.add_child(stem)
+	var handle := MeshInstance3D.new()
+	var handle_mesh := BoxMesh.new()
+	handle_mesh.size = Vector3(0.72, 0.07, 0.08)
+	handle.mesh = handle_mesh
+	handle.position = Vector3(0.0, 1.12, -0.35)
+	handle.material_override = dark_material
+	scooter_visual.add_child(handle)
+
+
+func toggle_scooter_ride() -> bool:
+	if scooter_riding:
+		end_scooter_ride()
+		return false
+	return start_scooter_ride()
+
 
 func start_animal_ride(animal_name: String) -> bool:
 	# لا تبدأ ركوبًا ثانيًا فوق الركوب الحالي؛ يجب النزول أولًا.
@@ -181,7 +274,7 @@ func end_animal_ride() -> void:
 
 func toggle_sit() -> void:
 	# الجلوس غير متاح أثناء ركوب الحيوان حتى لا تتعارض حالتا الحركة.
-	if animal_riding:
+	if animal_riding or scooter_riding:
 		return
 	sitting = not sitting
 	if sitting:
