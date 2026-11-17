@@ -96,7 +96,8 @@ func _update_joystick(pos: Vector2) -> void:
 	var offset := pos - joystick_center
 	if offset.length() > _joystick_draw_radius:
 		offset = offset.normalized() * _joystick_draw_radius
-	joystick_vector = offset / maxf(1.0, _joystick_draw_radius)
+	# شاشة اللمس تزيد Y إلى الأسفل؛ اعكسها لتتطابق مع محور الحركة (الأمام = Y سالب).
+	joystick_vector = Vector2(offset.x, -offset.y) / maxf(1.0, _joystick_draw_radius)
 	queue_redraw()
 
 func _apply_camera_drag(delta_pos: Vector2) -> void:
