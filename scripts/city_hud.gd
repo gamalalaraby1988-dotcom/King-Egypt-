@@ -1570,6 +1570,12 @@ func _build_friend_character_portrait(friend: Dictionary) -> Control:
 
 
 func _send_group_invite_from_list(player_code: String) -> void:
+	if not _is_local_group_leader():
+		group_invite_status.text = "دعوة أعضاء المجموعة متاحة للقائد فقط."
+		return
+	if not AuthManager.is_authenticated():
+		group_invite_status.text = "سجّل الدخول أولًا لإرسال دعوة المجموعة."
+		return
 	var code := player_code.strip_edges().to_upper()
 	if not SocialChatManager.is_valid_player_code(code):
 		group_invite_status.text = "رمز اللاعب غير صالح."
