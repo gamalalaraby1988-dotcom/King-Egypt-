@@ -13,6 +13,7 @@ var destinations_button: Button
 var destinations_panel: PanelContainer
 var destinations_list: VBoxContainer
 var destination_choice_buttons: Array[Button] = []
+var resort_exit_choice: Button
 var marker_radius := 4.0
 var region_notice_panel: PanelContainer
 var region_notice_label: Label
@@ -22,7 +23,7 @@ var region_notice_remaining := 0.0
 # حدود تقريبية لمناطق النموذج الحالي، وليست خريطة مساحية نهائية.
 const REGION_BOUNDS := {
 	"region_city_center": {"center": Vector2(0.0, 0.0), "half_size": Vector2(84.0, 84.0)},
-	"region_animal_camp": {"center": Vector2(60.0, 75.0), "half_size": Vector2(19.0, 17.0)}
+	"region_royal_resort": {"center": Vector2(60.0, 75.0), "half_size": Vector2(19.0, 17.0)}
 }
 
 # معالم مثبتة في main.gd؛ لا تُضاف البوابة أو الميناء قبل وجود مواقع فعلية لهما.
@@ -33,7 +34,7 @@ const CITY_LANDMARKS := [
 	{"key": "delivery", "position": Vector3(24.0, 0.0, 4.5)},
 	{"key": "city_guide", "position": Vector3(-24.0, 0.0, 4.5)},
 	{"key": "maintenance", "position": Vector3(4.5, 0.0, 24.0)},
-	{"key": "animal_camp", "position": Vector3(60.0, 0.0, 68.0)}
+	{"key": "royal_resort", "position": Vector3(60.0, 0.0, 60.0)}
 ]
 
 func _ready() -> void:
@@ -132,6 +133,7 @@ func _update_layout() -> void:
 
 func _process(delta: float) -> void:
 	_update_landmark_buttons()
+	_update_resort_exit_choice()
 	var detected_region := _get_region_key(_player_position())
 	if active_region_key.is_empty():
 		active_region_key = detected_region
@@ -180,8 +182,8 @@ func _player_position() -> Vector3:
 
 func _get_region_key(position_3d: Vector3) -> String:
 	# يُفحص المخيم أولًا لأنه يقع داخل مستطيل وسط المدينة في النموذج الحالي.
-	if _is_inside_region("region_animal_camp", position_3d):
-		return "region_animal_camp"
+	if _is_inside_region("region_royal_resort", position_3d):
+		return "region_royal_resort"
 	if _is_inside_region("region_city_center", position_3d):
 		return "region_city_center"
 	return "region_outskirts"
@@ -195,7 +197,7 @@ func _is_inside_region(region_key: String, position_3d: Vector3) -> bool:
 	return absf(position_3d.x - region_center.x) <= half_size.x and absf(position_3d.z - region_center.y) <= half_size.y
 
 func _draw_region_boundaries() -> void:
-	for region_key in ["region_city_center", "region_animal_camp"]:
+	for region_key in ["region_city_center", "region_royal_resort"]:
 		var definition: Dictionary = REGION_BOUNDS[region_key]
 		var region_center: Vector2 = definition["center"]
 		var half_size: Vector2 = definition["half_size"]
@@ -283,6 +285,15 @@ func _create_destinations_menu() -> void:
 		choice.pressed.connect(_on_destination_choice_pressed.bind(index))
 		destinations_list.add_child(choice)
 		destination_choice_buttons.append(choice)
+	resort_exit_choice = Button.new()
+	resort_exit_choice.name = "ResortExitQuickTravel"
+	resort_exit_choice.text = "🚪 الخروج إلى خارج المنتجع"
+	resort_exit_choice.custom_minimum_size = Vector2(0.0, 38.0)
+	resort_exit_choice.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	resort_exit_choice.focus_mode = Control.FOCUS_NONE
+	resort_exit_choice.visible = false
+	resort_exit_choice.pressed.connect(_on_resort_exit_pressed)
+	destinations_list.add_child(resort_exit_choice)
 	var close_button := Button.new()
 	close_button.name = "CloseDestinationsMenu"
 	close_button.text = "×"
@@ -292,6 +303,32 @@ func _create_destinations_menu() -> void:
 	destinations_list.add_child(close_button)	
 	get_parent().add_child(destinations_panel)
 	destinations_panel.z_index = 20
+
+func _update_resort_exit_choice() -> void:
+	if not is_instance_valid(resort_exit_choice):
+		return
+	var city_root := get_tree().current_scene
+	var resort := city_root.get_node_or_null("RoyalResort") if is_instance_valid(city_root) else null
+	resort_exit_choice.visible = is_instance_valid(resort) and resort.has_method("is_inside_resort") and resort.is_inside_resort()
+
+func _on_resort_exit_pressed() -> void:
+	var city_root := get_tree().current_scene
+	var resort := city_root.get_node_or_null("RoyalResort") if is_instance_valid(city_root) else null
+	if is_instance_valid(resort) and is_instance_valid(player) and resort.has_method("exit_resort"):
+		resort.exit_resort(player)
+		if player is CharacterBody3D:
+			player.velocity = Vector3.ZERO
+		if is_instance_valid(destinations_panel):
+			destinations_panel.visible = false
+		_update_resort_exit_choice()
+
+func show_resort_quick_travel() -> void:
+	_update_resort_exit_choice()
+	if not is_instance_valid(destinations_panel):
+		return
+	destinations_panel.visible = true
+	destinations_panel.position = position
+	destinations_panel.size = Vector2(map_size.x, minf(270.0, maxf(190.0, get_viewport_rect().size.y - 90.0)))
 
 func _close_destinations_menu() -> void:
 	if is_instance_valid(destinations_panel):
