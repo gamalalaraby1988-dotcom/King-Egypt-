@@ -1121,12 +1121,12 @@ func _build_party_station_popup() -> void:
 	party_station_start_button = Button.new()
 	party_station_start_button.text = "إقامة حفلة"
 	party_station_start_button.custom_minimum_size.y = 27
-	party_station_start_button.disabled = not AuthManager.is_authenticated()
-	party_station_start_button.tooltip_text = "تتطلب إقامة الحفلة تسجيل الدخول."
+	party_station_start_button.disabled = true
+	party_station_start_button.tooltip_text = "سيتم تفعيل الإقامة بعد إضافة التحقق الخادمي من قرب المحطة."
 	party_station_start_button.pressed.connect(_on_party_station_start_pressed)
 	content.add_child(party_station_start_button)
 	party_station_status = Label.new()
-	party_station_status.text = "سجّل الدخول لإقامة حفلة." if not AuthManager.is_authenticated() else "جاهز لإرسال الطلب إلى الخادم."
+	party_station_status.text = "المحطة جاهزة؛ تفعيل الدفع ينتظر التحقق الخادمي من الموقع."
 	party_station_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	party_station_status.add_theme_font_size_override("font_size", 8)
 	party_station_status.add_theme_color_override("font_color", Color(1.0, 0.88, 0.68))
@@ -1135,9 +1135,9 @@ func _build_party_station_popup() -> void:
 func open_party_station_window(station_key: String = "main_party_station") -> void:
 	_party_station_key = station_key.strip_edges()
 	if is_instance_valid(party_station_start_button):
-		party_station_start_button.disabled = not AuthManager.is_authenticated() or _party_station_key.is_empty()
+		party_station_start_button.disabled = true
 	if is_instance_valid(party_station_status):
-		party_station_status.text = "جاهز لإقامة الحفلة." if AuthManager.is_authenticated() else "سجّل الدخول أولًا."
+		party_station_status.text = "المحطة موجودة؛ إقامة الحفلة متوقفة مؤقتًا لحماية الرصيد حتى اكتمال التحقق الخادمي."
 	if is_instance_valid(player_popup):
 		player_popup.visible = false
 	if is_instance_valid(party_station_popup):
