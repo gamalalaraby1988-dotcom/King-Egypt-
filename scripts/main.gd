@@ -770,8 +770,6 @@ func _create_interior_quick_travel_ui() -> void:
 		travel_button.text = str(entry[0])
 		travel_button.custom_minimum_size = Vector2(270, 48)
 		travel_button.disabled = not bool(entry[1])
-		if index == 6:
-			travel_button.visible = false
 		travel_button.pressed.connect(_on_interior_quick_travel_selected.bind(index))
 		content.add_child(travel_button)
 		interior_quick_travel_buttons.append(travel_button)
