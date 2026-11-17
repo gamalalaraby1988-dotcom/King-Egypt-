@@ -4,6 +4,11 @@
 alter table game_test.party_sessions
   drop constraint if exists party_sessions_duration_check;
 
+-- Normalize already-created test sessions before enforcing the new duration.
+update game_test.party_sessions
+   set ends_at = started_at + interval '20 seconds'
+ where ends_at = started_at + interval '15 seconds';
+
 alter table game_test.party_sessions
   add constraint party_sessions_duration_check
   check (ends_at = started_at + interval '20 seconds');
