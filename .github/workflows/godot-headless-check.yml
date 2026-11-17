@@ -91,6 +91,16 @@ jobs:
             exit 1
           fi
 
+      - name: Run animal rental transaction tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$GODOT_BIN" --headless --path . --script res://tests/animal_rental_test.gd -- --wallet-test 2>&1 | tee godot-animal-rental-tests.log
+          if grep -E "SCRIPT ERROR:|Parse Error:|ERROR:" godot-animal-rental-tests.log; then
+            echo "Animal rental tests reported errors."
+            exit 1
+          fi
+
       - name: Run auth session lifecycle tests
         shell: bash
         run: |
@@ -122,6 +132,6 @@ jobs:
             godot-startup.log
             godot-social-tests.log
             godot-wallet-tests.log
-            godot-auth-session-tests.log
+            godot-auth-session-tests.log\n            godot-animal-rental-tests.log
           if-no-files-found: ignore
           retention-days: 14
