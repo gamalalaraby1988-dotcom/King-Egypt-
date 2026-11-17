@@ -50,6 +50,8 @@ var _social_friends_loaded := false
 var _pending_player_moderation_action := ""
 var _pending_player_moderation_code := ""
 var group_members: Array[Dictionary] = [{"player_id":"local_leader", "display_name":"أنت", "is_leader":true}]
+var _group_server_state_loaded := false
+var _group_server_group_exists := false
 var pending_group_invites: Array[String] = []
 var group_popup: PanelContainer
 var group_invite_popup: PanelContainer
@@ -1570,6 +1572,9 @@ func _build_friend_character_portrait(friend: Dictionary) -> Control:
 
 
 func _send_group_invite_from_list(player_code: String) -> void:
+	if not _group_server_state_loaded or not _group_server_group_exists:
+		group_invite_status.text = "جارٍ التحقق من المجموعة على الخادم. حاول بعد اكتمال التحميل."
+		return
 	if not _is_local_group_leader():
 		group_invite_status.text = "دعوة أعضاء المجموعة متاحة للقائد فقط."
 		return
@@ -1606,7 +1611,7 @@ func _open_group_popup() -> void:
 
 func _refresh_group_popup() -> void:
 	if is_instance_valid(group_invite_button):
-		group_invite_button.disabled = group_members.size() >= GROUP_MAX_MEMBERS
+		group_invite_button.disabled = not _group_server_state_loaded or not _group_server_group_exists or not _is_local_group_leader() or group_members.size() >= GROUP_MAX_MEMBERS
 	if not is_instance_valid(group_members_box):
 		return
 	for child in group_members_box.get_children():
@@ -1929,7 +1934,7 @@ func _request_group_gather_invite() -> void:
 
 
 func _is_local_group_leader() -> bool:
-	if group_members.is_empty():
+	if not _group_server_state_loaded or not _group_server_group_exists or group_members.is_empty():
 		return false
 	var leader: Dictionary = group_members[0]
 	var leader_id := str(leader.get("player_id", ""))
@@ -2520,8 +2525,11 @@ func _on_social_account_session_changed(_previous_user_id: String, current_user_
 		blocked_players_box.add_child(blocked_empty)
 	if is_instance_valid(player_popup):
 		player_popup.visible = false
+	_group_server_state_loaded = false
+	_group_server_group_exists = false
 	group_members.clear()
 	group_members.append({"player_id": "local_leader", "display_name": "أنت", "is_leader": true})
+	_refresh_group_popup()
 	_friend_buttons.clear()
 	_friend_base_labels.clear()
 	for child in social_friends_box.get_children():
@@ -2874,6 +2882,8 @@ func _on_social_operation_completed(action: String, data: Variant) -> void:
 			_refresh_social_invite_cards(data)
 			SocialChatManager.list_friends()
 		"group_info":
+			_group_server_state_loaded = true
+			_group_server_group_exists = false
 			group_members.clear()
 			var active_group_id := ""
 			if data is Array:
@@ -2884,6 +2894,7 @@ func _on_social_operation_completed(action: String, data: Variant) -> void:
 						if not member_code.is_empty():
 							pending_group_invites.erase(member_code)
 						group_members.append({"player_id": member_code, "display_name": str(member.get("display_name", "لاعب")), "is_leader": bool(member.get("is_leader", false))})
+			_group_server_group_exists = not active_group_id.is_empty() and not group_members.is_empty()
 			SocialChatManager.subscribe_group_chat(active_group_id)
 			if group_members.is_empty():
 				group_members = [{"player_id":"local_leader", "display_name":"أنت", "is_leader":true}]
@@ -3031,6 +3042,8 @@ func _on_social_operation_failed(action: String, message: String) -> void:
 		"friends_list":
 			SocialChatManager.get_chat_group()
 		"group_info":
+			_group_server_state_loaded = false
+			_group_server_group_exists = false
 			SocialChatManager.subscribe_group_chat("")
 			group_members = [{"player_id": "local_leader", "display_name": "أنت", "is_leader": true}]
 			_refresh_group_popup()
