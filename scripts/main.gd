@@ -203,7 +203,7 @@ func _process(_delta: float) -> void:
 	_update_shared_location_vehicle_follow()
 	if vehicle_occupied:
 		if is_instance_valid(vehicle_interaction_button):
-			vehicle_interaction_button.visible = true
+			vehicle_interaction_button.visible = false
 		_update_interaction_target_marker(null)
 		if is_instance_valid(vehicle_summon_button):
 			vehicle_summon_button.visible = false
@@ -237,16 +237,8 @@ func _process(_delta: float) -> void:
 	_update_interaction_target_marker(interaction_target)
 	# زر المركبة الإضافي مخصص للمحطة والسيارة فقط؛ بقية عناصر المدينة تستخدم زر MissionManager القائم.
 	if is_instance_valid(vehicle_interaction_button):
-		var vehicle_or_party_target := is_instance_valid(nearby_party_station) or (is_instance_valid(city_vehicle) and close_enough and not is_instance_valid(nearby_city_interactable))
-		vehicle_interaction_button.visible = vehicle_or_party_target
-		if vehicle_or_party_target:
-			vehicle_interaction_button.add_theme_stylebox_override("normal", _make_vehicle_summon_style(Color(0.04, 0.34, 0.78)))
-			vehicle_interaction_button.add_theme_stylebox_override("hover", _make_vehicle_summon_style(Color(0.08, 0.46, 0.94)))
-			vehicle_interaction_button.add_theme_stylebox_override("pressed", _make_vehicle_summon_style(Color(0.02, 0.23, 0.58)))
-		if is_instance_valid(nearby_party_station):
-			vehicle_interaction_button.text = "إقامة حفلة" if CityLanguage.get_language() == "ar" else "Start party"
-		else:
-			vehicle_interaction_button.text = "ركوب السيارة" if CityLanguage.get_language() == "ar" else "Enter vehicle"
+		# كل تفاعلات اللاعب تمر عبر زر MissionManager الموحد.
+		vehicle_interaction_button.visible = false
 
 
 func _update_interaction_target_marker(target: Node3D) -> void:
@@ -377,6 +369,7 @@ func _create_player_vehicle() -> void:
 	vehicle_interaction_button.offset_bottom = -92
 	vehicle_interaction_button.visible = false
 	vehicle_interaction_button.pressed.connect(_toggle_vehicle_use)
+	vehicle_interaction_button.visible = false
 	layer.add_child(vehicle_interaction_button)
 
 func _summon_player_vehicle() -> void:
@@ -600,8 +593,7 @@ func _toggle_vehicle_use() -> void:
 	if is_instance_valid(vehicle_camera):
 		vehicle_camera.current = true
 	if is_instance_valid(vehicle_interaction_button):
-		vehicle_interaction_button.text = "النزول من السيارة" if CityLanguage.get_language() == "ar" else "Exit vehicle"
-		vehicle_interaction_button.visible = true
+		vehicle_interaction_button.visible = false
 
 func _recover_vehicle_occupancy() -> void:
 	# لا تترك حالة الركوب أو متابعة الموقع عالقة إذا حُذفت السيارة أو اللاعب.
