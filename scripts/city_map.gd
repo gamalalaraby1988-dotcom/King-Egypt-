@@ -181,7 +181,7 @@ func _player_position() -> Vector3:
 	return Vector3.ZERO
 
 func _get_region_key(position_3d: Vector3) -> String:
-	# يُفحص المخيم أولًا لأنه يقع داخل مستطيل وسط المدينة في النموذج الحالي.
+	# يُفحص المنتجع أولًا لأنه يقع داخل حدود وسط المدينة في النموذج الحالي.
 	if _is_inside_region("region_royal_resort", position_3d):
 		return "region_royal_resort"
 	if _is_inside_region("region_city_center", position_3d):
@@ -287,7 +287,7 @@ func _create_destinations_menu() -> void:
 		destination_choice_buttons.append(choice)
 	resort_exit_choice = Button.new()
 	resort_exit_choice.name = "ResortExitQuickTravel"
-	resort_exit_choice.text = "🚪 الخروج إلى خارج المنتجع"
+	resort_exit_choice.text = CityLanguage.translate("resort_exit_quick_travel")
 	resort_exit_choice.custom_minimum_size = Vector2(0.0, 38.0)
 	resort_exit_choice.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	resort_exit_choice.focus_mode = Control.FOCUS_NONE
@@ -396,7 +396,7 @@ func _draw() -> void:
 		var left := _world_to_map(Vector3(-90.0, 0.0, road_z))
 		var right := _world_to_map(Vector3(90.0, 0.0, road_z))
 		draw_line(left, right, road_color, 2.0 if road_z == 0.0 else 1.5)
-	# وصلة المخيم الخاصة كما هي منشأة في مشهد المدينة.
+	# وصلة طريق المنتجع كما هي منشأة في مشهد المدينة.
 	draw_line(_world_to_map(Vector3(16.0, 0.0, 0.0)), _world_to_map(Vector3(30.0, 0.0, 0.0)), road_color, 1.8)
 	draw_line(_world_to_map(Vector3(30.0, 0.0, 0.0)), _world_to_map(Vector3(30.0, 0.0, 75.0)), road_color, 1.8)
 	draw_line(_world_to_map(Vector3(30.0, 0.0, 75.0)), _world_to_map(Vector3(60.0, 0.0, 75.0)), road_color, 1.8)
