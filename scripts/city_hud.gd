@@ -356,7 +356,7 @@ func _make_friends_icon_button(parent: Control) -> void:
 	holder.custom_minimum_size = Vector2(118, 42)
 	parent.add_child(holder)
 	var button := Button.new()
-	button.text = "👥 أصدقاء"
+	button.text = "♧"
 	button.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	button.add_theme_font_size_override("font_size", 14)
 	button.pressed.connect(_on_button_pressed.bind("social"))
