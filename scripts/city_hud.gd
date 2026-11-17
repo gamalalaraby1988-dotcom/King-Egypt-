@@ -1627,7 +1627,8 @@ func _refresh_group_popup() -> void:
 			if not bool(member.get("is_leader", false)):
 				var remove := Button.new()
 				remove.text = "إزالة"
-				remove.pressed.connect(_remove_group_member.bind(str(member.get("player_id", ""))))
+				remove.disabled = true
+				remove.tooltip_text = "خدمة إزالة أعضاء المجموعة غير متاحة من الخادم حاليًا."
 				row.add_child(label)
 				row.add_child(remove)
 			else:
@@ -2006,17 +2007,11 @@ func _group_contains(player_id: String) -> bool:
 
 
 func _remove_group_member(player_id: String) -> void:
-	for i in range(group_members.size() - 1, 0, -1):
-		if str(group_members[i].get("player_id", "")) == player_id:
-			group_members.remove_at(i)
-			group_member_removed.emit(player_id)
-			break
-	if group_members.size() <= 1:
-		group_meeting_position = Vector3.ZERO
-		if group_follow_enabled:
-			group_follow_enabled = false
-			group_follow_mode_requested.emit(false)
-	_refresh_group_popup()
+	# لا نغيّر قائمة المجموعة محليًا؛ لا توجد عملية إزالة خادمية متاحة بعد.
+	if is_instance_valid(group_invite_status):
+		group_invite_status.text = "لم تتم إزالة العضو: خدمة إزالة أعضاء المجموعة غير مفعّلة من الخادم بعد."
+	elif is_instance_valid(social_chat_status):
+		social_chat_status.text = "لم تتم إزالة العضو: خدمة إزالة أعضاء المجموعة غير مفعّلة من الخادم بعد."
 
 
 func _toggle_group_follow_mode() -> void:
