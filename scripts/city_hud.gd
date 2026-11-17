@@ -3075,6 +3075,15 @@ func _on_social_realtime_status(status: String) -> void:
 
 
 func _on_social_realtime_event(topic: String, event_name: String, payload: Dictionary) -> void:
+	if topic == "party:city:events" and event_name == "party_started":
+		if social_chat_channel == "العامة" and is_instance_valid(social_chat_log):
+			var party_host_name := str(payload.get("host_display_name", "لاعب")).strip_edges()
+			if party_host_name.is_empty():
+				party_host_name = "لاعب"
+			social_chat_log.append_text(format_public_chat_message(party_host_name, "🎉 أقام حفلة في المدينة!"))
+			if is_instance_valid(social_chat_status):
+				social_chat_status.text = "وصل إشعار حفلة جديد من الخادم."
+		return
 	if not can_receive_social_invitation_event(event_name):
 		return
 	if event_name == "group_invite":
