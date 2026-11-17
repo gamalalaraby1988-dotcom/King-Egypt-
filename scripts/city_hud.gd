@@ -27,6 +27,7 @@ var vehicle_store_status: Label
 var player_popup: PanelContainer
 var party_station_popup: PanelContainer
 var party_station_status: Label
+var emote_sit_button: Button
 var party_station_start_button: Button
 var player_name_label: Label
 var player_level_label: Label
@@ -277,6 +278,13 @@ func _build() -> void:
 	popup_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	popup_body.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	content.add_child(popup_body)
+	emote_sit_button = Button.new()
+	emote_sit_button.name = "EmoteSitAction"
+	emote_sit_button.text = "6. الجلوس"
+	emote_sit_button.custom_minimum_size = Vector2(0, 46)
+	emote_sit_button.visible = false
+	emote_sit_button.pressed.connect(_on_emote_sit_pressed)
+	content.add_child(emote_sit_button)
 	var close := Button.new()
 	close.text = "إغلاق"
 	close.pressed.connect(func(): popup.visible = false)
@@ -345,7 +353,9 @@ func _open_section(section: String) -> void:
 		_open_display_name_panel()
 		return
 	popup_title.text = str(SECTIONS[section][0])
-	popup_body.text = str(SECTIONS[section][1])
+	popup_body.text = "اختر إحدى الحركات الاجتماعية." if section == "emotes" else str(SECTIONS[section][1])
+	if is_instance_valid(emote_sit_button):
+		emote_sit_button.visible = section == "emotes"
 	if section == "group":
 		_open_group_popup()
 		return
@@ -358,6 +368,16 @@ func _open_section(section: String) -> void:
 			daily.root_panel.visible = true
 			popup_body.text += "\nتم فتح لوحة الأنشطة اليومية الموجودة في اللعبة."
 	popup.visible = true
+
+func _on_emote_sit_pressed() -> void:
+	var actor := main_scene.get_node_or_null("Player") as CharacterBody3D if is_instance_valid(main_scene) else null
+	if is_instance_valid(actor) and actor.has_method("toggle_sit"):
+		actor.toggle_sit()
+		if is_instance_valid(popup):
+			popup.visible = false
+	else:
+		popup_body.text = "حركة الجلوس غير متاحة حاليًا."
+
 
 func _open_friends_phone_panel() -> void:
 	if is_instance_valid(phone_popup):
