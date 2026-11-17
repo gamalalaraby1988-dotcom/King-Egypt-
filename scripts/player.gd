@@ -21,6 +21,9 @@ var ride_visual: Node3D = null
 @onready var camera_pivot: Node3D = $CameraPivot
 
 func _ready() -> void:
+	# يساعد على متابعة سطح الطريق عند الانتقال من الأرض المستوية إلى المنحدر.
+	floor_snap_length = 0.65
+	floor_max_angle = deg_to_rad(48.0)
 	add_to_group("player")
 	# افصل دوران الكاميرا عن دوران جسم اللاعب؛ حتى لا تدور الكاميرا
 	# حوله كلما استدار أثناء تحريك عصا التحكم.
