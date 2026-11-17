@@ -634,6 +634,16 @@ func _make_friend_request_avatar(character_id: String) -> Control:
 
 
 func _render_friends_phone_requests(data: Array) -> void:
+	# Rebuild sent-request state from the authoritative server response so the
+	# nearby-player action remains correct after reopening the game or HUD.
+	var server_sent_requests: Dictionary = {}
+	for request in data:
+		if not request is Dictionary or str(request.get("direction", "")) != "outgoing":
+			continue
+		var sent_code := str(request.get("player_code", "")).strip_edges().to_upper()
+		if SocialChatManager.is_valid_player_code(sent_code):
+			server_sent_requests[sent_code] = true
+	_sent_friend_requests = server_sent_requests
 	for box in [friends_phone_incoming_box, friends_phone_outgoing_box]:
 		for child in box.get_children():
 			child.queue_free()
