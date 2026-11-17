@@ -2524,15 +2524,29 @@ static func is_player_in_friend_list(player_code: String, friends: Array) -> boo
 
 
 func _sync_selected_player_friend_state(friends: Array) -> void:
-	if not _has_selected_player() or not is_player_in_friend_list(selected_player_id, friends):
+	if not _has_selected_player():
 		return
-	_sent_friend_requests.erase(selected_player_id)
-	selected_player_is_friend = true
-	if is_instance_valid(player_primary_action_button):
-		player_primary_action_button.disabled = false
-		player_primary_action_button.text = "دعوة للمجموعة"
+	# The friends list is authoritative in both directions: a removed friendship
+	# must not leave the interaction popup offering a group invite indefinitely.
+	selected_player_is_friend = is_player_in_friend_list(selected_player_id, friends)
+	if selected_player_is_friend:
+		_sent_friend_requests.erase(selected_player_id)
+	_refresh_selected_player_friend_action_state()
+
+
+func _refresh_selected_player_friend_action_state() -> void:
+	if not _has_selected_player() or not is_instance_valid(player_primary_action_button):
+		return
+	var action_state := resolve_friend_action_state(
+		selected_player_id,
+		selected_player_is_friend,
+		_pending_friend_request_player_code,
+		_sent_friend_requests
+	)
+	player_primary_action_button.disabled = bool(action_state.get("disabled", false))
+	player_primary_action_button.text = str(action_state.get("text", "إضافة صديق"))
 	if is_instance_valid(player_action_status):
-		player_action_status.text = "أصبح هذا اللاعب ضمن قائمة أصدقائك."
+		player_action_status.text = str(action_state.get("status", ""))
 
 
 func _on_social_operation_completed(action: String, data: Variant) -> void:
@@ -2585,6 +2599,7 @@ func _on_social_operation_completed(action: String, data: Variant) -> void:
 		"friend_requests_list":
 			if data is Array:
 				_render_friends_phone_requests(data)
+				_refresh_selected_player_friend_action_state()
 				friends_phone_status.text = "تم تحميل طلبات الصداقة الواردة والمرسلة."
 		"friend_request_response":
 			friends_phone_status.text = "تم تحديث حالة طلب الصداقة من الخادم."
