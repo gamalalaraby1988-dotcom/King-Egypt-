@@ -2408,6 +2408,22 @@ func _on_social_account_session_changed(_previous_user_id: String, current_user_
 	# friends, requests, selected player, group, unread counters, or moderation state visible.
 	_sent_friend_requests.clear()
 	_pending_friend_request_player_code = ""
+	# Request counts and rows belong to the previous account; never leave its
+	# incoming badge or request names visible after an account switch.
+	friends_phone_incoming_count = 0
+	if is_instance_valid(friends_phone_incoming_box):
+		for child in friends_phone_incoming_box.get_children():
+			child.queue_free()
+		var incoming_empty := Label.new()
+		incoming_empty.text = "لا توجد طلبات واردة."
+		friends_phone_incoming_box.add_child(incoming_empty)
+	if is_instance_valid(friends_phone_outgoing_box):
+		for child in friends_phone_outgoing_box.get_children():
+			child.queue_free()
+		var outgoing_empty := Label.new()
+		outgoing_empty.text = "لا توجد طلبات مرسلة."
+		friends_phone_outgoing_box.add_child(outgoing_empty)
+	_update_friends_phone_request_badge()
 	selected_player_id = ""
 	selected_player_is_friend = false
 	_pending_player_moderation_action = ""
