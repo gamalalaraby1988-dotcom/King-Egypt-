@@ -850,10 +850,23 @@ func _update_interaction_hud() -> void:
 			interact_button.visible = false
 			prompt_label.text = ""
 		return
-	if is_instance_valid(player) and player.has_method("is_riding_animal") and player.is_riding_animal():
+	if is_instance_valid(city_root) and bool(city_root.get("vehicle_occupied")):
+		_set_interaction_button_active(true)
+		prompt_label.text = "أنت داخل السيارة"
+		interact_button.text = "🚪"
+		interact_button.tooltip_text = "النزول من السيارة"
+		interact_button.visible = true
+	elif is_instance_valid(player) and is_instance_valid(city_root.get("city_vehicle")) and player.global_position.distance_to((city_root.get("city_vehicle") as Node3D).global_position) <= 5.0 and not is_instance_valid(nearest_interactable):
+		_set_interaction_button_active(true)
+		prompt_label.text = "بجوار السيارة"
+		interact_button.text = CityLanguage.translate("interaction_enter")
+		interact_button.tooltip_text = "ركوب السيارة"
+		interact_button.visible = true
+	elif is_instance_valid(player) and player.has_method("is_riding_animal") and player.is_riding_animal():
 		_set_interaction_button_active(true)
 		prompt_label.text = CityLanguage.translate("interaction_riding_prompt")
-		interact_button.text = CityLanguage.translate("interaction_dismount")
+		interact_button.text = "🚪"
+		interact_button.tooltip_text = CityLanguage.translate("interaction_dismount")
 		interact_button.visible = true
 	elif is_instance_valid(nearest_interactable):
 		_set_interaction_button_active(true)
@@ -887,9 +900,18 @@ func interact() -> void:
 		if is_instance_valid(nearest_interactable):
 			open_interactable(nearest_interactable)
 		return
+	if is_instance_valid(city_root) and bool(city_root.get("vehicle_occupied")):
+		city_root.call("_toggle_vehicle_use")
+		_update_interaction_hud()
+		return
 	if is_instance_valid(player) and player.has_method("is_riding_animal") and player.is_riding_animal():
 		player.end_animal_ride()
 		prompt_label.text = CityLanguage.translate("interaction_dismounted")
+		_update_interaction_hud()
+		return
+	var nearby_vehicle: Variant = city_root.get("city_vehicle") if is_instance_valid(city_root) else null
+	if is_instance_valid(nearby_vehicle) and is_instance_valid(player) and player.global_position.distance_to((nearby_vehicle as Node3D).global_position) <= 5.0 and not is_instance_valid(nearest_interactable):
+		city_root.call("_toggle_vehicle_use")
 		_update_interaction_hud()
 		return
 	if mission_running or job_running:
