@@ -102,6 +102,8 @@ func _refresh_language() -> void:
 		toggle_button.text = CityLanguage.translate("hide_map") if map_visible else CityLanguage.translate("show_map")
 	if is_instance_valid(destinations_button):
 		destinations_button.text = CityLanguage.translate("map_destinations")
+	if is_instance_valid(resort_exit_choice):
+		resort_exit_choice.text = CityLanguage.translate("resort_exit_quick_travel")
 		destinations_button.visible = map_visible
 	for index in range(mini(destination_choice_buttons.size(), CITY_LANDMARKS.size())):
 		destination_choice_buttons[index].text = CityLanguage.translate(str(CITY_LANDMARKS[index]["key"]))
@@ -324,7 +326,7 @@ func _on_resort_exit_pressed() -> void:
 
 func show_resort_quick_travel() -> void:
 	_update_resort_exit_choice()
-	if not is_instance_valid(destinations_panel):
+	if not is_instance_valid(destinations_panel) or not is_instance_valid(resort_exit_choice) or not resort_exit_choice.visible:
 		return
 	destinations_panel.visible = true
 	destinations_panel.position = position
