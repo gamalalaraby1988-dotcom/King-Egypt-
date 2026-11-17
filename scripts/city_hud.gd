@@ -199,6 +199,8 @@ func _build() -> void:
 	root.name = "CityHUDRoot"
 	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# Keep screen anchors and button clusters on their intended physical sides on RTL devices.
+	root.layout_direction = Control.LAYOUT_DIRECTION_LTR
 	add_child(root)
 
 	# شريط الموارد العلوي يبقى صغيرًا ولا يزاحم مساحة اللعب.
