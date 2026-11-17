@@ -58,8 +58,9 @@ func _update_layout() -> void:
 	# إبقاء الجري والجلوس على يمين الشاشة، مع ترك الركن السفلي الأيمن لزر التفاعل.
 	# إبعاد الجري والجلوس عن قائمة الأزرار اليمنى في CityActionHUD حتى لا تغطيهما.
 	var right_x := size.x - 158.0 * scale_factor - margin - maxf(_sprint_draw_radius, _sit_draw_radius)
-	sprint_center = Vector2(right_x, size.y * 0.67)
-	sit_center = Vector2(right_x, maxf(margin + _sit_draw_radius, sprint_center.y - _sprint_draw_radius - _sit_draw_radius - 22.0 * scale_factor))
+	# وضع زري الجري والجلوس في مجموعة التحكم السفلية اليمنى مثل مرجع Sunday City.
+	sprint_center = Vector2(right_x - 72.0 * scale_factor, size.y * 0.87)
+	sit_center = Vector2(right_x, size.y * 0.78)
 	_camera_drag_scale = clampf(720.0 / maxf(360.0, size.y), 0.5, 1.8)
 
 func _draw() -> void:
