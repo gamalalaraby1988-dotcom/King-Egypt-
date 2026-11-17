@@ -975,6 +975,11 @@ func _open_royal_resort_gate(gate: Node3D) -> void:
 	if not is_instance_valid(resort) or not resort.has_method("activate_gate"):
 		return
 	var data: Dictionary = gate.get_royal_resort_gate_data()
+	if str(data.get("gate_kind", "")) == "quick_menu":
+		var city_root := get_tree().current_scene
+		if is_instance_valid(city_root) and city_root.has_method("show_interior_quick_travel_menu"):
+			city_root.show_interior_quick_travel_menu()
+		return
 	var result: Dictionary = resort.activate_gate(gate, player, player_level)
 	if bool(result.get("success", false)):
 		panel.visible = false
