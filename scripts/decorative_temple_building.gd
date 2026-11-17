@@ -51,6 +51,47 @@ func _build_temple() -> void:
 	_add_box("GreenInlay", Vector3(0.55, 0.12, 0.18), Vector3(-1.0, 7.0, -3.16), GREEN)
 	_add_box("GoldFrieze", Vector3(9.4, 0.22, 0.12), Vector3(0, 6.75, -2.72), GOLD)
 
+	_build_facade_reliefs()
+
+func _build_facade_reliefs() -> void:
+	# Two inset royal panels on the outer pylons, facing the approach.
+	for side in [-1.0, 1.0]:
+		var x := side * 6.4
+		_add_box("PylonInset_%s" % str(side), Vector3(1.45, 2.55, 0.12), Vector3(x, 4.35, -3.16), BLUE)
+		_add_box("PylonPanelFrameTop_%s" % str(side), Vector3(1.75, 0.16, 0.16), Vector3(x, 5.72, -3.19), GOLD)
+		_add_box("PylonPanelFrameBottom_%s" % str(side), Vector3(1.75, 0.16, 0.16), Vector3(x, 2.98, -3.19), GOLD)
+		_add_box("PylonPanelFrameLeft_%s" % str(side), Vector3(0.16, 2.85, 0.16), Vector3(x - 0.88, 4.35, -3.19), GOLD)
+		_add_box("PylonPanelFrameRight_%s" % str(side), Vector3(0.16, 2.85, 0.16), Vector3(x + 0.88, 4.35, -3.19), GOLD)
+		_add_disc("PylonSunEmblem_%s" % str(side), 0.42, 0.14, Vector3(x, 4.9, -3.31), GOLD)
+		for mark in range(3):
+			_add_box(
+				"PylonReliefMark_%s_%d" % [str(side), mark],
+				Vector3(0.12, 0.48, 0.10),
+				Vector3(x - 0.28 + float(mark) * 0.28, 3.75, -3.31),
+				LIGHT_STONE
+			)
+
+	# Repeated low-profile gold motifs beneath the roofline.
+	for motif in range(9):
+		var x := -4.0 + float(motif) * 1.0
+		_add_box("RooflineMotif_%02d" % motif, Vector3(0.42, 0.28, 0.12), Vector3(x, 6.98, -2.78), GOLD)
+	_add_box("CentralRoyalEmblemBacking", Vector3(1.55, 1.05, 0.16), Vector3(0, 5.85, -2.78), BLUE)
+	_add_disc("CentralRoyalSunEmblem", 0.38, 0.16, Vector3(0, 5.9, -2.91), GOLD)
+
+func _add_disc(node_name: String, radius: float, depth: float, at: Vector3, tint: Color) -> void:
+	var instance := MeshInstance3D.new()
+	instance.name = node_name
+	var mesh := CylinderMesh.new()
+	mesh.top_radius = radius
+	mesh.bottom_radius = radius
+	mesh.height = depth
+	mesh.radial_segments = 20
+	instance.mesh = mesh
+	instance.position = at
+	instance.rotation.x = PI * 0.5
+	instance.material_override = _make_material(tint)
+	add_child(instance)
+
 func _add_box(node_name: String, dimensions: Vector3, at: Vector3, tint: Color) -> void:
 	var instance := MeshInstance3D.new()
 	instance.name = node_name
