@@ -57,6 +57,7 @@ func _ready() -> void:
 	_create_ground()
 	_create_city()
 	_create_desert_camp()
+	_create_pyramids_area()
 	_create_party_station()
 	_create_city_signage()
 	_create_mobile_hud()
@@ -757,7 +758,7 @@ func _create_interior_quick_travel_ui() -> void:
 	heading.add_theme_color_override("font_color", Color(0.88, 0.68, 0.30))
 	content.add_child(heading)
 	var entries := [
-		["🏜️  المخيم الصحراوي", true],
+		["𓉴  الأهرامات والمخيم الملكي", true],
 		["🏠  الشقة", true],
 		["𓉐  بوابة صعود الجبل", true],
 		["⚜  الميدان", true],
@@ -1764,7 +1765,7 @@ func _create_city_signage() -> void:
 	_create_direction_signpost("Signpost_Central", Vector3(9, 0, 8), "restaurant", "shop", PI / 2.0)
 	# Move roadside signs off the road centerline and turn their faces toward the road.
 	_create_direction_signpost("Signpost_Employment", Vector3(29, 0, -8), "employment", "city_center", PI / 2.0)
-	_create_direction_signpost("Signpost_DesertCamp", Vector3(34, 0, 38), "city_center", "desert_camp", PI / 2.0)
+	_create_direction_signpost("Signpost_PyramidsCamp", Vector3(34, 0, 38), "city_center", "pyramids_camp", PI / 2.0)
 
 func _create_direction_signpost(sign_name: String, pos: Vector3, left_key: String, right_key: String, yaw: float = 0.0) -> void:
 	var sign_root := Node3D.new()
@@ -1852,3 +1853,10 @@ func _create_desert_camp() -> void:
 	camp.set_script(load("res://scripts/desert_camp.gd"))
 	camp.position = Vector3(60.0, 0.0, 68.0)
 	add_child(camp)
+
+func _create_pyramids_area() -> void:
+	# الأهرامات وأبو الهول جزء من منطقة واحدة متصلة بالمخيم الملكي.
+	var pyramids := Node3D.new()
+	pyramids.name = "GizaPyramidsArea"
+	pyramids.set_script(load("res://scripts/pyramids_area.gd"))
+	add_child(pyramids)
