@@ -124,7 +124,8 @@ func _apply_camera_drag(delta_pos: Vector2) -> void:
 	if not is_instance_valid(pivot):
 		return
 	var sensitivity := camera_sensitivity * _camera_drag_scale
-	pivot.rotation.y -= delta_pos.x * sensitivity
+	# Horizontal camera drag follows the finger direction: right swipe turns right.
+	pivot.rotation.y += delta_pos.x * sensitivity
 	pivot.rotation.x = clampf(pivot.rotation.x - delta_pos.y * sensitivity, deg_to_rad(-60.0), deg_to_rad(25.0))
 
 func _is_over_control(pos: Vector2) -> bool:
