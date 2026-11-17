@@ -115,10 +115,13 @@ func _update_joystick(pos: Vector2) -> void:
 	queue_redraw()
 
 func _apply_camera_drag(delta_pos: Vector2) -> void:
-	if not is_instance_valid(player):
-		return
-	var pivot := player.get_node_or_null("CameraPivot") as Node3D
-	if pivot == null:
+	# أثناء القيادة ندوّر كاميرا السيارة النشطة، لا كاميرا اللاعب المخفية.
+	var pivot: Node3D = null
+	if is_instance_valid(vehicle_control_target):
+		pivot = vehicle_control_target.get_node_or_null("VehicleCameraPivot") as Node3D
+	elif is_instance_valid(player):
+		pivot = player.get_node_or_null("CameraPivot") as Node3D
+	if not is_instance_valid(pivot):
 		return
 	var sensitivity := camera_sensitivity * _camera_drag_scale
 	pivot.rotation.y -= delta_pos.x * sensitivity
