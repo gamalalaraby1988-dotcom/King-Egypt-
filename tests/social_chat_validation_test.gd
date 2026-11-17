@@ -1186,7 +1186,9 @@ func _run_social_validation_tests() -> void:
 		return
 	city_hud._group_server_state_loaded = true
 	city_hud._group_server_group_exists = true
-	city_hud.group_members = [{"player_id": "local_leader", "display_name": "أنت", "is_leader": true}, {"player_id": "TESTPLAYER1", "display_name": "عضو", "is_leader": false}]
+	city_hud.group_members.clear()
+	city_hud.group_members.append({"player_id": "local_leader", "display_name": "أنت", "is_leader": true})
+	city_hud.group_members.append({"player_id": "TESTPLAYER1", "display_name": "عضو", "is_leader": false})
 	city_hud.group_meeting_status = Label.new()
 	city_hud.call("_request_group_gather_invite")
 	if city_hud.group_meeting_status.text != "لم تُرسل الدعوة: خدمة التجمع بين الأجهزة غير مفعّلة بعد.":
