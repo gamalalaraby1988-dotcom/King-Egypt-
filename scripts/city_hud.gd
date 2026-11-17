@@ -141,7 +141,6 @@ const SECTIONS := {
 	"events": ["مركز الفعاليات", "الفعاليات المخطط لها: مهرجان الحيوانات لمدة 7 أيام، حفلات اللاعبين، وتحديات المدينة. ستظهر مواعيد الفعاليات ومؤقتاتها ومكافآتها عند تفعيل نظام الفعاليات المتصل."],
 	"pass": ["تذكرة الموسم", "تذكرة شهرية بجوائز رئيسية متتابعة: شخصية، ثم زي، ثم مركبة، ثم حيوان أليف. تفاصيل الموسم ومكافآته تُعرض عند تفعيل نظام المواسم."],
 	"phone": ["هاتف اللاعب", "متجر المركبات وإدارة المركبة المختارة."],
-	"map": ["خريطة المدينة", "استكشف مناطق المدينة واتبع اللافتات الإرشادية للوصول إلى الأماكن والمباني."],
 	"social": ["الأصدقاء والتواصل", "ابحث عن صديق باستخدام رمز اللاعب الفريد، أو اضغط على شخصية لاعب لعرض قائمة التفاعل."],
 	"group": ["مجموعتي", "مجموعة صغيرة من أربعة لاعبين كحد أقصى: قائد وثلاثة أعضاء."],
 	"chat": ["المحادثة", "افتح محادثة مجموعتك للتواصل مع أعضائها. الرسائل بين الأجهزة تحتاج اتصال الخادم."],
@@ -234,7 +233,6 @@ func _build() -> void:
 	_make_button(right, "👑 الفعاليات", "events")
 	_make_button(right, "🎟 الموسم", "pass")
 	_make_button(right, "📱 الهاتف", "phone")
-	_make_button(right, "🗺 الخريطة", "map")
 	_make_button(right, "🐈 الحيوانات", "pets")
 
 	var bottom := HBoxContainer.new()
@@ -356,13 +354,6 @@ func _open_section(section: String) -> void:
 		if is_instance_valid(daily) and is_instance_valid(daily.get("root_panel")):
 			daily.root_panel.visible = true
 			popup_body.text += "\nتم فتح لوحة الأنشطة اليومية الموجودة في اللعبة."
-	if section == "map":
-		var city_map := main_scene.get_node_or_null("CityMapHUD/CityMap") if is_instance_valid(main_scene) else null
-		if is_instance_valid(city_map):
-			for method_name in ["open_map", "show_map", "toggle_map", "_toggle_map"]:
-				if city_map.has_method(method_name):
-					city_map.call(method_name)
-					break
 	popup.visible = true
 
 func _open_friends_phone_panel() -> void:
