@@ -52,7 +52,7 @@ func _draw_hud_symbol(c: Vector2) -> void:
 	var w := 2.4 * s
 	match mode:
 		"phone":
-			draw_rect(Rect2(c + Vector2(-10, -17) * s, Vector2(20, 34) * s), 3.0 * s, g, false, w)
+			draw_rect(Rect2(c + Vector2(-10, -17) * s, Vector2(20, 34) * s), g, false, w)
 			draw_line(c + Vector2(-5, -11) * s, c + Vector2(5, -11) * s, g, w, true)
 			draw_circle(c + Vector2(0, 12) * s, 1.4 * s, g)
 		"notifications":
@@ -76,7 +76,7 @@ func _draw_hud_symbol(c: Vector2) -> void:
 			draw_line(c + Vector2(10,-1)*s,c + Vector2(0,18)*s,g,w,true)
 			draw_circle(c + Vector2(0,-5)*s,3.2*s,g)
 		"chat":
-			draw_rect(Rect2(c + Vector2(-17,-12)*s,Vector2(34,24)*s),5*s,g,false,w)
+			draw_rect(Rect2(c + Vector2(-17,-12)*s,Vector2(34,24)*s),g,false,w)
 			draw_line(c + Vector2(-8,12)*s,c + Vector2(-14,18)*s,g,w,true)
 			draw_line(c + Vector2(-14,18)*s,c + Vector2(-4,12)*s,g,w,true)
 			for i in range(3):
