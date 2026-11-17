@@ -73,9 +73,9 @@ func _physics_process(delta: float) -> void:
 	if auto_navigation_active and not auto_navigation_cancelled:
 		world_direction = auto_navigation_direction.normalized()
 		movement_strength = 1.0
-	var running := Input.is_action_pressed("sprint") or mobile_sprint
-	var target_speed := (8.0 if running else 6.0) if animal_riding else (run_speed if running else walk_speed)
-	# احتفظ بمقدار ميل العصا: دفع خفيف = حركة بطيئة، ودفع كامل = السرعة الكاملة.
+	var keyboard_running := Input.is_action_pressed("sprint")
+	# لا يوجد زر جري مستقل على الهاتف: تزداد السرعة تدريجيًا مع ميل العصا.
+	var target_speed := (8.0 if keyboard_running else 6.0) if animal_riding else (run_speed if keyboard_running else lerpf(walk_speed, run_speed, movement_strength))
 	var target_velocity := world_direction * target_speed * movement_strength
 	velocity.x = move_toward(velocity.x, target_velocity.x, acceleration * delta)
 	velocity.z = move_toward(velocity.z, target_velocity.z, acceleration * delta)
@@ -91,7 +91,7 @@ func _physics_process(delta: float) -> void:
 	var planar_speed := Vector2(velocity.x, velocity.z).length()
 	var motion_state := "idle"
 	if planar_speed > 0.25:
-		motion_state = "run" if running else "walk"
+		motion_state = "run" if keyboard_running or (mobile_move.length() > 0.08 and movement_strength > 0.78) else "walk"
 	_update_avatar_animation(motion_state, planar_speed)
 
 func begin_auto_navigation() -> bool:
