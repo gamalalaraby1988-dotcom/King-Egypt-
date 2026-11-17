@@ -1189,6 +1189,12 @@ func _run_social_validation_tests() -> void:
 	city_hud.group_members.clear()
 	city_hud.group_members.append({"player_id": "local_leader", "display_name": "أنت", "is_leader": true})
 	city_hud.group_members.append({"player_id": "TESTPLAYER1", "display_name": "عضو", "is_leader": false})
+	city_hud.group_invite_status = Label.new()
+	city_hud.call("_remove_group_member", "TESTPLAYER1")
+	if city_hud.group_members.size() != 2 or not city_hud.group_invite_status.text.contains("غير مفعّلة"):
+		push_error("Unsupported group member removal changed local membership or failed to explain the backend limitation.")
+		quit(1)
+		return
 	city_hud.group_meeting_status = Label.new()
 	city_hud.call("_request_group_gather_invite")
 	if city_hud.group_meeting_status.text != "لم تُرسل الدعوة: خدمة التجمع بين الأجهزة غير مفعّلة بعد.":
