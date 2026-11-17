@@ -30,7 +30,7 @@ func _ready() -> void:
 	if key_light:
 		key_light.add_to_group("quality_shadow_light")
 	_create_interactive_buildings()
-	_create_camp()
+	_create_royal_resort()
 	_create_city_map()
 	_create_interior_transition_ui()
 	_create_player_vehicle()
@@ -741,13 +741,13 @@ func _create_service_staff(display_name: String, role: String, dialogue: String,
 	staff.position = pos
 	add_child(staff)
 
-func _create_camp() -> void:
-	# طريق واضح يصل المخيم بالطريق الرئيسي مع تجنب كتل المباني.
-	_create_box(self, "CampRoad_Entry", Vector3(32, 0.07, 5), Vector3(16, 0.025, 0), Color(0.12, 0.13, 0.15))
-	_create_box(self, "CampRoad_North", Vector3(5, 0.07, 75), Vector3(30, 0.025, 37.5), Color(0.12, 0.13, 0.15))
-	_create_box(self, "CampRoad_Camp", Vector3(30, 0.07, 5), Vector3(45, 0.025, 75), Color(0.12, 0.13, 0.15))
-	var camp := Node3D.new()
-	camp.name = "AnimalCamp"
-	camp.position = Vector3(60, 0, 75)
-	camp.set_script(load("res://scripts/camp_system.gd"))
-	add_child(camp)
+func _create_royal_resort() -> void:
+	# يبقى مسار الوصول الخارجي نفسه، بينما تتحول وجهته من المخيم إلى المنتجع الملكي.
+	_create_box(self, "RoyalResortRoad_Entry", Vector3(32, 0.07, 5), Vector3(16, 0.025, 0), Color(0.12, 0.13, 0.15))
+	_create_box(self, "RoyalResortRoad_North", Vector3(5, 0.07, 75), Vector3(30, 0.025, 37.5), Color(0.12, 0.13, 0.15))
+	_create_box(self, "RoyalResortRoad_End", Vector3(30, 0.07, 5), Vector3(45, 0.025, 75), Color(0.12, 0.13, 0.15))
+	var resort := Node3D.new()
+	resort.name = "RoyalResort"
+	resort.position = Vector3(60, 0, 75)
+	resort.set_script(load("res://scripts/royal_resort.gd"))
+	add_child(resort)
