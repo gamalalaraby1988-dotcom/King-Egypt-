@@ -309,6 +309,23 @@ func _build() -> void:
 	content.add_child(close)
 
 
+func _apply_hud_icon_button_style(button: Button) -> void:
+	var normal := StyleBoxFlat.new()
+	normal.bg_color = Color(0.035, 0.055, 0.085, 0.52)
+	normal.border_color = Color("#b99145")
+	normal.set_border_width_all(1)
+	normal.set_corner_radius_all(28)
+	button.add_theme_stylebox_override("normal", normal)
+	var hover := normal.duplicate() as StyleBoxFlat
+	hover.bg_color = Color(0.10, 0.12, 0.16, 0.78)
+	hover.border_color = Color("#e8c477")
+	button.add_theme_stylebox_override("hover", hover)
+	var pressed := normal.duplicate() as StyleBoxFlat
+	pressed.bg_color = Color(0.16, 0.13, 0.08, 0.88)
+	pressed.border_color = Color("#f0d28b")
+	button.add_theme_stylebox_override("pressed", pressed)
+	button.add_theme_stylebox_override("focus", hover)
+
 func _make_compact_action(parent: Control, glyph: String, hint: String, action: String, button_size: Vector2) -> Button:
 	var button := Button.new()
 	button.text = ""
@@ -316,12 +333,7 @@ func _make_compact_action(parent: Control, glyph: String, hint: String, action: 
 	button.custom_minimum_size = button_size
 	button.add_theme_font_size_override("font_size", 1)
 	button.add_theme_color_override("font_color", Color("#f0d28b"))
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.035, 0.055, 0.085, 0.52)
-	style.border_color = Color("#b99145")
-	style.set_border_width_all(1)
-	style.set_corner_radius_all(28)
-	button.add_theme_stylebox_override("normal", style)
+	_apply_hud_icon_button_style(button)
 	button.pressed.connect(_on_hud_action_pressed.bind(action))
 	parent.add_child(button)
 	var icon := Control.new()
@@ -329,7 +341,7 @@ func _make_compact_action(parent: Control, glyph: String, hint: String, action: 
 	icon.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	icon.set_script(load("res://scripts/scooter_toggle_icon.gd"))
-	icon.set("mode", {"phone":"phone","events":"notifications","vehicle_summon":"car","location":"location","chat":"chat","emotes":"emotes","interact":"hand"}.get(action, "chat"))
+	icon.call("set_mode", {"phone":"phone","events":"notifications","vehicle_summon":"car","location":"location","chat":"chat","emotes":"emotes","interact":"hand"}.get(action, "chat"))
 	button.add_child(icon)
 	return button
 
@@ -366,6 +378,7 @@ func _make_friends_icon_button(parent: Control) -> void:
 	button.text = ""
 	button.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	button.add_theme_font_size_override("font_size", 1)
+	_apply_hud_icon_button_style(button)
 	button.pressed.connect(_on_button_pressed.bind("social"))
 	holder.add_child(button)
 	var friends_icon := Control.new()
@@ -373,7 +386,7 @@ func _make_friends_icon_button(parent: Control) -> void:
 	friends_icon.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	friends_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	friends_icon.set_script(load("res://scripts/scooter_toggle_icon.gd"))
-	friends_icon.set("mode", "friends")
+	friends_icon.call("set_mode", "friends")
 	button.add_child(friends_icon)
 	friends_phone_badge = PanelContainer.new()
 	friends_phone_badge.name = "IncomingFriendRequestsBadge"
@@ -441,6 +454,7 @@ func _make_scooter_icon_button(parent: Control) -> void:
 	button.name = "ScooterToggleButton"
 	button.custom_minimum_size = Vector2(58, 54)
 	button.tooltip_text = "ركوب الاسكوتر / النزول"
+	_apply_hud_icon_button_style(button)
 	button.pressed.connect(_on_scooter_button_pressed)
 	parent.add_child(button)
 	var icon_script := load("res://scripts/scooter_toggle_icon.gd") as Script
@@ -452,7 +466,7 @@ func _make_scooter_icon_button(parent: Control) -> void:
 	scooter_icon.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	scooter_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	scooter_icon.set_script(icon_script)
-	scooter_icon.set("mode", "scooter")
+	scooter_icon.call("set_mode", "scooter")
 	button.add_child(scooter_icon)
 
 
