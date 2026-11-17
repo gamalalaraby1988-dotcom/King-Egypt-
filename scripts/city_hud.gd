@@ -3233,7 +3233,11 @@ func _start_party_countdown(host_name: String, ends_at: String) -> void:
 	party_countdown_host_name = host_name.strip_edges()
 	if party_countdown_host_name.is_empty():
 		party_countdown_host_name = "لاعب"
-	party_countdown_ends_at_unix = Time.get_unix_time_from_datetime_string(ends_at) if not ends_at.is_empty() else 0
+	party_countdown_ends_at_unix = 0
+	if not ends_at.is_empty():
+		var end_datetime := Time.get_datetime_dict_from_datetime_string(ends_at, false)
+		if not end_datetime.is_empty():
+			party_countdown_ends_at_unix = int(Time.get_unix_time_from_datetime(end_datetime))
 	if party_countdown_ends_at_unix <= 0:
 		party_countdown_ends_at_unix = int(Time.get_unix_time_from_system()) + 20
 	party_countdown_label.visible = true
