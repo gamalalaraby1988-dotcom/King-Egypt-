@@ -28,6 +28,7 @@ var player_popup: PanelContainer
 var party_station_popup: PanelContainer
 var party_station_status: Label
 var emote_sit_button: Button
+var scooter_icon: Control
 var party_station_start_button: Button
 var player_name_label: Label
 var player_level_label: Label
