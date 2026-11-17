@@ -797,6 +797,19 @@ func _interaction_action_key(target: Node3D) -> String:
 		return "interaction_shop"
 	return "interaction_talk"
 
+func _make_city_interact_style(fill: Color, border: Color) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = fill
+	style.border_color = border
+	style.set_border_width_all(2)
+	style.set_corner_radius_all(14)
+	style.content_margin_left = 12.0
+	style.content_margin_right = 12.0
+	style.content_margin_top = 8.0
+	style.content_margin_bottom = 8.0
+	return style
+
+
 func _set_interaction_button_active(active: bool) -> void:
 	if not is_instance_valid(interact_button):
 		return
@@ -1754,10 +1767,23 @@ func _build_ui() -> void:
 	root_control.add_child(navigation_cancel_button)
 
 	interact_button = Button.new()
-	interact_button.text = "تفاعل"
+	interact_button.name = "CityInteractButton"
+	interact_button.text = CityLanguage.translate("interaction_button")
 	interact_button.visible = false
-	interact_button.position = Vector2(18, 120)
-	interact_button.size = Vector2(130, 54)
+	interact_button.anchor_left = 1.0
+	interact_button.anchor_right = 1.0
+	interact_button.anchor_top = 1.0
+	interact_button.anchor_bottom = 1.0
+	interact_button.offset_left = -194
+	interact_button.offset_right = -24
+	interact_button.offset_top = -82
+	interact_button.offset_bottom = -24
+	interact_button.custom_minimum_size = Vector2(170, 58)
+	interact_button.add_theme_font_size_override("font_size", 17)
+	interact_button.add_theme_color_override("font_color", Color("#fff8e8"))
+	interact_button.add_theme_stylebox_override("normal", _make_city_interact_style(Color("#5b431e"), Color("#d5ae61")))
+	interact_button.add_theme_stylebox_override("hover", _make_city_interact_style(Color("#735522"), Color("#f0ce83")))
+	interact_button.add_theme_stylebox_override("pressed", _make_city_interact_style(Color("#3d2d17"), Color("#b88d3f")))
 	interact_button.pressed.connect(interact)
 	root_control.add_child(interact_button)
 
