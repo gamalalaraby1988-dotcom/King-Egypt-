@@ -756,12 +756,13 @@ func _create_interior_quick_travel_ui() -> void:
 	heading.add_theme_color_override("font_color", Color(0.88, 0.68, 0.30))
 	content.add_child(heading)
 	var entries := [
-		["⛺  المخيم", true],
+		["⛵  المنتجع الملكي", true],
 		["🏠  الشقة", true],
 		["𓉐  بوابة صعود الجبل", true],
 		["⚜  الميدان", true],
 		["⛵  السفينة", true],
-		["🚪  الخروج خارج المبنى", true]
+		["🚪  الخروج خارج المبنى", true],
+		["🚪  الخروج إلى خارج المنتجع", true]
 	]
 	for index in range(entries.size()):
 		var entry: Array = entries[index]
@@ -785,8 +786,14 @@ func _create_interior_quick_travel_ui() -> void:
 	content.add_child(close_menu_button)
 
 func show_interior_quick_travel_menu() -> void:
-	if interior_transition_busy or not is_instance_valid(interior_root) or not is_instance_valid(interior_quick_travel_panel):
+	if interior_transition_busy or not is_instance_valid(interior_quick_travel_panel):
 		return
+	var resort := get_node_or_null("RoyalResort")
+	var in_resort := is_instance_valid(resort) and resort.has_method("is_inside_resort") and resort.is_inside_resort()
+	if not is_instance_valid(interior_root) and not in_resort:
+		return
+	if interior_quick_travel_buttons.size() > 6:
+		interior_quick_travel_buttons[6].visible = in_resort
 	interior_quick_travel_panel.visible = true
 
 func _hide_interior_quick_travel_menu() -> void:
@@ -812,8 +819,24 @@ func _on_interior_quick_travel_selected(index: int) -> void:
 	elif index == 5:
 		_hide_interior_quick_travel_menu()
 		await return_from_building_interior()
+	elif index == 6:
+		_hide_interior_quick_travel_menu()
+		_exit_royal_resort()
 	else:
 		return
+
+func _exit_royal_resort() -> void:
+	var resort := get_node_or_null("RoyalResort")
+	var manager := get_node_or_null("MissionManager")
+	if not is_instance_valid(resort) or not is_instance_valid(manager):
+		return
+	var body = manager.get("player")
+	if not is_instance_valid(body) or not resort.has_method("exit_resort"):
+		return
+	resort.exit_resort(body)
+	if manager.has_method("_update_interaction_target"):
+		manager._update_interaction_target()
+		manager._update_interaction_hud()
 
 func _open_quick_travel_destination(destination_name: String, destination_kind: String) -> void:
 	var body := interior_player
