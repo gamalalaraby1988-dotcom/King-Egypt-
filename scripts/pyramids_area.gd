@@ -28,12 +28,13 @@ func _build_pyramid(node_name: String, at: Vector3, base_width: float, height: f
 	mesh_instance.add_to_group("city_world_geometry")
 	var mesh := CylinderMesh.new()
 	mesh.top_radius = 0.08
-	# Four unrotated radial segments produce a square footprint matching the collider.
+	# Rotate the inscribed square so its axis-aligned footprint matches the box collider.
 	mesh.bottom_radius = base_width * 0.70710678
 	mesh.height = height
 	mesh.radial_segments = 4
 	mesh_instance.mesh = mesh
 	mesh_instance.position.y = height * 0.5
+	mesh_instance.rotation.y = PI * 0.25
 	mesh_instance.material_override = _material(tint)
 	pyramid.add_child(mesh_instance)
 
