@@ -701,11 +701,11 @@ func _render_friends_phone_requests(data: Array) -> void:
 		if direction == "incoming":
 			var accept := Button.new()
 			accept.text = "قبول"
-			accept.pressed.connect(func(): SocialChatManager.respond_friend_request(request_id, true))
-			actions.add_child(accept)
 			var decline := Button.new()
 			decline.text = "رفض"
-			decline.pressed.connect(func(): SocialChatManager.respond_friend_request(request_id, false))
+			accept.pressed.connect(_respond_to_friend_request_from_phone.bind(request_id, true, accept, decline))
+			decline.pressed.connect(_respond_to_friend_request_from_phone.bind(request_id, false, accept, decline))
+			actions.add_child(accept)
 			actions.add_child(decline)
 		else:
 			var pending := Button.new()
@@ -728,6 +728,20 @@ func _render_friends_phone_requests(data: Array) -> void:
 
 	friends_phone_incoming_count = incoming_count
 	_update_friends_phone_request_badge()
+
+func _respond_to_friend_request_from_phone(request_id: String, accept_request: bool, accept_button: Button, decline_button: Button) -> void:
+	if not is_instance_valid(accept_button) or not is_instance_valid(decline_button):
+		return
+	if accept_button.disabled or decline_button.disabled:
+		return
+	accept_button.disabled = true
+	decline_button.disabled = true
+	accept_button.text = "جارٍ التنفيذ..." if accept_request else "قبول"
+	decline_button.text = "جارٍ التنفيذ..." if not accept_request else "رفض"
+	if not SocialChatManager.respond_friend_request(request_id, accept_request):
+		# The failure signal handles the user-facing message and refresh below.
+		return
+	friends_phone_status.text = "جارٍ تحديث طلب الصداقة من الخادم..."
 
 func _update_friends_phone_request_badge() -> void:
 	if is_instance_valid(friends_phone_badge):
@@ -2934,6 +2948,10 @@ func _on_social_operation_failed(action: String, message: String) -> void:
 	if action == "group_invite_response":
 		_pending_group_invite_response_id = ""
 		_continue_deferred_group_invite_responses()
+	if action == "friend_request_response":
+		if is_instance_valid(friends_phone_status):
+			friends_phone_status.text = "تعذر تحديث الطلب: " + message
+		SocialChatManager.list_friend_requests()
 	if action == "display_name_get" or action == "display_name_change":
 		if is_instance_valid(display_name_status):
 			display_name_status.text = "تعذر تنفيذ العملية: " + message
