@@ -5,6 +5,7 @@ extends Control
 @export var camera_sensitivity: float = 0.006
 
 var player: CharacterBody3D
+var vehicle_control_target: CharacterBody3D
 var joystick_center := Vector2.ZERO
 var joystick_vector := Vector2.ZERO
 var joystick_finger := -1
@@ -21,12 +22,25 @@ func _ready() -> void:
 	queue_redraw()
 
 func _process(_delta: float) -> void:
-	if not is_instance_valid(player):
-		return
 	if not visible:
-		player.set_mobile_move(Vector2.ZERO)
+		if is_instance_valid(player):
+			player.set_mobile_move(Vector2.ZERO)
+		if is_instance_valid(vehicle_control_target):
+			vehicle_control_target.call("set_drive", false)
+			vehicle_control_target.call("set_reverse", false)
+			vehicle_control_target.call("set_steering", 0.0)
 		return
-	player.set_mobile_move(joystick_vector)
+	if is_instance_valid(vehicle_control_target):
+		# عصا الحركة نفسها تقود السيارة: أعلى للأمام، أسفل للخلف، يمين/يسار للتوجيه.
+		var forward_input := -joystick_vector.y
+		var drive_active := absf(forward_input) > 0.12
+		vehicle_control_target.call("set_drive", drive_active)
+		vehicle_control_target.call("set_brake", not drive_active)
+		vehicle_control_target.call("set_reverse", forward_input < -0.12)
+		vehicle_control_target.call("set_steering", joystick_vector.x)
+		return
+	if is_instance_valid(player):
+		player.set_mobile_move(joystick_vector)
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_RESIZED:
@@ -120,4 +134,9 @@ func _clear_touch_state() -> void:
 	mouse_camera_active = false
 	if is_instance_valid(player):
 		player.set_mobile_move(Vector2.ZERO)
+	if is_instance_valid(vehicle_control_target):
+		vehicle_control_target.call("set_drive", false)
+		vehicle_control_target.call("set_brake", true)
+		vehicle_control_target.call("set_reverse", false)
+		vehicle_control_target.call("set_steering", 0.0)
 	queue_redraw()
