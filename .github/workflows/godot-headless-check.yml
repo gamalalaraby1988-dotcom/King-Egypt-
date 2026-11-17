@@ -132,6 +132,7 @@ jobs:
             godot-startup.log
             godot-social-tests.log
             godot-wallet-tests.log
-            godot-auth-session-tests.log\n            godot-animal-rental-tests.log
+            godot-auth-session-tests.log
+            godot-animal-rental-tests.log
           if-no-files-found: ignore
           retention-days: 14
