@@ -63,7 +63,7 @@ func _ready() -> void:
 	if key_light:
 		key_light.add_to_group("quality_shadow_light")
 	_create_interactive_buildings()
-	_create_camp()
+	_create_royal_resort()
 	_create_king_mountain_route()
 	_create_decorative_mountain_temple()
 	_create_interior_transition_ui()
@@ -1761,7 +1761,7 @@ func _create_city_signage() -> void:
 	_create_direction_signpost("Signpost_Central", Vector3(9, 0, 8), "restaurant", "shop", PI / 2.0)
 	# Move roadside signs off the road centerline and turn their faces toward the road.
 	_create_direction_signpost("Signpost_Employment", Vector3(29, 0, -8), "employment", "city_center", PI / 2.0)
-	_create_direction_signpost("Signpost_Camp", Vector3(34, 0, 38), "city_center", "animal_camp", PI / 2.0)
+	_create_direction_signpost("Signpost_RoyalResort", Vector3(34, 0, 38), "city_center", "royal_resort", PI / 2.0)
 
 func _create_direction_signpost(sign_name: String, pos: Vector3, left_key: String, right_key: String, yaw: float = 0.0) -> void:
 	var sign_root := Node3D.new()
@@ -1803,16 +1803,16 @@ func _create_service_staff(display_name: String, role: String, dialogue: String,
 	staff.position = pos
 	add_child(staff)
 
-func _create_camp() -> void:
-	# طريق المخيم الأصلي يظل مستقلًا؛ وصلة الجبل تتفرع خارجه ولا تمر بين الحظائر.
-	_create_box(self, "CampRoad_Entry", Vector3(32, 0.08, 5), Vector3(16, 0.01, 0), Color(0.12, 0.13, 0.15), true)
-	_create_box(self, "CampRoad_North", Vector3(5, 0.08, 75), Vector3(30, 0.01, 37.5), Color(0.12, 0.13, 0.15), true)
-	_create_box(self, "CampRoad_Camp", Vector3(30, 0.08, 5), Vector3(45, 0.01, 75), Color(0.12, 0.13, 0.15), true)
-	var camp := Node3D.new()
-	camp.name = "AnimalCamp"
-	camp.position = Vector3(60, 0, 75)
-	camp.set_script(load("res://scripts/camp_system.gd"))
-	add_child(camp)
+func _create_royal_resort() -> void:
+	# تُعاد تسمية وصلة المخيم لتصبح طريق المنتجع، مع الحفاظ على مسار الطريق نفسه.
+	_create_box(self, "RoyalResortRoad_Entry", Vector3(32, 0.08, 5), Vector3(16, 0.01, 0), Color(0.12, 0.13, 0.15), true)
+	_create_box(self, "RoyalResortRoad_North", Vector3(5, 0.08, 75), Vector3(30, 0.01, 37.5), Color(0.12, 0.13, 0.15), true)
+	_create_box(self, "RoyalResortRoad_Approach", Vector3(30, 0.08, 5), Vector3(45, 0.01, 75), Color(0.12, 0.13, 0.15), true)
+	var resort := Node3D.new()
+	resort.name = "RoyalResort"
+	resort.position = Vector3(60, 0, 75)
+	resort.set_script(load("res://scripts/royal_resort.gd"))
+	add_child(resort)
 
 func _create_party_station() -> void:
 	# محطة الحفلات التجريبية في الساحة المركزية، خارج مسارات الطرق ومداخل المباني.
