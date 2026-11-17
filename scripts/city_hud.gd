@@ -259,6 +259,7 @@ func _build() -> void:
 	var emotes_button := _make_button(bottom, "😊", "emotes")
 	emotes_button.custom_minimum_size = Vector2(58, 54)
 	emotes_button.tooltip_text = "التعبيرات"
+	_make_scooter_icon_button(bottom)
 
 	popup = PanelContainer.new()
 	popup.anchor_left = 0.5
@@ -373,6 +374,38 @@ func _open_section(section: String) -> void:
 			daily.root_panel.visible = true
 			popup_body.text += "\nتم فتح لوحة الأنشطة اليومية الموجودة في اللعبة."
 	popup.visible = true
+
+
+func _make_scooter_icon_button(parent: Control) -> void:
+	var button := Button.new()
+	button.name = "ScooterToggleButton"
+	button.custom_minimum_size = Vector2(58, 54)
+	button.tooltip_text = "ركوب الاسكوتر / النزول"
+	button.pressed.connect(_on_scooter_button_pressed)
+	parent.add_child(button)
+	var icon_script := load("res://scripts/scooter_toggle_icon.gd") as Script
+	if icon_script == null:
+		button.text = "اسكوتر"
+		return
+	scooter_icon = Control.new()
+	scooter_icon.name = "ScooterToggleIcon"
+	scooter_icon.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	scooter_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	scooter_icon.set_script(icon_script)
+	scooter_icon.set("mode", "scooter")
+	button.add_child(scooter_icon)
+
+
+func _on_scooter_button_pressed() -> void:
+	var actor := main_scene.get_node_or_null("Player") as CharacterBody3D if is_instance_valid(main_scene) else null
+	if not is_instance_valid(actor):
+		return
+	if not actor.has_method("toggle_scooter_ride"):
+		return
+	var now_riding: bool = actor.toggle_scooter_ride()
+	if is_instance_valid(scooter_icon):
+		scooter_icon.call("set_mode", "feet" if now_riding else "scooter")
+
 
 func _on_emote_sit_pressed() -> void:
 	var actor := main_scene.get_node_or_null("Player") as CharacterBody3D if is_instance_valid(main_scene) else null
