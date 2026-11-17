@@ -122,16 +122,38 @@ func _run_mountain_route_tests() -> void:
 				return
 
 	# The city approach and entrance must leave a vehicle-width opening into the climb.
-	var approach_body := route.get_node_or_null("MountainCityApproachRoadCollision") as StaticBody3D
+	# The approach is deliberately split into two pieces so it can skirt the
+	# western and southern edges of the animal camp instead of crossing its yard.
+	for approach_name in ["MountainCityApproachRoad_00", "MountainCityApproachRoad_01", "MountainTransitionPlaza"]:
+		if route.get_node_or_null(approach_name) == null or route.get_node_or_null(approach_name + "Collision") == null:
+			push_error("The mountain approach piece %s is missing its physical road surface." % approach_name)
+			quit(1)
+			return
 	var gate_left := route.get_node_or_null("KingsMountainEntranceGate/GateLeftPillarCollision") as StaticBody3D
 	var gate_right := route.get_node_or_null("KingsMountainEntranceGate/GateRightPillarCollision") as StaticBody3D
-	if approach_body == null or gate_left == null or gate_right == null:
-		push_error("The mountain approach or entrance gate is missing physical collision geometry.")
+	if gate_left == null or gate_right == null:
+		push_error("The mountain entrance gate is missing physical collision geometry.")
 		quit(1)
 		return
-	var gate_clear_width := absf(gate_right.global_position.x - gate_left.global_position.x) - 0.9
+	# Measure the opening in the horizontal plane because the gate is rotated
+	# to face the western approach; comparing only world X would be incorrect.
+	var gate_clear_width := Vector2(gate_right.global_position.x - gate_left.global_position.x, gate_right.global_position.z - gate_left.global_position.z).length() - 0.9
 	if gate_clear_width < 9.0:
 		push_error("The mountain gate opening is too narrow for the shared road and vehicle access.")
+		quit(1)
+		return
+	# Confirm the road approach stays outside the camp's rectangular footprint.
+	# Camp center=(60,75), half-size=(19,17); road width is 8m.
+	var camp_min_x := 41.0
+	var camp_max_z := 92.0
+	var west_road := route.get_node("MountainCityApproachRoad_00") as MeshInstance3D
+	var south_road := route.get_node("MountainCityApproachRoad_01") as MeshInstance3D
+	if west_road == null or south_road == null:
+		push_error("The mountain approach must keep both camp-avoidance road segments.")
+		quit(1)
+		return
+	if west_road.position.x + 4.0 > camp_min_x or south_road.position.z - 4.0 < camp_max_z:
+		push_error("The mountain approach overlaps the animal camp boundary.")
 		quit(1)
 		return
 
