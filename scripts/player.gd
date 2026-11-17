@@ -68,13 +68,23 @@ func _physics_process(delta: float) -> void:
 	right.y = 0.0
 	forward = forward.normalized()
 	right = right.normalized()
-	var world_direction := (right * direction.x + forward * -direction.z)
-	var movement_strength := clampf(input_vector.length(), 0.0, 1.0)
-	if world_direction.length() > 0.001:
+	var world_direction := Vector3.ZERO
+	var movement_strength := 0.0
+	if scooter_riding:
+		# الاسكوتر لا يرجع للخلف: أعلى العصا للتقدم، واليمين/اليسار لتدوير المقود.
+		rotation.y -= input_vector.x * turn_speed * delta
+		world_direction = -global_transform.basis.z
+		world_direction.y = 0.0
 		world_direction = world_direction.normalized()
-	if auto_navigation_active and not auto_navigation_cancelled:
-		world_direction = auto_navigation_direction.normalized()
-		movement_strength = 1.0
+		movement_strength = clampf(-input_vector.y, 0.0, 1.0)
+	else:
+		world_direction = (right * direction.x + forward * -direction.z)
+		movement_strength = clampf(input_vector.length(), 0.0, 1.0)
+		if world_direction.length() > 0.001:
+			world_direction = world_direction.normalized()
+		if auto_navigation_active and not auto_navigation_cancelled:
+			world_direction = auto_navigation_direction.normalized()
+			movement_strength = 1.0
 	var keyboard_running := Input.is_action_pressed("sprint")
 	# لا يوجد زر جري مستقل على الهاتف: تزداد السرعة تدريجيًا مع ميل العصا.
 	var target_speed := (8.0 if keyboard_running else 6.0) if animal_riding else (7.5 if scooter_riding else (run_speed if keyboard_running else lerpf(walk_speed, run_speed, movement_strength)))
@@ -86,7 +96,7 @@ func _physics_process(delta: float) -> void:
 		velocity.y -= gravity * delta
 	else:
 		velocity.y = 0.0
-	if world_direction.length() > 0.1:
+	if not scooter_riding and world_direction.length() > 0.1:
 		var target_angle := atan2(world_direction.x, -world_direction.z)
 		rotation.y = lerp_angle(rotation.y, target_angle, turn_speed * delta)
 	move_and_slide()
