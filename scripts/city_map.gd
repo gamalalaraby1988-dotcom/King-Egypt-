@@ -102,9 +102,9 @@ func _refresh_language() -> void:
 		toggle_button.text = CityLanguage.translate("hide_map") if map_visible else CityLanguage.translate("show_map")
 	if is_instance_valid(destinations_button):
 		destinations_button.text = CityLanguage.translate("map_destinations")
+		destinations_button.visible = map_visible
 	if is_instance_valid(resort_exit_choice):
 		resort_exit_choice.text = CityLanguage.translate("resort_exit_quick_travel")
-		destinations_button.visible = map_visible
 	for index in range(mini(destination_choice_buttons.size(), CITY_LANDMARKS.size())):
 		destination_choice_buttons[index].text = CityLanguage.translate(str(CITY_LANDMARKS[index]["key"]))
 	if is_instance_valid(region_notice_label) and region_notice_remaining > 0.0:
