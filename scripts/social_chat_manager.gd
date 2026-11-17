@@ -434,6 +434,7 @@ func connect_realtime() -> void:
 	if not AuthManager.is_authenticated():
 		return
 	_realtime_topics["chat:public:messages"] = true
+	_realtime_topics["party:city:events"] = true
 	if not _realtime_player_code.is_empty():
 		_realtime_topics["chat:invites:" + _realtime_player_code] = true
 	if _realtime_socket == null or _realtime_socket.get_ready_state() == WebSocketPeer.STATE_CLOSED:
