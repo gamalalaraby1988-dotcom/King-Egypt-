@@ -525,6 +525,10 @@ func _friends_phone_style(background: Color, border: Color, border_width: int) -
 	return style
 
 func _render_friends_phone_list(data: Array) -> void:
+	# Authentication loads social data before the phone panel is necessarily opened.
+	# Keep the server response flowing to the social HUD without touching absent controls.
+	if not is_instance_valid(friends_phone_friends_box):
+		return
 	for child in friends_phone_friends_box.get_children():
 		child.queue_free()
 	for friend in data:
@@ -634,6 +638,23 @@ func _make_friend_request_avatar(character_id: String) -> Control:
 
 
 func _render_friends_phone_requests(data: Array) -> void:
+	# Request polling also runs while the management phone is closed or not built.
+	# The badge is updated separately; render rows only when their containers exist.
+	if not is_instance_valid(friends_phone_incoming_box) or not is_instance_valid(friends_phone_outgoing_box):
+		var pending_codes: Dictionary = {}
+		for request in data:
+			if request is Dictionary and str(request.get("direction", "")) == "outgoing":
+				var code := str(request.get("player_code", "")).strip_edges().to_upper()
+				if SocialChatManager.is_valid_player_code(code):
+					pending_codes[code] = true
+		_sent_friend_requests = pending_codes
+		var count := 0
+		for request in data:
+			if request is Dictionary and str(request.get("direction", "")) == "incoming":
+				count += 1
+		friends_phone_incoming_count = count
+		_update_friends_phone_request_badge()
+		return
 	# Rebuild sent-request state from the authoritative server response so the
 	# nearby-player action remains correct after reopening the game or HUD.
 	var server_sent_requests: Dictionary = {}
