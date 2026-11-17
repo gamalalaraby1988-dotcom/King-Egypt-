@@ -196,71 +196,82 @@ func _process(_delta: float) -> void:
 
 func _build() -> void:
 	root = Control.new()
+	root.name = "CityHUDRoot"
 	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(root)
 
+	# شريط الموارد العلوي يبقى صغيرًا ولا يزاحم مساحة اللعب.
 	var top := HBoxContainer.new()
-	top.anchor_left = 0.18
-	top.anchor_right = 0.82
+	top.anchor_left = 0.24
+	top.anchor_right = 0.76
 	top.anchor_top = 0.015
 	top.anchor_bottom = 0.015
-	top.offset_bottom = 52
+	top.offset_bottom = 42
 	top.alignment = BoxContainer.ALIGNMENT_CENTER
-	top.add_theme_constant_override("separation", 8)
+	top.add_theme_constant_override("separation", 6)
 	root.add_child(top)
 	money_label = _make_button(top, "ذهب: 0  +", "wallet")
 	chips_label = _make_button(top, "رقائق: 0  +", "wallet")
 	gems_label = _make_button(top, "جواهر: 0", "wallet")
 
-	var left := VBoxContainer.new()
-	left.anchor_left = 0.012
-	left.anchor_top = 0.15
-	left.anchor_bottom = 0.68
-	left.offset_right = 150
-	left.add_theme_constant_override("separation", 7)
-	root.add_child(left)
-	_make_button(left, "👤 الملف", "profile")
-	_make_button(left, "📜 المهام", "missions")
-	_make_button(left, "🎁 المكافآت", "rewards")
-	_make_button(left, "🏆 الإنجازات", "missions")
+	# أزرار الهاتف والإشعارات أعلى اليمين، دون قوائم جانبية ثابتة.
+	var top_right := HBoxContainer.new()
+	top_right.anchor_left = 1.0
+	top_right.anchor_right = 1.0
+	top_right.anchor_top = 0.025
+	top_right.anchor_bottom = 0.025
+	top_right.offset_left = -116
+	top_right.offset_right = -10
+	top_right.offset_bottom = 48
+	top_right.alignment = BoxContainer.ALIGNMENT_END
+	top_right.add_theme_constant_override("separation", 6)
+	root.add_child(top_right)
+	var phone_button := _make_compact_action(top_right, "▣", "الهاتف", "phone", Vector2(48, 46))
+	var notification_button := _make_compact_action(top_right, "◇", "الإشعارات", "events", Vector2(48, 46))
+	phone_button.name = "PhoneButton"
+	notification_button.name = "NotificationsButton"
 
-	var right := VBoxContainer.new()
-	right.anchor_left = 1.0
-	right.anchor_right = 1.0
-	right.anchor_top = 0.17
-	right.anchor_bottom = 0.72
-	right.offset_left = -158
-	right.offset_right = -8
-	right.add_theme_constant_override("separation", 7)
-	root.add_child(right)
-	_make_button(right, "👑 الفعاليات", "events")
-	_make_button(right, "🎟 الموسم", "pass")
-	_make_button(right, "📱 الهاتف", "phone")
-	_make_button(right, "🐈 الحيوانات", "pets")
+	# فوق زر التفاعل: استدعاء السيارة والموقع.
+	var utility_stack := VBoxContainer.new()
+	utility_stack.anchor_left = 1.0
+	utility_stack.anchor_right = 1.0
+	utility_stack.anchor_top = 1.0
+	utility_stack.anchor_bottom = 1.0
+	utility_stack.offset_left = -78
+	utility_stack.offset_right = -10
+	utility_stack.offset_top = -190
+	utility_stack.offset_bottom = -86
+	utility_stack.add_theme_constant_override("separation", 6)
+	root.add_child(utility_stack)
+	var car_button := _make_compact_action(utility_stack, "▰", "إحضار السيارة", "vehicle_summon", Vector2(58, 48))
+	car_button.name = "VehicleSummonButton"
+	var location_button := _make_compact_action(utility_stack, "⌖", "الموقع", "location", Vector2(58, 48))
+	location_button.name = "LocationButton"
 
-	# شريط الأزرار السفلية وفق مرجع Sunday City: محادثة، أصدقاء، تعبيرات.
-	# الجلوس يبقى داخل قائمة التعبيرات حسب الاعتماد السابق، ولا يظهر زر حفلة أو مجموعتي مستقل.
+	# الترتيب السفلي المعتمد: محادثة، أصدقاء، ابتسامة، اسكوتر، ثم يد التفاعل.
 	var bottom := HBoxContainer.new()
-	bottom.anchor_left = 0.66
-	bottom.anchor_right = 0.99
+	bottom.anchor_left = 1.0
+	bottom.anchor_right = 1.0
 	bottom.anchor_top = 1.0
 	bottom.anchor_bottom = 1.0
+	bottom.offset_left = -350
+	bottom.offset_right = -10
 	bottom.offset_top = -68
 	bottom.offset_bottom = -8
 	bottom.alignment = BoxContainer.ALIGNMENT_END
-	bottom.add_theme_constant_override("separation", 7)
+	bottom.add_theme_constant_override("separation", 5)
 	root.add_child(bottom)
-	var chat_button := _make_button(bottom, "💬", "chat")
-	chat_button.custom_minimum_size = Vector2(58, 54)
-	chat_button.tooltip_text = "المحادثة"
+	var chat_button := _make_compact_action(bottom, "▤", "المحادثة", "chat", Vector2(54, 54))
+	chat_button.name = "ChatButton"
 	_make_friends_icon_button(bottom)
 	var friends_holder := bottom.get_child(bottom.get_child_count() - 1) as Control
-	friends_holder.custom_minimum_size = Vector2(58, 54)
-	var emotes_button := _make_button(bottom, "😊", "emotes")
-	emotes_button.custom_minimum_size = Vector2(58, 54)
-	emotes_button.tooltip_text = "التعبيرات"
+	friends_holder.custom_minimum_size = Vector2(54, 54)
+	var emotes_button := _make_compact_action(bottom, "☺", "التعبيرات", "emotes", Vector2(54, 54))
+	emotes_button.name = "EmotesButton"
 	_make_scooter_icon_button(bottom)
+	var hand_button := _make_compact_action(bottom, "✋", "التفاعل / النزول", "interact", Vector2(62, 62))
+	hand_button.name = "InteractionButton"
 
 	popup = PanelContainer.new()
 	popup.anchor_left = 0.5
@@ -287,7 +298,7 @@ func _build() -> void:
 	content.add_child(popup_body)
 	emote_sit_button = Button.new()
 	emote_sit_button.name = "EmoteSitAction"
-	emote_sit_button.text = "6. الجلوس"
+	emote_sit_button.text = "الجلوس"
 	emote_sit_button.custom_minimum_size = Vector2(0, 46)
 	emote_sit_button.visible = false
 	emote_sit_button.pressed.connect(_on_emote_sit_pressed)
@@ -296,6 +307,40 @@ func _build() -> void:
 	close.text = "إغلاق"
 	close.pressed.connect(func(): popup.visible = false)
 	content.add_child(close)
+
+
+func _make_compact_action(parent: Control, glyph: String, hint: String, action: String, button_size: Vector2) -> Button:
+	var button := Button.new()
+	button.text = glyph
+	button.tooltip_text = hint
+	button.custom_minimum_size = button_size
+	button.add_theme_font_size_override("font_size", 22 if button_size.x >= 58 else 19)
+	button.add_theme_color_override("font_color", Color("#f0d28b"))
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.035, 0.055, 0.085, 0.52)
+	style.border_color = Color("#b99145")
+	style.set_border_width_all(1)
+	style.set_corner_radius_all(28)
+	button.add_theme_stylebox_override("normal", style)
+	button.pressed.connect(_on_hud_action_pressed.bind(action))
+	parent.add_child(button)
+	return button
+
+
+func _on_hud_action_pressed(action: String) -> void:
+	match action:
+		"vehicle_summon":
+			if is_instance_valid(main_scene) and main_scene.has_method("_summon_player_vehicle"):
+				main_scene.call("_summon_player_vehicle")
+		"location":
+			_open_social_chat_panel()
+			if is_instance_valid(social_chat_status):
+				social_chat_status.text = "اختر مشاركة موقع من المحادثة لبدء التوجيه."
+		"interact":
+			if is_instance_valid(main_scene) and main_scene.has_method("_toggle_vehicle_use"):
+				main_scene.call("_toggle_vehicle_use")
+		_:
+			_open_section(action)
 
 func _make_button(parent: Control, caption: String, section: String) -> Button:
 	var button := Button.new()
