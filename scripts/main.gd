@@ -56,6 +56,7 @@ const APARTMENT_FURNITURE_GROUPS := [
 func _ready() -> void:
 	_create_ground()
 	_create_city()
+	_create_desert_camp()
 	_create_party_station()
 	_create_city_signage()
 	_create_mobile_hud()
@@ -1870,3 +1871,12 @@ func _show_party_station_notice(station: Node3D) -> void:
 	var city_hud := get_node_or_null("CityActionHUD")
 	if is_instance_valid(city_hud) and city_hud.has_method("open_party_station_window") and is_instance_valid(station):
 		city_hud.call("open_party_station_window", str(station.name).to_snake_case())
+
+
+func _create_desert_camp() -> void:
+	# المخيم الصحراوي الملكي؛ الحيوانات داخله مجسمات زينة ثابتة فقط.
+	var camp := Node3D.new()
+	camp.name = "RoyalDesertCamp"
+	camp.set_script(load("res://scripts/desert_camp.gd"))
+	camp.position = Vector3(60.0, 0.0, 68.0)
+	add_child(camp)
