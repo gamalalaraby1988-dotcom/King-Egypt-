@@ -245,7 +245,7 @@ func complete_activity_once(activity_id: String, activity_kind: String, money_am
 	var next_xp := xp + xp_amount
 	var next_chips := chips + chips_amount
 	var next_level := player_level
-	while next_xp >= next_level * 100:
+	while next_level < MAX_PLAYER_LEVEL and next_xp >= next_level * 100:
 		next_xp -= next_level * 100
 		next_level += 1
 	var next_receipts := reward_receipts.duplicate(true)
