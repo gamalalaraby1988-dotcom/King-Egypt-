@@ -130,6 +130,9 @@ var friends_phone_avatar_label: Label
 var friends_phone_badge: Control
 var friends_phone_badge_label: Label
 var friends_phone_incoming_count := 0
+var party_station_start_button: Button
+var party_station_status: Label
+var _party_station_key := ""
 
 const GROUP_MAX_MEMBERS := 4
 const GROUP_CHAT_MAX_LENGTH := 300
@@ -1118,21 +1121,40 @@ func _build_party_station_popup() -> void:
 	party_station_start_button = Button.new()
 	party_station_start_button.text = "إقامة حفلة"
 	party_station_start_button.custom_minimum_size.y = 27
-	party_station_start_button.disabled = true
-	party_station_start_button.tooltip_text = "تفعيل الحفلات ينتظر ربط خدمة الحفلات الخادمية."
+	party_station_start_button.disabled = not AuthManager.is_authenticated()
+	party_station_start_button.tooltip_text = "تتطلب إقامة الحفلة تسجيل الدخول."
+	party_station_start_button.pressed.connect(_on_party_station_start_pressed)
 	content.add_child(party_station_start_button)
 	party_station_status = Label.new()
-	party_station_status.text = "الخدمة غير متصلة حاليًا"
+	party_station_status.text = "سجّل الدخول لإقامة حفلة." if not AuthManager.is_authenticated() else "جاهز لإرسال الطلب إلى الخادم."
 	party_station_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	party_station_status.add_theme_font_size_override("font_size", 8)
 	party_station_status.add_theme_color_override("font_color", Color(1.0, 0.88, 0.68))
 	content.add_child(party_station_status)
 
-func open_party_station_window() -> void:
+func open_party_station_window(station_key: String = "main_party_station") -> void:
+	_party_station_key = station_key.strip_edges()
+	if is_instance_valid(party_station_start_button):
+		party_station_start_button.disabled = not AuthManager.is_authenticated() or _party_station_key.is_empty()
+	if is_instance_valid(party_station_status):
+		party_station_status.text = "جاهز لإقامة الحفلة." if AuthManager.is_authenticated() else "سجّل الدخول أولًا."
 	if is_instance_valid(player_popup):
 		player_popup.visible = false
 	if is_instance_valid(party_station_popup):
 		party_station_popup.visible = true
+
+func _on_party_station_start_pressed() -> void:
+	if not AuthManager.is_authenticated():
+		party_station_status.text = "سجّل الدخول أولًا."
+		return
+	if _party_station_key.is_empty():
+		party_station_status.text = "تعذر تحديد محطة الحفلة."
+		return
+	party_station_start_button.disabled = true
+	party_station_status.text = "جارٍ التحقق وبدء الحفلة من الخادم..."
+	if not SocialChatManager.start_test_party(_party_station_key):
+		party_station_start_button.disabled = false
+		party_station_status.text = "تعذر إرسال طلب إقامة الحفلة."
 
 func close_party_station_window() -> void:
 	if is_instance_valid(party_station_popup):
@@ -2631,6 +2653,14 @@ func _refresh_selected_player_friend_action_state() -> void:
 
 func _on_social_operation_completed(action: String, data: Variant) -> void:
 	match action:
+		"party_start":
+			party_station_start_button.disabled = false
+			if data is Array and not data.is_empty() and data[0] is Dictionary:
+				var party_result: Dictionary = data[0]
+				party_station_status.text = "بدأت الحفلة على الخادم. تنتهي بعد 15 ثانية."
+				party_station_popup.visible = false
+			else:
+				party_station_status.text = "استجابة الخادم غير مكتملة؛ لم يتم تأكيد بدء الحفلة."
 		"blocked_list":
 			for child in blocked_players_box.get_children():
 				child.queue_free()
@@ -2950,6 +2980,10 @@ func _on_social_operation_completed(action: String, data: Variant) -> void:
 
 
 func _on_social_operation_failed(action: String, message: String) -> void:
+	if action == "party_start":
+		party_station_start_button.disabled = false
+		party_station_status.text = "تعذر إقامة الحفلة: " + message
+		return
 	if action == "group_invite":
 		group_invite_status.text = "تعذر إرسال الدعوة: " + message
 		var failed_group_invite_code := _pending_group_invite_code
