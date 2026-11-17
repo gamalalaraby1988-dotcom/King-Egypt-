@@ -638,6 +638,12 @@ func _open_royal_resort_gate(gate: Node3D) -> void:
 		player.velocity = Vector3.ZERO
 		_update_interaction_target()
 		_update_interaction_hud()
+	else:
+		title_label.text = str(gate_data.get("title", "بوابة المنتجع الملكي"))
+		description_label.text = gate_message
+		reward_label.text = ""
+		accept_button.visible = false
+		panel.visible = true
 
 func open_animal_rental(staff: Node3D) -> void:
 	selected_animal_staff = staff
