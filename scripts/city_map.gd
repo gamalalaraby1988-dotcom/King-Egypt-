@@ -22,7 +22,7 @@ var region_notice_remaining := 0.0
 # حدود تقريبية لمناطق النموذج الحالي، وليست خريطة مساحية نهائية.
 const REGION_BOUNDS := {
 	"region_city_center": {"center": Vector2(0.0, 0.0), "half_size": Vector2(84.0, 84.0)},
-	"region_desert_camp": {"center": Vector2(60.0, 75.0), "half_size": Vector2(19.0, 17.0)}
+	"region_pyramids_camp": {"center": Vector2(54.0, 56.0), "half_size": Vector2(32.0, 34.0)}
 }
 
 # معالم مثبتة في main.gd؛ لا تُضاف البوابة أو الميناء قبل وجود مواقع فعلية لهما.
@@ -33,7 +33,7 @@ const CITY_LANDMARKS := [
 	{"key": "delivery", "position": Vector3(24.0, 0.0, 4.5)},
 	{"key": "city_guide", "position": Vector3(-24.0, 0.0, 4.5)},
 	{"key": "maintenance", "position": Vector3(4.5, 0.0, 24.0)},
-	{"key": "desert_camp", "position": Vector3(60.0, 0.0, 68.0)}
+	{"key": "pyramids_camp", "position": Vector3(60.0, 0.0, 60.0)}
 ]
 
 func _ready() -> void:
@@ -180,8 +180,8 @@ func _player_position() -> Vector3:
 
 func _get_region_key(position_3d: Vector3) -> String:
 	# يُفحص المخيم أولًا لأنه يقع داخل مستطيل وسط المدينة في النموذج الحالي.
-	if _is_inside_region("region_desert_camp", position_3d):
-		return "region_desert_camp"
+	if _is_inside_region("region_pyramids_camp", position_3d):
+		return "region_pyramids_camp"
 	if _is_inside_region("region_city_center", position_3d):
 		return "region_city_center"
 	return "region_outskirts"
@@ -195,7 +195,7 @@ func _is_inside_region(region_key: String, position_3d: Vector3) -> bool:
 	return absf(position_3d.x - region_center.x) <= half_size.x and absf(position_3d.z - region_center.y) <= half_size.y
 
 func _draw_region_boundaries() -> void:
-	for region_key in ["region_city_center", "region_desert_camp"]:
+	for region_key in ["region_city_center", "region_pyramids_camp"]:
 		var definition: Dictionary = REGION_BOUNDS[region_key]
 		var region_center: Vector2 = definition["center"]
 		var half_size: Vector2 = definition["half_size"]
