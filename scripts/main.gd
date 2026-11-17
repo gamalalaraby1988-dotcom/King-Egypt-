@@ -805,10 +805,10 @@ func _open_quick_travel_destination(destination_name: String, destination_kind: 
 	if not is_inside_tree() or not is_instance_valid(body) or body.is_queued_for_deletion():
 		return
 	if destination_kind == "summit":
-		# التنقل السريع يصل إلى بوابة الجبل فقط؛ الصعود إلى القمة يتم على الطريق الفعلي.
-		body.global_position = Vector3(90.0, 1.2, 96.5)
+		# الوصول إلى الجهة الغربية من البوابة بعد تدويرها لتواجه وصلة الطريق القادمة من الغرب.
+		body.global_position = Vector3(86.5, 1.2, 99.0)
 		body.velocity = Vector3.ZERO
-		body.rotation.y = PI
+		body.rotation.y = -PI * 0.5
 		body.set_physics_process(true)
 		return
 	interior_transition_busy = true
