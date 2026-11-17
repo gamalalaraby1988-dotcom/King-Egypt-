@@ -44,8 +44,8 @@ func _run_animal_rental_tests() -> void:
 
 	var mission_script: Script = load("res://scripts/mission_manager.gd")
 	var player_script: Script = load("res://scripts/player.gd")
-	var mission: Node = mission_script.new()
-	var player: Node3D = player_script.new()
+	var mission = mission_script.new()
+	var player = player_script.new()
 	var staff := RentalStaffFixture.new()
 	mission.player = player
 	mission.selected_animal_staff = staff
@@ -77,25 +77,14 @@ func _run_animal_rental_tests() -> void:
 		return
 	mission.money = wallet.get_balance("money")
 
-	# A rejected ride start must not charge the player.
-	player.set("animal_riding", true)
-	if player.start_animal_ride("fixture_blocked"):
-		_fail("Player test precondition unexpectedly allowed a duplicate ride.")
-		return
-	player.set("animal_riding", false)
+	# A player already using a scooter cannot start an animal ride; the
+	# production rental flow must leave the wallet untouched on that failure.
 	player.set("scooter_riding", true)
-	if player.start_animal_ride("fixture_blocked"):
-		_fail("Player test precondition unexpectedly allowed a ride while on a scooter.")
+	mission._rent_selected_animal()
+	if player.is_riding_animal() or wallet.get_balance("money") != 100:
+		_fail("Rejected ride start charged the player or left an animal ride active.")
 		return
 	player.set("scooter_riding", false)
-	# Force the production start method to reject by supplying an empty animal name
-	# through a separate guard check; rental itself always reads a non-empty catalog entry.
-	if player.start_animal_ride(""):
-		_fail("Player accepted an empty animal name.")
-		return
-	if wallet.get_balance("money") != 100:
-		_fail("A failed ride-start precondition changed the wallet balance.")
-		return
 
 	# Successful payment starts the actual player ride and deducts exactly one fare.
 	mission._rent_selected_animal()
