@@ -97,7 +97,7 @@ func _physics_process(delta: float) -> void:
 	_update_avatar_animation("sit" if scooter_riding else motion_state, planar_speed)
 
 func begin_auto_navigation() -> bool:
-	if animal_riding:
+	if animal_riding or scooter_riding:
 		return false
 	sitting = false
 	mobile_move = Vector2.ZERO
@@ -222,7 +222,7 @@ func toggle_scooter_ride() -> bool:
 
 func start_animal_ride(animal_name: String) -> bool:
 	# لا تبدأ ركوبًا ثانيًا فوق الركوب الحالي؛ يجب النزول أولًا.
-	if animal_riding or animal_name.strip_edges().is_empty():
+	if animal_riding or scooter_riding or animal_name.strip_edges().is_empty():
 		return false
 	sitting = false
 	animal_riding = true
