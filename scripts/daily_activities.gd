@@ -47,9 +47,10 @@ func _process(_delta: float) -> void:
 	var step := Vector2(current.x - last_position.x, current.z - last_position.z).length()
 	if step > 0.0 and step < 2.5:
 		walked_meters += step
-		_set_progress("walk", int(walked_meters / 25.0))
+		var walk_progress := int(walked_meters / 25.0)
+		if walk_progress > int(progress.get("walk", 0)):
+			_set_progress("walk", walk_progress)
 	last_position = current
-	_refresh_ui()
 
 func record_job_completed(_job_id: String = "") -> void:
 	_sync_completed_daily_tasks_from_profile()
@@ -71,8 +72,11 @@ func record_city_visit() -> void:
 	_set_progress("visit", int(progress.get("visit", 0)) + 1)
 
 func _set_progress(task_id: String, value: int) -> void:
+	if int(progress.get(task_id, 0)) == value:
+		return
 	progress[task_id] = value
 	_save_state()
+	_refresh_ui()
 
 func _build_tasks_if_needed() -> void:
 	if tasks.is_empty():
