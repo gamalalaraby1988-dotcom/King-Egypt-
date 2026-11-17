@@ -57,7 +57,7 @@ func _update_layout() -> void:
 	joystick_center = Vector2(maxf(margin + _joystick_draw_radius, size.x * 0.12), size.y - margin - _joystick_draw_radius)
 	# إبقاء الجري والجلوس على يمين الشاشة، مع ترك الركن السفلي الأيمن لزر التفاعل.
 	var right_x := size.x - margin - maxf(_sprint_draw_radius, _sit_draw_radius)
-	sprint_center = Vector2(right_x, size.y * 0.73)
+	sprint_center = Vector2(right_x, size.y * 0.67)
 	sit_center = Vector2(right_x, maxf(margin + _sit_draw_radius, sprint_center.y - _sprint_draw_radius - _sit_draw_radius - 22.0 * scale_factor))
 	_camera_drag_scale = clampf(720.0 / maxf(360.0, size.y), 0.5, 1.8)
 
