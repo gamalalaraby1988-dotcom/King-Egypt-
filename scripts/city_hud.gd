@@ -45,6 +45,8 @@ var selected_player_is_friend := false
 var selected_player_id := ""
 var _pending_friend_request_player_code := ""
 var _sent_friend_requests: Dictionary = {}
+var _social_friends_cache: Array = []
+var _social_friends_loaded := false
 var _pending_player_moderation_action := ""
 var _pending_player_moderation_code := ""
 var group_members: Array[Dictionary] = [{"player_id":"local_leader", "display_name":"أنت", "is_leader":true}]
@@ -1205,7 +1207,7 @@ func open_player_interaction(player_data: Dictionary) -> void:
 		selected_player_id = ""
 	if is_instance_valid(player_block_button):
 		player_block_button.visible = not selected_player_id.is_empty()
-	selected_player_is_friend = bool(player_data.get("is_friend", false))
+	selected_player_is_friend = is_player_in_friend_list(selected_player_id, _social_friends_cache) if _social_friends_loaded else bool(player_data.get("is_friend", false))
 	if selected_player_is_friend:
 		_sent_friend_requests.erase(selected_player_id)
 	var friend_action_state := resolve_friend_action_state(selected_player_id, selected_player_is_friend, _pending_friend_request_player_code, _sent_friend_requests)
@@ -2450,6 +2452,8 @@ func _on_social_account_session_changed(_previous_user_id: String, current_user_
 	# The social HUD is account-owned too: never leave the previous account's
 	# friends, requests, selected player, group, unread counters, or moderation state visible.
 	_sent_friend_requests.clear()
+	_social_friends_cache.clear()
+	_social_friends_loaded = false
 	_pending_friend_request_player_code = ""
 	# Request counts and rows belong to the previous account; never leave its
 	# incoming badge or request names visible after an account switch.
@@ -2683,6 +2687,8 @@ func _on_social_operation_completed(action: String, data: Variant) -> void:
 			SocialChatManager.list_friends()
 		"friends_list":
 			if data is Array:
+				_social_friends_cache = data.duplicate(true)
+				_social_friends_loaded = true
 				_render_friends_phone_list(data)
 				_sync_selected_player_friend_state(data)
 			if data is Array and is_instance_valid(group_invite_popup) and group_invite_popup.visible:
