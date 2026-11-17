@@ -29,7 +29,7 @@ func _ready() -> void:
 
 
 func get_gate_position() -> Vector3:
-	return ROUTE_POINTS[0] + Vector3(0.0, 1.15, -2.0)
+	return ROUTE_POINTS[0] + Vector3(-2.0, 1.15, 0.0)
 
 
 func get_summit_position() -> Vector3:
