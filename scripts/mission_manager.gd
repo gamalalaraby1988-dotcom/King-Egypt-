@@ -879,6 +879,9 @@ func _update_interaction_hud() -> void:
 			display_name = str(nearest_interactable.get_daily_reward_chest_data().get("title", "صندوق المكافأة"))
 		elif nearest_interactable.has_method("get_animal_rental_data"):
 			display_name = CityLanguage.translate("interaction_animal_staff")
+		elif nearest_interactable.has_method("get_royal_resort_gate_data"):
+			var gate_data: Dictionary = nearest_interactable.get_royal_resort_gate_data()
+			display_name = str(gate_data.get("title", "بوابة المنتجع الملكي"))
 		elif nearest_interactable.has_method("get_interaction_data"):
 			var interaction_data: Dictionary = nearest_interactable.get_interaction_data()
 			display_name = str(interaction_data.get("title", nearest_interactable.get("character_name")))
