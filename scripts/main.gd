@@ -541,7 +541,7 @@ func _toggle_vehicle_use() -> void:
 		return
 	var nearby_party_station := _get_nearby_party_station(player)
 	if is_instance_valid(nearby_party_station):
-		_show_party_station_notice()
+		_show_party_station_notice(nearby_party_station)
 		return
 	if not is_instance_valid(city_vehicle) or player.global_position.distance_to(city_vehicle.global_position) > 5.0:
 		return
@@ -1791,7 +1791,7 @@ func _get_nearby_party_station(actor: Node3D) -> Node3D:
 			nearest_distance = distance
 	return nearest
 
-func _show_party_station_notice() -> void:
+func _show_party_station_notice(station: Node3D) -> void:
 	var city_hud := get_node_or_null("CityActionHUD")
-	if is_instance_valid(city_hud) and city_hud.has_method("open_party_station_window"):
-		city_hud.call("open_party_station_window")
+	if is_instance_valid(city_hud) and city_hud.has_method("open_party_station_window") and is_instance_valid(station):
+		city_hud.call("open_party_station_window", str(station.name).to_snake_case())
