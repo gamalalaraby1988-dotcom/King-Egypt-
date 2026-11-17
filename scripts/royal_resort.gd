@@ -65,6 +65,9 @@ func _build_resort() -> void:
 		for side in [-1.0,1.0]:
 			_box(self, "Pillar_" + zone_id, Vector3(0.8,3.0,0.8), zone_position + Vector3(side * 7.0,1.5,-6.5), Color(0.76,0.65,0.45))
 
+	# نقطة تفتح قائمة التنقل السريع داخل المنتجع، ومنها خيار الخروج إلى المدينة.
+	_create_gate("resort_quick_travel", "قائمة التنقل السريع", 1, Vector3(8,0,0), Vector3.ZERO, "quick_menu")
+	_label(self, "التنقل السريع", Vector3(8,3.2,-2), 26)
 	# بوابة خروج ظاهرة من داخل المنتجع.
 	_create_gate("resort_exit", "الخروج من المنتجع الملكي", 1, Vector3(0,0,88), Vector3.ZERO, "exit")
 	_label(self, "الخروج إلى المدينة", Vector3(0,3.2,91), 32)
@@ -88,6 +91,18 @@ func _create_gate(id: String, title: String, level: int, local_position: Vector3
 	_label(gate, title, Vector3(0,5.0,-0.1), 28)
 	_label(gate, "المستوى " + str(level), Vector3(0,0.25,-0.55), 23)
 
+func is_inside_resort() -> bool:
+	return _inside
+
+func exit_resort(actor: Node3D) -> void:
+	if not _inside or not is_instance_valid(actor):
+		return
+	if _has_outside_transform:
+		actor.global_transform = _outside_transform
+	else:
+		actor.global_position = to_global(Vector3(0,1,-18))
+	_inside = false
+
 func activate_gate(gate: Node3D, actor: Node3D, current_level: int) -> Dictionary:
 	if not is_instance_valid(gate) or not is_instance_valid(actor):
 		return {"success":false,"message":"تعذر التحقق من البوابة."}
@@ -105,11 +120,7 @@ func activate_gate(gate: Node3D, actor: Node3D, current_level: int) -> Dictionar
 	if not _inside:
 		return {"success":false,"message":"يجب دخول المنتجع أولًا."}
 	if kind == "exit":
-		if _has_outside_transform:
-			actor.global_transform = _outside_transform
-		else:
-			actor.global_position = to_global(Vector3(0,1,-18))
-		_inside = false
+		exit_resort(actor)
 		return {"success":true,"message":"تم الخروج إلى المدينة."}
 	if current_level < required:
 		return {"success":false,"message":"هذه المنطقة تفتح عند المستوى %d. مستواك الحالي %d." % [required,current_level]}
