@@ -131,7 +131,7 @@ var friends_phone_avatar_label: Label
 var friends_phone_badge: Control
 var friends_phone_badge_label: Label
 var friends_phone_incoming_count := 0
-var party_station_status: Label
+
 var _party_station_key := ""
 
 const GROUP_MAX_MEMBERS := 4
