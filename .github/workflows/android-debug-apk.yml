@@ -9,6 +9,7 @@ on:
       - "scripts/main.gd"
       - "scripts/player.gd"
       - "scripts/mobile_hud.gd"
+      - "scripts/city_sign_label.gd"
       - ".github/workflows/android-debug-apk.yml"
   workflow_dispatch:
 
