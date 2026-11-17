@@ -238,21 +238,27 @@ func _build() -> void:
 	_make_button(right, "📱 الهاتف", "phone")
 	_make_button(right, "🐈 الحيوانات", "pets")
 
+	# شريط الأزرار السفلية وفق مرجع Sunday City: محادثة، أصدقاء، تعبيرات.
+	# الجلوس يبقى داخل قائمة التعبيرات حسب الاعتماد السابق، ولا يظهر زر حفلة أو مجموعتي مستقل.
 	var bottom := HBoxContainer.new()
-	bottom.anchor_left = 0.28
-	bottom.anchor_right = 0.72
+	bottom.anchor_left = 0.66
+	bottom.anchor_right = 0.99
 	bottom.anchor_top = 1.0
 	bottom.anchor_bottom = 1.0
-	bottom.offset_top = -66
-	bottom.alignment = BoxContainer.ALIGNMENT_CENTER
-	bottom.add_theme_constant_override("separation", 8)
+	bottom.offset_top = -68
+	bottom.offset_bottom = -8
+	bottom.alignment = BoxContainer.ALIGNMENT_END
+	bottom.add_theme_constant_override("separation", 7)
 	root.add_child(bottom)
-	_make_button(bottom, "💬 محادثة", "chat")
+	var chat_button := _make_button(bottom, "💬", "chat")
+	chat_button.custom_minimum_size = Vector2(58, 54)
+	chat_button.tooltip_text = "المحادثة"
 	_make_friends_icon_button(bottom)
-	_make_button(bottom, "🛡 مجموعتي", "group")
-	_make_button(bottom, "😊 تعبيرات", "emotes")
-	_make_button(bottom, "🎉 حفلة", "party")
-	_make_button(bottom, "⚙", "settings")
+	var friends_holder := bottom.get_child(bottom.get_child_count() - 1) as Control
+	friends_holder.custom_minimum_size = Vector2(58, 54)
+	var emotes_button := _make_button(bottom, "😊", "emotes")
+	emotes_button.custom_minimum_size = Vector2(58, 54)
+	emotes_button.tooltip_text = "التعبيرات"
 
 	popup = PanelContainer.new()
 	popup.anchor_left = 0.5
