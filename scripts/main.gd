@@ -64,7 +64,7 @@ func _ready() -> void:
 	if key_light:
 		key_light.add_to_group("quality_shadow_light")
 	_create_interactive_buildings()
-	_create_royal_resort()
+	_create_desert_camp_access_road()
 	_create_king_mountain_route()
 	_create_decorative_mountain_temple()
 	_create_interior_transition_ui()
@@ -757,14 +757,13 @@ func _create_interior_quick_travel_ui() -> void:
 	heading.add_theme_color_override("font_color", Color(0.88, 0.68, 0.30))
 	content.add_child(heading)
 	var entries := [
-		["⛵  المنتجع الملكي", true],
+		["🏜️  المخيم الصحراوي", true],
 		["🏠  الشقة", true],
 		["𓉐  بوابة صعود الجبل", true],
 		["⚜  الميدان", true],
 		["⛵  السفينة", true],
 		["🚪  الخروج خارج المبنى", true],
-		["🚪  الخروج إلى خارج المنتجع", true]
-	]
+ 	]
 	for index in range(entries.size()):
 		var entry: Array = entries[index]
 		var travel_button := Button.new()
@@ -791,12 +790,8 @@ func _create_interior_quick_travel_ui() -> void:
 func show_interior_quick_travel_menu() -> void:
 	if interior_transition_busy or not is_instance_valid(interior_quick_travel_panel):
 		return
-	var resort := get_node_or_null("RoyalResort")
-	var in_resort := is_instance_valid(resort) and resort.has_method("is_inside_resort") and resort.is_inside_resort()
-	if not is_instance_valid(interior_root) and not in_resort:
+	if not is_instance_valid(interior_root):
 		return
-	if interior_quick_travel_buttons.size() > 6:
-		interior_quick_travel_buttons[6].visible = in_resort
 	interior_quick_travel_panel.visible = true
 
 func _hide_interior_quick_travel_menu() -> void:
@@ -822,24 +817,8 @@ func _on_interior_quick_travel_selected(index: int) -> void:
 	elif index == 5:
 		_hide_interior_quick_travel_menu()
 		await return_from_building_interior()
-	elif index == 6:
-		_hide_interior_quick_travel_menu()
-		_exit_royal_resort()
 	else:
 		return
-
-func _exit_royal_resort() -> void:
-	var resort := get_node_or_null("RoyalResort")
-	var manager := get_node_or_null("MissionManager")
-	if not is_instance_valid(resort) or not is_instance_valid(manager):
-		return
-	var body = manager.get("player")
-	if not is_instance_valid(body) or not resort.has_method("exit_resort"):
-		return
-	resort.exit_resort(body)
-	if manager.has_method("_update_interaction_target"):
-		manager._update_interaction_target()
-		manager._update_interaction_hud()
 
 func _open_quick_travel_destination(destination_name: String, destination_kind: String) -> void:
 	var body := interior_player
@@ -1787,7 +1766,7 @@ func _create_city_signage() -> void:
 	_create_direction_signpost("Signpost_Central", Vector3(9, 0, 8), "restaurant", "shop", PI / 2.0)
 	# Move roadside signs off the road centerline and turn their faces toward the road.
 	_create_direction_signpost("Signpost_Employment", Vector3(29, 0, -8), "employment", "city_center", PI / 2.0)
-	_create_direction_signpost("Signpost_RoyalResort", Vector3(34, 0, 38), "city_center", "royal_resort", PI / 2.0)
+	_create_direction_signpost("Signpost_DesertCamp", Vector3(34, 0, 38), "city_center", "desert_camp", PI / 2.0)
 
 func _create_direction_signpost(sign_name: String, pos: Vector3, left_key: String, right_key: String, yaw: float = 0.0) -> void:
 	var sign_root := Node3D.new()
@@ -1829,16 +1808,11 @@ func _create_service_staff(display_name: String, role: String, dialogue: String,
 	staff.position = pos
 	add_child(staff)
 
-func _create_royal_resort() -> void:
-	# تُعاد تسمية وصلة المخيم لتصبح طريق المنتجع، مع الحفاظ على مسار الطريق نفسه.
-	_create_box(self, "RoyalResortRoad_Entry", Vector3(32, 0.08, 5), Vector3(16, 0.01, 0), Color(0.12, 0.13, 0.15), true)
-	_create_box(self, "RoyalResortRoad_North", Vector3(5, 0.08, 75), Vector3(30, 0.01, 37.5), Color(0.12, 0.13, 0.15), true)
-	_create_box(self, "RoyalResortRoad_Approach", Vector3(30, 0.08, 5), Vector3(45, 0.01, 75), Color(0.12, 0.13, 0.15), true)
-	var resort := Node3D.new()
-	resort.name = "RoyalResort"
-	resort.position = Vector3(60, 0, 75)
-	resort.set_script(load("res://scripts/royal_resort.gd"))
-	add_child(resort)
+# طريق وصول مشترك للمخيم الصحراوي واتصال طريق قمة الملوك؛ لا ينشئ منتجعًا أو بوابات.
+func _create_desert_camp_access_road() -> void:
+	_create_box(self, "DesertCampRoad_Entry", Vector3(32, 0.08, 5), Vector3(16, 0.01, 0), Color(0.12, 0.13, 0.15), true)
+	_create_box(self, "DesertCampRoad_North", Vector3(5, 0.08, 75), Vector3(30, 0.01, 37.5), Color(0.12, 0.13, 0.15), true)
+	_create_box(self, "DesertCampRoad_Approach", Vector3(30, 0.08, 5), Vector3(45, 0.01, 75), Color(0.12, 0.13, 0.15), true)
 
 func _create_party_station() -> void:
 	# محطة الحفلات التجريبية في الساحة المركزية، خارج مسارات الطرق ومداخل المباني.
