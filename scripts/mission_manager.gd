@@ -76,6 +76,7 @@ var _key_was_down := false
 
 const SAVE_PATH := "user://kings_city_profile.cfg"
 const MAX_CURRENCY_BALANCE := 2000000000
+const MAX_PLAYER_LEVEL := 5000
 
 func _ready() -> void:
 	_build_ui()
@@ -113,7 +114,7 @@ func grant_reward_once(reward_id: String, money_amount: int = 0, xp_amount: int 
 	var next_xp := xp + xp_amount
 	var next_chips := chips + chips_amount
 	var next_level := player_level
-	while next_xp >= next_level * 100:
+	while next_level < MAX_PLAYER_LEVEL and next_xp >= next_level * 100:
 		next_xp -= next_level * 100
 		next_level += 1
 	var next_receipts := reward_receipts.duplicate(true)
@@ -383,7 +384,7 @@ func _load_profile() -> void:
 		push_warning("تعذر قراءة ملف اللاعب؛ تم إيقاف الترحيل لتجنب فقدان البيانات.")
 		return
 	if error == OK:
-		player_level = _safe_profile_int(config.get_value("profile", "player_level", 1), 1, 1)
+		player_level = clampi(_safe_profile_int(config.get_value("profile", "player_level", 1), 1, 1), 1, MAX_PLAYER_LEVEL)
 		xp = _safe_profile_int(config.get_value("profile", "xp", 0), 0)
 		money = _safe_profile_int(config.get_value("profile", "money", 0), 0)
 		chips = _safe_profile_int(config.get_value("profile", "chips", 0), 0)
@@ -547,6 +548,9 @@ func _update_interaction_hud() -> void:
 		var display_name := CityLanguage.translate("interaction_place")
 		if nearest_interactable.has_method("get_job_data"):
 			display_name = str(nearest_interactable.get_job_data().get("title", CityLanguage.translate("interaction_job_name")))
+		elif nearest_interactable.has_method("get_royal_resort_gate_data"):
+			var resort_gate_data: Dictionary = nearest_interactable.get_royal_resort_gate_data()
+			display_name = str(resort_gate_data.get("title", "بوابة المنتجع الملكي"))
 		elif nearest_building:
 			display_name = str(nearest_interactable.get("building_title"))
 		elif nearest_interactable.has_method("get_animal_rental_data"):
@@ -627,7 +631,9 @@ func _open_royal_resort_gate(gate: Node3D) -> void:
 			map_control.show_resort_quick_travel()
 		return
 	var result: Dictionary = resort.activate_gate(gate, player, player_level)
-	status_label.text = str(result.get("message", ""))
+	var gate_message := str(result.get("message", ""))
+	status_label.text = gate_message
+	prompt_label.text = gate_message
 	if bool(result.get("success", false)):
 		player.velocity = Vector3.ZERO
 		_update_interaction_target()
@@ -1044,7 +1050,7 @@ func _build_landmark_route(destination: Vector3, landmark_key: String) -> void:
 	landmark_route_points.append(Vector3(start.x, 0.0, start.z))
 	landmark_route_points.append(Vector3(start_node.x, 0.0, start_node.y))
 	if landmark_key == "royal_resort":
-		# نصل أولًا إلى مدخل طريق المخيم، ثم نتبع مقاطعه المنشأة في المشهد.
+		# نصل أولًا إلى مدخل طريق المنتجع، ثم نتبع مقاطعه المنشأة في المشهد.
 		var camp_entry := Vector2(24.0, 0.0)
 		_append_grid_route(start_node, camp_entry)
 		landmark_route_points.append(Vector3(30.0, 0.0, 0.0))
