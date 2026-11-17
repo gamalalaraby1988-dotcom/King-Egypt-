@@ -296,6 +296,13 @@ func _on_request_completed(result: int, response_code: int, _headers: PackedStri
 		return
 	operation_completed.emit(action, response_json.data)
 
+func start_test_party(station_key: String) -> bool:
+	var clean_station_key := station_key.strip_edges()
+	if clean_station_key.is_empty() or clean_station_key.length() > 80 or not clean_station_key.is_valid_identifier():
+		operation_failed.emit("party_start", "معرّف محطة الحفلة غير صالح.")
+		return false
+	return _rpc("start_my_test_party", {"p_station_key": clean_station_key}, "party_start")
+
 func create_chat_group() -> bool:
 	return _rpc("create_my_test_chat_group", {}, "group_create")
 
