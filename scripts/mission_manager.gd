@@ -932,6 +932,9 @@ func open_interactable(target: Node3D) -> void:
 		if is_instance_valid(city_root) and city_root.has_method("show_interior_quick_travel_menu"):
 			city_root.show_interior_quick_travel_menu()
 		return
+	if target.has_method("get_royal_resort_gate_data"):
+		_open_royal_resort_gate(target)
+		return
 	if target.has_method("is_shop_owner") and target.is_shop_owner() and is_instance_valid(shop_manager):
 		shop_manager.open_shop()
 		return
@@ -958,6 +961,28 @@ func open_interactable(target: Node3D) -> void:
 		accept_button.visible = false
 		panel.visible = true
 
+
+func _open_royal_resort_gate(gate: Node3D) -> void:
+	var resort := gate.get_parent()
+	if not is_instance_valid(resort) or not resort.has_method("activate_gate"):
+		return
+	var data: Dictionary = gate.get_royal_resort_gate_data()
+	var result: Dictionary = resort.activate_gate(gate, player, player_level)
+	if bool(result.get("success", false)):
+		panel.visible = false
+		interact_button.visible = false
+		prompt_label.text = str(result.get("message", ""))
+		return
+	animal_selector.visible = false
+	active_mission = null
+	accept_button.visible = false
+	interior_activities_button.visible = false
+	interior_return_button.visible = false
+	title_label.text = str(data.get("title", "بوابة المنتجع الملكي"))
+	description_label.text = "الدخول مجاني عند بلوغ المستوى المطلوب."
+	reward_label.text = "المستوى الحالي: %d | المستوى المطلوب: %d" % [player_level, int(data.get("required_level", 1))]
+	status_label.text = str(result.get("message", "لم يُفتح المدخل بعد."))
+	panel.visible = true
 
 func open_daily_reward_chest(chest: Node3D) -> void:
 	if not is_instance_valid(chest) or not chest.has_method("get_daily_reward_chest_data"):
@@ -1406,7 +1431,7 @@ const CITY_LANDMARK_ENTRANCES := {
 	"delivery": Vector3(24.0, 0.0, 4.5),
 	"city_guide": Vector3(-24.0, 0.0, 4.5),
 	"maintenance": Vector3(4.5, 0.0, 24.0),
-	"animal_camp": Vector3(60.0, 0.0, 68.0)
+	"royal_resort": Vector3(60.0, 0.0, 60.0)
 }
 
 func get_landmark_entrance(landmark_key: String, fallback: Vector3) -> Vector3:
@@ -1422,14 +1447,14 @@ func _build_landmark_route(destination: Vector3, landmark_key: String) -> void:
 	var start_node := _nearest_city_road_node(start)
 	landmark_route_points.append(Vector3(start.x, 0.0, start.z))
 	landmark_route_points.append(Vector3(start_node.x, 0.0, start_node.y))
-	if landmark_key == "animal_camp":
-		# نصل أولًا إلى مدخل طريق المخيم، ثم نتبع مقاطعه المنشأة في المشهد.
-		var camp_entry := Vector2(24.0, 0.0)
-		_append_grid_route(start_node, camp_entry)
+	if landmark_key == "royal_resort":
+		# طريق مباشر إلى بوابة المنتجع الملكي عبر الوصلة الشمالية الشرقية.
+		var resort_entry := Vector2(24.0, 0.0)
+		_append_grid_route(start_node, resort_entry)
 		landmark_route_points.append(Vector3(30.0, 0.0, 0.0))
 		landmark_route_points.append(Vector3(30.0, 0.0, 75.0))
 		landmark_route_points.append(Vector3(45.0, 0.0, 75.0))
-		landmark_route_points.append(Vector3(60.0, 0.0, 75.0))
+		landmark_route_points.append(Vector3(60.0, 0.0, 60.0))
 		landmark_route_points.append(destination)
 	else:
 		var target_node := _nearest_city_road_node(destination)
