@@ -64,7 +64,6 @@ func _ready() -> void:
 	_create_interactive_buildings()
 	_create_camp()
 	_create_king_mountain_route()
-	_create_city_map()
 	_create_interior_transition_ui()
 	_create_player_vehicle()
 	# دخول مباشر للمدينة في نسخة الاختبار؛ شاشة OTP المؤقتة معطلة حتى تجهيز نظام الدخول النهائي.
@@ -1582,7 +1581,7 @@ func _create_city() -> void:
 	_create_box(self, "MainRoad_X", Vector3(180, 0.08, 10), Vector3(0, 0.0, 0), Color(0.12, 0.13, 0.15))
 	_create_box(self, "MainRoad_Z", Vector3(10, 0.09, 180), Vector3(0, 0.01, 0), Color(0.12, 0.13, 0.15))
 	# شوارع فرعية متصلة بالمحورين الرئيسيين، تمر في الممرات بين كتل المباني.
-	# الإحداثيات نفسها مستخدمة في نظام الملاحة والخريطة المصغرة.
+	# إحداثيات شبكة الطرق المستخدمة في حساب مسارات الحركة داخل المدينة.
 	for road_x in [-72.0, -24.0, 24.0, 72.0]:
 		_create_box(self, "SideRoad_X_%d" % int(road_x), Vector3(180, 0.075, 6), Vector3(road_x, 0.005, 0), Color(0.15, 0.16, 0.17))
 	for road_z in [-72.0, -24.0, 24.0, 72.0]:
@@ -1755,18 +1754,6 @@ func _add_sign_label(parent: Node3D, key: String, pos: Vector3, y_rotation: floa
 	# Keep text aligned with its physical sign face and directional arrows.
 	# Billboard mode made labels rotate independently of the board.
 	parent.add_child(label)
-
-
-func _create_city_map() -> void:
-	var layer := CanvasLayer.new()
-	layer.name = "CityMapHUD"
-	add_child(layer)
-	var map_control := Control.new()
-	map_control.name = "CityMap"
-	map_control.set_script(load("res://scripts/city_map.gd"))
-	map_control.player = get_node_or_null("Player")
-	map_control.mission_manager = get_node_or_null("MissionManager")
-	layer.add_child(map_control)
 
 
 func _create_service_staff(display_name: String, role: String, dialogue: String, pos: Vector3) -> void:
