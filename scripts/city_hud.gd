@@ -311,10 +311,10 @@ func _build() -> void:
 
 func _make_compact_action(parent: Control, glyph: String, hint: String, action: String, button_size: Vector2) -> Button:
 	var button := Button.new()
-	button.text = glyph
+	button.text = ""
 	button.tooltip_text = hint
 	button.custom_minimum_size = button_size
-	button.add_theme_font_size_override("font_size", 22 if button_size.x >= 58 else 19)
+	button.add_theme_font_size_override("font_size", 1)
 	button.add_theme_color_override("font_color", Color("#f0d28b"))
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color(0.035, 0.055, 0.085, 0.52)
@@ -324,6 +324,13 @@ func _make_compact_action(parent: Control, glyph: String, hint: String, action: 
 	button.add_theme_stylebox_override("normal", style)
 	button.pressed.connect(_on_hud_action_pressed.bind(action))
 	parent.add_child(button)
+	var icon := Control.new()
+	icon.name = "VectorIcon"
+	icon.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	icon.set_script(load("res://scripts/scooter_toggle_icon.gd"))
+	icon.set("mode", {"phone":"phone","events":"notifications","vehicle_summon":"car","location":"location","chat":"chat","emotes":"emotes","interact":"hand"}.get(action, "chat"))
+	button.add_child(icon)
 	return button
 
 
@@ -356,11 +363,18 @@ func _make_friends_icon_button(parent: Control) -> void:
 	holder.custom_minimum_size = Vector2(118, 42)
 	parent.add_child(holder)
 	var button := Button.new()
-	button.text = "♧"
+	button.text = ""
 	button.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	button.add_theme_font_size_override("font_size", 14)
+	button.add_theme_font_size_override("font_size", 1)
 	button.pressed.connect(_on_button_pressed.bind("social"))
 	holder.add_child(button)
+	var friends_icon := Control.new()
+	friends_icon.name = "FriendsVectorIcon"
+	friends_icon.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	friends_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	friends_icon.set_script(load("res://scripts/scooter_toggle_icon.gd"))
+	friends_icon.set("mode", "friends")
+	button.add_child(friends_icon)
 	friends_phone_badge = PanelContainer.new()
 	friends_phone_badge.name = "IncomingFriendRequestsBadge"
 	friends_phone_badge.anchor_left = 1.0
