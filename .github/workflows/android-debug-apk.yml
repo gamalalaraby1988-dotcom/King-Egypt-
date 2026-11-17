@@ -2,7 +2,7 @@ name: Android debug APK
 
 on:
   push:
-    branches: [main]
+    branches: [main, feature/building-quick-travel]
     paths:
       - "export_presets.cfg"
       - "project.godot"
