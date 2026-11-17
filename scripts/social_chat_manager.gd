@@ -275,7 +275,7 @@ func _on_request_completed(result: int, response_code: int, _headers: PackedStri
 		request.queue_free()
 	if owns_pending_slot:
 		_start_next_queued_rpc()
-	if action == "friend_requests_list":
+	if action == "friend_requests_list" and owns_pending_slot and _request_session_is_current(request_user_id, request_generation):
 		_friend_requests_poll_pending = false
 	# Request identity is immutable; an old callback can never inherit a newer account's pending metadata.
 	if not owns_pending_slot or action.is_empty():
