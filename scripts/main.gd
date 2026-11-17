@@ -65,6 +65,7 @@ func _ready() -> void:
 	_create_interactive_buildings()
 	_create_camp()
 	_create_king_mountain_route()
+	_create_decorative_mountain_temple()
 	_create_interior_transition_ui()
 	_create_player_vehicle()
 	# دخول مباشر للمدينة في نسخة الاختبار؛ شاشة OTP المؤقتة معطلة حتى تجهيز نظام الدخول النهائي.
@@ -77,6 +78,23 @@ func _create_king_mountain_route() -> void:
 	route.name = "KingsMountainRoute"
 	route.set_script(load("res://scripts/king_mountain_route.gd"))
 	add_child(route)
+
+
+func _create_decorative_mountain_temple() -> void:
+	var packed := load("res://scenes/buildings/decorative_temple_building.tscn") as PackedScene
+	if packed == null:
+		push_warning("تعذر تحميل المعبد الفرعوني الزخرفي.")
+		return
+	var temple := packed.instantiate() as Node3D
+	if temple == null:
+		push_warning("تعذر إنشاء مشهد المعبد الفرعوني الزخرفي.")
+		return
+	temple.name = "DecorativeMountainTemple"
+	# موضع جانبي آمن: شرق ساحة الانتقال وخارج مسار الصعود والكتل الصخرية.
+	# الواجهة تدور غربًا نحو منطقة البوابة، دون سد الطريق أو الساحة.
+	temple.position = Vector3(103.0, -0.16, 119.0)
+	temple.rotation.y = PI * 0.5
+	add_child(temple)
 
 
 func _create_character_selection_ui() -> void:
