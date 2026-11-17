@@ -83,6 +83,7 @@ var _daily_chest_request_uid := ""
 var _daily_chest_request_generation := -1
 
 const MAX_CURRENCY_BALANCE := 2000000000
+const MAX_PLAYER_LEVEL := 5000
 
 func _ready() -> void:
 	_build_ui()
@@ -317,9 +318,11 @@ func grant_reward_once(reward_id: String, money_amount: int = 0, xp_amount: int 
 	var next_xp := xp + xp_amount
 	var next_chips := chips + chips_amount
 	var next_level := player_level
-	while next_xp >= next_level * 100:
+	while next_level < MAX_PLAYER_LEVEL and next_xp >= next_level * 100:
 		next_xp -= next_level * 100
 		next_level += 1
+	if next_level >= MAX_PLAYER_LEVEL:
+		next_xp = 0
 	var next_receipts := reward_receipts.duplicate(true)
 	next_receipts[reward_id] = Time.get_datetime_string_from_system()
 	var config := ConfigFile.new()
@@ -456,9 +459,11 @@ func complete_activity_once(activity_id: String, activity_kind: String, money_am
 	var next_xp := xp + xp_amount
 	var next_chips := chips + chips_amount
 	var next_level := player_level
-	while next_xp >= next_level * 100:
+	while next_level < MAX_PLAYER_LEVEL and next_xp >= next_level * 100:
 		next_xp -= next_level * 100
 		next_level += 1
+	if next_level >= MAX_PLAYER_LEVEL:
+		next_xp = 0
 	var next_receipts := reward_receipts.duplicate(true)
 	next_receipts[receipt_id] = Time.get_datetime_string_from_system()
 	var next_achievement_totals := achievement_totals.duplicate(true)
@@ -586,7 +591,7 @@ func _load_profile() -> void:
 		push_warning("تعذر قراءة ملف اللاعب؛ تم إيقاف الترحيل لتجنب فقدان البيانات.")
 		return
 	if error == OK:
-		player_level = _safe_profile_int(config.get_value("profile", "player_level", 1), 1, 1)
+		player_level = clampi(_safe_profile_int(config.get_value("profile", "player_level", 1), 1, 1), 1, MAX_PLAYER_LEVEL)
 		xp = _safe_profile_int(config.get_value("profile", "xp", 0), 0)
 		money = _safe_profile_int(config.get_value("profile", "money", 0), 0)
 		chips = _safe_profile_int(config.get_value("profile", "chips", 0), 0)
