@@ -407,7 +407,11 @@ func _build_friends_phone_panel() -> void:
 	header.add_child(title)
 	var close := Button.new()
 	close.text = "✕"
-	close.pressed.connect(func(): friends_phone_panel.visible = false)
+	close.pressed.connect(func():
+		friends_phone_panel.visible = false
+		if is_instance_valid(phone_popup):
+			phone_popup.visible = true
+	)
 	header.add_child(close)
 	var profile := PanelContainer.new()
 	profile.add_theme_stylebox_override("panel", _friends_phone_style(Color("#1b2a3e"), Color("#8e713e"), 1))
