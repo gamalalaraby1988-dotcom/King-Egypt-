@@ -133,26 +133,35 @@ func _make_vehicle_summon_style(color: Color) -> StyleBoxFlat:
 func _find_suitable_vehicle_summon_position(player: CharacterBody3D) -> Variant:
 	if not is_instance_valid(player):
 		return null
-	# ابحث عن موقف آمن بجوار الطريق حتى لو كان اللاعب واقفًا فوق الطريق نفسه.
-	# الإزاحات الثابتة على محاور العالم تمنع اعتماد النتيجة على اتجاه الكاميرا.
-	var offsets: Array[Vector2] = []
-	for distance in [9.0, 11.0, 13.0, 15.0]:
-		offsets.append_array([
-			Vector2(distance, 0.0), Vector2(-distance, 0.0),
-			Vector2(0.0, distance), Vector2(0.0, -distance),
-			Vector2(distance * 0.7071, distance * 0.7071),
-			Vector2(-distance * 0.7071, distance * 0.7071),
-			Vector2(distance * 0.7071, -distance * 0.7071),
-			Vector2(-distance * 0.7071, -distance * 0.7071)
-		])
+	# استدعِ السيارة بمحاذاة اللاعب وعلى أقرب جانب خالٍ، مع احترام اتجاه جسمه.
+	# الطرق صالحة لوقوف السيارة؛ مانع التصادم هو الذي يستبعد المباني والعوائق.
+	var basis := player.global_transform.basis
+	var right := basis.x
+	var forward := -basis.z
+	right.y = 0.0
+	forward.y = 0.0
+	right = right.normalized()
+	forward = forward.normalized()
 	var candidates: Array[Vector3] = []
-	for offset in offsets:
-		candidates.append(player.global_position + Vector3(offset.x, 0.0, offset.y))
+	for distance in [3.8, 4.6, 5.4, 6.2, 7.0]:
+		var diagonal := distance * 0.7071
+		var offsets := [
+			right * distance,
+			-right * distance,
+			forward * distance,
+			-forward * distance,
+			(right + forward).normalized() * distance,
+			(-right + forward).normalized() * distance,
+			(right - forward).normalized() * distance,
+			(-right - forward).normalized() * distance
+		]
+		for offset in offsets:
+			candidates.append(player.global_position + offset)
 	var shape := BoxShape3D.new()
 	shape.size = Vector3(2.8, 1.9, 5.2)
 	var space_state := get_world_3d().direct_space_state
 	for candidate in candidates:
-		if not is_position_inside_city_bounds(candidate, 85.0) or not is_vehicle_summon_position_road_safe(candidate):
+		if not is_position_inside_city_bounds(candidate, 85.0):
 			continue
 		var query := PhysicsShapeQueryParameters3D.new()
 		query.shape = shape
