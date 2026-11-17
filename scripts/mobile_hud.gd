@@ -55,10 +55,10 @@ func _update_layout() -> void:
 	_sprint_draw_radius = sprint_radius * scale_factor
 	_sit_draw_radius = sit_radius * scale_factor
 	joystick_center = Vector2(maxf(margin + _joystick_draw_radius, size.x * 0.12), size.y - margin - _joystick_draw_radius)
-	# وضع زري الجري والجلوس رأسيًا لمنع تداخل مناطق اللمس على الشاشات الصغيرة.
+	# إبقاء الجري والجلوس على يمين الشاشة، مع ترك الركن السفلي الأيمن لزر التفاعل.
 	var right_x := size.x - margin - maxf(_sprint_draw_radius, _sit_draw_radius)
-	sprint_center = Vector2(right_x, size.y - margin - _sprint_draw_radius)
-	sit_center = Vector2(right_x, maxf(margin + _sit_draw_radius, sprint_center.y - _sprint_draw_radius - _sit_draw_radius - 24.0 * scale_factor))
+	sprint_center = Vector2(right_x, size.y * 0.73)
+	sit_center = Vector2(right_x, maxf(margin + _sit_draw_radius, sprint_center.y - _sprint_draw_radius - _sit_draw_radius - 22.0 * scale_factor))
 	_camera_drag_scale = clampf(720.0 / maxf(360.0, size.y), 0.5, 1.8)
 
 func _draw() -> void:
@@ -66,9 +66,9 @@ func _draw() -> void:
 	draw_circle(joystick_center, _joystick_draw_radius, Color(0.04, 0.06, 0.09, 0.30))
 	draw_arc(joystick_center, _joystick_draw_radius, 0.0, TAU, 48, Color(1, 1, 1, 0.58), 3.0 * minf(1.0, _joystick_draw_radius / 72.0))
 	draw_circle(joystick_center + joystick_vector * _joystick_draw_radius, maxf(17.0, 26.0 * _joystick_draw_radius / 72.0), Color(0.91, 0.75, 0.38, 0.90))
-	_draw_button(sprint_center, _sprint_draw_radius, "RUN", sprint_active)
+	_draw_button(sprint_center, _sprint_draw_radius, "جري" if CityLanguage.get_language() == "ar" else "RUN", sprint_active)
 	var sitting_now: bool = is_instance_valid(player) and bool(player.get("sitting"))
-	_draw_button(sit_center, _sit_draw_radius, "SIT", sitting_now)
+	_draw_button(sit_center, _sit_draw_radius, "جلوس" if CityLanguage.get_language() == "ar" else "SIT", sitting_now)
 
 func _draw_button(center: Vector2, radius: float, caption: String, active: bool) -> void:
 	var fill := Color(0.67, 0.48, 0.19, 0.82) if active else Color(0.04, 0.06, 0.09, 0.48)
