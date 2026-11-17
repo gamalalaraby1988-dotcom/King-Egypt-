@@ -524,6 +524,8 @@ func _update_interaction_target() -> void:
 	nearest_building = best if is_instance_valid(best) and best.has_method("get_mission_data") else null
 
 func _interaction_action_key(target: Node3D) -> String:
+	if target.has_method("get_royal_resort_gate_data"):
+		return "interaction_enter"
 	if target.has_method("get_job_data"):
 		return "interaction_job"
 	if target.has_method("get_mission_data"):
@@ -582,6 +584,9 @@ func open_interactable(target: Node3D) -> void:
 	if player.global_position.distance_to(target.global_position) > clampf(allowed_distance, 0.5, 4.8) + 0.65:
 		_update_interaction_target()
 		return
+	if target.has_method("get_royal_resort_gate_data"):
+		_open_royal_resort_gate(target)
+		return
 	if target.has_method("is_shop_owner") and target.is_shop_owner() and is_instance_valid(shop_manager):
 		shop_manager.open_shop()
 		return
@@ -604,6 +609,29 @@ func open_interactable(target: Node3D) -> void:
 		status_label.text = CityLanguage.translate("service_npc_dialogue_status")
 		accept_button.visible = false
 		panel.visible = true
+
+func _open_royal_resort_gate(gate: Node3D) -> void:
+	var city_root := get_tree().current_scene
+	var resort := city_root.get_node_or_null("RoyalResort") if is_instance_valid(city_root) else null
+	if not is_instance_valid(resort) or not resort.has_method("activate_gate"):
+		status_label.text = "المنتجع الملكي غير متاح حاليًا."
+		return
+	var gate_data: Dictionary = gate.get_royal_resort_gate_data()
+	var gate_kind := str(gate_data.get("gate_kind", "zone"))
+	if gate_kind == "quick_menu":
+		if not resort.is_inside_resort():
+			status_label.text = "يجب دخول المنتجع أولًا."
+			return
+		var map_control := city_root.get_node_or_null("CityMapHUD/CityMap")
+		if is_instance_valid(map_control) and map_control.has_method("show_resort_quick_travel"):
+			map_control.show_resort_quick_travel()
+		return
+	var result: Dictionary = resort.activate_gate(gate, player, player_level)
+	status_label.text = str(result.get("message", ""))
+	if bool(result.get("success", false)):
+		player.velocity = Vector3.ZERO
+		_update_interaction_target()
+		_update_interaction_hud()
 
 func open_animal_rental(staff: Node3D) -> void:
 	selected_animal_staff = staff
@@ -999,7 +1027,7 @@ const CITY_LANDMARK_ENTRANCES := {
 	"delivery": Vector3(24.0, 0.0, 4.5),
 	"city_guide": Vector3(-24.0, 0.0, 4.5),
 	"maintenance": Vector3(4.5, 0.0, 24.0),
-	"animal_camp": Vector3(60.0, 0.0, 68.0)
+	"royal_resort": Vector3(60.0, 0.0, 60.0)
 }
 
 func get_landmark_entrance(landmark_key: String, fallback: Vector3) -> Vector3:
@@ -1015,7 +1043,7 @@ func _build_landmark_route(destination: Vector3, landmark_key: String) -> void:
 	var start_node := _nearest_city_road_node(start)
 	landmark_route_points.append(Vector3(start.x, 0.0, start.z))
 	landmark_route_points.append(Vector3(start_node.x, 0.0, start_node.y))
-	if landmark_key == "animal_camp":
+	if landmark_key == "royal_resort":
 		# نصل أولًا إلى مدخل طريق المخيم، ثم نتبع مقاطعه المنشأة في المشهد.
 		var camp_entry := Vector2(24.0, 0.0)
 		_append_grid_route(start_node, camp_entry)
