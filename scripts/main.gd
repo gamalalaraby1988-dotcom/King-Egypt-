@@ -67,7 +67,7 @@ func _ready() -> void:
 	_create_city_map()
 	_create_interior_transition_ui()
 	_create_player_vehicle()
-	_create_auth_login_panel()
+	# دخول مباشر للمدينة في نسخة الاختبار؛ شاشة OTP المؤقتة معطلة حتى تجهيز نظام الدخول النهائي.
 	_create_character_selection_ui()
 
 
