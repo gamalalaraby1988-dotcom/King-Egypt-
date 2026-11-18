@@ -577,6 +577,7 @@ func _create_city() -> void:
 func _create_mobile_hud() -> void:
 	var layer := CanvasLayer.new()
 	layer.name = "MobileHUD"
+	layer.layer = 50
 	add_child(layer)
 
 	var hud_script = load("res://scripts/mobile_hud.gd")
