@@ -4,6 +4,7 @@ signal operation_completed(action: String, data: Variant)
 signal operation_failed(action: String, message: String)
 signal realtime_event(topic: String, event_name: String, payload: Dictionary)
 signal realtime_status_changed(status: String)
+signal city_presence_counts_changed(counts: Dictionary)
 
 const SUPABASE_URL := "https://unwrlvyjrtdwobcktetd.supabase.co"
 const SUPABASE_PUBLISHABLE_KEY := "sb_publishable_BrWeMmhyOpL73Uca40Ug0Q_8Zgw55si"
@@ -35,8 +36,14 @@ var _realtime_session_generation := -1
 var _realtime_player_code := ""
 var _realtime_group_id := ""
 var _realtime_direct_id := ""
+const CITY_PRESENCE_TOPIC := "game:city:presence"
+const CITY_SECTORS := ["north_west", "north_east", "south_west", "south_east", "south_center"]
+var _city_presence_key := ""
+var _city_presence_sector := "north_west"
+var _city_presence_entries: Dictionary = {}
 
 func _ready() -> void:
+	_city_presence_key = _make_city_presence_key()
 	if not AuthManager.session_changed.is_connected(_on_auth_session_changed):
 		AuthManager.session_changed.connect(_on_auth_session_changed)
 
@@ -71,6 +78,8 @@ func _on_auth_session_changed(_previous_user_id: String, _current_user_id: Strin
 	_realtime_player_code = ""
 	_realtime_group_id = ""
 	_realtime_direct_id = ""
+	_city_presence_key = _make_city_presence_key()
+	_clear_city_presence_state()
 	_realtime_heartbeat_elapsed = 0.0
 	_realtime_retry_elapsed = 0.0
 	realtime_status_changed.emit("تم فصل الاتصال السابق؛ يلزم إعادة الاشتراك للحساب الحالي")
@@ -385,6 +394,7 @@ func _process(delta: float) -> void:
 		_realtime_player_code = ""
 		_realtime_group_id = ""
 		_realtime_direct_id = ""
+		_clear_city_presence_state()
 		return
 	_friend_requests_poll_elapsed += maxf(0.0, delta)
 	if _friend_requests_poll_elapsed >= FRIEND_REQUESTS_POLL_INTERVAL and not _friend_requests_poll_pending:
@@ -435,6 +445,7 @@ func connect_realtime() -> void:
 		return
 	_realtime_topics["chat:public:messages"] = true
 	_realtime_topics["party:city:events"] = true
+	_realtime_topics[CITY_PRESENCE_TOPIC] = true
 	if not _realtime_player_code.is_empty():
 		_realtime_topics["chat:invites:" + _realtime_player_code] = true
 	if _realtime_socket == null or _realtime_socket.get_ready_state() == WebSocketPeer.STATE_CLOSED:
@@ -529,10 +540,11 @@ func _join_realtime_topic(topic: String) -> void:
 	var join_ref := str(_realtime_ref)
 	_realtime_ready_topics.erase(topic)
 	_realtime_join_refs[topic] = join_ref
+	var presence_enabled := topic == CITY_PRESENCE_TOPIC
 	var payload := {
 		"config": {
 			"broadcast": {"ack": false, "self": false},
-			"presence": {"enabled": false},
+			"presence": {"enabled": presence_enabled, "key": _city_presence_key if presence_enabled else ""},
 			"postgres_changes": [],
 			"private": true
 		},
@@ -620,11 +632,22 @@ func _handle_realtime_packet(packet: PackedByteArray) -> void:
 				_realtime_topic_retry_seconds.erase(topic)
 				_realtime_topic_retry_attempts.erase(topic)
 				_realtime_ready_topics[topic] = true
+				if topic == CITY_PRESENCE_TOPIC:
+					_send_city_presence_track()
 				realtime_status_changed.emit("القنوات اللحظية جاهزة")
 		return
 	if event_name == "phx_error" or event_name == "phx_close":
 		_schedule_realtime_topic_retry(topic, str(parsed.get("join_ref", "")))
 		return
+	if topic == CITY_PRESENCE_TOPIC and payload is Dictionary:
+		if not is_realtime_topic_subscribed(CITY_PRESENCE_TOPIC):
+			return
+		if event_name == "presence_state":
+			_apply_city_presence_state(payload)
+			return
+		if event_name == "presence_diff":
+			_apply_city_presence_diff(payload)
+			return
 	if event_name == "broadcast" and payload is Dictionary:
 		# Ignore packets for channels this session has not successfully joined.
 		if not is_realtime_topic_subscribed(topic):
@@ -633,3 +656,86 @@ func _handle_realtime_packet(packet: PackedByteArray) -> void:
 		var broadcast_payload: Variant = payload.get("payload", {})
 		if broadcast_payload is Dictionary:
 			realtime_event.emit(topic, broadcast_event, broadcast_payload)
+
+func _make_city_presence_key() -> String:
+	return "session_%s_%s" % [str(Time.get_ticks_usec()), str(randi())]
+
+func set_city_presence_sector(sector: String) -> void:
+	var clean_sector := sector.strip_edges().to_lower()
+	if clean_sector != "interior" and not CITY_SECTORS.has(clean_sector):
+		return
+	if clean_sector == _city_presence_sector:
+		return
+	_city_presence_sector = clean_sector
+	if is_realtime_topic_subscribed(CITY_PRESENCE_TOPIC):
+		_send_city_presence_track()
+
+func get_city_presence_counts() -> Dictionary:
+	return _build_city_presence_counts()
+
+func _send_city_presence_track() -> void:
+	if not is_realtime_topic_subscribed(CITY_PRESENCE_TOPIC) or not AuthManager.is_authenticated():
+		return
+	var join_ref := str(_realtime_join_refs.get(CITY_PRESENCE_TOPIC, ""))
+	if join_ref.is_empty():
+		return
+	_send_realtime_frame("realtime:" + CITY_PRESENCE_TOPIC, "presence", {
+		"type": "presence",
+		"event": "track",
+		"payload": {"sector": _city_presence_sector}
+	}, join_ref)
+
+func _extract_city_presence_sector(metas: Variant) -> String:
+	if metas is Array:
+		for index in range(metas.size() - 1, -1, -1):
+			if metas[index] is Dictionary:
+				var candidate := str(metas[index].get("sector", ""))
+				if CITY_SECTORS.has(candidate) or candidate == "interior":
+					return candidate
+	elif metas is Dictionary:
+		var candidate := str(metas.get("sector", ""))
+		if CITY_SECTORS.has(candidate) or candidate == "interior":
+			return candidate
+	return ""
+
+func _apply_city_presence_state(state: Dictionary) -> void:
+	_city_presence_entries.clear()
+	for presence_key in state.keys():
+		var sector := _extract_city_presence_sector(state[presence_key])
+		if not sector.is_empty():
+			_city_presence_entries[str(presence_key)] = sector
+	_emit_city_presence_counts()
+
+func _apply_city_presence_diff(diff: Dictionary) -> void:
+	var leaves: Variant = diff.get("leaves", {})
+	if leaves is Dictionary:
+		for presence_key in leaves.keys():
+			_city_presence_entries.erase(str(presence_key))
+	var joins: Variant = diff.get("joins", {})
+	if joins is Dictionary:
+		for presence_key in joins.keys():
+			var sector := _extract_city_presence_sector(joins[presence_key])
+			if not sector.is_empty():
+				_city_presence_entries[str(presence_key)] = sector
+	_emit_city_presence_counts()
+
+func _build_city_presence_counts() -> Dictionary:
+	var counts := {
+		"north_west": 0,
+		"north_east": 0,
+		"south_west": 0,
+		"south_east": 0,
+		"south_center": 0
+	}
+	for sector_variant in _city_presence_entries.values():
+		var sector := str(sector_variant)
+		if counts.has(sector):
+			counts[sector] = int(counts[sector]) + 1
+	return counts
+
+func _emit_city_presence_counts() -> void:
+	city_presence_counts_changed.emit(_build_city_presence_counts())
+
+func _clear_city_presence_state() -> void:
+	_city_presence_entries.clear()
+	_emit_city_presence_counts()
