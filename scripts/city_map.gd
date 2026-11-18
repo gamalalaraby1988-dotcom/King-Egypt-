@@ -350,15 +350,19 @@ func _draw() -> void:
 	var scale_factor := map_size.x * 0.42 / world_radius
 	var heading := player.global_rotation.y if is_instance_valid(player) else 0.0
 	var road_color := Color(0.24, 0.31, 0.30, 0.92)
-	# رسم الشوارع الفعلية فقط: المحوران الرئيسيان والشوارع الفرعية الأربعة.
-	for road_x in [-72.0, -24.0, 0.0, 24.0, 72.0]:
-		var top := _world_to_map(Vector3(road_x, 0.0, -90.0))
-		var bottom := _world_to_map(Vector3(road_x, 0.0, 90.0))
-		draw_line(top, bottom, road_color, 2.0 if road_x == 0.0 else 1.5)
-	for road_z in [-72.0, -24.0, 0.0, 24.0, 72.0]:
-		var left := _world_to_map(Vector3(-90.0, 0.0, road_z))
-		var right := _world_to_map(Vector3(90.0, 0.0, road_z))
-		draw_line(left, right, road_color, 2.0 if road_z == 0.0 else 1.5)
+	# يعكس الرسم شبكة الطرق الفعلية: طريق محيطي وأربعة ممرات بين صفوف المباني.
+	for road_x in [-95.0, 95.0]:
+		var top := _world_to_map(Vector3(road_x, 0.0, -95.0))
+		var bottom := _world_to_map(Vector3(road_x, 0.0, 95.0))
+		draw_line(top, bottom, road_color, 1.5)
+	for road_z in [-95.0, 95.0, -45.0]:
+		var left := _world_to_map(Vector3(-95.0, 0.0, road_z))
+		var right := _world_to_map(Vector3(95.0, 0.0, road_z))
+		draw_line(left, right, road_color, 2.0 if road_z == -45.0 else 1.5)
+	for road_z in [-15.0, 15.0, 45.0]:
+		var left := _world_to_map(Vector3(-70.0, 0.0, road_z))
+		var right := _world_to_map(Vector3(70.0, 0.0, road_z))
+		draw_line(left, right, road_color, 1.5)
 	# وصلة المخيم الخاصة كما هي منشأة في مشهد المدينة.
 	draw_line(_world_to_map(Vector3(16.0, 0.0, 0.0)), _world_to_map(Vector3(30.0, 0.0, 0.0)), road_color, 1.8)
 	draw_line(_world_to_map(Vector3(30.0, 0.0, 0.0)), _world_to_map(Vector3(30.0, 0.0, 75.0)), road_color, 1.8)
