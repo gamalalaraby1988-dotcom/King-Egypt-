@@ -24,6 +24,7 @@ const INTERIOR_WORLD_POSITION := Vector3(1000.0, 0.0, 1000.0)
 func _ready() -> void:
 	_create_ground()
 	_create_city()
+	_create_approved_city_layout()
 	_create_city_signage()
 	_create_mobile_hud()
 	var key_light := get_node_or_null("DirectionalLight3D")
@@ -34,6 +35,17 @@ func _ready() -> void:
 	_create_city_map()
 	_create_interior_transition_ui()
 	_create_player_vehicle()
+
+
+func _create_approved_city_layout() -> void:
+	var layout_script := load("res://scripts/approved_city_layout.gd") as Script
+	if layout_script == null:
+		push_warning("تعذر تحميل تخطيط المدينة المعتمد.")
+		return
+	var layout := Node3D.new()
+	layout.name = "ApprovedCityLayout"
+	layout.set_script(layout_script)
+	add_child(layout)
 
 
 func _process(_delta: float) -> void:
