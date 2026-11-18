@@ -111,8 +111,12 @@ func _build_pyramids() -> void:
 	for i in range(3):
 		var pyramid := MeshInstance3D.new()
 		pyramid.name = "ApprovedPyramid_%d" % (i + 1)
-		var mesh := PyramidMesh.new()
-		mesh.size = Vector2(18.0 - i * 3.0, 15.0 - i * 2.0)
+		var mesh := CylinderMesh.new()
+		mesh.top_radius = 0.0
+		mesh.bottom_radius = 9.0 - i * 1.5
+		mesh.height = 15.0 - i * 2.0
+		mesh.radial_segments = 4
+		mesh.rings = 1
 		pyramid.mesh = mesh
 		pyramid.position = Vector3(-65.0 + i * 24.0, 7.5, 90.0)
 		pyramid.material_override = _mat(Color(0.72, 0.58, 0.38))
