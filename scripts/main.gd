@@ -56,6 +56,7 @@ const APARTMENT_FURNITURE_GROUPS := [
 func _ready() -> void:
 	_create_ground()
 	_create_city()
+	_create_approved_city_layout()
 	_create_party_station()
 	_create_city_signage()
 	_create_mobile_hud()
@@ -70,6 +71,17 @@ func _ready() -> void:
 	_create_player_vehicle()
 	# دخول مباشر للمدينة في نسخة الاختبار؛ شاشة OTP المؤقتة معطلة حتى تجهيز نظام الدخول النهائي.
 	_create_character_selection_ui()
+
+
+func _create_approved_city_layout() -> void:
+	var layout_script := load("res://scripts/approved_city_layout.gd") as Script
+	if layout_script == null:
+		push_warning("تعذر تحميل تخطيط المدينة المعتمد.")
+		return
+	var layout := Node3D.new()
+	layout.name = "ApprovedCityLayout"
+	layout.set_script(layout_script)
+	add_child(layout)
 
 
 func _create_offline_city_life() -> void:
