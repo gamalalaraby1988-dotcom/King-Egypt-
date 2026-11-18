@@ -17,39 +17,6 @@ var mission_manager: Node
 var root: Control
 var left_controls: VBoxContainer
 var bottom_controls: HBoxContainer
-var popup: PanelContainer
-var popup_title: Label
-var popup_body: Label
-var money_label: Button
-var chips_label: Button
-var gems_label: Button
-var phone_popup: PanelContainer
-var vehicle_store_list: VBoxContainer
-var vehicle_store_status: Label
-var player_popup: PanelContainer
-var player_name_label: Label
-var player_level_label: Label
-var player_status_label: Label
-var player_avatar_label: Label
-var player_action_status: Label
-var player_primary_action_button: Button
-var selected_player_is_friend := false
-var selected_player_id := ""
-var group_members: Array[Dictionary] = [{"player_id":"local_leader", "display_name":"أنت", "is_leader":true}]
-var pending_group_invites: Array[String] = []
-var group_popup: PanelContainer
-var group_status_label: Label
-var group_members_box: VBoxContainer
-var group_chat_popup: PanelContainer
-var group_chat_log: RichTextLabel
-var group_chat_input: LineEdit
-var group_meeting_status: Label
-var group_meeting_position := Vector3.ZERO
-var group_follow_enabled := false
-var group_follow_button: Button
-var group_meeting_point_button: Button
-var group_move_button: Button
-var group_member_markers: Dictionary = {}
 var social_popup: PanelContainer
 var social_content: VBoxContainer
 var social_status_label: Label
@@ -113,7 +80,6 @@ func _ready() -> void:
 	main_scene = get_parent()
 	mission_manager = main_scene.get_node_or_null("MissionManager") if is_instance_valid(main_scene) else null
 	_build()
-	_build_social_popup()
 	_build_player_interaction_popup()
 	_build_group_popup()
 	_build_group_chat_popup()
@@ -196,6 +162,8 @@ func _build() -> void:
 	_make_button(bottom_controls, "😊 تعبيرات", "emotes")
 	_make_button(bottom_controls, "🎉 حفلة", "party")
 	_make_button(bottom_controls, "⚙", "settings")
+	root.resized.connect(_layout_mobile_controls)
+	_layout_mobile_controls()
 
 	popup = PanelContainer.new()
 	popup.anchor_left = 0.5
@@ -224,6 +192,33 @@ func _build() -> void:
 	close.text = "إغلاق"
 	close.pressed.connect(func(): popup.visible = false)
 	content.add_child(close)
+
+func _layout_mobile_controls() -> void:
+	if not is_instance_valid(root):
+		return
+	var viewport_size := root.size
+	if viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
+		return
+	var short_side := minf(viewport_size.x, viewport_size.y)
+	var scale_factor := clampf(short_side / 720.0, 0.58, 1.0)
+	var margin := 24.0 * scale_factor
+	var joystick_radius := 72.0 * scale_factor
+	var touch_radius := joystick_radius * 1.55
+	var clearance := 18.0 * scale_factor
+	if is_instance_valid(bottom_controls):
+		bottom_controls.anchor_left = 0.5
+		bottom_controls.anchor_right = 0.5
+		bottom_controls.offset_left = -minf(250.0, viewport_size.x * 0.34)
+		bottom_controls.offset_right = minf(250.0, viewport_size.x * 0.34)
+		bottom_controls.offset_top = -62.0 * scale_factor
+		bottom_controls.offset_bottom = -8.0 * scale_factor
+		bottom_controls.add_theme_constant_override("separation", int(6.0 * scale_factor))
+		var left_limit := margin + touch_radius + clearance
+		if bottom_controls.position.x < left_limit:
+			bottom_controls.position.x = left_limit
+	if is_instance_valid(left_controls):
+		left_controls.scale = Vector2(scale_factor, scale_factor)
+		left_controls.position.y = 0.15 * viewport_size.y
 
 func _make_button(parent: Control, caption: String, section: String) -> Button:
 	var icons := {
