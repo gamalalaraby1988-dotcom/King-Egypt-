@@ -15,9 +15,9 @@ func _run_city_presence_tests() -> void:
 	await process_frame
 
 	manager.call("_apply_city_presence_state", {
-		"session_a": [{"phx_ref": "a1", "sector": "north_west"}],
-		"session_b": [{"phx_ref": "b1", "sector": "south_east"}],
-		"session_c": [{"phx_ref": "c1", "sector": "interior"}]
+		"session_a": {"metas": [{"phx_ref": "a1", "sector": "north_west"}]},
+		"session_b": {"metas": [{"phx_ref": "b1", "sector": "south_east"}]},
+		"session_c": {"metas": [{"phx_ref": "c1", "sector": "interior"}]}
 	})
 	var counts: Dictionary = manager.call("get_city_presence_counts")
 	if int(counts.get("north_west", -1)) != 1 or int(counts.get("south_east", -1)) != 1 or int(counts.get("north_east", -1)) != 0:
@@ -27,8 +27,8 @@ func _run_city_presence_tests() -> void:
 		return
 
 	manager.call("_apply_city_presence_diff", {
-		"joins": {"session_d": [{"phx_ref": "d1", "sector": "north_west"}]},
-		"leaves": {"session_b": [{"phx_ref": "b1", "sector": "south_east"}]}
+		"joins": {"session_d": {"metas": [{"phx_ref": "d1", "sector": "north_west"}]}},
+		"leaves": {"session_b": {"metas": [{"phx_ref": "b1", "sector": "south_east"}]}}
 	})
 	counts = manager.call("get_city_presence_counts")
 	if int(counts.get("north_west", -1)) != 2 or int(counts.get("south_east", -1)) != 0:
