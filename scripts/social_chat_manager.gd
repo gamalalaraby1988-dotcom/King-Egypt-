@@ -692,13 +692,13 @@ func _extract_city_presence_sector(metas: Variant) -> String:
 	if metas is Array:
 		for index in range(metas.size() - 1, -1, -1):
 			if metas[index] is Dictionary:
-				var candidate := str(metas[index].get("sector", ""))
-				if CITY_SECTORS.has(candidate) or candidate == "interior":
-					return candidate
+				var meta_sector := str(metas[index].get("sector", ""))
+				if CITY_SECTORS.has(meta_sector) or meta_sector == "interior":
+					return meta_sector
 	elif metas is Dictionary:
-		var candidate := str(metas.get("sector", ""))
-		if CITY_SECTORS.has(candidate) or candidate == "interior":
-			return candidate
+		var payload_sector := str(metas.get("sector", ""))
+		if CITY_SECTORS.has(payload_sector) or payload_sector == "interior":
+			return payload_sector
 	return ""
 
 func _apply_city_presence_state(state: Dictionary) -> void:
