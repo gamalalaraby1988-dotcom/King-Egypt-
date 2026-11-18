@@ -15,6 +15,45 @@ signal group_leader_move_requested(target_position: Vector3)
 var main_scene: Node
 var mission_manager: Node
 var root: Control
+var left_controls: VBoxContainer
+var bottom_controls: HBoxContainer
+var popup: PanelContainer
+var popup_title: Label
+var popup_body: Label
+var money_label: Button
+var chips_label: Button
+var gems_label: Button
+var phone_popup: PanelContainer
+var vehicle_store_list: VBoxContainer
+var vehicle_store_status: Label
+var player_popup: PanelContainer
+var player_name_label: Label
+var player_level_label: Label
+var player_status_label: Label
+var player_avatar_label: Label
+var player_action_status: Label
+var player_primary_action_button: Button
+var selected_player_is_friend := false
+var selected_player_id := ""
+var group_members: Array[Dictionary] = [{"player_id":"local_leader", "display_name":"أنت", "is_leader":true}]
+var pending_group_invites: Array[String] = []
+var group_popup: PanelContainer
+var group_status_label: Label
+var group_members_box: VBoxContainer
+var group_chat_popup: PanelContainer
+var group_chat_log: RichTextLabel
+var group_chat_input: LineEdit
+var group_meeting_status: Label
+var group_meeting_position := Vector3.ZERO
+var group_follow_enabled := false
+var group_follow_button: Button
+var group_meeting_point_button: Button
+var group_move_button: Button
+var group_member_markers: Dictionary = {}
+var social_popup: PanelContainer
+var social_content: VBoxContainer
+var social_status_label: Label
+var social_active_tab := "friends"
 var popup: PanelContainer
 var popup_title: Label
 var popup_body: Label
@@ -74,6 +113,7 @@ func _ready() -> void:
 	main_scene = get_parent()
 	mission_manager = main_scene.get_node_or_null("MissionManager") if is_instance_valid(main_scene) else null
 	_build()
+	_build_social_popup()
 	_build_player_interaction_popup()
 	_build_group_popup()
 	_build_group_chat_popup()
@@ -115,17 +155,17 @@ func _build() -> void:
 	chips_label = _make_button(top, "رقائق: 0  +", "wallet")
 	gems_label = _make_button(top, "جواهر: 0", "wallet")
 
-	var left := VBoxContainer.new()
-	left.anchor_left = 0.012
-	left.anchor_top = 0.15
-	left.anchor_bottom = 0.68
-	left.offset_right = 150
-	left.add_theme_constant_override("separation", 7)
-	root.add_child(left)
-	_make_button(left, "👤 الملف", "profile")
-	_make_button(left, "📜 المهام", "missions")
-	_make_button(left, "🎁 المكافآت", "rewards")
-	_make_button(left, "🏆 الإنجازات", "missions")
+	left_controls = VBoxContainer.new()
+	left_controls.anchor_left = 0.012
+	left_controls.anchor_top = 0.15
+	left_controls.anchor_bottom = 0.68
+	left_controls.offset_right = 150
+	left_controls.add_theme_constant_override("separation", 7)
+	root.add_child(left_controls)
+	_make_button(left_controls, "👤 الملف", "profile")
+	_make_button(left_controls, "📜 المهام", "missions")
+	_make_button(left_controls, "🎁 المكافآت", "rewards")
+	_make_button(left_controls, "🏆 الإنجازات", "missions")
 
 	var right := VBoxContainer.new()
 	right.anchor_left = 1.0
@@ -142,21 +182,20 @@ func _build() -> void:
 	_make_button(right, "🗺 الخريطة", "map")
 	_make_button(right, "🐈 الحيوانات", "pets")
 
-	var bottom := HBoxContainer.new()
-	bottom.anchor_left = 0.28
-	bottom.anchor_right = 0.72
-	bottom.anchor_top = 1.0
-	bottom.anchor_bottom = 1.0
-	bottom.offset_top = -66
-	bottom.alignment = BoxContainer.ALIGNMENT_CENTER
-	bottom.add_theme_constant_override("separation", 8)
-	root.add_child(bottom)
-	_make_button(bottom, "💬 محادثة", "chat")
-	_make_button(bottom, "👥 أصدقاء", "social")
-	_make_button(bottom, "🛡 مجموعتي", "group")
-	_make_button(bottom, "😊 تعبيرات", "emotes")
-	_make_button(bottom, "🎉 حفلة", "party")
-	_make_button(bottom, "⚙", "settings")
+	bottom_controls = HBoxContainer.new()
+	bottom_controls.anchor_left = 0.28
+	bottom_controls.anchor_right = 0.72
+	bottom_controls.anchor_top = 1.0
+	bottom_controls.anchor_bottom = 1.0
+	bottom_controls.alignment = BoxContainer.ALIGNMENT_CENTER
+	bottom_controls.add_theme_constant_override("separation", 8)
+	root.add_child(bottom_controls)
+	_make_button(bottom_controls, "💬 محادثة", "chat")
+	_make_button(bottom_controls, "👥 أصدقاء", "social")
+	_make_button(bottom_controls, "🛡 مجموعتي", "group")
+	_make_button(bottom_controls, "😊 تعبيرات", "emotes")
+	_make_button(bottom_controls, "🎉 حفلة", "party")
+	_make_button(bottom_controls, "⚙", "settings")
 
 	popup = PanelContainer.new()
 	popup.anchor_left = 0.5
@@ -187,15 +226,37 @@ func _build() -> void:
 	content.add_child(close)
 
 func _make_button(parent: Control, caption: String, section: String) -> Button:
+	var icons := {
+		"wallet": "◈", "profile": "👤", "missions": "📜", "rewards": "🎁",
+		"events": "👑", "pass": "🎟", "phone": "📱", "map": "🗺",
+		"pets": "🐈", "chat": "💬", "social": "👥", "group": "🛡",
+		"emotes": "😊", "party": "🎉", "settings": "⚙"
+	}
 	var button := Button.new()
-	button.text = caption
-	button.custom_minimum_size = Vector2(118, 42)
-	button.add_theme_font_size_override("font_size", 14)
+	button.text = str(icons.get(section, "•"))
+	button.tooltip_text = caption
+	button.custom_minimum_size = Vector2(112, 46) if section == "wallet" else Vector2(46, 46)
+	button.add_theme_font_size_override("font_size", 13 if section == "wallet" else 23)
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.025, 0.035, 0.045, 0.78)
+	style.border_color = Color(0.82, 0.67, 0.36, 0.96)
+	style.set_border_width_all(2)
+	style.set_corner_radius_all(23)
+	style.content_margin_left = 4
+	style.content_margin_right = 4
+	style.content_margin_top = 4
+	style.content_margin_bottom = 4
+	button.add_theme_stylebox_override("normal", style)
+	button.add_theme_stylebox_override("hover", style)
+	button.add_theme_stylebox_override("pressed", style)
 	button.pressed.connect(_on_button_pressed.bind(section))
 	parent.add_child(button)
 	return button
 
 func _on_button_pressed(section: String) -> void:
+	if section == "social":
+		_open_social_popup()
+		return
 	if section == "wallet":
 		_open_section("phone")
 		return
@@ -203,6 +264,131 @@ func _on_button_pressed(section: String) -> void:
 		_open_section("settings")
 		return
 	_open_section(section)
+
+func _build_social_popup() -> void:
+	social_popup = PanelContainer.new()
+	social_popup.name = "SocialHubPopup"
+	# نافذة اجتماعية عمودية ضيقة على يمين الشاشة، مع إبقاء مساحة المدينة ظاهرة.
+	social_popup.anchor_left = 0.72
+	social_popup.anchor_right = 1.0
+	social_popup.anchor_top = 0.02
+	social_popup.anchor_bottom = 0.98
+	social_popup.offset_left = 0
+	social_popup.offset_right = -8
+	social_popup.offset_top = 0
+	social_popup.offset_bottom = 0
+	social_popup.visible = false
+	social_popup.mouse_filter = Control.MOUSE_FILTER_STOP
+	var panel_style := StyleBoxFlat.new()
+	panel_style.bg_color = Color(0.035, 0.045, 0.055, 0.98)
+	panel_style.border_color = Color(0.84, 0.69, 0.38, 1.0)
+	panel_style.set_border_width_all(2)
+	panel_style.set_corner_radius_all(22)
+	panel_style.content_margin_left = 14
+	panel_style.content_margin_right = 14
+	panel_style.content_margin_top = 12
+	panel_style.content_margin_bottom = 12
+	social_popup.add_theme_stylebox_override("panel", panel_style)
+	root.add_child(social_popup)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 10)
+	social_popup.add_child(box)
+	var heading := Label.new()
+	heading.text = "التواصل الاجتماعي"
+	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	heading.add_theme_font_size_override("font_size", 22)
+	heading.add_theme_color_override("font_color", Color(0.94, 0.82, 0.55))
+	box.add_child(heading)
+	var tabs := HBoxContainer.new()
+	tabs.add_theme_constant_override("separation", 6)
+	box.add_child(tabs)
+	for tab in [{"id":"friends","title":"الأصدقاء"},{"id":"group","title":"المجموعة"},{"id":"public","title":"العامة"}]:
+		var tab_button := Button.new()
+		tab_button.text = str(tab["title"])
+		tab_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		tab_button.custom_minimum_size.y = 42
+		tab_button.pressed.connect(_show_social_tab.bind(str(tab["id"])))
+		tabs.add_child(tab_button)
+	social_content = VBoxContainer.new()
+	social_content.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	social_content.add_theme_constant_override("separation", 8)
+	box.add_child(social_content)
+	social_status_label = Label.new()
+	social_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	social_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	social_status_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	box.add_child(social_status_label)
+	var close := Button.new()
+	close.text = "إغلاق"
+	close.pressed.connect(func(): social_popup.visible = false)
+	box.add_child(close)
+	_show_social_tab("friends")
+
+
+func _open_social_popup() -> void:
+	if not is_instance_valid(social_popup):
+		_build_social_popup()
+	_show_social_tab(social_active_tab)
+	social_popup.visible = true
+	if is_instance_valid(popup):
+		popup.visible = false
+	if is_instance_valid(group_popup):
+		group_popup.visible = false
+	if is_instance_valid(group_chat_popup):
+		group_chat_popup.visible = false
+
+
+func _show_social_tab(tab: String) -> void:
+	social_active_tab = tab
+	if not is_instance_valid(social_content):
+		return
+	for child in social_content.get_children():
+		child.queue_free()
+	if is_instance_valid(social_status_label):
+		social_status_label.text = ""
+	if tab == "friends":
+		var heading := Label.new()
+		heading.text = "الأصدقاء"
+		heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		social_content.add_child(heading)
+		var hint := Label.new()
+		hint.text = "ستظهر قائمة الأصدقاء وطلبات الصداقة هنا عند تفعيل اتصال الحسابات."
+		hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		social_content.add_child(hint)
+		if is_instance_valid(social_status_label):
+			social_status_label.text = "واجهة الأصدقاء جاهزة؛ بيانات الأصدقاء الحقيقية تحتاج خدمة الحسابات المتصلة."
+	elif tab == "group":
+		var heading := Label.new()
+		heading.text = "أعضاء المجموعة"
+		heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		social_content.add_child(heading)
+		for member in group_members:
+			var row := Label.new()
+			row.text = ("👑 " if bool(member.get("is_leader", false)) else "👤 ") + str(member.get("display_name", "لاعب"))
+			social_content.add_child(row)
+		var count := Label.new()
+		count.text = "الأعضاء: %d/%d" % [group_members.size(), GROUP_MAX_MEMBERS]
+		count.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		social_content.add_child(count)
+		var chat := Button.new()
+		chat.text = "محادثة المجموعة"
+		chat.pressed.connect(_open_group_chat)
+		social_content.add_child(chat)
+		if is_instance_valid(social_status_label):
+			social_status_label.text = "عرض المجموعة الحالية محليًا؛ دعوات الأعضاء ومزامنتهم تحتاج اتصال الخادم."
+	elif tab == "public":
+		var heading := Label.new()
+		heading.text = "المحادثة العامة"
+		heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		social_content.add_child(heading)
+		var hint := Label.new()
+		hint.text = "ستظهر رسائل لاعبي المدينة هنا عند تشغيل خدمة المحادثة العامة."
+		hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		social_content.add_child(hint)
+		if is_instance_valid(social_status_label):
+			social_status_label.text = "واجهة العامة موضوعة؛ الإرسال والاستقبال الفعليان غير متصلين بعد."
 
 func _open_section(section: String) -> void:
 	if not SECTIONS.has(section):
