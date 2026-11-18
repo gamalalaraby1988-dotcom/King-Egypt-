@@ -45,6 +45,16 @@ var social_popup: PanelContainer
 var social_friends_list: VBoxContainer
 var social_conversation_log: RichTextLabel
 var social_message_input: LineEdit
+var social_auth_row: HBoxContainer
+var social_auth_status: Label
+var social_email_input: LineEdit
+var social_password_input: LineEdit
+var social_login_button: Button
+var social_player_code_input: LineEdit
+var social_conversation_title: Label
+var social_send_button: Button
+var social_current_conversation_id := ""
+var social_current_player_code := ""
 var group_meeting_status: Label
 var group_meeting_position := Vector3.ZERO
 var group_follow_enabled := false
@@ -415,7 +425,7 @@ func _build_social_hub() -> void:
 	root.add_child(social_popup)
 
 	var outer := VBoxContainer.new()
-	outer.add_theme_constant_override("separation", 8)
+	outer.add_theme_constant_override("separation", 7)
 	social_popup.add_child(outer)
 	var header := HBoxContainer.new()
 	outer.add_child(header)
@@ -426,7 +436,6 @@ func _build_social_hub() -> void:
 	heading.add_theme_color_override("font_color", Color(0.94, 0.82, 0.55))
 	heading.add_theme_font_size_override("font_size", 19)
 	heading.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	heading.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	heading.custom_minimum_size.y = 38
 	heading.clip_text = true
 	heading.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
@@ -434,8 +443,37 @@ func _build_social_hub() -> void:
 	var close := Button.new()
 	close.text = "✕"
 	close.custom_minimum_size = Vector2(38, 38)
-	close.pressed.connect(func(): social_popup.visible = false)
+	close.pressed.connect(func():
+		social_popup.visible = false
+		if is_instance_valid(SupabaseTestClient):
+			SupabaseTestClient.disconnect_test_realtime()
+	)
 	header.add_child(close)
+
+	social_auth_row = HBoxContainer.new()
+	social_auth_row.add_theme_constant_override("separation", 5)
+	outer.add_child(social_auth_row)
+	social_email_input = LineEdit.new()
+	social_email_input.placeholder_text = "بريد حساب الاختبار"
+	social_email_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	social_email_input.custom_minimum_size.x = 90
+	social_auth_row.add_child(social_email_input)
+	social_password_input = LineEdit.new()
+	social_password_input.placeholder_text = "كلمة المرور"
+	social_password_input.secret = true
+	social_password_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	social_password_input.custom_minimum_size.x = 80
+	social_auth_row.add_child(social_password_input)
+	social_login_button = Button.new()
+	social_login_button.text = "دخول الاختبار"
+	social_login_button.custom_minimum_size.x = 92
+	social_login_button.pressed.connect(_on_social_test_login)
+	social_auth_row.add_child(social_login_button)
+	social_auth_status = Label.new()
+	social_auth_status.text = "الاتصال الاجتماعي متاح لحساب الاختبار فقط في هذه النسخة."
+	social_auth_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	social_auth_status.add_theme_font_size_override("font_size", 11)
+	outer.add_child(social_auth_status)
 
 	var panes := HBoxContainer.new()
 	panes.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -448,22 +486,41 @@ func _build_social_hub() -> void:
 	friends_panel.size_flags_stretch_ratio = 0.34
 	panes.add_child(friends_panel)
 	var friends_column := VBoxContainer.new()
-	friends_column.add_theme_constant_override("separation", 7)
+	friends_column.add_theme_constant_override("separation", 6)
 	friends_panel.add_child(friends_column)
 	var friends_heading := Label.new()
 	friends_heading.text = "الأصدقاء"
 	friends_heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	friends_heading.add_theme_color_override("font_color", Color(0.94, 0.82, 0.55))
 	friends_column.add_child(friends_heading)
+	var add_friend_row := HBoxContainer.new()
+	add_friend_row.add_theme_constant_override("separation", 3)
+	friends_column.add_child(add_friend_row)
+	social_player_code_input = LineEdit.new()
+	social_player_code_input.placeholder_text = "رمز اللاعب"
+	social_player_code_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	social_player_code_input.custom_minimum_size.x = 45
+	add_friend_row.add_child(social_player_code_input)
+	var add_friend_button := Button.new()
+	add_friend_button.text = "+"
+	add_friend_button.custom_minimum_size.x = 32
+	add_friend_button.pressed.connect(_on_social_add_friend)
+	add_friend_row.add_child(add_friend_button)
+	var refresh_friends_button := Button.new()
+	refresh_friends_button.text = "تحديث الأصدقاء"
+	refresh_friends_button.pressed.connect(_refresh_social_friends)
+	friends_column.add_child(refresh_friends_button)
+	var friends_scroll := ScrollContainer.new()
+	friends_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	friends_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	friends_column.add_child(friends_scroll)
 	social_friends_list = VBoxContainer.new()
-	social_friends_list.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	friends_column.add_child(social_friends_list)
+	social_friends_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	friends_scroll.add_child(social_friends_list)
 	var friends_hint := Label.new()
-	friends_hint.text = "ستظهر قائمتك هنا بعد ربط الحسابات."
+	friends_hint.text = "سجّل الدخول لعرض أصدقائك."
 	friends_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	friends_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	friends_hint.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	friends_hint.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	social_friends_list.add_child(friends_hint)
 
 	var conversation_panel := PanelContainer.new()
@@ -475,11 +532,11 @@ func _build_social_hub() -> void:
 	conversation_panel.add_child(conversation_column)
 	var conversation_header := HBoxContainer.new()
 	conversation_column.add_child(conversation_header)
-	var conversation_title := Label.new()
-	conversation_title.text = "المحادثة"
-	conversation_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	conversation_title.add_theme_color_override("font_color", Color(0.94, 0.82, 0.55))
-	conversation_header.add_child(conversation_title)
+	social_conversation_title = Label.new()
+	social_conversation_title.text = "المحادثة"
+	social_conversation_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	social_conversation_title.add_theme_color_override("font_color", Color(0.94, 0.82, 0.55))
+	conversation_header.add_child(social_conversation_title)
 	var group_chat_button := Button.new()
 	group_chat_button.text = "المجموعة"
 	group_chat_button.custom_minimum_size.x = 76
@@ -490,12 +547,23 @@ func _build_social_hub() -> void:
 	social_conversation_log.fit_content = false
 	social_conversation_log.scroll_following = true
 	social_conversation_log.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	social_conversation_log.text = "[color=gray]اختر صديقًا لعرض المحادثة هنا. المحادثات تحتاج اتصال الحسابات.[/color]"
+	social_conversation_log.text = "[color=gray]اختر صديقًا لعرض المحادثة هنا.[/color]"
 	conversation_column.add_child(social_conversation_log)
+	var message_row := HBoxContainer.new()
+	message_row.add_theme_constant_override("separation", 5)
+	conversation_column.add_child(message_row)
 	social_message_input = LineEdit.new()
-	social_message_input.placeholder_text = "ستتاح الكتابة عند الاتصال..."
+	social_message_input.placeholder_text = "اكتب رسالة لصديق..."
 	social_message_input.editable = false
-	conversation_column.add_child(social_message_input)
+	social_message_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	social_message_input.text_submitted.connect(_send_social_message)
+	message_row.add_child(social_message_input)
+	social_send_button = Button.new()
+	social_send_button.text = "إرسال"
+	social_send_button.disabled = true
+	social_send_button.pressed.connect(_send_social_message)
+	message_row.add_child(social_send_button)
+	SupabaseTestClient.social_event.connect(_on_social_backend_event)
 
 
 func _open_social_hub() -> void:
@@ -507,6 +575,157 @@ func _open_social_hub() -> void:
 		group_chat_popup.visible = false
 	if is_instance_valid(social_popup):
 		social_popup.visible = true
+	if SupabaseTestClient.is_authenticated():
+		_refresh_social_friends()
+
+
+func _on_social_test_login() -> void:
+	if not is_instance_valid(SupabaseTestClient):
+		social_auth_status.text = "خدمة الاختبار غير متاحة."
+		return
+	social_login_button.disabled = true
+	social_auth_status.text = "جارٍ التحقق من حساب الاختبار..."
+	var email := social_email_input.text.strip_edges()
+	var password := social_password_input.text
+	var signed_in: bool = await SupabaseTestClient.sign_in_with_password(email, password)
+	social_password_input.clear()
+	social_login_button.disabled = false
+	if not signed_in:
+		social_auth_status.text = "تعذر الدخول. تأكد من بيانات حساب الاختبار المخصص."
+		return
+	var provision: Dictionary = await SupabaseTestClient.ensure_test_player_account()
+	if not bool(provision.get("ok", false)):
+		social_auth_status.text = str(provision.get("message", "تعذر تجهيز ملف لاعب الاختبار."))
+		return
+	social_auth_row.visible = false
+	social_auth_status.text = "متصل بحساب الاختبار — بيانات المؤسس منفصلة."
+	_refresh_social_friends()
+
+
+func _refresh_social_friends() -> void:
+	if not SupabaseTestClient.is_authenticated() or not is_instance_valid(social_friends_list):
+		return
+	var result: Dictionary = await SupabaseTestClient.list_test_friends()
+	if not bool(result.get("ok", false)):
+		social_auth_status.text = str(result.get("message", "تعذر تحديث قائمة الأصدقاء."))
+		return
+	for child in social_friends_list.get_children():
+		child.queue_free()
+	var friends: Variant = result.get("data", [])
+	if not friends is Array or friends.is_empty():
+		var empty_label := Label.new()
+		empty_label.text = "لا يوجد أصدقاء بعد."
+		empty_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		empty_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		social_friends_list.add_child(empty_label)
+		return
+	for friend_value in friends:
+		if not friend_value is Dictionary:
+			continue
+		var friend: Dictionary = friend_value
+		var player_code := str(friend.get("player_code", "")).strip_edges()
+		var display_name := str(friend.get("display_name", "لاعب")).strip_edges().substr(0, 24)
+		if player_code.is_empty():
+			continue
+		var friend_button := Button.new()
+		friend_button.text = display_name + "\n" + player_code
+		friend_button.custom_minimum_size.y = 48
+		friend_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		friend_button.pressed.connect(_open_social_conversation.bind(player_code, display_name))
+		social_friends_list.add_child(friend_button)
+
+
+func _on_social_add_friend() -> void:
+	if not SupabaseTestClient.is_authenticated():
+		social_auth_status.text = "سجّل الدخول بحساب الاختبار أولًا."
+		return
+	var player_code := social_player_code_input.text.strip_edges().to_upper()
+	if player_code.is_empty():
+		social_auth_status.text = "اكتب رمز اللاعب أولًا."
+		return
+	var result: Dictionary = await SupabaseTestClient.send_test_friend_request(player_code)
+	if bool(result.get("ok", false)):
+		social_auth_status.text = "رد الخادم: " + str(result.get("data", "تم إرسال الطلب."))
+		social_player_code_input.clear()
+	else:
+		social_auth_status.text = str(result.get("message", "تعذر إرسال طلب الصداقة."))
+
+
+func _open_social_conversation(player_code: String, display_name: String) -> void:
+	if not SupabaseTestClient.is_authenticated():
+		return
+	var result: Dictionary = await SupabaseTestClient.open_test_direct_conversation(player_code)
+	if not bool(result.get("ok", false)):
+		social_auth_status.text = str(result.get("message", "تعذر فتح المحادثة."))
+		return
+	var rows: Variant = result.get("data", [])
+	if not rows is Array or rows.is_empty() or not rows[0] is Dictionary:
+		social_auth_status.text = "لم يرجع الخادم معرّف المحادثة."
+		return
+	var row: Dictionary = rows[0]
+	if not bool(row.get("success", false)):
+		social_auth_status.text = "تعذر فتح المحادثة: " + str(row.get("error_code", "unknown"))
+		return
+	social_current_conversation_id = str(row.get("conversation_id", ""))
+	social_current_player_code = player_code
+	social_conversation_title.text = display_name
+	social_message_input.editable = true
+	social_send_button.disabled = false
+	await _refresh_social_messages()
+	SupabaseTestClient.connect_test_direct_realtime(social_current_conversation_id)
+
+
+func _refresh_social_messages() -> void:
+	if social_current_conversation_id.is_empty():
+		return
+	var result: Dictionary = await SupabaseTestClient.read_test_direct_messages(social_current_conversation_id)
+	if not bool(result.get("ok", false)):
+		social_auth_status.text = str(result.get("message", "تعذر تحميل الرسائل."))
+		return
+	social_conversation_log.clear()
+	var messages: Variant = result.get("data", [])
+	if not messages is Array or messages.is_empty():
+		social_conversation_log.text = "[color=gray]لا توجد رسائل بعد. ابدأ المحادثة.[/color]"
+		return
+	for message_value in messages:
+		if not message_value is Dictionary:
+			continue
+		var message: Dictionary = message_value
+		var sender := "أنت" if bool(message.get("sender_is_me", false)) else "الصديق"
+		var body := str(message.get("body", "")).replace("[", "(").replace("]", ")")
+		social_conversation_log.append_text("[color=gold][" + sender + "][/color] " + body + "\n")
+
+
+func _send_social_message(_submitted_text: String = "") -> void:
+	if social_current_conversation_id.is_empty() or not SupabaseTestClient.is_authenticated():
+		return
+	var message := social_message_input.text.strip_edges()
+	if message.is_empty():
+		return
+	social_send_button.disabled = true
+	var result: Dictionary = await SupabaseTestClient.send_test_direct_message(social_current_conversation_id, message)
+	social_send_button.disabled = false
+	if not bool(result.get("ok", false)):
+		social_auth_status.text = str(result.get("message", "تعذر إرسال الرسالة."))
+		return
+	var rows: Variant = result.get("data", [])
+	if rows is Array and not rows.is_empty() and rows[0] is Dictionary and not bool(rows[0].get("success", false)):
+		social_auth_status.text = "رفض الخادم الرسالة: " + str(rows[0].get("error_code", "unknown"))
+		return
+	social_message_input.clear()
+	await _refresh_social_messages()
+
+
+func _on_social_backend_event(event_name: String, payload: Dictionary) -> void:
+	if event_name != "direct_message" or social_current_conversation_id.is_empty():
+		return
+	var body := str(payload.get("body", "")).strip_edges()
+	if body.is_empty():
+		return
+	var sender := str(payload.get("sender_name", "الصديق")).strip_edges().substr(0, 24)
+	var safe_sender := sender.replace("[", "(").replace("]", ")")
+	var safe_body := body.replace("[", "(").replace("]", ")")
+	social_conversation_log.append_text("[color=lightblue][" + safe_sender + "][/color] " + safe_body + "\n")
 
 
 func _build_player_interaction_popup() -> void:
