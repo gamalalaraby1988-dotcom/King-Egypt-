@@ -82,6 +82,23 @@ func _sphere(parent: Node3D, node_name: String, radius: float, pos: Vector3, col
 	parent.add_child(node)
 	return node
 
+func _box_with_collision(parent: Node3D, node_name: String, size: Vector3, pos: Vector3, color: Color) -> void:
+	_box(parent, node_name, size, pos, color)
+	CollisionProfile.add_world_box_collider(parent, size, pos, node_name + "Collision")
+
+func _build_tent_seat(tent: Node3D, seat_name: String, pos: Vector3, royal: bool) -> void:
+	var seat := Node3D.new()
+	seat.name = seat_name
+	seat.position = pos
+	seat.add_to_group("city_interactables")
+	seat.set_script(load("res://scripts/tent_seat_interaction.gd"))
+	seat.set("seat_title", "جلسة الخيمة الملكية" if royal else "جلسة خيمة الضيافة")
+	tent.add_child(seat)
+	var cushion_color := Color(0.48, 0.13, 0.10) if royal else Color(0.58, 0.29, 0.20)
+	_box(seat, "SeatCushion", Vector3(1.55, 0.38, 0.95), Vector3(0, 0.28, 0), cushion_color)
+	_box(seat, "SeatBackrest", Vector3(1.55, 0.78, 0.22), Vector3(0, 0.72, 0.40), GOLD.darkened(0.12) if royal else FABRIC.darkened(0.12))
+	_box(seat, "SeatGoldTrim", Vector3(1.58, 0.07, 0.98), Vector3(0, 0.49, 0), GOLD)
+
 func _build_tent(parent: Node3D, node_name: String, pos: Vector3, scale_factor: float, royal: bool = false) -> void:
 	var tent := Node3D.new()
 	tent.name = node_name
@@ -89,13 +106,28 @@ func _build_tent(parent: Node3D, node_name: String, pos: Vector3, scale_factor: 
 	tent.scale = Vector3.ONE * scale_factor
 	parent.add_child(tent)
 	var cloth := Color(0.56, 0.30, 0.17) if royal else FABRIC
-	_box(tent, "TentBody", Vector3(6.0, 2.5, 4.6), Vector3(0, 1.35, 0), cloth)
-	_box(tent, "FrontCanopy", Vector3(6.5, 0.22, 2.0), Vector3(0, 2.7, 2.4), cloth.lightened(0.08), Vector3(-0.12, 0, 0))
-	_box(tent, "GoldValance", Vector3(6.55, 0.12, 0.18), Vector3(0, 2.56, 3.34), GOLD)
+	# الجدار الشمالي مقسوم إلى جانبيْن مع فتحة بانورامية واسعة تطل على الأهرامات (-Z).
+	_box_with_collision(tent, "NorthWallLeft", Vector3(1.05, 2.5, 0.18), Vector3(-2.48, 1.35, -2.22), cloth)
+	_box_with_collision(tent, "NorthWallRight", Vector3(1.05, 2.5, 0.18), Vector3(2.48, 1.35, -2.22), cloth)
+	_box_with_collision(tent, "NorthWindowHeader", Vector3(3.95, 0.62, 0.18), Vector3(0, 2.29, -2.22), cloth)
+	# الجداران الجانبيان يحافظان على خصوصية الجلسة مع بقاء المشهد مفتوحًا من الداخل.
+	_box_with_collision(tent, "WestWall", Vector3(0.18, 2.5, 4.45), Vector3(-2.92, 1.35, 0), cloth)
+	_box_with_collision(tent, "EastWall", Vector3(0.18, 2.5, 4.45), Vector3(2.92, 1.35, 0), cloth)
+	# مدخل جنوبي واسع؛ لا يوجد لوح يغلق منتصف الواجهة.
+	_box_with_collision(tent, "SouthWallLeft", Vector3(1.25, 2.5, 0.18), Vector3(-2.32, 1.35, 2.22), cloth)
+	_box_with_collision(tent, "SouthWallRight", Vector3(1.25, 2.5, 0.18), Vector3(2.32, 1.35, 2.22), cloth)
+	_box_with_collision(tent, "SouthDoorHeader", Vector3(3.75, 0.42, 0.18), Vector3(0, 2.38, 2.22), cloth)
+	_box_with_collision(tent, "TentRoof", Vector3(6.25, 0.20, 4.95), Vector3(0, 2.72, 0), cloth.darkened(0.04))
+	_box(tent, "NorthWindowGoldSill", Vector3(4.05, 0.12, 0.24), Vector3(0, 0.88, -2.20), GOLD)
+	_box(tent, "NorthWindowGoldHeader", Vector3(4.05, 0.12, 0.24), Vector3(0, 2.65, -2.20), GOLD)
 	for x in [-2.75, 2.75]:
 		_cylinder(tent, "TentPole", 0.09, 3.0, Vector3(x, 1.5, 2.8), DARK)
+	_box(tent, "FrontCanopy", Vector3(6.5, 0.22, 2.0), Vector3(0, 2.7, 2.4), cloth.lightened(0.08), Vector3(-0.12, 0, 0))
+	_box(tent, "GoldValance", Vector3(6.55, 0.12, 0.18), Vector3(0, 2.56, 3.34), GOLD)
 	if royal:
 		_box(tent, "RoyalEmblem", Vector3(1.0, 0.62, 0.12), Vector3(0, 2.55, 2.38), GOLD)
+	_build_tent_seat(tent, "RoyalSeatLeft" if royal else "GuestSeatLeft", Vector3(-1.20, 0, 0.45), royal)
+	_build_tent_seat(tent, "RoyalSeatRight" if royal else "GuestSeatRight", Vector3(1.20, 0, 0.45), royal)
 
 func _build_fire_circle(parent: Node3D, pos: Vector3) -> void:
 	var fire := Node3D.new()
