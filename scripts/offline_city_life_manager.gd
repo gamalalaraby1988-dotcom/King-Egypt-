@@ -11,22 +11,29 @@ var _citizens: Array[CharacterBody3D] = []
 var _poll_elapsed := 0.0
 var _density_step_elapsed := 0.0
 var _online_mode := false
-var _nearby_real_player_count := 0
-var _visible_target_count := TOTAL_CITIZENS
+var _sector_player_counts: Dictionary = {}
+var _sector_visible_targets: Dictionary = {}
+var _sector_ids := ["north_west", "north_east", "south_west", "south_east", "south_center"]
 var _rng := RandomNumberGenerator.new()
 
 func _ready() -> void:
 	_rng.randomize()
 	_spawn_citizens()
+	var chat_manager := get_node_or_null("/root/SocialChatManager")
+	if is_instance_valid(chat_manager):
+		if chat_manager.has_signal("city_presence_counts_changed") and not chat_manager.city_presence_counts_changed.is_connected(_on_city_presence_counts_changed):
+			chat_manager.city_presence_counts_changed.connect(_on_city_presence_counts_changed)
+		if chat_manager.has_method("get_city_presence_counts"):
+			_on_city_presence_counts_changed(chat_manager.get_city_presence_counts())
 	_refresh_mode()
-	_update_density_target()
+	_update_density_targets()
 
 func _process(delta: float) -> void:
 	_poll_elapsed += delta
 	if _poll_elapsed >= ONLINE_POLL_INTERVAL:
 		_poll_elapsed = 0.0
 		_refresh_mode()
-		_update_density_target()
+		_update_density_targets()
 	_advance_density_transition(delta)
 
 func _spawn_citizens() -> void:
@@ -45,6 +52,7 @@ func _spawn_citizens() -> void:
 		citizen.set("citizen_id", "offline_npc_%02d_%s" % [index + 1, "f" if is_female else "m"])
 		citizen.set("gender", gender)
 		citizen.set("roam_radius", _rng.randf_range(8.0, 15.0))
+		citizen.set("city_sector", _sector_ids[index % _sector_ids.size()])
 		citizen.position = _choose_spawn_position(index)
 		add_child(citizen)
 		_citizens.append(citizen)
@@ -74,51 +82,57 @@ func _refresh_mode() -> void:
 		# Connecting to the internet alone must never make the city empty.
 		# Real-player density is handled separately by set_nearby_real_player_count().
 
-func set_nearby_real_player_count(player_count: int) -> void:
-	## Multiplayer presence should call this with the real-player count near this city sector.
-	_nearby_real_player_count = maxi(0, player_count)
-	_update_density_target()
+func _on_city_presence_counts_changed(counts: Dictionary) -> void:
+	_sector_player_counts = counts.duplicate(true)
+	_update_density_targets()
 
-func _update_density_target() -> void:
-	if not _online_mode:
-		_visible_target_count = TOTAL_CITIZENS
-		return
-	var count := _nearby_real_player_count
-	if count <= 0:
-		_visible_target_count = TOTAL_CITIZENS
-	elif count <= 2:
-		_visible_target_count = 42
-	elif count <= 5:
-		_visible_target_count = 32
-	elif count <= 9:
-		_visible_target_count = 22
-	elif count <= 14:
-		_visible_target_count = 12
-	elif count <= 20:
-		_visible_target_count = 5
-	else:
-		_visible_target_count = 0
+func _update_density_targets() -> void:
+	for sector in _sector_ids:
+		var target := 10
+		if _online_mode:
+			var count := maxi(0, int(_sector_player_counts.get(sector, 0)))
+			if count <= 0:
+				target = 10
+			elif count <= 2:
+				target = 8
+			elif count <= 5:
+				target = 6
+			elif count <= 9:
+				target = 4
+			elif count <= 14:
+				target = 2
+			elif count <= 20:
+				target = 1
+			else:
+				target = 0
+		_sector_visible_targets[sector] = target
 
 func _advance_density_transition(delta: float) -> void:
 	_density_step_elapsed += delta
 	if _density_step_elapsed < DENSITY_STEP_INTERVAL:
 		return
 	_density_step_elapsed = 0.0
-	var current_visible := 0
-	for citizen in _citizens:
-		if is_instance_valid(citizen) and citizen.visible:
-			current_visible += 1
-	if current_visible == _visible_target_count:
-		return
-	var should_show := current_visible < _visible_target_count
-	for citizen in _citizens:
-		if not is_instance_valid(citizen) or citizen.visible == should_show:
+	for sector in _sector_ids:
+		var sector_citizens: Array[CharacterBody3D] = []
+		var visible_count := 0
+		for citizen in _citizens:
+			if not is_instance_valid(citizen) or str(citizen.get("city_sector")) != sector:
+				continue
+			sector_citizens.append(citizen)
+			if citizen.visible:
+				visible_count += 1
+		var target := int(_sector_visible_targets.get(sector, 10))
+		if visible_count == target:
 			continue
-		citizen.visible = should_show
-		citizen.set_physics_process(should_show)
-		if not should_show:
-			citizen.velocity = Vector3.ZERO
-		break
+		var should_show := visible_count < target
+		for citizen in sector_citizens:
+			if citizen.visible == should_show:
+				continue
+			citizen.visible = should_show
+			citizen.set_physics_process(should_show)
+			if not should_show:
+				citizen.velocity = Vector3.ZERO
+			break
 
 func get_citizen_count() -> int:
 	return _citizens.size()
@@ -127,6 +141,13 @@ func get_visible_citizen_count() -> int:
 	var count := 0
 	for citizen in _citizens:
 		if is_instance_valid(citizen) and citizen.visible:
+			count += 1
+	return count
+
+func get_sector_visible_citizen_count(sector: String) -> int:
+	var count := 0
+	for citizen in _citizens:
+		if is_instance_valid(citizen) and citizen.visible and str(citizen.get("city_sector")) == sector:
 			count += 1
 	return count
 
