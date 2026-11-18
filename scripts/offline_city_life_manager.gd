@@ -55,6 +55,8 @@ func _create_activity_points() -> void:
 		add_child(point)
 		var bench := Node3D.new()
 		bench.name = "PedestrianBench_%02d" % (index + 1)
+		# Leave a clear approach spot in front of the bench for citizens.
+		bench.position.z = -1.2
 		point.add_child(bench)
 		var seat := MeshInstance3D.new()
 		seat.name = "Seat"
