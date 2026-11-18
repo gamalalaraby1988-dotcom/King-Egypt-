@@ -70,7 +70,7 @@ func apply_character_identity(character_id: String) -> void:
 		_set_part_color("TieLayer", outfit.darkened(0.25))
 
 func set_motion_state(state: String, speed: float = 0.0) -> void:
-	motion_state = state if ["idle", "walk", "run", "sit"].has(state) else "idle"
+	motion_state = state if ["idle", "walk", "run", "sit", "talk", "wave"].has(state) else "idle"
 	motion_speed = maxf(speed, 0.0)
 
 func _process(delta: float) -> void:
@@ -80,6 +80,16 @@ func _process(delta: float) -> void:
 	var swing := sin(motion_time * cycle_speed) * 0.48 * intensity
 	var bob := absf(sin(motion_time * cycle_speed * 2.0)) * 0.045 * intensity
 	_restore_animation_defaults()
+	if motion_state == "wave" or motion_state == "talk":
+		if parts.has("LeftArm"):
+			(parts["LeftArm"] as MeshInstance3D).rotation.z = -0.18
+		if parts.has("RightArm"):
+			var gesture := sin(motion_time * (5.5 if motion_state == "wave" else 3.2))
+			(parts["RightArm"] as MeshInstance3D).rotation.z = -1.05 + gesture * (0.28 if motion_state == "wave" else 0.08)
+			(parts["RightArm"] as MeshInstance3D).rotation.x = -0.22 if motion_state == "wave" else gesture * 0.12
+		if parts.has("TorsoBase") and motion_state == "talk":
+			(parts["TorsoBase"] as MeshInstance3D).rotation.y = sin(motion_time * 3.2) * 0.035
+		return
 	if motion_state == "sit":
 		if parts.has("TorsoBase"):
 			(parts["TorsoBase"] as MeshInstance3D).position.y = 0.91
