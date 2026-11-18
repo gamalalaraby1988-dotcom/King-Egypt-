@@ -80,7 +80,7 @@ func _refresh_mode() -> void:
 	if online_ready != _online_mode:
 		_online_mode = online_ready
 		# Connecting to the internet alone must never make the city empty.
-		# Real-player density is handled separately by set_nearby_real_player_count().
+		# Real-player density is driven by authenticated Realtime Presence counts for each coarse city sector.
 
 func _on_city_presence_counts_changed(counts: Dictionary) -> void:
 	_sector_player_counts = counts.duplicate(true)
