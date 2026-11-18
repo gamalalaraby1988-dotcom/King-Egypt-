@@ -18,6 +18,8 @@ var _activity_active := false
 var _activity_started := false
 var _activity_facing_y := 0.0
 var _gravity := 18.0
+var _social_state := ""
+var _social_remaining := 0.0
 
 func _ready() -> void:
 	collision_layer = 0
@@ -46,6 +48,20 @@ func _ready() -> void:
 
 func _physics_process(delta: float) -> void:
 	if not is_inside_tree():
+		return
+	if _social_remaining > 0.0:
+		_social_remaining = maxf(0.0, _social_remaining - delta)
+		velocity.x = move_toward(velocity.x, 0.0, 7.0 * delta)
+		velocity.z = move_toward(velocity.z, 0.0, 7.0 * delta)
+		if not is_on_floor():
+			velocity.y -= _gravity * delta
+		else:
+			velocity.y = 0.0
+		move_and_slide()
+		_update_avatar(_social_state, 0.0)
+		if _social_remaining <= 0.0:
+			_social_state = ""
+			_update_avatar("idle", 0.0)
 		return
 	if _idle_remaining > 0.0:
 		_idle_remaining = maxf(0.0, _idle_remaining - delta)
@@ -152,3 +168,17 @@ func _pick_next_target() -> void:
 func _update_avatar(state: String, speed: float) -> void:
 	if is_instance_valid(_avatar) and _avatar.has_method("set_motion_state"):
 		_avatar.call("set_motion_state", state, speed)
+
+func play_social_gesture(state: String, duration: float = 2.5, face_position: Vector3 = Vector3.ZERO) -> void:
+	if not ["talk", "wave"].has(state):
+		return
+	_social_state = state
+	_social_remaining = clampf(duration, 0.5, 5.0)
+	velocity.x = 0.0
+	velocity.z = 0.0
+	if face_position != Vector3.ZERO:
+		var direction := face_position - global_position
+		direction.y = 0.0
+		if direction.length_squared() > 0.01:
+			rotation.y = atan2(-direction.x, -direction.z)
+	_update_avatar(state, 0.0)
