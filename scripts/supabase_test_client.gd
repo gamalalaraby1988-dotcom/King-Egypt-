@@ -272,11 +272,11 @@ func fetch_test_display_name() -> Dictionary:
 func _call_test_social_rpc(function_name: String, payload: Dictionary = {}) -> Dictionary:
 	if not is_authenticated():
 		return {"ok": false, "message": "سجّل الدخول بحساب الاختبار أولًا."}
-	if not function_name.begins_with("list_test_") and not function_name.begins_with("send_test_") and not function_name.begins_with("respond_test_") and not function_name in [
+	if not function_name.begins_with("list_test_") and not function_name.begins_with("send_test_") and not function_name.begins_with("respond_test_") and not (function_name in [
 		"ensure_my_test_player_account",
 		"open_test_direct_conversation",
 		"read_test_direct_messages"
-	]:
+	]):
 		return {"ok": false, "message": "طلب اجتماعي غير مسموح."}
 	var request_token := access_token
 	var result := await _send_json(
