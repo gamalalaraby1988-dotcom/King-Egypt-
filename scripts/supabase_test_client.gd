@@ -386,8 +386,7 @@ func disconnect_test_realtime() -> void:
 func _join_realtime_topic() -> void:
 	if not is_authenticated() or _realtime_topic.is_empty() or _realtime_join_sent:
 		return
-	_realtime_ref += 1
-	_realtime_join_ref = str(_realtime_ref)
+	_realtime_join_ref = str(_realtime_ref + 1)
 	var payload := {
 		"config": {
 			"broadcast": {"ack": false, "self": false},
