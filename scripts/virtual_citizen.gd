@@ -56,7 +56,21 @@ func _physics_process(delta: float) -> void:
 		move_and_slide()
 		_update_avatar("idle", 0.0)
 		return
-	if _activity_remaining > 0.0:
+	if _activity_active:
+		var activity_offset := _target - global_position
+		activity_offset.y = 0.0
+		if activity_offset.length() > 0.8:
+			var activity_direction := activity_offset.normalized()
+			velocity.x = move_toward(velocity.x, activity_direction.x * walk_speed, 4.0 * delta)
+			velocity.z = move_toward(velocity.z, activity_direction.z * walk_speed, 4.0 * delta)
+			if not is_on_floor():
+				velocity.y -= _gravity * delta
+			else:
+				velocity.y = 0.0
+			rotation.y = lerp_angle(rotation.y, atan2(-activity_direction.x, -activity_direction.z), 5.0 * delta)
+			move_and_slide()
+			_update_avatar("walk", Vector2(velocity.x, velocity.z).length())
+			return
 		_activity_remaining = maxf(0.0, _activity_remaining - delta)
 		velocity.x = move_toward(velocity.x, 0.0, 6.0 * delta)
 		velocity.z = move_toward(velocity.z, 0.0, 6.0 * delta)
