@@ -543,6 +543,12 @@ func _build_social_hub() -> void:
 	social_conversation_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	social_conversation_title.add_theme_color_override("font_color", Color(0.94, 0.82, 0.55))
 	conversation_header.add_child(social_conversation_title)
+	var refresh_chat_button := Button.new()
+	refresh_chat_button.text = "↻"
+	refresh_chat_button.custom_minimum_size.x = 36
+	refresh_chat_button.tooltip_text = "تحديث الرسائل"
+	refresh_chat_button.pressed.connect(_refresh_social_messages)
+	conversation_header.add_child(refresh_chat_button)
 	var group_chat_button := Button.new()
 	group_chat_button.text = "المجموعة"
 	group_chat_button.custom_minimum_size.x = 76
@@ -601,14 +607,14 @@ func _on_social_test_login() -> void:
 	if not signed_in:
 		social_auth_status.text = "تعذر الدخول. تأكد من بيانات حساب الاختبار المخصص."
 		return
-	var provision: Dictionary = await SupabaseTestClient.ensure_test_player_account()
-	if not bool(provision.get("ok", false)):
-		social_auth_status.text = str(provision.get("message", "تعذر تجهيز ملف لاعب الاختبار."))
-		return
 	social_email_input.visible = false
 	social_password_input.visible = false
 	social_login_button.visible = false
 	social_logout_button.visible = true
+	var provision: Dictionary = await SupabaseTestClient.ensure_test_player_account()
+	if not bool(provision.get("ok", false)):
+		social_auth_status.text = str(provision.get("message", "تعذر تجهيز ملف لاعب الاختبار."))
+		return
 	social_auth_status.text = "متصل بحساب الاختبار — بيانات المؤسس منفصلة."
 	_refresh_social_friends()
 
@@ -716,6 +722,7 @@ func _on_social_add_friend() -> void:
 	if bool(result.get("ok", false)):
 		social_auth_status.text = "رد الخادم: " + str(result.get("data", "تم إرسال الطلب."))
 		social_player_code_input.clear()
+		_refresh_social_friends()
 	else:
 		social_auth_status.text = str(result.get("message", "تعذر إرسال طلب الصداقة."))
 
