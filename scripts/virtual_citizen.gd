@@ -16,6 +16,7 @@ var _rng := RandomNumberGenerator.new()
 var _avatar: Node3D
 var _activity_active := false
 var _activity_started := false
+var _activity_facing_y := 0.0
 var _gravity := 18.0
 
 func _ready() -> void:
@@ -73,6 +74,7 @@ func _physics_process(delta: float) -> void:
 			_update_avatar("walk", Vector2(velocity.x, velocity.z).length())
 			return
 		if not _activity_started:
+			rotation.y = _activity_facing_y
 			_activity_started = true
 			_activity_remaining = _rng.randf_range(5.0, 11.0)
 		_activity_remaining = maxf(0.0, _activity_remaining - delta)
@@ -126,6 +128,7 @@ func _try_visit_activity_point() -> bool:
 		return false
 	var selected := candidates[_rng.randi_range(0, candidates.size() - 1)]
 	_target = selected.global_position
+	_activity_facing_y = selected.global_rotation.y
 	_activity_active = true
 	_activity_started = false
 	_activity_remaining = 0.0
