@@ -50,6 +50,7 @@ var social_auth_status: Label
 var social_email_input: LineEdit
 var social_password_input: LineEdit
 var social_login_button: Button
+var social_logout_button: Button
 var social_player_code_input: LineEdit
 var social_conversation_title: Label
 var social_send_button: Button
@@ -469,6 +470,11 @@ func _build_social_hub() -> void:
 	social_login_button.custom_minimum_size.x = 92
 	social_login_button.pressed.connect(_on_social_test_login)
 	social_auth_row.add_child(social_login_button)
+	social_logout_button = Button.new()
+	social_logout_button.text = "خروج"
+	social_logout_button.visible = false
+	social_logout_button.pressed.connect(_on_social_test_logout)
+	social_auth_row.add_child(social_logout_button)
 	social_auth_status = Label.new()
 	social_auth_status.text = "الاتصال الاجتماعي متاح لحساب الاختبار فقط في هذه النسخة."
 	social_auth_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -597,10 +603,29 @@ func _on_social_test_login() -> void:
 	if not bool(provision.get("ok", false)):
 		social_auth_status.text = str(provision.get("message", "تعذر تجهيز ملف لاعب الاختبار."))
 		return
-	social_auth_row.visible = false
+	social_email_input.visible = false
+	social_password_input.visible = false
+	social_login_button.visible = false
+	social_logout_button.visible = true
 	social_auth_status.text = "متصل بحساب الاختبار — بيانات المؤسس منفصلة."
 	_refresh_social_friends()
 
+
+func _on_social_test_logout() -> void:
+	await SupabaseTestClient.sign_out()
+	social_current_conversation_id = ""
+	social_current_player_code = ""
+	social_conversation_title.text = "المحادثة"
+	social_conversation_log.clear()
+	social_conversation_log.text = "[color=gray]سجّل الدخول بحساب الاختبار لبدء المحادثات.[/color]"
+	social_message_input.editable = false
+	social_send_button.disabled = true
+	social_email_input.visible = true
+	social_password_input.visible = true
+	social_login_button.visible = true
+	social_logout_button.visible = false
+	social_friends_list.queue_free_children()
+	social_auth_status.text = "تم تسجيل الخروج من حساب الاختبار."
 
 func _refresh_social_friends() -> void:
 	if not SupabaseTestClient.is_authenticated() or not is_instance_valid(social_friends_list):
@@ -609,8 +634,40 @@ func _refresh_social_friends() -> void:
 	if not bool(result.get("ok", false)):
 		social_auth_status.text = str(result.get("message", "تعذر تحديث قائمة الأصدقاء."))
 		return
+	var requests_result: Dictionary = await SupabaseTestClient.list_test_friend_requests()
 	for child in social_friends_list.get_children():
 		child.queue_free()
+	if bool(requests_result.get("ok", false)):
+		var requests: Variant = requests_result.get("data", [])
+		if requests is Array:
+			for request_value in requests:
+				if not request_value is Dictionary:
+					continue
+				var request: Dictionary = request_value
+				var request_id := str(request.get("request_id", ""))
+				var request_code := str(request.get("player_code", ""))
+				var request_name := str(request.get("display_name", "لاعب")).substr(0, 24)
+				var direction := str(request.get("direction", ""))
+				if direction == "incoming":
+					var request_row := HBoxContainer.new()
+					social_friends_list.add_child(request_row)
+					var request_label := Label.new()
+					request_label.text = "طلب: " + request_name
+					request_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+					request_row.add_child(request_label)
+					var accept_button := Button.new()
+					accept_button.text = "✓"
+					accept_button.pressed.connect(_respond_social_friend_request.bind(request_id, true))
+					request_row.add_child(accept_button)
+					var decline_button := Button.new()
+					decline_button.text = "×"
+					decline_button.pressed.connect(_respond_social_friend_request.bind(request_id, false))
+					request_row.add_child(decline_button)
+				elif direction == "outgoing":
+					var pending_label := Label.new()
+					pending_label.text = "مرسل إلى: " + request_name
+					pending_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+					social_friends_list.add_child(pending_label)
 	var friends: Variant = result.get("data", [])
 	if not friends is Array or friends.is_empty():
 		var empty_label := Label.new()
@@ -633,6 +690,12 @@ func _refresh_social_friends() -> void:
 		friend_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		friend_button.pressed.connect(_open_social_conversation.bind(player_code, display_name))
 		social_friends_list.add_child(friend_button)
+
+
+func _respond_social_friend_request(request_id: String, accept: bool) -> void:
+	var result: Dictionary = await SupabaseTestClient.respond_test_friend_request(request_id, accept)
+	social_auth_status.text = str(result.get("data", "تم تحديث طلب الصداقة.")) if bool(result.get("ok", false)) else str(result.get("message", "تعذر تحديث طلب الصداقة."))
+	_refresh_social_friends()
 
 
 func _on_social_add_friend() -> void:
@@ -840,9 +903,13 @@ func _on_player_primary_action() -> void:
 		return
 	if selected_player_is_friend:
 		_request_group_invite(selected_player_id)
+	elif SupabaseTestClient.is_authenticated():
+		var result: Dictionary = await SupabaseTestClient.send_test_friend_request(selected_player_id)
+		player_action_status.text = str(result.get("data", "تم إرسال طلب الصداقة.")) if bool(result.get("ok", false)) else str(result.get("message", "تعذر إرسال طلب الصداقة."))
+		_refresh_social_friends()
 	else:
 		friend_add_requested.emit(selected_player_id)
-		player_action_status.text = "تم تجهيز طلب الإضافة؛ الإرسال الفعلي يحتاج اتصال الخادم."
+		player_action_status.text = "سجّل الدخول بحساب الاختبار لإرسال طلب الصداقة."
 
 
 func _on_player_gift_party() -> void:
