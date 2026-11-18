@@ -554,15 +554,8 @@ func _create_ground() -> void:
 	_create_box(self, "Ground", Vector3(220, 1, 220), Vector3(0, -0.55, 0), Color(0.34, 0.42, 0.31), true)
 
 func _create_city() -> void:
-	for x in range(-city_half_size, city_half_size + 1):
-		for z in range(-city_half_size, city_half_size + 1):
-			var center := Vector3(x * block_spacing, 0, z * block_spacing)
-			# مساحات مبانٍ على جانبي شبكة الطرق
-			if abs(x) % 2 == 0 and abs(z) % 2 == 0 and (x != 0 or z != 0):
-				var height := 7.0 + float((abs(x * 7 + z * 11) % 5)) * 2.0
-				var building_color := Color(0.72, 0.66, 0.55) if (x + z) % 2 == 0 else Color(0.58, 0.62, 0.66)
-				_create_box(self, "Building_%d_%d" % [x, z], Vector3(10, height, 10), center + Vector3(0, height / 2.0, 0), building_color, true)
-				_create_box(self, "ShopFront_%d_%d" % [x, z], Vector3(4.0, 1.1, 0.18), center + Vector3(0, 1.8, 5.08), Color(0.12, 0.28, 0.42), false)
+	# المباني المرئية تُنشأ من قائمة المدينة المعتمدة في ApprovedCityLayout.
+	# نُبقي شبكة الطرق هنا، ولا ننشئ كتلًا عامة قد تتداخل مع المباني المعتمدة.
 
 	# شارعان رئيسيان واضحان
 	_create_box(self, "MainRoad_X", Vector3(220, 0.08, 10), Vector3(0, 0.0, 0), Color(0.12, 0.13, 0.15))
