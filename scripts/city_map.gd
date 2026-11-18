@@ -360,13 +360,20 @@ func _draw() -> void:
 		var right := _world_to_map(Vector3(95.0, 0.0, road_z))
 		draw_line(left, right, road_color, 2.0 if road_z == -45.0 else 1.5)
 	for road_z in [-15.0, 15.0, 45.0]:
-		var left := _world_to_map(Vector3(-70.0, 0.0, road_z))
-		var right := _world_to_map(Vector3(70.0, 0.0, road_z))
+		var left := _world_to_map(Vector3(-66.0, 0.0, road_z))
+		var right := _world_to_map(Vector3(66.0, 0.0, road_z))
 		draw_line(left, right, road_color, 1.5)
-	# وصلة المخيم الخاصة كما هي منشأة في مشهد المدينة.
-	draw_line(_world_to_map(Vector3(16.0, 0.0, 0.0)), _world_to_map(Vector3(30.0, 0.0, 0.0)), road_color, 1.8)
-	draw_line(_world_to_map(Vector3(30.0, 0.0, 0.0)), _world_to_map(Vector3(30.0, 0.0, 75.0)), road_color, 1.8)
-	draw_line(_world_to_map(Vector3(30.0, 0.0, 75.0)), _world_to_map(Vector3(60.0, 0.0, 75.0)), road_color, 1.8)
+	# مسار المخيم يلتف حول الحد الشرقي والشمالي للمدينة كما في main.gd.
+	var camp_route := [
+		Vector3(16.0, 0.0, 0.0),
+		Vector3(16.0, 0.0, -45.0),
+		Vector3(95.0, 0.0, -45.0),
+		Vector3(95.0, 0.0, 90.0),
+		Vector3(60.0, 0.0, 90.0),
+		Vector3(60.0, 0.0, 75.0)
+	]
+	for route_index in range(camp_route.size() - 1):
+		draw_line(_world_to_map(camp_route[route_index]), _world_to_map(camp_route[route_index + 1]), road_color, 1.8)
 	_draw_region_boundaries()
 	_draw_landmark_route()
 	_draw_landmark_labels(rect)
