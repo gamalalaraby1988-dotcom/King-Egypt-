@@ -15,6 +15,9 @@ var _sector_player_counts: Dictionary = {}
 var _sector_visible_targets: Dictionary = {}
 var _sector_ids := ["north_west", "north_east", "south_west", "south_east", "south_center"]
 var _rng := RandomNumberGenerator.new()
+var _social_poll_elapsed := 0.0
+var _social_pair_cooldowns: Dictionary = {}
+var _player_gesture_cooldown := 0.0
 
 func _ready() -> void:
 	_rng.randomize()
@@ -36,6 +39,7 @@ func _process(delta: float) -> void:
 		_refresh_mode()
 		_update_density_targets()
 	_advance_density_transition(delta)
+	_update_social_activity(delta)
 
 func _create_activity_points() -> void:
 	# One small, physical seating point in each pedestrian sector.
@@ -221,3 +225,39 @@ func get_sector_visible_citizen_count(sector: String) -> int:
 
 func is_online_mode() -> bool:
 	return _online_mode
+
+func _update_social_activity(delta: float) -> void:
+	_social_poll_elapsed += delta
+	_player_gesture_cooldown = maxf(0.0, _player_gesture_cooldown - delta)
+	if _social_poll_elapsed < 1.0:
+		return
+	_social_poll_elapsed = 0.0
+	var player := get_node_or_null("../Player") as Node3D
+	var candidates: Array[CharacterBody3D] = []
+	for citizen in _citizens:
+		if is_instance_valid(citizen) and citizen.visible:
+			candidates.append(citizen)
+	if is_instance_valid(player) and _player_gesture_cooldown <= 0.0:
+		for citizen in candidates:
+			if citizen.global_position.distance_to(player.global_position) <= 4.0:
+				if citizen.has_method("play_social_gesture"):
+					citizen.call("play_social_gesture", "wave", 2.2, player.global_position)
+					_player_gesture_cooldown = 8.0
+				break
+	for i in range(candidates.size()):
+		var first := candidates[i]
+		if not is_instance_valid(first) or float(_social_pair_cooldowns.get(first.get_instance_id(), 0.0)) > 0.0:
+			continue
+		for j in range(i + 1, candidates.size()):
+			var second := candidates[j]
+			if not is_instance_valid(second):
+				continue
+			if first.global_position.distance_to(second.global_position) <= 2.8:
+				if first.has_method("play_social_gesture") and second.has_method("play_social_gesture"):
+					first.call("play_social_gesture", "talk", 3.0, second.global_position)
+					second.call("play_social_gesture", "talk", 3.0, first.global_position)
+					_social_pair_cooldowns[first.get_instance_id()] = 7.0
+					_social_pair_cooldowns[second.get_instance_id()] = 7.0
+				break
+	for key in _social_pair_cooldowns.keys():
+		_social_pair_cooldowns[key] = maxf(0.0, float(_social_pair_cooldowns[key]) - 1.0)
