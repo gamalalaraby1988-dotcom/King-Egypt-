@@ -891,9 +891,6 @@ func _update_interaction_hud() -> void:
 		elif nearest_interactable.has_method("get_royal_resort_gate_data"):
 			var gate_data: Dictionary = nearest_interactable.get_royal_resort_gate_data()
 			display_name = str(gate_data.get("title", "بوابة المنتجع الملكي"))
-		elif nearest_interactable.has_method("get_interaction_data"):
-			var interaction_data: Dictionary = nearest_interactable.get_interaction_data()
-			display_name = str(interaction_data.get("title", nearest_interactable.get("character_name")))
 		else:
 			display_name = str(nearest_interactable.get("character_name"))
 		interact_button.text = "جلوس" if nearest_interactable.has_method("sit_player") else ("فتح الصندوق" if nearest_interactable.has_method("get_daily_reward_chest_data") else CityLanguage.translate(_interaction_action_key(nearest_interactable)))
