@@ -1,13 +1,37 @@
 extends Node3D
-## مخيم صحراوي ملكي خفيف. الجمال والخيول مجسمات ديكور غير تفاعلية.
+## مخيم صحراوي ملكي خفيف. الجمال والخيول ديكور متحرك بتصادم، بلا تفاعل أو ركوب.
 
 const SAND := Color(0.56, 0.39, 0.23)
 const GOLD := Color(0.78, 0.57, 0.25)
 const DARK := Color(0.13, 0.09, 0.07)
 const FABRIC := Color(0.72, 0.57, 0.38)
 
+const CollisionProfile = preload("res://scripts/city_collision_profile.gd")
+var _animal_motion: Array[Dictionary] = []
+
 func _ready() -> void:
 	_build_camp()
+
+func _process(delta: float) -> void:
+	for motion in _animal_motion:
+		var animal: Node3D = motion["animal"]
+		var phase: float = motion["phase"]
+		var clock: float = motion["clock"] + delta
+		motion["clock"] = clock
+		var stride := sin(clock * 1.7 + phase)
+		var drift := sin(clock * 0.42 + phase) * 0.32
+		animal.position = motion["base_position"] + Vector3(drift, absf(stride) * 0.025, cos(clock * 0.42 + phase) * 0.12)
+		animal.rotation.y = motion["base_rotation"] + sin(clock * 0.42 + phase) * 0.12
+		var head: Node3D = motion["head"]
+		var neck: Node3D = motion["neck"]
+		var tail: Node3D = motion["tail"]
+		head.rotation.z = sin(clock * 1.1 + phase) * 0.09
+		neck.rotation.z = sin(clock * 0.9 + phase + 0.4) * 0.045
+		tail.rotation.x = sin(clock * 2.2 + phase) * 0.22
+		for i in range(motion["legs"].size()):
+			var leg: Node3D = motion["legs"][i]
+			var direction := 1.0 if i % 2 == 0 else -1.0
+			leg.rotation.x = sin(clock * 1.7 + phase + (0.0 if i < 2 else PI)) * 0.12 * direction
 
 func _material(color: Color, roughness: float = 0.9, emission: Color = Color.BLACK) -> StandardMaterial3D:
 	var material := StandardMaterial3D.new()
@@ -113,20 +137,35 @@ func _build_palm(parent: Node3D, pos: Vector3) -> void:
 		_box(palm, "PalmFrond", Vector3(0.22, 0.12, 2.4), Vector3(cos(angle) * 0.9, 3.8, sin(angle) * 0.9), Color(0.16, 0.34, 0.18), Vector3(0.25, angle, 0.18))
 
 func _build_static_animal(parent: Node3D, node_name: String, pos: Vector3, coat: Color, camel: bool) -> void:
-	# مجسم ثابت للزينة فقط: لا Collision ولا مجموعات تفاعل ولا سكربت ركوب.
+	# حيوان زينة يتحرك بهدوء داخل نطاقه، مع تصادم صلب؛ بلا تفاعل أو ركوب أو تأجير.
 	var animal := Node3D.new()
 	animal.name = node_name
 	animal.position = pos
 	parent.add_child(animal)
 	var body := _sphere(animal, "DecorativeBody", 0.62 if camel else 0.48, Vector3(0, 0.9, 0), coat)
 	body.scale = Vector3(1.45, 0.85, 0.72)
-	_sphere(animal, "DecorativeHead", 0.28, Vector3(0.58, 1.35, -0.12), coat.lightened(0.08))
-	_cylinder(animal, "DecorativeNeck", 0.19, 0.95, Vector3(0.42, 1.25, 0), coat)
+	var head := _sphere(animal, "DecorativeHead", 0.28, Vector3(0.58, 1.35, -0.12), coat.lightened(0.08))
+	var neck := _cylinder(animal, "DecorativeNeck", 0.19, 0.95, Vector3(0.42, 1.25, 0), coat)
+	var legs: Array[MeshInstance3D] = []
 	for x in [-0.38, 0.38]:
 		for z in [-0.22, 0.22]:
-			_cylinder(animal, "DecorativeLeg", 0.075, 0.72, Vector3(x, 0.36, z), coat.darkened(0.12))
+			legs.append(_cylinder(animal, "DecorativeLeg", 0.075, 0.72, Vector3(x, 0.36, z), coat.darkened(0.12)))
 	if camel:
 		_sphere(animal, "DecorativeHump", 0.34, Vector3(-0.12, 1.48, 0), coat.darkened(0.05))
+	var tail := _cylinder(animal, "DecorativeTail", 0.045, 0.52, Vector3(-0.72, 0.95, 0), coat.darkened(0.18))
+	tail.rotation.z = PI * 0.35
+	CollisionProfile.add_staff_collider(animal, 0.55 if camel else 0.46, 1.65 if camel else 1.55)
+	_animal_motion.append({
+		"animal": animal,
+		"base_position": pos,
+		"base_rotation": animal.rotation.y,
+		"phase": float(_animal_motion.size()) * 1.37,
+		"clock": 0.0,
+		"head": head,
+		"neck": neck,
+		"tail": tail,
+		"legs": legs
+	})
 
 func _build_photo_oasis() -> void:
 	var oasis := Node3D.new()
@@ -172,7 +211,7 @@ func _build_camp() -> void:
 	_build_palm(self, Vector3(-16, 0, 5))
 	_build_palm(self, Vector3(16, 0, 5))
 	_build_photo_oasis()
-	# حيوانات زينة ثابتة فقط؛ لا تُنشأ نقاط ركوب أو موظف أو نظام تأجير.
+	# حيوانات زينة غير تفاعلية؛ تتحرك بخطوات قصيرة داخل نطاقها ولا تُنشأ لها نقاط ركوب أو نظام تأجير.
 	_build_static_animal(self, "DecorativeCamel_01", Vector3(-13, 0, 2), Color(0.55, 0.34, 0.19), true)
 	_build_static_animal(self, "DecorativeCamel_02", Vector3(13, 0, 2), Color(0.68, 0.48, 0.29), true)
 	_build_static_animal(self, "DecorativeHorse_White", Vector3(-13, 0, 9), Color(0.88, 0.84, 0.74), false)
