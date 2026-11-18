@@ -763,6 +763,7 @@ func _refresh_social_messages() -> void:
 	if not messages is Array or messages.is_empty():
 		social_conversation_log.text = "[color=gray]لا توجد رسائل بعد. ابدأ المحادثة.[/color]"
 		return
+	messages.reverse()
 	for message_value in messages:
 		if not message_value is Dictionary:
 			continue
