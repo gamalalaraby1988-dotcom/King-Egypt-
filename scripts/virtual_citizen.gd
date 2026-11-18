@@ -4,6 +4,7 @@ extends CharacterBody3D
 
 @export var citizen_id := ""
 @export var gender := "male"
+@export var city_sector := "north_west"
 @export var walk_speed := 1.35
 @export var roam_radius := 11.0
 
