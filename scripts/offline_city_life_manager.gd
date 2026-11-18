@@ -18,6 +18,7 @@ var _rng := RandomNumberGenerator.new()
 
 func _ready() -> void:
 	_rng.randomize()
+	_create_activity_points()
 	_spawn_citizens()
 	var chat_manager := get_node_or_null("/root/SocialChatManager")
 	if is_instance_valid(chat_manager):
@@ -35,6 +36,66 @@ func _process(delta: float) -> void:
 		_refresh_mode()
 		_update_density_targets()
 	_advance_density_transition(delta)
+
+func _create_activity_points() -> void:
+	# One small, physical seating point in each pedestrian sector.
+	# These are independent of service staff and do not count as citizens.
+	var seating_areas := [
+		Vector3(-34.0, 0.0, -34.0),
+		Vector3(34.0, 0.0, -34.0),
+		Vector3(-34.0, 0.0, 34.0),
+		Vector3(34.0, 0.0, 34.0),
+		Vector3(0.0, 0.0, 34.0)
+	]
+	for index in range(seating_areas.size()):
+		var point := Node3D.new()
+		point.name = "CitizenSeatingPoint_%02d" % (index + 1)
+		point.position = seating_areas[index] + Vector3(0.0, 0.0, 3.8)
+		point.add_to_group("npc_interaction_points")
+		add_child(point)
+		var bench := Node3D.new()
+		bench.name = "PedestrianBench_%02d" % (index + 1)
+		point.add_child(bench)
+		var seat := MeshInstance3D.new()
+		seat.name = "Seat"
+		var seat_mesh := BoxMesh.new()
+		seat_mesh.size = Vector3(2.2, 0.18, 0.62)
+		seat.mesh = seat_mesh
+		seat.position = Vector3(0.0, 0.52, 0.0)
+		var wood := StandardMaterial3D.new()
+		wood.albedo_color = Color(0.38, 0.23, 0.13)
+		wood.roughness = 0.88
+		seat.material_override = wood
+		bench.add_child(seat)
+		var back := MeshInstance3D.new()
+		back.name = "Backrest"
+		var back_mesh := BoxMesh.new()
+		back_mesh.size = Vector3(2.2, 0.72, 0.16)
+		back.mesh = back_mesh
+		back.position = Vector3(0.0, 0.91, -0.23)
+		back.material_override = wood
+		bench.add_child(back)
+		for side in [-1.0, 1.0]:
+			var leg := MeshInstance3D.new()
+			leg.name = "BenchLeg_%s" % str(side)
+			var leg_mesh := BoxMesh.new()
+			leg_mesh.size = Vector3(0.14, 0.52, 0.14)
+			leg.mesh = leg_mesh
+			leg.position = Vector3(side * 0.82, 0.26, 0.0)
+			leg.material_override = wood
+			bench.add_child(leg)
+		var body := StaticBody3D.new()
+		body.name = "BenchCollision"
+		body.collision_layer = 1
+		body.collision_mask = 0
+		var collision := CollisionShape3D.new()
+		var shape := BoxShape3D.new()
+		shape.size = Vector3(2.2, 1.1, 0.62)
+		collision.shape = shape
+		collision.position = Vector3(0.0, 0.55, 0.0)
+		body.add_child(collision)
+		bench.add_child(body)
+
 
 func _spawn_citizens() -> void:
 	var female_created := 0
