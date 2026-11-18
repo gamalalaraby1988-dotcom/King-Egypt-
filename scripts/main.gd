@@ -753,7 +753,6 @@ func _create_camp() -> void:
 	# مسار المخيم يلتف حول أطراف المدينة بدل المرور عبر قصور الشقق والمدينة المائية.
 	var camp_road_color := Color(0.12, 0.13, 0.15)
 	_create_box(self, "CampRoad_Entry", Vector3(5, 0.07, 45), Vector3(16, 0.025, -22.5), camp_road_color)
-	_create_box(self, "CampRoad_East", Vector3(5, 0.07, 135), Vector3(95, 0.025, 22.5), camp_road_color)
 	_create_box(self, "CampRoad_North", Vector3(35, 0.07, 5), Vector3(77.5, 0.025, 90), camp_road_color)
 	_create_box(self, "CampRoad_Camp", Vector3(5, 0.07, 15), Vector3(60, 0.025, 82.5), camp_road_color)
 	var camp := Node3D.new()
