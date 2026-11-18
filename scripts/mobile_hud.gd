@@ -2,8 +2,8 @@ extends Control
 ## المرحلة 28: واجهة لمس متجاوبة، مع فصل مناطق الحركة والجري والجلوس والكاميرا.
 
 @export var joystick_radius: float = 72.0
-@export var sprint_radius: float = 43.0
-@export var sit_radius: float = 39.0
+@export var sprint_radius: float = 54.0
+@export var sit_radius: float = 50.0
 @export var camera_sensitivity: float = 0.006
 
 var player: CharacterBody3D
@@ -71,13 +71,16 @@ func _draw() -> void:
 	_draw_button(sit_center, _sit_draw_radius, "SIT", sitting_now)
 
 func _draw_button(center: Vector2, radius: float, caption: String, active: bool) -> void:
-	var fill := Color(0.67, 0.48, 0.19, 0.82) if active else Color(0.04, 0.06, 0.09, 0.48)
-	draw_circle(center, radius, fill)
-	draw_arc(center, radius, 0.0, TAU, 40, Color(1, 1, 1, 0.78), 2.0)
+	# أزرار لمس واضحة فوق المشهد حتى على شاشات الهاتف الصغيرة.
+	draw_circle(center + Vector2(0, 3), radius + 5.0, Color(0, 0, 0, 0.48))
+	draw_circle(center, radius + 3.0, Color(0.92, 0.72, 0.32, 0.98))
+	var fill := Color(0.66, 0.43, 0.12, 0.98) if active else Color(0.035, 0.055, 0.075, 0.94)
+	draw_circle(center, radius - 1.0, fill)
+	draw_arc(center, radius - 1.0, 0.0, TAU, 48, Color(1, 0.94, 0.76, 1.0), 2.5)
 	var font := ThemeDB.fallback_font
-	var text_size := maxi(11, roundi(17.0 * radius / 43.0))
+	var text_size := maxi(15, roundi(20.0 * radius / 54.0))
 	var text_width := font.get_string_size(caption, HORIZONTAL_ALIGNMENT_LEFT, -1, text_size).x
-	draw_string(font, center + Vector2(-text_width / 2.0, text_size * 0.34), caption, HORIZONTAL_ALIGNMENT_LEFT, -1, text_size, Color.WHITE)
+	draw_string(font, center + Vector2(-text_width / 2.0, text_size * 0.36), caption, HORIZONTAL_ALIGNMENT_LEFT, -1, text_size, Color.WHITE)
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not visible:
