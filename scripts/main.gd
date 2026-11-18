@@ -551,7 +551,7 @@ func _create_box(parent: Node3D, name: String, size: Vector3, pos: Vector3, colo
 		parent.add_child(body)
 
 func _create_ground() -> void:
-	_create_box(self, "Ground", Vector3(180, 1, 180), Vector3(0, -0.55, 0), Color(0.34, 0.42, 0.31), true)
+	_create_box(self, "Ground", Vector3(220, 1, 220), Vector3(0, -0.55, 0), Color(0.34, 0.42, 0.31), true)
 
 func _create_city() -> void:
 	for x in range(-city_half_size, city_half_size + 1):
@@ -565,14 +565,14 @@ func _create_city() -> void:
 				_create_box(self, "ShopFront_%d_%d" % [x, z], Vector3(4.0, 1.1, 0.18), center + Vector3(0, 1.8, 5.08), Color(0.12, 0.28, 0.42), false)
 
 	# شارعان رئيسيان واضحان
-	_create_box(self, "MainRoad_X", Vector3(180, 0.08, 10), Vector3(0, 0.0, 0), Color(0.12, 0.13, 0.15))
-	_create_box(self, "MainRoad_Z", Vector3(10, 0.09, 180), Vector3(0, 0.01, 0), Color(0.12, 0.13, 0.15))
+	_create_box(self, "MainRoad_X", Vector3(220, 0.08, 10), Vector3(0, 0.0, 0), Color(0.12, 0.13, 0.15))
+	_create_box(self, "MainRoad_Z", Vector3(10, 0.09, 220), Vector3(0, 0.01, 0), Color(0.12, 0.13, 0.15))
 	# شوارع فرعية متصلة بالمحورين الرئيسيين، تمر في الممرات بين كتل المباني.
 	# الإحداثيات نفسها مستخدمة في نظام الملاحة والخريطة المصغرة.
 	for road_x in [-72.0, -24.0, 24.0, 72.0]:
-		_create_box(self, "SideRoad_X_%d" % int(road_x), Vector3(180, 0.075, 6), Vector3(road_x, 0.005, 0), Color(0.15, 0.16, 0.17))
+		_create_box(self, "SideRoad_X_%d" % int(road_x), Vector3(220, 0.075, 6), Vector3(road_x, 0.005, 0), Color(0.15, 0.16, 0.17))
 	for road_z in [-72.0, -24.0, 24.0, 72.0]:
-		_create_box(self, "SideRoad_Z_%d" % int(road_z), Vector3(6, 0.075, 180), Vector3(0, 0.006, road_z), Color(0.15, 0.16, 0.17))
+		_create_box(self, "SideRoad_Z_%d" % int(road_z), Vector3(6, 0.075, 220), Vector3(0, 0.006, road_z), Color(0.15, 0.16, 0.17))
 	# خطوط إرشادية بسيطة على المحورين الرئيسيين فقط لتقليل العناصر المرئية.
 	for i in range(-8, 9):
 		_create_box(self, "RoadMark_X_%d" % i, Vector3(3, 0.025, 0.16), Vector3(i * 10, 0.06, 0), Color(0.92, 0.86, 0.62))
