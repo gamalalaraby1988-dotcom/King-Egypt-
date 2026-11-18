@@ -43,7 +43,7 @@ func _process(delta: float) -> void:
 		if _heartbeat_elapsed >= 20.0:
 			_heartbeat_elapsed = 0.0
 			_send_realtime_frame("phoenix", "heartbeat", {}, "")
-		while _realtime_socket.get_available_packet_count() > 0:
+		while is_instance_valid(_realtime_socket) and _realtime_socket.get_available_packet_count() > 0:
 			var packet := _realtime_socket.get_packet()
 			if not _realtime_socket.was_string_packet():
 				continue
@@ -272,11 +272,17 @@ func fetch_test_display_name() -> Dictionary:
 func _call_test_social_rpc(function_name: String, payload: Dictionary = {}) -> Dictionary:
 	if not is_authenticated():
 		return {"ok": false, "message": "سجّل الدخول بحساب الاختبار أولًا."}
-	if not function_name.begins_with("list_test_") and not function_name.begins_with("send_test_") and not function_name.begins_with("respond_test_") and not (function_name in [
+	var allowed_functions := [
 		"ensure_my_test_player_account",
+		"list_test_friends",
+		"list_test_friend_requests",
+		"send_test_friend_request",
+		"respond_test_friend_request",
 		"open_test_direct_conversation",
-		"read_test_direct_messages"
-	]):
+		"read_test_direct_messages",
+		"send_test_direct_message"
+	]
+	if not allowed_functions.has(function_name):
 		return {"ok": false, "message": "طلب اجتماعي غير مسموح."}
 	var request_token := access_token
 	var result := await _send_json(
@@ -410,6 +416,12 @@ func _send_realtime_frame(topic: String, event_name: String, payload: Dictionary
 
 func _handle_realtime_frame(message: Dictionary) -> void:
 	var event_name := str(message.get("event", ""))
+	if event_name == "phx_reply":
+		var reply: Variant = message.get("payload", {})
+		if reply is Dictionary and str(reply.get("status", "")) == "error":
+			request_failed.emit("رفض الخادم الاشتراك في قناة المحادثة المباشرة.")
+			disconnect_test_realtime()
+		return
 	if event_name == "phx_error" or event_name == "phx_close":
 		request_failed.emit("انقطع اتصال المحادثة المباشر؛ أعد فتح المحادثة للمحاولة.")
 		disconnect_test_realtime()
