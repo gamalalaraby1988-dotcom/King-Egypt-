@@ -211,6 +211,7 @@ func _refresh_vehicle_summon_availability(player: CharacterBody3D) -> void:
 		vehicle_summon_button.disabled = not _vehicle_summon_available
 
 func _process(_delta: float) -> void:
+	_update_city_presence_sector()
 	# المركبات تخص مساحة المدينة؛ أخفِ أدواتها طوال الانتقال أو الوجود داخل مبنى.
 	if interior_transition_busy or is_instance_valid(interior_root):
 		if is_instance_valid(vehicle_interaction_button):
@@ -1877,3 +1878,36 @@ func _show_party_station_notice(station: Node3D) -> void:
 	var city_hud := get_node_or_null("CityActionHUD")
 	if is_instance_valid(city_hud) and city_hud.has_method("open_party_station_window") and is_instance_valid(station):
 		city_hud.call("open_party_station_window", str(station.name).to_snake_case())
+
+func _update_city_presence_sector() -> void:
+	var chat_manager := get_node_or_null("/root/SocialChatManager")
+	if not is_instance_valid(chat_manager) or not chat_manager.has_method("set_city_presence_sector"):
+		return
+	if interior_transition_busy or is_instance_valid(interior_root):
+		chat_manager.set_city_presence_sector("interior")
+		return
+	var player := get_node_or_null("Player") as Node3D
+	if not is_instance_valid(player):
+		return
+	var position := player.global_position
+	if not is_position_inside_city_bounds(position, 90.0):
+		chat_manager.set_city_presence_sector("interior")
+		return
+	var sector_centers := {
+		"north_west": Vector2(-48.0, -48.0),
+		"north_east": Vector2(48.0, -48.0),
+		"south_west": Vector2(-48.0, 48.0),
+		"south_east": Vector2(48.0, 48.0),
+		"south_center": Vector2(0.0, 54.0)
+	}
+	var player_point := Vector2(position.x, position.z)
+	var closest_sector := "north_west"
+	var closest_distance := INF
+	for sector_variant in sector_centers.keys():
+		var sector := str(sector_variant)
+		var center: Vector2 = sector_centers[sector]
+		var distance := player_point.distance_squared_to(center)
+		if distance < closest_distance:
+			closest_distance = distance
+			closest_sector = sector
+	chat_manager.set_city_presence_sector(closest_sector)
