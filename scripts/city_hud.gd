@@ -624,7 +624,12 @@ func _on_social_test_logout() -> void:
 	social_password_input.visible = true
 	social_login_button.visible = true
 	social_logout_button.visible = false
-	social_friends_list.queue_free_children()
+	for child in social_friends_list.get_children():
+		child.queue_free()
+	var logged_out_hint := Label.new()
+	logged_out_hint.text = "سجّل الدخول لعرض أصدقائك."
+	logged_out_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	social_friends_list.add_child(logged_out_hint)
 	social_auth_status.text = "تم تسجيل الخروج من حساب الاختبار."
 
 func _refresh_social_friends() -> void:
@@ -645,7 +650,6 @@ func _refresh_social_friends() -> void:
 					continue
 				var request: Dictionary = request_value
 				var request_id := str(request.get("request_id", ""))
-				var request_code := str(request.get("player_code", ""))
 				var request_name := str(request.get("display_name", "لاعب")).substr(0, 24)
 				var direction := str(request.get("direction", ""))
 				if direction == "incoming":
