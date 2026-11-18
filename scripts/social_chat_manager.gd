@@ -688,7 +688,12 @@ func _send_city_presence_track() -> void:
 		"payload": {"sector": _city_presence_sector}
 	}, join_ref)
 
-func _extract_city_presence_sector(metas: Variant) -> String:
+func _extract_city_presence_sector(presence_data: Variant) -> String:
+	# Supabase sends each Presence key as { "metas": [ ... ] }.
+	# Keep support for a direct meta dictionary/array for isolated tests and older payloads.
+	var metas: Variant = presence_data
+	if presence_data is Dictionary and presence_data.has("metas"):
+		metas = presence_data.get("metas", [])
 	if metas is Array:
 		for index in range(metas.size() - 1, -1, -1):
 			if metas[index] is Dictionary:
