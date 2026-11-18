@@ -18,10 +18,12 @@ func _process(delta: float) -> void:
 		var phase: float = motion["phase"]
 		var clock: float = motion["clock"] + delta
 		motion["clock"] = clock
-		var stride := sin(clock * 1.7 + phase)
-		var drift := sin(clock * 0.42 + phase) * 0.32
-		animal.position = motion["base_position"] + Vector3(drift, absf(stride) * 0.025, cos(clock * 0.42 + phase) * 0.12)
-		animal.rotation.y = motion["base_rotation"] + sin(clock * 0.42 + phase) * 0.12
+		var walk_cycle := fposmod(clock + phase * 0.7, 8.0)
+		var walk_blend := minf(clampf(walk_cycle / 0.45, 0.0, 1.0), clampf((2.8 - walk_cycle) / 0.45, 0.0, 1.0))
+		var stride := sin(clock * 1.7 + phase) * walk_blend
+		var drift := sin(clock * 0.75 + phase) * 0.32 * walk_blend
+		animal.position = motion["base_position"] + Vector3(drift, absf(stride) * 0.025, cos(clock * 0.75 + phase) * 0.12 * walk_blend)
+		animal.rotation.y = motion["base_rotation"] + sin(clock * 0.75 + phase) * 0.12 * walk_blend
 		var head: Node3D = motion["head"]
 		var neck: Node3D = motion["neck"]
 		var tail: Node3D = motion["tail"]
@@ -31,7 +33,7 @@ func _process(delta: float) -> void:
 		for i in range(motion["legs"].size()):
 			var leg: Node3D = motion["legs"][i]
 			var direction := 1.0 if i % 2 == 0 else -1.0
-			leg.rotation.x = sin(clock * 1.7 + phase + (0.0 if i < 2 else PI)) * 0.12 * direction
+			leg.rotation.x = sin(clock * 1.7 + phase + (0.0 if i < 2 else PI)) * 0.12 * direction * walk_blend
 
 func _material(color: Color, roughness: float = 0.9, emission: Color = Color.BLACK) -> StandardMaterial3D:
 	var material := StandardMaterial3D.new()
