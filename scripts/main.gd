@@ -586,10 +586,13 @@ func _set_mobile_hud_active(active: bool) -> void:
 		touch_hud.call("_clear_touch_state")
 	touch_hud.visible = active
 
-	var hud_layer := CanvasLayer.new()
-	hud_layer.name = "CityActionHUD"
-	hud_layer.set_script(load("res://scripts/city_hud.gd"))
-	add_child(hud_layer)
+	# أنشئ واجهة المدينة مرة واحدة فقط؛ تبديل حالة تحكم اللمس لا يعيد إنشاءها.
+	var hud_layer := get_node_or_null("CityActionHUD") as CanvasLayer
+	if not is_instance_valid(hud_layer):
+		hud_layer = CanvasLayer.new()
+		hud_layer.name = "CityActionHUD"
+		hud_layer.set_script(load("res://scripts/city_hud.gd"))
+		add_child(hud_layer)
 
 
 func _create_interactive_buildings() -> void:
