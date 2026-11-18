@@ -788,6 +788,8 @@ func _find_nearest_interior_exit(city_root: Node) -> Node3D:
 	return best
 
 func _interaction_action_key(target: Node3D) -> String:
+	if target.has_method("sit_player"):
+		return "interaction_talk"
 	if target.is_in_group("interior_exit_interactables"):
 		return "interaction_enter"
 	if target.has_method("get_daily_reward_chest_data"):
@@ -878,6 +880,8 @@ func _update_interaction_hud() -> void:
 		var display_name := CityLanguage.translate("interaction_place")
 		if nearest_interactable.has_method("get_job_data"):
 			display_name = str(nearest_interactable.get_job_data().get("title", CityLanguage.translate("interaction_job_name")))
+		elif nearest_interactable.has_method("get_interaction_data"):
+			display_name = str(nearest_interactable.get_interaction_data().get("title", "جلسة الخيمة"))
 		elif nearest_building:
 			display_name = str(nearest_interactable.get("building_title"))
 		elif nearest_interactable.has_method("get_daily_reward_chest_data"):
@@ -892,7 +896,7 @@ func _update_interaction_hud() -> void:
 			display_name = str(interaction_data.get("title", nearest_interactable.get("character_name")))
 		else:
 			display_name = str(nearest_interactable.get("character_name"))
-		interact_button.text = "فتح الصندوق" if nearest_interactable.has_method("get_daily_reward_chest_data") else CityLanguage.translate(_interaction_action_key(nearest_interactable))
+		interact_button.text = "جلوس" if nearest_interactable.has_method("sit_player") else ("فتح الصندوق" if nearest_interactable.has_method("get_daily_reward_chest_data") else CityLanguage.translate(_interaction_action_key(nearest_interactable)))
 		prompt_label.text = "%s %s — %s" % [CityLanguage.translate("interaction_near"), display_name, CityLanguage.translate("interaction_press_hint")]
 		interact_button.visible = true
 	else:
@@ -939,6 +943,12 @@ func open_interactable(target: Node3D) -> void:
 		var city_root := get_tree().current_scene
 		if is_instance_valid(city_root) and city_root.has_method("show_interior_quick_travel_menu"):
 			city_root.show_interior_quick_travel_menu()
+		return
+	if target.has_method("sit_player"):
+		var seated: bool = bool(target.call("sit_player", player))
+		if seated:
+			panel.visible = false
+			prompt_label.text = "استمتع بالجلوس ومشاهدة الأهرامات"
 		return
 	if target.has_method("get_royal_resort_gate_data"):
 		_open_royal_resort_gate(target)
