@@ -66,11 +66,18 @@ func _ready() -> void:
 	_create_royal_resort()
 	_create_king_mountain_route()
 	_create_decorative_mountain_temple()
+	_create_offline_city_life()
 	_create_interior_transition_ui()
 	_create_player_vehicle()
 	# دخول مباشر للمدينة في نسخة الاختبار؛ شاشة OTP المؤقتة معطلة حتى تجهيز نظام الدخول النهائي.
 	_create_character_selection_ui()
 
+
+func _create_offline_city_life() -> void:
+	var manager := Node3D.new()
+	manager.name = "OfflineCityLifeManager"
+	manager.set_script(load("res://scripts/offline_city_life_manager.gd"))
+	add_child(manager)
 
 
 func _create_king_mountain_route() -> void:
