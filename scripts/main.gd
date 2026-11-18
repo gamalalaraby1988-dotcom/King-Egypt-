@@ -1893,12 +1893,14 @@ func _update_city_presence_sector() -> void:
 	if not is_position_inside_city_bounds(position, 90.0):
 		chat_manager.set_city_presence_sector("interior")
 		return
+	# Keep player Presence sectors aligned with the five safe pedestrian
+	# gathering pockets used by OfflineCityLifeManager.
 	var sector_centers := {
-		"north_west": Vector2(-48.0, -48.0),
-		"north_east": Vector2(48.0, -48.0),
-		"south_west": Vector2(-48.0, 48.0),
-		"south_east": Vector2(48.0, 48.0),
-		"south_center": Vector2(0.0, 54.0)
+		"north_west": Vector2(-34.0, -34.0),
+		"north_east": Vector2(34.0, -34.0),
+		"south_west": Vector2(-34.0, 34.0),
+		"south_east": Vector2(34.0, 34.0),
+		"south_center": Vector2(0.0, 34.0)
 	}
 	var player_point := Vector2(position.x, position.z)
 	var closest_sector := "north_west"
