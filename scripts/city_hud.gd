@@ -41,6 +41,10 @@ var group_members_box: VBoxContainer
 var group_chat_popup: PanelContainer
 var group_chat_log: RichTextLabel
 var group_chat_input: LineEdit
+var social_popup: PanelContainer
+var social_friends_list: VBoxContainer
+var social_conversation_log: RichTextLabel
+var social_message_input: LineEdit
 var group_meeting_status: Label
 var group_meeting_position := Vector3.ZERO
 var group_follow_enabled := false
@@ -77,6 +81,7 @@ func _ready() -> void:
 	_build_player_interaction_popup()
 	_build_group_popup()
 	_build_group_chat_popup()
+	_build_social_hub()
 	_refresh_wallet()
 
 
@@ -217,6 +222,9 @@ func _open_section(section: String) -> void:
 		return
 	if section == "chat":
 		_open_group_chat()
+		return
+	if section == "social":
+		_open_social_hub()
 		return
 	if section == "rewards":
 		var daily := main_scene.get_node_or_null("DailyActivities") if is_instance_valid(main_scene) else null
@@ -379,6 +387,126 @@ func _refresh_wallet() -> void:
 		chips_label.text = "رقائق: %d  +" % int(mission_manager.get("chips"))
 	if is_instance_valid(gems_label):
 		gems_label.text = "جواهر: %d" % WalletManager.get_balance("gems")
+
+
+func _build_social_hub() -> void:
+	social_popup = PanelContainer.new()
+	social_popup.name = "SocialHub"
+	social_popup.anchor_left = 0.54
+	social_popup.anchor_right = 0.995
+	social_popup.anchor_top = 0.025
+	social_popup.anchor_bottom = 0.975
+	social_popup.offset_left = 0
+	social_popup.offset_right = -8
+	social_popup.offset_top = 0
+	social_popup.offset_bottom = 0
+	social_popup.visible = false
+	social_popup.mouse_filter = Control.MOUSE_FILTER_STOP
+	var panel_style := StyleBoxFlat.new()
+	panel_style.bg_color = Color(0.035, 0.045, 0.055, 0.98)
+	panel_style.border_color = Color(0.84, 0.69, 0.38, 1.0)
+	panel_style.set_border_width_all(2)
+	panel_style.set_corner_radius_all(18)
+	panel_style.content_margin_left = 10
+	panel_style.content_margin_right = 10
+	panel_style.content_margin_top = 10
+	panel_style.content_margin_bottom = 10
+	social_popup.add_theme_stylebox_override("panel", panel_style)
+	root.add_child(social_popup)
+
+	var outer := VBoxContainer.new()
+	outer.add_theme_constant_override("separation", 8)
+	social_popup.add_child(outer)
+	var header := HBoxContainer.new()
+	outer.add_child(header)
+	var heading := Label.new()
+	heading.text = "الأصدقاء والمحادثات"
+	heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	heading.add_theme_color_override("font_color", Color(0.94, 0.82, 0.55))
+	heading.add_theme_font_size_override("font_size", 19)
+	heading.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	heading.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	heading.custom_minimum_size.y = 38
+	heading.clip_text = true
+	heading.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	header.add_child(heading)
+	var close := Button.new()
+	close.text = "✕"
+	close.custom_minimum_size = Vector2(38, 38)
+	close.pressed.connect(func(): social_popup.visible = false)
+	header.add_child(close)
+
+	var panes := HBoxContainer.new()
+	panes.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	panes.add_theme_constant_override("separation", 8)
+	outer.add_child(panes)
+
+	var friends_panel := PanelContainer.new()
+	friends_panel.custom_minimum_size.x = 112
+	friends_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	friends_panel.size_flags_stretch_ratio = 0.34
+	panes.add_child(friends_panel)
+	var friends_column := VBoxContainer.new()
+	friends_column.add_theme_constant_override("separation", 7)
+	friends_panel.add_child(friends_column)
+	var friends_heading := Label.new()
+	friends_heading.text = "الأصدقاء"
+	friends_heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	friends_heading.add_theme_color_override("font_color", Color(0.94, 0.82, 0.55))
+	friends_column.add_child(friends_heading)
+	social_friends_list = VBoxContainer.new()
+	social_friends_list.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	friends_column.add_child(social_friends_list)
+	var friends_hint := Label.new()
+	friends_hint.text = "ستظهر قائمتك هنا بعد ربط الحسابات."
+	friends_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	friends_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	friends_hint.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	friends_hint.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	social_friends_list.add_child(friends_hint)
+
+	var conversation_panel := PanelContainer.new()
+	conversation_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	conversation_panel.size_flags_stretch_ratio = 0.66
+	panes.add_child(conversation_panel)
+	var conversation_column := VBoxContainer.new()
+	conversation_column.add_theme_constant_override("separation", 7)
+	conversation_panel.add_child(conversation_column)
+	var conversation_header := HBoxContainer.new()
+	conversation_column.add_child(conversation_header)
+	var conversation_title := Label.new()
+	conversation_title.text = "المحادثة"
+	conversation_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	conversation_title.add_theme_color_override("font_color", Color(0.94, 0.82, 0.55))
+	conversation_header.add_child(conversation_title)
+	var group_chat_button := Button.new()
+	group_chat_button.text = "المجموعة"
+	group_chat_button.custom_minimum_size.x = 76
+	group_chat_button.pressed.connect(_open_group_chat)
+	conversation_header.add_child(group_chat_button)
+	social_conversation_log = RichTextLabel.new()
+	social_conversation_log.bbcode_enabled = true
+	social_conversation_log.fit_content = false
+	social_conversation_log.scroll_following = true
+	social_conversation_log.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	social_conversation_log.text = "[color=gray]اختر صديقًا لعرض المحادثة هنا. المحادثات تحتاج اتصال الحسابات.[/color]"
+	conversation_column.add_child(social_conversation_log)
+	social_message_input = LineEdit.new()
+	social_message_input.placeholder_text = "ستتاح الكتابة عند الاتصال..."
+	social_message_input.editable = false
+	conversation_column.add_child(social_message_input)
+
+
+func _open_social_hub() -> void:
+	if is_instance_valid(popup):
+		popup.visible = false
+	if is_instance_valid(group_popup):
+		group_popup.visible = false
+	if is_instance_valid(group_chat_popup):
+		group_chat_popup.visible = false
+	if is_instance_valid(social_popup):
+		social_popup.visible = true
 
 
 func _build_player_interaction_popup() -> void:
