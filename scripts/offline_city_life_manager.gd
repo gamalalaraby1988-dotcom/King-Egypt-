@@ -51,26 +51,28 @@ func _spawn_citizens() -> void:
 		citizen.set_script(CITIZEN_SCRIPT)
 		citizen.set("citizen_id", "offline_npc_%02d_%s" % [index + 1, "f" if is_female else "m"])
 		citizen.set("gender", gender)
-		citizen.set("roam_radius", _rng.randf_range(8.0, 15.0))
+		citizen.set("roam_radius", _rng.randf_range(4.5, 6.0))
 		citizen.set("city_sector", _sector_ids[index % _sector_ids.size()])
 		citizen.position = _choose_spawn_position(index)
 		add_child(citizen)
 		_citizens.append(citizen)
 
 func _choose_spawn_position(index: int) -> Vector3:
+	# These five gathering areas sit in open pedestrian pockets between the
+	# prototype's road grid and 10x10 building footprints (not inside buildings).
 	var sectors := [
-		Vector3(-48.0, 0.0, -48.0),
-		Vector3(48.0, 0.0, -48.0),
-		Vector3(-48.0, 0.0, 48.0),
-		Vector3(48.0, 0.0, 48.0),
-		Vector3(0.0, 0.0, 54.0)
+		Vector3(-34.0, 0.0, -34.0),
+		Vector3(34.0, 0.0, -34.0),
+		Vector3(-34.0, 0.0, 34.0),
+		Vector3(34.0, 0.0, 34.0),
+		Vector3(0.0, 0.0, 34.0)
 	]
-	var center: Vector3 = sectors[index % sectors.size()]
-	for attempt in range(12):
-		var candidate := center + Vector3(_rng.randf_range(-8.0, 8.0), 0.0, _rng.randf_range(-8.0, 8.0))
-		if absf(candidate.x) > 9.0 and absf(candidate.z) > 9.0:
-			return candidate
-	return center
+	var sector_index := index % sectors.size()
+	var slot := int(index / sectors.size())
+	var x_offset := (float(slot % 5) - 2.0) * 1.45
+	var z_offset := -1.15 if slot < 5 else 1.15
+	var center: Vector3 = sectors[sector_index]
+	return center + Vector3(x_offset + _rng.randf_range(-0.2, 0.2), 0.0, z_offset + _rng.randf_range(-0.2, 0.2))
 
 func _refresh_mode() -> void:
 	var online_ready := false
