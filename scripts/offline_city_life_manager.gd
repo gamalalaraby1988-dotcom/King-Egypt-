@@ -129,6 +129,9 @@ func _advance_density_transition(delta: float) -> void:
 			if citizen.visible == should_show:
 				continue
 			citizen.visible = should_show
+			# Disable inherited processing too, so the avatar's child animation
+			# does not keep consuming frame time while this citizen is hidden.
+			citizen.process_mode = Node.PROCESS_MODE_INHERIT if should_show else Node.PROCESS_MODE_DISABLED
 			citizen.set_physics_process(should_show)
 			if not should_show:
 				citizen.velocity = Vector3.ZERO
