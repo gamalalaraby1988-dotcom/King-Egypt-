@@ -583,6 +583,8 @@ func _open_social_hub() -> void:
 		social_popup.visible = true
 	if SupabaseTestClient.is_authenticated():
 		_refresh_social_friends()
+		if not social_current_conversation_id.is_empty():
+			SupabaseTestClient.connect_test_direct_realtime(social_current_conversation_id)
 
 
 func _on_social_test_login() -> void:
