@@ -432,6 +432,7 @@ func _process(delta: float) -> void:
 			_realtime_connected = false
 			_realtime_join_refs.clear()
 			_realtime_ready_topics.clear()
+			_clear_city_presence_state()
 			realtime_status_changed.emit("انقطع الاتصال؛ جارٍ إعادة المحاولة")
 		_realtime_retry_elapsed += delta
 		if _realtime_retry_elapsed >= _realtime_retry_delay:
@@ -637,6 +638,8 @@ func _handle_realtime_packet(packet: PackedByteArray) -> void:
 				realtime_status_changed.emit("القنوات اللحظية جاهزة")
 		return
 	if event_name == "phx_error" or event_name == "phx_close":
+		if topic == CITY_PRESENCE_TOPIC:
+			_clear_city_presence_state()
 		_schedule_realtime_topic_retry(topic, str(parsed.get("join_ref", "")))
 		return
 	if topic == CITY_PRESENCE_TOPIC and payload is Dictionary:
