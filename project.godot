@@ -11,6 +11,7 @@ config/description="مشروع مدينة ثلاثية الأبعاد قابل �
 CityLanguage="*res://scripts/city_language.gd"
 WalletManager="*res://scripts/wallet_manager.gd"
 VehicleStoreManager="*res://scripts/vehicle_store_manager.gd"
+SupabaseTestClient="*res://scripts/supabase_test_client.gd"
 
 [display]
 window/size/viewport_width=1280
