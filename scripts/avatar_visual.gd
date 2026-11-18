@@ -286,3 +286,31 @@ func _add_mesh(part_name: String, mesh: Mesh, pos: Vector3, mat: Material) -> vo
 	instance.material_override = mat
 	add_child(instance)
 	parts[part_name] = instance
+
+
+func apply_npc_identity(character_id: String, npc_gender: String) -> void:
+	# NPC-only appearance variation; the approved 16-character roster is unchanged.
+	var skin_tones: Array[Color] = [Color("#c98f68"), Color("#a96f50"), Color("#e0ad83"), Color("#86583f")]
+	var hair_tones: Array[Color] = [Color("#241b18"), Color("#493025"), Color("#17191e"), Color("#76503a")]
+	var outfit_tones: Array[Color] = [Color("#315b78"), Color("#466b5b"), Color("#75445d"), Color("#66543c")]
+	var skin_index := absi(character_id.hash()) % skin_tones.size()
+	var hair_index := absi(int(character_id.hash() / 7)) % hair_tones.size()
+	var outfit_index := absi(int(character_id.hash() / 13)) % outfit_tones.size()
+	var skin := skin_tones[skin_index]
+	var hair := hair_tones[hair_index]
+	var outfit := outfit_tones[outfit_index]
+	for part_name in ["Head", "Neck", "LeftArm", "RightArm", "LeftEar", "RightEar"]:
+		_set_part_color(part_name, skin)
+	for part_name in ["ShortHairCap", "LongHairBack", "CurlyHairCap", "Curl_0", "Curl_1", "Curl_2", "Curl_3", "Curl_4"]:
+		_set_part_color(part_name, hair)
+	if npc_gender == "female":
+		apply_outfit("women_formal")
+		apply_hairstyle("long" if outfit_index % 2 == 0 else "curly")
+		_set_part_color("SkirtLayer", outfit)
+		_set_part_color("WomenFormalTopLayer", outfit.lightened(0.12))
+	else:
+		apply_outfit("men_formal")
+		apply_hairstyle("short" if outfit_index % 2 == 0 else "curly")
+		_set_part_color("JacketLayer", outfit)
+		_set_part_color("ShirtLayer", Color("#e8e6df"))
+		_set_part_color("TieLayer", outfit.darkened(0.25))
