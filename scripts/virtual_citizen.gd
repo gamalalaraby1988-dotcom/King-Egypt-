@@ -71,6 +71,14 @@ func _physics_process(delta: float) -> void:
 				velocity.y = 0.0
 			rotation.y = lerp_angle(rotation.y, atan2(-activity_direction.x, -activity_direction.z), 5.0 * delta)
 			move_and_slide()
+			if is_on_wall():
+				_activity_active = false
+				_activity_started = false
+				velocity.x = 0.0
+				velocity.z = 0.0
+				_pick_next_target()
+				_update_avatar("idle", 0.0)
+				return
 			_update_avatar("walk", Vector2(velocity.x, velocity.z).length())
 			return
 		if not _activity_started:
