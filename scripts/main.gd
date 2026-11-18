@@ -555,21 +555,24 @@ func _create_ground() -> void:
 
 func _create_city() -> void:
 	# المباني المرئية تُنشأ من قائمة المدينة المعتمدة في ApprovedCityLayout.
-	# نُبقي شبكة الطرق هنا، ولا ننشئ كتلًا عامة قد تتداخل مع المباني المعتمدة.
+	# شبكة الطرق تمر في الممرات الخالية وبين صفوف المباني، لا عبر بصماتها.
 
-	# شارعان رئيسيان واضحان
-	_create_box(self, "MainRoad_X", Vector3(220, 0.08, 10), Vector3(0, 0.0, 0), Color(0.12, 0.13, 0.15))
-	_create_box(self, "MainRoad_Z", Vector3(10, 0.09, 220), Vector3(0, 0.01, 0), Color(0.12, 0.13, 0.15))
-	# شوارع فرعية متصلة بالمحورين الرئيسيين، تمر في الممرات بين كتل المباني.
-	# الإحداثيات نفسها مستخدمة في نظام الملاحة والخريطة المصغرة.
-	for road_x in [-72.0, -24.0, 24.0, 72.0]:
-		_create_box(self, "SideRoad_X_%d" % int(road_x), Vector3(220, 0.075, 6), Vector3(road_x, 0.005, 0), Color(0.15, 0.16, 0.17))
-	for road_z in [-72.0, -24.0, 24.0, 72.0]:
-		_create_box(self, "SideRoad_Z_%d" % int(road_z), Vector3(6, 0.075, 220), Vector3(0, 0.006, road_z), Color(0.15, 0.16, 0.17))
-	# خطوط إرشادية بسيطة على المحورين الرئيسيين فقط لتقليل العناصر المرئية.
+	var road_color := Color(0.12, 0.13, 0.15)
+	var side_road_color := Color(0.15, 0.16, 0.17)
+	# طريق محيطي مستطيل يحيط بالمدينة مع خلوّ مسافة عن مباني الأطراف.
+	_create_box(self, "MainRoad_North", Vector3(190, 0.08, 6), Vector3(0, 0.0, -95), road_color)
+	_create_box(self, "MainRoad_South", Vector3(190, 0.08, 6), Vector3(0, 0.0, 95), road_color)
+	_create_box(self, "MainRoad_West", Vector3(6, 0.08, 190), Vector3(-95, 0.0, 0), road_color)
+	_create_box(self, "MainRoad_East", Vector3(6, 0.08, 190), Vector3(95, 0.0, 0), road_color)
+	# شارع عرضي رئيسي في الفراغ بين صفّي المباني الشماليّين.
+	_create_box(self, "MainRoad_X", Vector3(190, 0.08, 6), Vector3(0, 0.0, -45), road_color)
+	# أربعة ممرات عرضية قصيرة داخل الفواصل الآمنة بين صفوف المباني.
+	# تقف عند x=±70 قبل مباني الخدمات الطرفية الواقعة عند x=±75.
+	for road_z in [-15.0, 15.0, 45.0]:
+		_create_box(self, "SideRoad_Z_%d" % int(road_z), Vector3(132, 0.075, 5), Vector3(0, 0.006, road_z), side_road_color)
+	# خطوط إرشادية على الشارع العرضي الرئيسي.
 	for i in range(-8, 9):
-		_create_box(self, "RoadMark_X_%d" % i, Vector3(3, 0.025, 0.16), Vector3(i * 10, 0.06, 0), Color(0.92, 0.86, 0.62))
-		_create_box(self, "RoadMark_Z_%d" % i, Vector3(0.16, 0.025, 3), Vector3(0, 0.065, i * 10), Color(0.92, 0.86, 0.62))
+		_create_box(self, "RoadMark_X_%d" % i, Vector3(3, 0.025, 0.16), Vector3(i * 10, 0.06, -45), Color(0.92, 0.86, 0.62))
 
 func _create_mobile_hud() -> void:
 	var layer := CanvasLayer.new()
@@ -747,10 +750,11 @@ func _create_service_staff(display_name: String, role: String, dialogue: String,
 	add_child(staff)
 
 func _create_camp() -> void:
-	# طريق واضح يصل المخيم بالطريق الرئيسي مع تجنب كتل المباني.
-	_create_box(self, "CampRoad_Entry", Vector3(32, 0.07, 5), Vector3(16, 0.025, 0), Color(0.12, 0.13, 0.15))
-	_create_box(self, "CampRoad_North", Vector3(5, 0.07, 75), Vector3(30, 0.025, 37.5), Color(0.12, 0.13, 0.15))
-	_create_box(self, "CampRoad_Camp", Vector3(30, 0.07, 5), Vector3(45, 0.025, 75), Color(0.12, 0.13, 0.15))
+	# مسار المخيم يلتف حول أطراف المدينة بدل المرور عبر قصور الشقق والمدينة المائية.
+	var camp_road_color := Color(0.12, 0.13, 0.15)
+	_create_box(self, "CampRoad_Entry", Vector3(5, 0.07, 45), Vector3(16, 0.025, -22.5), camp_road_color)
+	_create_box(self, "CampRoad_North", Vector3(35, 0.07, 5), Vector3(77.5, 0.025, 90), camp_road_color)
+	_create_box(self, "CampRoad_Camp", Vector3(5, 0.07, 15), Vector3(60, 0.025, 82.5), camp_road_color)
 	var camp := Node3D.new()
 	camp.name = "AnimalCamp"
 	camp.position = Vector3(60, 0, 75)
