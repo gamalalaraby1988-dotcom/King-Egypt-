@@ -1811,7 +1811,7 @@ func _create_service_staff(display_name: String, role: String, dialogue: String,
 func _create_desert_camp_access_road() -> void:
 	_create_box(self, "DesertCampRoad_Entry", Vector3(32, 0.08, 5), Vector3(16, 0.01, 0), Color(0.12, 0.13, 0.15), true)
 	_create_box(self, "DesertCampRoad_North", Vector3(5, 0.08, 75), Vector3(30, 0.01, 37.5), Color(0.12, 0.13, 0.15), true)
-	_create_box(self, "DesertCampRoad_Approach", Vector3(30, 0.08, 5), Vector3(45, 0.01, 75), Color(0.12, 0.13, 0.15), true)
+	_create_box(self, "DesertCampRoad_Approach", Vector3(11, 0.08, 5), Vector3(35.5, 0.01, 60), Color(0.12, 0.13, 0.15), true)
 
 func _create_party_station() -> void:
 	# محطة الحفلات التجريبية في الساحة المركزية، خارج مسارات الطرق ومداخل المباني.
