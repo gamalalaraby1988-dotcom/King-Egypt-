@@ -13,6 +13,7 @@ var language_select: OptionButton
 var info_label: Label
 var shadow_light: DirectionalLight3D
 var root_control: Control
+var founder_identity_label: Label
 
 func _ready() -> void:
 	_build_ui()
@@ -51,6 +52,11 @@ func _build_ui() -> void:
 	heading.text = "الملف الشخصي والإعدادات"
 	heading.add_theme_font_size_override("font_size", 22)
 	content.add_child(heading)
+
+	founder_identity_label = Label.new()
+	founder_identity_label.visible = false
+	founder_identity_label.add_theme_color_override("font_color", Color("#d6ad55"))
+	content.add_child(founder_identity_label)
 
 	var name_label := Label.new()
 	name_label.text = "اسم اللاعب"
@@ -128,6 +134,11 @@ func _load_settings() -> void:
 		return
 	var saved_name: Variant = config.get_value("profile", "player_name", "لاعب جديد")
 	name_input.text = str(saved_name).strip_edges().substr(0, 24) if saved_name is String else "لاعب جديد"
+	if FounderIdentityManager.is_founder:
+		name_input.text = FounderIdentityManager.get_founder_display_name()
+		name_input.editable = false
+		founder_identity_label.text = "♛ %s — %s" % [FounderIdentityManager.get_founder_title(), "هوية المؤسس موثقة"]
+		founder_identity_label.visible = true
 	_update_name_change_status(config)
 	var saved_volume: Variant = config.get_value("settings", "volume", 80)
 	var volume_value := float(saved_volume) if saved_volume is int or saved_volume is float else 80.0
@@ -149,6 +160,8 @@ func _save_settings() -> void:
 	var old_name_value: Variant = config.get_value("profile", "player_name", "لاعب جديد")
 	var old_name := str(old_name_value).strip_edges() if old_name_value is String else "لاعب جديد"
 	var requested_name := name_input.text.strip_edges()
+	if FounderIdentityManager.is_founder:
+		requested_name = FounderIdentityManager.get_founder_display_name()
 	if requested_name.is_empty():
 		requested_name = old_name if not old_name.is_empty() else "لاعب"
 	requested_name = requested_name.substr(0, 24)
