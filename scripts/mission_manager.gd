@@ -43,7 +43,7 @@ var owned_outfits: Array = ["default"]
 const VALID_OUTFIT_IDS := ["default", "men_formal", "women_formal", "urban_casual", "sport"]
 const OUTFIT_PRICES := {"men_formal": 500, "women_formal": 500, "urban_casual": 300, "sport": 250}
 const LEGACY_STORE_PATH := "user://kings_city_store.cfg"
-var target_marker: MeshInstance3D
+var target_marker: Node3D
 var daily_activities: Node
 var achievement_manager: Node
 var shop_manager: Node
@@ -1119,6 +1119,11 @@ func _complete_active_mission() -> void:
 
 func _update_navigation_hud() -> void:
 	var navigating := mission_running or job_running or landmark_navigation_active or navigation_arrival_remaining > 0.0
+	if is_instance_valid(target_marker):
+		var beacon_target := active_job_target if job_running else active_target if mission_running else landmark_navigation_target
+		if navigating and navigation_arrival_remaining <= 0.0:
+			target_marker.global_position = beacon_target
+		target_marker.visible = navigating and navigation_arrival_remaining <= 0.0
 	if not is_instance_valid(navigation_label) or not is_instance_valid(navigation_arrow) or not is_instance_valid(navigation_cancel_button):
 		return
 	navigation_label.visible = navigating
@@ -1373,18 +1378,46 @@ func _cancel_active_navigation() -> void:
 	_update_navigation_hud()
 
 func _create_target_marker() -> void:
-	target_marker = MeshInstance3D.new()
-	target_marker.name = "MissionTargetMarker"
-	var mesh := CylinderMesh.new()
-	mesh.top_radius = 0.65
-	mesh.bottom_radius = 0.65
-	mesh.height = 0.22
-	target_marker.mesh = mesh
-	var material := StandardMaterial3D.new()
-	material.albedo_color = Color(1.0, 0.78, 0.08)
-	material.emission_enabled = true
-	material.emission = Color(1.0, 0.62, 0.02)
-	target_marker.material_override = material
+	# هذا المجسم محلي داخل نسخة اللاعب فقط؛ لا يُرسل كعنصر شبكة إلى بقية اللاعبين.
+	target_marker = Node3D.new()
+	target_marker.name = "PrivateMissionSkyBeacon"
+	var outer_beam := MeshInstance3D.new()
+	outer_beam.name = "GoldenBeamGlow"
+	var outer_mesh := CylinderMesh.new()
+	outer_mesh.top_radius = 0.22
+	outer_mesh.bottom_radius = 0.72
+	outer_mesh.height = 120.0
+	outer_beam.mesh = outer_mesh
+	outer_beam.position.y = 60.0
+	outer_beam.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var glow_material := StandardMaterial3D.new()
+	glow_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	glow_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	glow_material.albedo_color = Color(1.0, 0.72, 0.22, 0.18)
+	glow_material.emission_enabled = true
+	glow_material.emission = Color(1.0, 0.62, 0.12)
+	glow_material.emission_energy_multiplier = 2.2
+	outer_beam.material_override = glow_material
+	target_marker.add_child(outer_beam)
+
+	var core_beam := MeshInstance3D.new()
+	core_beam.name = "GoldenBeamCore"
+	var core_mesh := CylinderMesh.new()
+	core_mesh.top_radius = 0.075
+	core_mesh.bottom_radius = 0.20
+	core_mesh.height = 120.0
+	core_beam.mesh = core_mesh
+	core_beam.position.y = 60.0
+	core_beam.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var core_material := StandardMaterial3D.new()
+	core_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	core_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	core_material.albedo_color = Color(1.0, 0.91, 0.58, 0.48)
+	core_material.emission_enabled = true
+	core_material.emission = Color(1.0, 0.78, 0.30)
+	core_material.emission_energy_multiplier = 3.0
+	core_beam.material_override = core_material
+	target_marker.add_child(core_beam)
 	target_marker.visible = false
 	add_child(target_marker)
 
@@ -1425,17 +1458,17 @@ func _build_ui() -> void:
 	root_control.add_child(navigation_label)
 
 	navigation_arrow = Label.new()
-	navigation_arrow.text = "▲"
+	navigation_arrow.text = "➤"
 	navigation_arrow.set_anchors_preset(Control.PRESET_TOP_WIDE)
 	navigation_arrow.anchor_left = 0.5
 	navigation_arrow.anchor_right = 0.5
-	navigation_arrow.offset_left = -20
-	navigation_arrow.offset_right = 20
-	navigation_arrow.offset_top = 48
-	navigation_arrow.offset_bottom = 82
-	navigation_arrow.pivot_offset = Vector2(20, 17)
+	navigation_arrow.offset_left = -14
+	navigation_arrow.offset_right = 14
+	navigation_arrow.offset_top = 50
+	navigation_arrow.offset_bottom = 78
+	navigation_arrow.pivot_offset = Vector2(14, 14)
 	navigation_arrow.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	navigation_arrow.add_theme_font_size_override("font_size", 28)
+	navigation_arrow.add_theme_font_size_override("font_size", 21)
 	navigation_arrow.add_theme_color_override("font_color", Color(1.0, 0.72, 0.18))
 	navigation_arrow.visible = false
 	root_control.add_child(navigation_arrow)
