@@ -28,7 +28,7 @@ android {
 
 dependencies {
     // Keep this exactly aligned with the Godot editor/export templates used by the project.
-    implementation("org.godotengine:godot:4.7.0.stable")
+    implementation("org.godotengine:godot:4.7.2.stable")
 }
 
 val repoRoot = layout.projectDirectory.dir("../../../../").asFile
