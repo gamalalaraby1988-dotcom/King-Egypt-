@@ -36,6 +36,45 @@
 - يجب ضبط المفتاح العام المقابل في `founder/security/public_key_pem` قبل قبول أي تذكرة مؤسس.
 - لا تعتبر PIN المحلي إثبات ملكية البريد؛ إنه قفل محلي منفصل.
 
+## اعتماد هوية المؤسس بتذكرة موقعة
+
+أُضيف مصدر Edge Function باسم `founder-entitlement` في:
+`supabase/functions/founder-entitlement/index.ts`
+
+تقوم الوظيفة بما يلي:
+1. تتطلب JWT صالحًا في ترويسة Authorization.
+2. تستعلم عن المستخدم من Supabase Auth مباشرة؛ لا تثق ببريد أو UUID يرسلهما العميل في جسم الطلب.
+3. تشترط البريد المؤكد `gamalalaraby1988@gmail.com` ومطابقة UUID ثابت مضبوط في سر الخادم `FOUNDER_AUTH_USER_ID`.
+4. توقع مطالب التذكرة بمفتاح RSA خاص محفوظ في أسرار Edge Functions، وتعيد payload والتوقيع فقط.
+5. التذكرة صالحة دون اتصال لمدة 30 يومًا، ولا تحتوي صلاحيات إدارية خادمية.
+
+### إعداد الأسرار قبل نشر الوظيفة
+
+لا تنشر الوظيفة قبل تجهيز هذه القيم في Supabase Dashboard > Edge Functions > Secrets:
+- `FOUNDER_AUTH_USER_ID`: UUID لحساب Auth الأصلي بعد إنشائه والتحقق من بريده. لا تستخدم UUID من حساب اختبار.
+- `FOUNDER_SIGNING_PRIVATE_KEY`: مفتاح RSA خاص بصيغة PEM/PKCS#8. لا تضفه إلى Git أو Godot أو المحادثة.
+
+يمكن إنشاء زوج مفاتيح جديد على جهاز موثوق باستخدام:
+```sh
+openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:3072 -out founder_private.pem
+openssl pkey -in founder_private.pem -pubout -out founder_public.pem
+```
+انسخ محتوى `founder_private.pem` مباشرة إلى سر `FOUNDER_SIGNING_PRIVATE_KEY` في لوحة Supabase، واحتفظ به خارج المستودع. ضع محتوى `founder_public.pem` فقط في إعداد اللعبة `founder/security/public_key_pem` بصيغة نص PEM مع أسطر جديدة ممثلة بـ `\\n`.
+
+**مهم:** أنشئ حساب المؤسس الأصلي وتحقق من البريد أولًا، ثم انسخ UUID الخاص به من لوحة Auth Users إلى `FOUNDER_AUTH_USER_ID`. بعد ذلك فقط انشر الوظيفة مع `verify_jwt=true`. لا يوجد حساب Auth للمؤسس منشأ تلقائيًا في هذه المرحلة.
+
+### الربط داخل اللعبة
+
+بعد نجاح OTP، يطلب العميل `/functions/v1/founder-entitlement` باستخدام جلسة المستخدم ومفتاح Publishable. لا تُفعّل `FounderIdentityManager` إلا إذا أعاد الخادم payload وتوقيعًا صالحين وقبلهما المفتاح العام. عندها فقط تظهر شاشة إعداد/إدخال PIN المحلي.
+
+### حدود متبقية
+
+- لم تُضبط أسرار Edge Function أو UUID المؤسس بعد.
+- لم تُنشر الوظيفة إلى الإنتاج بعد؛ نشرها قبل ضبط الأسرار سيعيد 503.
+- لا توجد إدارة مستمرة لتجديد جلسة Supabase بعد إغلاق اللعبة؛ access/refresh tokens لا تزال غير محفوظة محليًا.
+- التذكرة الموقعة تمنح تعريف المؤسس محليًا فقط؛ كل إجراء إداري Online يجب أن يتحقق خادميًا بصورة مستقلة.
+- لا ترسل PIN أو المفتاح الخاص في المحادثة.
+
 ## حدود الإنجاز الحالي
 
 تم ربط شاشة اختيار وضع اللعب بحقول البريد ورمز OTP وزري الإرسال والتأكيد. بعد نجاح التحقق تعرض الشاشة رسالة صريحة بأن اعتماد المؤسس ما زال ينتظر التذكرة الخادمية. لا يتم تخزين access token أو refresh token محليًا في هذه المرحلة؛ إدارة الجلسة الآمنة والتجديد ما زالا مطلوبين.
