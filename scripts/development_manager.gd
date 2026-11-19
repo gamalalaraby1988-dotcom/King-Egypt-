@@ -247,9 +247,10 @@ func _load_progress() -> void:
 		saved_level = clampi(int(config.get_value("profile", "development_level", config.get_value("profile", "player_level", 1))), 1, MAX_PLAYER_LEVEL)
 		var saved_count: Variant = config.get_value("profile", "development_stage_count", null)
 		if saved_count == null:
-			completed_stage_count = clampi(int(floor(float(saved_level - 1) * float(TOTAL_STAGES) / float(MAX_PLAYER_LEVEL))), 0, TOTAL_STAGES)
+			completed_stage_count = clampi(int(floor(float(saved_level) * float(TOTAL_STAGES) / float(MAX_PLAYER_LEVEL))), 0, TOTAL_STAGES)
 		else:
-			completed_stage_count = clampi(int(saved_count), 0, TOTAL_STAGES)
+			var legacy_level_stage_count := clampi(int(floor(float(saved_level) * float(TOTAL_STAGES) / float(MAX_PLAYER_LEVEL))), 0, TOTAL_STAGES)
+			completed_stage_count = maxi(clampi(int(saved_count), 0, TOTAL_STAGES), legacy_level_stage_count)
 	player_level = max(saved_level, _level_for_stage(completed_stage_count))
 	if completed_stage_count >= TOTAL_STAGES:
 		player_level = MAX_PLAYER_LEVEL
