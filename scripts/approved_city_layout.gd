@@ -154,6 +154,7 @@ func _build_open_fuel_station() -> void:
 	station.name = "OpenFuelStation"
 	station.position = Vector3(-75.0, 0.0, 38.0)
 	station.add_to_group("city_world_geometry")
+	station.add_to_group("approved_city_buildings")
 	add_child(station)
 
 	# A broad, continuous paved surface remains open on the east side for vehicles

@@ -159,15 +159,13 @@ func grant_reward_once(reward_id: String, money_amount: int = 0, xp_amount: int 
 	if GameModeManager.is_online_ready():
 		return false
 	# يسجل الإيصال والمحفظة في ملف واحد؛ تكرار نفس المعرف لا يصرف المكافأة مجددًا.
+	xp_amount = 0
 	if reward_id.is_empty() or money_amount < 0 or xp_amount < 0 or chips_amount < 0 or money + money_amount > MAX_CURRENCY_BALANCE or chips + chips_amount > MAX_CURRENCY_BALANCE or reward_receipts.has(reward_id):
 		return false
 	var next_money := money + money_amount
-	var next_xp := xp + xp_amount
+	var next_xp := 0
 	var next_chips := chips + chips_amount
-	var next_level := player_level
-	while next_xp >= next_level * 100:
-		next_xp -= next_level * 100
-		next_level += 1
+	var next_level := DevelopmentManager.player_level
 	var next_receipts := reward_receipts.duplicate(true)
 	next_receipts[reward_id] = Time.get_datetime_string_from_system()
 	var config := ConfigFile.new()
@@ -281,6 +279,7 @@ func complete_activity_once(activity_id: String, activity_kind: String, money_am
 	if GameModeManager.is_online_ready():
 		return false
 	# حفظ إكمال النشاط وإيصال المكافأة والمحفظة في ملف واحد يمنع إعادة الصرف بعد إعادة التشغيل.
+	xp_amount = 0
 	if activity_id.is_empty() or money_amount < 0 or xp_amount < 0 or chips_amount < 0 or money + money_amount > MAX_CURRENCY_BALANCE or chips + chips_amount > MAX_CURRENCY_BALANCE:
 		return false
 	var completion_key := activity_id
@@ -300,12 +299,9 @@ func complete_activity_once(activity_id: String, activity_kind: String, money_am
 	if reward_receipts.has(receipt_id):
 		return false
 	var next_money := money + money_amount
-	var next_xp := xp + xp_amount
+	var next_xp := 0
 	var next_chips := chips + chips_amount
-	var next_level := player_level
-	while next_xp >= next_level * 100:
-		next_xp -= next_level * 100
-		next_level += 1
+	var next_level := DevelopmentManager.player_level
 	var next_receipts := reward_receipts.duplicate(true)
 	next_receipts[receipt_id] = Time.get_datetime_string_from_system()
 	var next_achievement_totals := achievement_totals.duplicate(true)
@@ -474,8 +470,8 @@ func _load_profile() -> void:
 		push_warning("تعذر قراءة ملف اللاعب؛ تم إيقاف الترحيل لتجنب فقدان البيانات.")
 		return
 	if error == OK:
-		player_level = _safe_profile_int(config.get_value("profile", "player_level", 1), 1, 1)
-		xp = _safe_profile_int(config.get_value("profile", "xp", 0), 0)
+		player_level = DevelopmentManager.player_level
+		xp = 0
 		money = _safe_profile_int(config.get_value("profile", "money", 0), 0)
 		chips = _safe_profile_int(config.get_value("profile", "chips", 0), 0)
 		var saved_missions: Variant = config.get_value("profile", "completed_missions", {})
@@ -581,7 +577,7 @@ func _process(_delta: float) -> void:
 		interact()
 	_key_was_down = interaction_key_down
 
-	stats_label.text = "المستوى %d  |  الخبرة %d  |  المال %d  |  الرقائق %d  |  الجواهر %d" % [player_level, xp, money, chips, WalletManager.get_balance("gems")]
+	stats_label.text = "المستوى %d/5000  |  مراحل التطوير %d/140  |  المال %d  |  الرقائق %d  |  الجواهر %d" % [DevelopmentManager.player_level, DevelopmentManager.get_completed_stage_count(), money, chips, WalletManager.get_balance("gems")]
 	if job_running:
 		var job_distance := Vector2(player.global_position.x, player.global_position.z).distance_to(Vector2(active_job_target.x, active_job_target.z))
 		status_label.text = "الوظيفة: توجّه إلى نقطة العمل. المتبقي: %.1f متر" % job_distance
@@ -618,7 +614,7 @@ func _update_interaction_target() -> void:
 	for candidate in get_tree().get_nodes_in_group("city_interactables"):
 		if not is_instance_valid(candidate) or candidate.is_queued_for_deletion() or not candidate is Node3D:
 			continue
-		if GameModeManager.is_online_ready() and not candidate.has_method("get_job_data") and not candidate.has_method("get_mission_data"):
+		if GameModeManager.is_online_ready() and not candidate.has_method("get_job_data") and not candidate.has_method("get_mission_data") and not candidate.has_method("get_development_data"):
 			continue
 		var radius_value: Variant = candidate.get("interaction_radius")
 		var allowed_distance := float(radius_value) if radius_value != null else 4.5
@@ -634,6 +630,8 @@ func _update_interaction_target() -> void:
 	nearest_building = best if is_instance_valid(best) and best.has_method("get_mission_data") else null
 
 func _interaction_action_key(target: Node3D) -> String:
+	if target.has_method("get_development_data"):
+		return "interaction_enter"
 	if target.has_method("get_job_data"):
 		return "interaction_job"
 	if target.has_method("get_mission_data"):
@@ -653,7 +651,9 @@ func _update_interaction_hud() -> void:
 		interact_button.visible = true
 	elif is_instance_valid(nearest_interactable):
 		var display_name := CityLanguage.translate("interaction_place")
-		if nearest_interactable.has_method("get_job_data"):
+		if nearest_interactable.has_method("get_development_data"):
+			display_name = str(nearest_interactable.get_development_data().get("title", "مبنى التطوير"))
+		elif nearest_interactable.has_method("get_job_data"):
 			display_name = str(nearest_interactable.get_job_data().get("title", CityLanguage.translate("interaction_job_name")))
 		elif nearest_building:
 			display_name = str(nearest_interactable.get("building_title"))
@@ -694,6 +694,10 @@ func open_interactable(target: Node3D) -> void:
 		return
 	if target.has_method("is_shop_owner") and target.is_shop_owner() and is_instance_valid(shop_manager):
 		shop_manager.open_shop()
+		return
+	if target.has_method("get_development_data"):
+		var development_data: Dictionary = target.get_development_data()
+		DevelopmentManager.open_for_building(str(development_data.get("building_id", "")), str(development_data.get("title", "مبنى التطوير")))
 		return
 	if target.has_method("get_animal_rental_data"):
 		open_animal_rental(target)
@@ -774,7 +778,7 @@ func _rent_selected_animal() -> void:
 		player.end_animal_ride()
 		status_label.text = "تعذر حفظ أجرة الركوب؛ لم يتم خصم المال. حاول مرة أخرى."
 		return
-	stats_label.text = "المستوى %d  |  الخبرة %d  |  المال %d  |  الرقائق %d" % [player_level, xp, money, chips]
+	stats_label.text = "المستوى %d/5000  |  مراحل التطوير %d/140  |  المال %d  |  الرقائق %d" % [DevelopmentManager.player_level, DevelopmentManager.get_completed_stage_count(), money, chips]
 	status_label.text = "دفعت %d جنيه وبدأت ركوب %s. اضغط زر تفاعل للنزول." % [price, animal_name]
 	description_label.text = "يمكنك التجول بالحيوان في المخيم والمدينة."
 	reward_label.text = "تم خصم أجرة الركوب من رصيدك."
@@ -791,7 +795,7 @@ func open_job(job_board: Node3D) -> void:
 	selected_activity_kind = "job"
 	title_label.text = "وظيفة | " + str(data.get("title", "عمل متاح"))
 	description_label.text = str(data.get("description", "نفّذ العمل المحدد في المدينة."))
-	reward_label.text = "أجر الوظيفة: %d جنيه | %d رقائق | %d خبرة" % [int(data.get("money", 0)), int(data.get("chips", 0)), int(data.get("xp", 0))]
+	reward_label.text = "أجر الوظيفة: %d جنيه | %d رقائق" % [int(data.get("money", 0)), int(data.get("chips", 0))]
 	var key := str(data.get("job_id", job_board.name))
 	var daily_key := _daily_job_key(key)
 	if not is_job_available_today(key):
@@ -836,7 +840,7 @@ func open_building(building: Node3D) -> void:
 	description_label.text = data["description"]
 	if str(data.get("activities", "")).strip_edges() != "":
 		description_label.text += "\nالأنشطة: " + str(data["activities"])
-	reward_label.text = "المكافأة: %d جنيه | %d رقائق | %d خبرة" % [data["money"], data["chips"], data["xp"]]
+	reward_label.text = "المكافأة: %d جنيه | %d رقائق" % [data["money"], data["chips"]]
 	var key: String = str(building.get("building_id"))
 	if completed_missions.has(key) and not GameModeManager.is_online_ready():
 		status_label.text = "أنجزت هذه المهمة بالفعل في هذه الجلسة."
@@ -868,7 +872,7 @@ func open_building_activities(building: Node3D) -> void:
 	accept_button.visible = true
 	title_label.text = "%s | %s" % [building.building_title, data["title"]]
 	description_label.text = str(data.get("description", "")) + "\n" + str(data.get("activities", ""))
-	reward_label.text = "المكافأة: %d جنيه | %d رقائق | %d خبرة" % [data["money"], data["chips"], data["xp"]]
+	reward_label.text = "المكافأة: %d جنيه | %d رقائق" % [data["money"], data["chips"]]
 	status_label.text = CityLanguage.translate("interior_activity_status")
 	accept_button.disabled = completed_missions.has(str(building.building_id)) or player_level < int(data.get("level", 1))
 	accept_button.text = "بدء المهمة"
@@ -957,7 +961,7 @@ func _accept_job() -> void:
 	target_marker.visible = true
 	accept_button.disabled = true
 	description_label.text = "بدأت الوظيفة! اتبع علامة العمل حتى تصل إلى الموقع المطلوب."
-	reward_label.text = "الأجر عند إتمام العمل: %d جنيه | %d رقائق | %d خبرة" % [int(data.get("money", 0)), int(data.get("chips", 0)), int(data.get("xp", 0))]
+	reward_label.text = "الأجر عند إتمام العمل: %d جنيه | %d رقائق" % [int(data.get("money", 0)), int(data.get("chips", 0))]
 	status_label.text = "توجّه إلى نقطة العمل."
 
 func _on_server_mission_start_result(success: bool, mission_id: String, server_target: Vector3, message: String) -> void:
@@ -1028,8 +1032,8 @@ func _on_verified_reward_claim_finished(success: bool, result: Dictionary, messa
 	status_label.text = message
 	if success:
 		description_label.text = "اعتمد الخادم المكافأة وسجلها في محفظتك المركزية."
-		reward_label.text = "أرصدتك الخادمية: %d جنيه | %d رقائق | %d خبرة" % [int(result.get("cash", 0)), int(result.get("chips", 0)), int(result.get("xp", 0))]
-		stats_label.text = "الرصيد الخادمي: %d جنيه | %d رقائق | %d خبرة" % [int(result.get("cash", 0)), int(result.get("chips", 0)), int(result.get("xp", 0))]
+		reward_label.text = "أرصدتك الخادمية: %d جنيه | %d رقائق" % [int(result.get("cash", 0)), int(result.get("chips", 0))]
+		stats_label.text = "الرصيد الخادمي: %d جنيه | %d رقائق" % [int(result.get("cash", 0)), int(result.get("chips", 0))]
 	else:
 		description_label.text = "لم يتم إضافة أي رصيد محلي. سيظل الاعتماد متوقفًا حتى اكتمال إعداد الخدمة."
 		reward_label.text = "لا توجد مكافأة محلية بديلة في وضع Online."
@@ -1079,7 +1083,7 @@ func _complete_active_job() -> void:
 		return
 	var job_id := str(active_job_reward.get("job_id", active_job.name if is_instance_valid(active_job) else "job"))
 	var key := _daily_job_key(job_id)
-	var saved := complete_activity_once(key, "job", int(active_job_reward.get("money", 0)), int(active_job_reward.get("xp", 0)), int(active_job_reward.get("chips", 0)))
+	var saved := complete_activity_once(key, "job", int(active_job_reward.get("money", 0)), 0, int(active_job_reward.get("chips", 0)))
 	if not saved:
 		job_running = false
 		target_marker.visible = false
@@ -1126,7 +1130,7 @@ func _accept_mission() -> void:
 	accept_button.disabled = true
 	status_label.text = "بدأت المهمة! اتبع علامة الهدف الصفراء."
 	description_label.text = "تحرك إلى نقطة الهدف المحددة في المدينة لإكمال المهمة."
-	reward_label.text = "المكافأة عند الوصول: %d جنيه | %d رقائق | %d خبرة" % [data["money"], data["chips"], data["xp"]]
+	reward_label.text = "المكافأة عند الوصول: %d جنيه | %d رقائق" % [data["money"], data["chips"]]
 
 func _complete_active_mission() -> void:
 	if not mission_running or not is_instance_valid(active_mission):
