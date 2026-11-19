@@ -245,6 +245,7 @@ declare
     v_digest bytea;
 begin
     if p_user_id is null or p_server_event_id is null
+       or p_activity_kind is null or p_activity_id is null or p_evidence_digest_hex is null
        or p_activity_kind not in ('mission', 'job', 'achievement', 'daily_claim')
        or p_activity_id !~ '^[a-z0-9][a-z0-9_.-]{0,79}$'
        or p_evidence_digest_hex !~ '^[0-9a-f]{64}$'
