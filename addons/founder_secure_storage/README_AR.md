@@ -13,12 +13,11 @@
 
 ## تفعيل الإضافة
 
-بعد بناء ملفات AAR وظهورها في `addons/founder_secure_storage/bin/debug` و`release`:
+تم تفعيل ملف الإضافة في `project.godot` وضُبط Android Export Preset لاستخدام Gradle. بعد بناء ملفات AAR وظهورها في `addons/founder_secure_storage/bin/debug` و`release`:
 
-1. افتح المشروع في Godot.
-2. من Project Settings > Plugins فعّل FounderSecureStorage.
-3. استخدم Gradle Build في Android Export Preset.
-4. أعد تصدير APK.
+1. افتح المشروع في Godot وثبّت Android Build Template من Project > Install Android Build Template إذا لم يكن مثبتًا.
+2. تأكد من ظهور FounderSecureStorage ضمن Project Settings > Plugins.
+3. أعد تصدير APK.
 
 لا تفعّل الإضافة أو تصدر Android قبل وجود ملف AAR المناسب. لم يُبنَ AAR في هذه المرحلة.
 
