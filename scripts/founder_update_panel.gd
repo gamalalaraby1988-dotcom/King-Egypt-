@@ -47,10 +47,13 @@ func _build_ui() -> void:
 	panel.anchor_right = 0.5
 	panel.anchor_top = 0.5
 	panel.anchor_bottom = 0.5
-	panel.offset_left = -210
-	panel.offset_right = 210
-	panel.offset_top = -270
-	panel.offset_bottom = 270
+	var viewport_size := get_viewport().get_visible_rect().size
+	var panel_width := minf(420.0, maxf(260.0, viewport_size.x - 16.0))
+	var panel_height := minf(540.0, maxf(360.0, viewport_size.y - 16.0))
+	panel.offset_left = -panel_width * 0.5
+	panel.offset_right = panel_width * 0.5
+	panel.offset_top = -panel_height * 0.5
+	panel.offset_bottom = panel_height * 0.5
 	panel.visible = false
 	panel.mouse_filter = Control.MOUSE_FILTER_STOP
 	var style := StyleBoxFlat.new()
