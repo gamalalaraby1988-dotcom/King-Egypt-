@@ -157,12 +157,24 @@ func flush_pending() -> void:
 	_request_active = true
 
 
-func _on_request_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+func _on_request_completed(result: int, response_code: int, response_headers: PackedStringArray, body: PackedByteArray) -> void:
 	_request_active = false
-	if result != HTTPRequest.RESULT_SUCCESS or response_code < 200 or response_code >= 300:
+	if result != HTTPRequest.RESULT_SUCCESS:
 		_pending_event_ids.clear()
 		sync_finished.emit(false, 0, 0, "تعذرت المزامنة الآن. ستبقى الأحداث في قائمة الانتظار.")
 		_schedule_retry()
+		return
+	if response_code == 429:
+		_pending_event_ids.clear()
+		_retry_delay_seconds = maxf(_retry_delay_seconds, _get_retry_after_seconds(response_headers))
+		sync_finished.emit(false, 0, 0, "الخادم طلب تهدئة طلبات المزامنة؛ ستبقى الأحداث محفوظة.")
+		_schedule_retry()
+		return
+	if response_code < 200 or response_code >= 300:
+		_pending_event_ids.clear()
+		sync_finished.emit(false, 0, 0, "رفض الخادم الدفعة أو تعذر قبولها. ستبقى الأحداث محفوظة للمراجعة.")
+		if response_code >= 500:
+			_schedule_retry()
 		return
 
 	var parsed: Variant = JSON.parse_string(body.get_string_from_utf8())
@@ -259,3 +271,13 @@ func _schedule_retry() -> void:
 		return
 	_retry_timer.start(_retry_delay_seconds)
 	_retry_delay_seconds = minf(_retry_delay_seconds * 2.0, MAX_RETRY_DELAY_SECONDS)
+
+
+func _get_retry_after_seconds(response_headers: PackedStringArray) -> float:
+	for header in response_headers:
+		var parts := header.split(":", true, 1)
+		if parts.size() == 2 and parts[0].strip_edges().to_lower() == "retry-after":
+			var parsed := parts[1].strip_edges().to_float()
+			if parsed > 0.0:
+				return clampf(parsed, 5.0, MAX_RETRY_DELAY_SECONDS)
+	return 60.0
