@@ -932,7 +932,7 @@ func _on_server_mission_start_result(success: bool, mission_id: String, server_t
 	if not success:
 		accept_button.disabled = false
 		return
-	if not is_instance_valid(active_mission) or str(active_mission.get("building_id")) != mission_id:
+	if not is_instance_valid(active_mission) or str(active_mission.get("server_activity_id")) != mission_id:
 		accept_button.disabled = false
 		return
 	active_target = server_target
@@ -1075,7 +1075,12 @@ func _accept_mission() -> void:
 	if GameModeManager.is_online_ready():
 		accept_button.disabled = true
 		status_label.text = "يراجع الخادم موقعك ويبدأ المهمة..."
-		AuthoritativeGameServer.request_start_mission.rpc_id(1, key)
+		var server_mission_id := str(active_mission.get("server_activity_id"))
+		if server_mission_id.is_empty():
+			accept_button.disabled = false
+			status_label.text = "تعذر تحديد معرف المهمة الخادمي."
+			return
+		AuthoritativeGameServer.request_start_mission.rpc_id(1, server_mission_id)
 		return
 	active_target = active_mission.global_position + data["target_offset"]
 	active_target.y = 0.15
