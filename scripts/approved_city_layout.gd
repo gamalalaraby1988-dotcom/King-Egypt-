@@ -173,7 +173,7 @@ func _build_pyramids() -> void:
 		pyramid.material_override = _mat(Color(0.72, 0.58, 0.38))
 		pyramid.add_to_group("city_distant_landmarks")
 		pyramid.add_to_group("city_world_geometry")
-		pyramid.visibility_range_begin = 150.0
+		pyramid.visibility_range_begin = 0.0
 		pyramid.visibility_range_end = 500.0
 		pyramid.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		add_child(pyramid)
@@ -186,7 +186,7 @@ func _build_pyramids() -> void:
 	sphinx.material_override = _mat(SAND)
 	sphinx.add_to_group("city_distant_landmarks")
 	sphinx.add_to_group("city_world_geometry")
-	sphinx.visibility_range_begin = 150.0
+	sphinx.visibility_range_begin = 0.0
 	sphinx.visibility_range_end = 500.0
 	sphinx.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(sphinx)
