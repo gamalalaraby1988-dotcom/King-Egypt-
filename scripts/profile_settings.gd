@@ -126,6 +126,11 @@ func _load_settings() -> void:
 	if config.load(SAVE_PATH) != OK:
 		name_input.text = "لاعب جديد"
 		language_select.select(0)
+		if FounderIdentityManager.is_founder:
+			name_input.text = FounderIdentityManager.get_founder_display_name()
+			name_input.editable = false
+			founder_identity_label.text = "♛ %s — هوية المؤسس موثقة" % FounderIdentityManager.get_founder_title()
+			founder_identity_label.visible = true
 		if FileAccess.file_exists(SAVE_PATH):
 			name_input.editable = false
 			name_change_status.text = "تعذر قراءة بيانات الاسم؛ لا يمكن التحقق من حق التغيير اليومي بأمان."
@@ -197,6 +202,10 @@ func _save_settings() -> void:
 
 func _update_name_change_status(config: ConfigFile) -> void:
 	if not is_instance_valid(name_change_status):
+		return
+	if FounderIdentityManager.is_founder:
+		name_input.editable = false
+		name_change_status.text = "اسم المؤسس ثابت ولا يمكن تغييره من إعدادات اللاعب."
 		return
 	var last_change_value: Variant = config.get_value("profile", "player_name_change_date", "")
 	var last_change_date := str(last_change_value) if last_change_value is String else ""
