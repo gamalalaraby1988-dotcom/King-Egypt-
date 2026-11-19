@@ -78,6 +78,33 @@ var _reward_claim_inflight := false
 
 const SAVE_PATH := "user://kings_city_profile.cfg"
 const MAX_CURRENCY_BALANCE := 2000000000
+const EGYPT_UTC_OFFSET_SECONDS := 7200
+
+# Weekly rotation for the currently implemented city job boards (Sunday=0).
+const WEEKLY_JOB_SCHEDULE := {
+	0: ["courier_delivery"],
+	1: ["city_guide"],
+	2: ["city_maintenance"],
+	3: ["courier_delivery"],
+	4: ["city_guide"],
+	5: ["courier_delivery", "city_guide", "city_maintenance"],
+	6: ["courier_delivery", "city_guide", "city_maintenance"]
+}
+
+func _egypt_datetime() -> Dictionary:
+	return Time.get_datetime_dict_from_unix_time(int(Time.get_unix_time_from_system()) + EGYPT_UTC_OFFSET_SECONDS)
+
+func _egypt_day_key() -> String:
+	var date := _egypt_datetime()
+	return "%04d-%02d-%02d" % [int(date.year), int(date.month), int(date.day)]
+
+func _daily_job_key(job_id: String) -> String:
+	return "%s:%s" % [_egypt_day_key(), job_id]
+
+func is_job_available_today(job_id: String) -> bool:
+	var date := _egypt_datetime()
+	var jobs: Array = WEEKLY_JOB_SCHEDULE.get(int(date.weekday), [])
+	return jobs.has(job_id)
 
 func _ready() -> void:
 	_build_ui()
@@ -766,8 +793,12 @@ func open_job(job_board: Node3D) -> void:
 	description_label.text = str(data.get("description", "نفّذ العمل المحدد في المدينة."))
 	reward_label.text = "أجر الوظيفة: %d جنيه | %d رقائق | %d خبرة" % [int(data.get("money", 0)), int(data.get("chips", 0)), int(data.get("xp", 0))]
 	var key := str(data.get("job_id", job_board.name))
-	if completed_jobs.has(key) and not GameModeManager.is_online_ready():
-		status_label.text = "أنجزت هذه الوظيفة بالفعل."
+	var daily_key := _daily_job_key(key)
+	if not is_job_available_today(key):
+		status_label.text = "هذه الوظيفة غير متاحة اليوم. راجع جدول الوظائف الأسبوعي."
+		accept_button.disabled = true
+	elif completed_jobs.has(daily_key) and not GameModeManager.is_online_ready():
+		status_label.text = "أنجزت هذه الوظيفة اليوم. يمكنك اختيار وظيفة أخرى أو العودة غدًا."
 		accept_button.disabled = true
 	elif player_level < int(data.get("level", 1)) and not GameModeManager.is_online_ready():
 		status_label.text = "المستوى المطلوب لهذه الوظيفة: %d" % int(data.get("level", 1))
@@ -907,7 +938,11 @@ func _accept_job() -> void:
 	navigation_arrival_remaining = 0.0
 	var data: Dictionary = active_job.get_job_data()
 	var key := str(data.get("job_id", active_job.name))
-	if not GameModeManager.is_online_ready() and (completed_jobs.has(key) or player_level < int(data.get("level", 1))):
+	if not is_job_available_today(key):
+		status_label.text = "هذه الوظيفة غير متاحة اليوم وفق جدول الأسبوع."
+		accept_button.disabled = false
+		return
+	if not GameModeManager.is_online_ready() and (completed_jobs.has(_daily_job_key(key)) or player_level < int(data.get("level", 1))):
 		return
 	if GameModeManager.is_online_ready():
 		accept_button.disabled = true
@@ -1042,7 +1077,8 @@ func _on_server_job_completed(job_id: String) -> void:
 func _complete_active_job() -> void:
 	if not job_running:
 		return
-	var key := str(active_job_reward.get("job_id", active_job.name if is_instance_valid(active_job) else "job"))
+	var job_id := str(active_job_reward.get("job_id", active_job.name if is_instance_valid(active_job) else "job"))
+	var key := _daily_job_key(job_id)
 	var saved := complete_activity_once(key, "job", int(active_job_reward.get("money", 0)), int(active_job_reward.get("xp", 0)), int(active_job_reward.get("chips", 0)))
 	if not saved:
 		job_running = false
