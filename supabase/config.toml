@@ -7,5 +7,7 @@ project_id = "lupmaktbymuaymhqsxxu"
 [functions.founder-entitlement]
 verify_jwt = false
 
+# The function validates the caller's Supabase Auth access token via /auth/v1/user.
+# Keep this false when using sb_publishable_* keys; the function performs user auth itself.
 [functions.player-sync]
-verify_jwt = true
+verify_jwt = false
