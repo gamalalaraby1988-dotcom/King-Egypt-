@@ -52,7 +52,7 @@ func _ready() -> void:
 
 func set_session_access_token(access_token: String) -> void:
 	_access_token = access_token.strip_edges()
-	if not _access_token.is_empty():
+	if not _access_token.is_empty() and bool(ProjectSettings.get_setting(SYNC_ENABLED_SETTING, false)):
 		call_deferred("fetch_preference_snapshot")
 		call_deferred("flush_pending")
 
@@ -71,12 +71,17 @@ func get_preference_snapshot_revision() -> int:
 
 
 func fetch_preference_snapshot() -> void:
+	if not bool(ProjectSettings.get_setting(SYNC_ENABLED_SETTING, false)):
+		return
 	if _access_token.is_empty() or _snapshot_request_active:
 		return
 	_start_snapshot_request("get_player_preference_snapshot", {}, "fetch")
 
 
 func save_preference_snapshot(settings: Dictionary) -> void:
+	if not bool(ProjectSettings.get_setting(SYNC_ENABLED_SETTING, false)):
+		preference_snapshot_finished.emit(false, "مزامنة الحساب معطلة حاليًا في إعدادات اللعبة.")
+		return
 	if _access_token.is_empty() or _snapshot_request_active:
 		preference_snapshot_finished.emit(false, "سجّل الدخول أولًا أو انتظر انتهاء طلب الإعدادات.")
 		return
