@@ -16,7 +16,7 @@ function json(data: unknown, status = 200, extraHeaders: Record<string, string> 
 
 async function readBoundedBody(req: Request): Promise<string | null> {
   const contentLength = req.headers.get("Content-Length");
-  if (contentLength && /^\\d+$/.test(contentLength) && Number(contentLength) > MAX_BODY_BYTES) return null;
+  if (contentLength && Number.isFinite(Number(contentLength)) && Number(contentLength) > MAX_BODY_BYTES) return null;
   if (!req.body) return "";
   const reader = req.body.getReader();
   const chunks: Uint8Array[] = [];
@@ -47,21 +47,24 @@ async function readBoundedBody(req: Request): Promise<string | null> {
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS_HEADERS });
   if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
-  if (!/^application\\/json(?:\\s*;|$)/i.test(req.headers.get("Content-Type") ?? "")) {
-    return json({ error: "content_type_must_be_json" }, 415);
-  }
+  const contentType = (req.headers.get("Content-Type") ?? "").split(";")[0].trim().toLowerCase();
+  if (contentType !== "application/json") return json({ error: "content_type_must_be_json" }, 415);
 
   const authorization = req.headers.get("Authorization") ?? "";
-  if (!/^Bearer\\s+\\S+$/i.test(authorization)) return json({ error: "unauthorized" }, 401);
+  if (!authorization.toLowerCase().startsWith("bearer ") || authorization.slice(7).trim().length === 0) {
+    return json({ error: "unauthorized" }, 401);
+  }
 
-  const projectUrl = Deno.env.get("SUPABASE_URL")?.replace(/\\/$/, "");
+  const projectUrlRaw = Deno.env.get("SUPABASE_URL");
+  const projectUrl = projectUrlRaw?.endsWith("/") ? projectUrlRaw.slice(0, -1) : projectUrlRaw;
   const publishableKeysRaw = Deno.env.get("SUPABASE_PUBLISHABLE_KEYS");
   if (!projectUrl || !publishableKeysRaw) return json({ error: "sync_service_not_configured" }, 503);
 
   let publishableKey = "";
   try {
     const keys = JSON.parse(publishableKeysRaw);
-    publishableKey = String(keys.default ?? "");
+    const publishableKeyEnvName = String(keys.default ?? "");
+    publishableKey = Deno.env.get(publishableKeyEnvName) ?? "";
   } catch {
     return json({ error: "sync_service_not_configured" }, 503);
   }
