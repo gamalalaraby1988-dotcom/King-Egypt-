@@ -106,6 +106,8 @@ func _notification(what: int) -> void:
 		_save_profile()
 
 func grant_reward_once(reward_id: String, money_amount: int = 0, xp_amount: int = 0, chips_amount: int = 0) -> bool:
+	if GameModeManager.is_online_ready():
+		return false
 	# يسجل الإيصال والمحفظة في ملف واحد؛ تكرار نفس المعرف لا يصرف المكافأة مجددًا.
 	if reward_id.is_empty() or money_amount < 0 or xp_amount < 0 or chips_amount < 0 or money + money_amount > MAX_CURRENCY_BALANCE or chips + chips_amount > MAX_CURRENCY_BALANCE or reward_receipts.has(reward_id):
 		return false
@@ -148,6 +150,8 @@ func grant_reward_once(reward_id: String, money_amount: int = 0, xp_amount: int 
 	return true
 
 func record_achievement_event_once(event_id: String, stat_key: String) -> bool:
+	if GameModeManager.is_online_ready():
+		return false
 	# عدادات الإنجازات ومعرّفات أحداثها تحفظ داخل ملف اللاعب نفسه.
 	# هذا يجعل تسجيل التقدم قابلًا لإعادة المحاولة دون مضاعفة العداد.
 	if event_id.is_empty() or not ["jobs", "missions", "daily_claims"].has(stat_key):
@@ -224,6 +228,8 @@ func has_reward_receipt(reward_id: String) -> bool:
 	return reward_receipts.has(reward_id)
 
 func complete_activity_once(activity_id: String, activity_kind: String, money_amount: int = 0, xp_amount: int = 0, chips_amount: int = 0) -> bool:
+	if GameModeManager.is_online_ready():
+		return false
 	# حفظ إكمال النشاط وإيصال المكافأة والمحفظة في ملف واحد يمنع إعادة الصرف بعد إعادة التشغيل.
 	if activity_id.is_empty() or money_amount < 0 or xp_amount < 0 or chips_amount < 0 or money + money_amount > MAX_CURRENCY_BALANCE or chips + chips_amount > MAX_CURRENCY_BALANCE:
 		return false
@@ -485,6 +491,12 @@ func register_building(building: Node3D) -> void:
 	buildings.append(building)
 
 func _process(_delta: float) -> void:
+	if GameModeManager.is_online_ready():
+		if is_instance_valid(panel):
+			panel.visible = false
+		if is_instance_valid(interact_button):
+			interact_button.visible = false
+		return
 	if navigation_arrival_remaining > 0.0:
 		navigation_arrival_remaining = maxf(navigation_arrival_remaining - _delta, 0.0)
 	if navigation_route_notice_remaining > 0.0:
