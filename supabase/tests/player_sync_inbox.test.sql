@@ -1,5 +1,5 @@
 begin;
-select extensions.plan(28);
+select extensions.plan(29);
 insert into auth.users (id,aud,role,email,encrypted_password,email_confirmed_at)
 values ('00000000-0000-4000-8000-000000000038','authenticated','authenticated','player-sync-inbox-test@example.invalid','',pg_catalog.now())
 on conflict (id) do nothing;
