@@ -48,6 +48,7 @@ func _ready() -> void:
 	_create_interior_transition_ui()
 	_create_player_vehicle()
 	_create_mode_selection_ui()
+	_create_founder_update_panel()
 	GameModeManager.status_changed.connect(_on_mode_status_changed)
 	GameModeManager.online_connected.connect(_on_mode_connected)
 	AuthoritativeGameServer.authentication_completed.connect(_on_player_server_authenticated)
@@ -1266,3 +1267,15 @@ func _on_mode_disconnected() -> void:
 		player.set_physics_process(false)
 	if is_instance_valid(mode_selection_layer):
 		mode_selection_layer.visible = true
+
+
+func _create_founder_update_panel() -> void:
+	# لوحة المؤسس مستقلة عن واجهة اللاعب العادية، ولا تظهر إلا بعد التحقق من تذكرة المؤسس.
+	var panel_script := load("res://scripts/founder_update_panel.gd") as Script
+	if panel_script == null:
+		push_warning("تعذر تحميل لوحة إدارة تحديثات المؤسس.")
+		return
+	var panel := CanvasLayer.new()
+	panel.name = "FounderUpdateManagement"
+	panel.set_script(panel_script)
+	add_child(panel)
