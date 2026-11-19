@@ -11,6 +11,52 @@ func _run_wallet_tests() -> void:
 		quit(1)
 		return
 
+	var initial_profile := ConfigFile.new()
+	if initial_profile.load("user://kings_city_profile.cfg") != OK:
+		push_error("Could not load the newly initialized wallet profile.")
+		quit(1)
+		return
+	if not initial_profile.has_section_key("profile", "money") or not initial_profile.has_section_key("profile", "chips"):
+		push_error("First-run wallet migration did not initialize legacy profile balances.")
+		quit(1)
+		return
+	if int(initial_profile.get_value("profile", "money")) != wallet.get_balance("money") or int(initial_profile.get_value("profile", "chips")) != wallet.get_balance("chips"):
+		push_error("First-run profile and wallet balances do not match.")
+		quit(1)
+		return
+
+	var metadata_config := ConfigFile.new()
+	if metadata_config.load("user://kings_city_profile.cfg") != OK:
+		push_error("Could not load profile for metadata persistence test.")
+		quit(1)
+		return
+	metadata_config.set_value("profile", "ci_metadata_test_marker", true)
+	var metadata_money_before: int = wallet.get_balance("money")
+	var metadata_chips_before: int = wallet.get_balance("chips")
+	if not wallet.save_profile_metadata(metadata_config):
+		push_error("Atomic profile metadata save failed.")
+		quit(1)
+		return
+	if wallet.get_balance("money") != metadata_money_before or wallet.get_balance("chips") != metadata_chips_before:
+		push_error("Metadata save unexpectedly changed wallet balances.")
+		quit(1)
+		return
+	var tampered_metadata := ConfigFile.new()
+	if tampered_metadata.load("user://kings_city_profile.cfg") != OK:
+		push_error("Could not reload profile for metadata integrity test.")
+		quit(1)
+		return
+	tampered_metadata.set_value("profile", "money", metadata_money_before + 1)
+	if wallet.save_profile_metadata(tampered_metadata):
+		push_error("Metadata save accepted a balance change outside a wallet transaction.")
+		quit(1)
+		return
+	var after_rejected_metadata := ConfigFile.new()
+	if after_rejected_metadata.load("user://kings_city_profile.cfg") != OK or int(after_rejected_metadata.get_value("profile", "money", -1)) != metadata_money_before:
+		push_error("Rejected metadata save changed the persisted balance.")
+		quit(1)
+		return
+
 	var transaction_id := "ci_wallet_test_%s" % str(Time.get_ticks_usec())
 	var before: int = wallet.get_balance("gems")
 	if not wallet.credit(transaction_id, "gems", 25, "CI test credit"):
@@ -96,6 +142,67 @@ func _run_wallet_tests() -> void:
 		push_error("Vehicle with unapproved price was purchasable.")
 		quit(1)
 		return
+
+	var language_service := root.get_node_or_null("CityLanguage")
+	if language_service == null:
+		push_error("CityLanguage autoload was not found.")
+		quit(1)
+		return
+	var language_profile_before := ConfigFile.new()
+	if language_profile_before.load("user://kings_city_profile.cfg") != OK:
+		push_error("Could not load profile before testing in-memory language changes.")
+		quit(1)
+		return
+	var saved_language_before: String = str(language_profile_before.get_value("settings", "language", "auto"))
+	var current_language_mode: String = str(language_service.language_mode)
+	var alternate_language := "en" if current_language_mode != "en" else "ar"
+	language_service.set_language(alternate_language)
+	var language_profile_after := ConfigFile.new()
+	if language_profile_after.load("user://kings_city_profile.cfg") != OK or str(language_profile_after.get_value("settings", "language", "auto")) != saved_language_before:
+		push_error("CityLanguage changed the profile file outside atomic profile settings persistence.")
+		language_service.set_language(current_language_mode)
+		quit(1)
+		return
+	language_service.set_language(current_language_mode)
+
+	var mission_script: Script = load("res://scripts/mission_manager.gd")
+	var mission_manager = mission_script.new()
+	mission_manager.money = -10
+	mission_manager.chips = -20
+	if not mission_manager._refresh_wallet_cache():
+		push_error("MissionManager did not read the verified wallet snapshot.")
+		quit(1)
+		return
+	if mission_manager.money != wallet.get_balance("money") or mission_manager.chips != wallet.get_balance("chips"):
+		push_error("MissionManager wallet cache did not match the wallet snapshot.")
+		quit(1)
+		return
+	var saved_integrity_blocked: bool = wallet.integrity_blocked
+	wallet.integrity_blocked = true
+	mission_manager.money = 777
+	mission_manager.chips = 888
+	if mission_manager._refresh_wallet_cache():
+		push_error("MissionManager accepted a blocked wallet snapshot.")
+		wallet.integrity_blocked = saved_integrity_blocked
+		quit(1)
+		return
+	if mission_manager.money != 777 or mission_manager.chips != 888:
+		push_error("MissionManager changed cached balances while wallet integrity was blocked.")
+		wallet.integrity_blocked = saved_integrity_blocked
+		quit(1)
+		return
+	if mission_manager.grant_reward_once("ci_blocked_reward", 10, 5, 1):
+		push_error("MissionManager granted a reward while wallet integrity was blocked.")
+		wallet.integrity_blocked = saved_integrity_blocked
+		quit(1)
+		return
+	if mission_manager.complete_activity_once("ci_blocked_activity", "mission", 10, 5, 1):
+		push_error("MissionManager completed a paid activity while wallet integrity was blocked.")
+		wallet.integrity_blocked = saved_integrity_blocked
+		quit(1)
+		return
+	wallet.integrity_blocked = saved_integrity_blocked
+	mission_manager.free()
 
 	print("Wallet transaction tests passed.")
 	quit(0)

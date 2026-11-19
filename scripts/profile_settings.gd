@@ -17,7 +17,64 @@ var root_control: Control
 func _ready() -> void:
 	_build_ui()
 	_load_settings()
+	SupabaseTestClient.auth_changed.connect(_on_test_auth_changed)
 	_apply_settings()
+
+func _on_test_auth_changed(is_authenticated: bool, _user_id: String) -> void:
+	var config := ConfigFile.new()
+	if config.load(SAVE_PATH) != OK and FileAccess.file_exists(SAVE_PATH):
+		name_input.editable = false
+		name_change_status.text = "تعذر قراءة ملف اللاعب؛ تغيير الاسم ومزامنته موقوفان لحماية البيانات."
+		return
+	if not is_authenticated:
+		_update_name_change_status(config)
+		return
+	await _sync_display_name_from_server(config)
+
+func _sync_display_name_from_server(config: ConfigFile) -> void:
+	if not SupabaseTestClient.is_authenticated():
+		return
+	var sync_token := SupabaseTestClient.access_token
+	name_input.editable = false
+	name_change_status.text = "جارٍ جلب اسم الحساب ومزامنته..."
+	var local_name_value: Variant = config.get_value("profile", "player_name", "لاعب جديد")
+	var local_name := str(local_name_value).strip_edges() if local_name_value is String else "لاعب جديد"
+	var server_result: Dictionary = await SupabaseTestClient.fetch_test_display_name()
+	if not SupabaseTestClient.is_authenticated() or SupabaseTestClient.access_token != sync_token:
+		return
+	if not bool(server_result.get("ok", false)):
+		name_change_status.text = "تعذرت مزامنة اسم الحساب: %s" % str(server_result.get("message", "خطأ غير معروف."))
+		return
+	var server_name := str(server_result.get("display_name", "")).strip_edges()
+	var server_next_name_change_at := str(server_result.get("next_change_at", ""))
+	if server_name.is_empty():
+		# انقل الاسم المحلي القديم إلى الحساب مرة واحدة فقط عند أول ربط.
+		if not local_name.is_empty() and local_name != "لاعب جديد":
+			var bootstrap_result: Dictionary = await SupabaseTestClient.change_test_display_name(local_name)
+			if not SupabaseTestClient.is_authenticated() or SupabaseTestClient.access_token != sync_token:
+				return
+			if not bool(bootstrap_result.get("ok", false)):
+				name_input.text = local_name
+				name_input.editable = true
+				name_change_status.text = str(bootstrap_result.get("message", "تعذر ربط الاسم المحلي بالحساب."))
+				return
+			server_name = str(bootstrap_result.get("display_name", local_name)).strip_edges()
+			server_next_name_change_at = str(bootstrap_result.get("next_change_at", ""))
+		else:
+			name_input.text = local_name
+			name_input.editable = true
+			name_change_status.text = "لم يُحدد اسم لهذا الحساب بعد؛ اختر اسمًا واحفظه لربطه بالحساب."
+			return
+	if server_name != local_name:
+		config.set_value("profile", "player_name", server_name)
+		if not WalletManager.save_profile_metadata(config):
+			name_input.text = server_name
+			name_change_status.text = "اسم الحساب محفوظ على الخادم، لكن تعذر تحديث النسخة المحلية. ستتم إعادة المزامنة عند المحاولة التالية."
+			return
+	name_input.text = server_name
+	_update_name_change_status(config)
+	if not server_next_name_change_at.is_empty():
+		name_change_status.text += "\nموعد السماح التالي حسب الخادم: %s" % server_next_name_change_at
 
 func _build_ui() -> void:
 	var layer := CanvasLayer.new()
@@ -153,47 +210,75 @@ func _save_settings() -> void:
 		requested_name = old_name if not old_name.is_empty() else "لاعب"
 	requested_name = requested_name.substr(0, 24)
 	var name_changed := requested_name != old_name
-	var today := Time.get_date_string_from_system()
-	var last_change_value: Variant = config.get_value("profile", "player_name_change_date", "")
-	var last_change_date := str(last_change_value) if last_change_value is String else ""
 	var name_change_blocked := false
-	if name_changed and last_change_date == today:
-		name_input.text = old_name
-		name_change_blocked = true
-		requested_name = old_name
-		name_changed = false
-	config.set_value("profile", "player_name", requested_name)
+	var server_next_name_change_at := ""
+	var name_change_failure_message := ""
 	if name_changed:
-		config.set_value("profile", "player_name_change_date", today)
+		# افحص إمكانية الحفظ المحلي قبل تنفيذ تغيير خادمي لا يمكن التراجع عنه ذريًا.
+		# احفظ الاسم القديم أولًا؛ لا يُكتب الاسم الجديد محليًا إلا بعد موافقة الخادم.
+		config.set_value("profile", "player_name", old_name)
+		if not WalletManager.save_profile_metadata(config):
+			name_input.text = old_name
+			info_label.text = "تعذر تأمين حفظ ملف اللاعب محليًا؛ لم نرسل طلب تغيير الاسم إلى الخادم."
+			return
+		if not SupabaseTestClient.is_authenticated():
+			name_input.text = old_name
+			requested_name = old_name
+			name_changed = false
+			name_change_blocked = true
+			name_change_status.text = "تغيير الاسم متاح بعد تسجيل الدخول بحساب الاختبار؛ لا نعتمد ساعة الجهاز لتطبيق الحد اليومي."
+		else:
+			name_change_status.text = "جارٍ التحقق من حد تغيير الاسم على الخادم..."
+			var server_result: Dictionary = await SupabaseTestClient.change_test_display_name(requested_name)
+			if not bool(server_result.get("ok", false)):
+				name_input.text = old_name
+				requested_name = old_name
+				name_changed = false
+				name_change_blocked = true
+				name_change_failure_message = str(server_result.get("message", "رفض الخادم تغيير الاسم."))
+				server_next_name_change_at = str(server_result.get("next_change_at", ""))
+				name_change_status.text = name_change_failure_message
+				if not server_next_name_change_at.is_empty():
+					name_change_status.text += " موعد السماح التالي حسب الخادم: %s" % server_next_name_change_at
+			else:
+				requested_name = str(server_result.get("display_name", requested_name))
+				name_input.text = requested_name
+				server_next_name_change_at = str(server_result.get("next_change_at", ""))
+				name_change_status.text = "تم تغيير الاسم من الخادم. موعد السماح التالي: %s" % (server_next_name_change_at if not server_next_name_change_at.is_empty() else "يُحدده الخادم")
+	config.set_value("profile", "player_name", requested_name)
 	config.set_value("settings", "volume", int(volume_slider.value))
 	config.set_value("settings", "quality", quality_select.selected)
 	var language_modes := ["auto", "ar", "en"]
 	var selected_language: String = language_modes[clampi(language_select.selected, 0, 2)]
 	config.set_value("settings", "language", selected_language)
-	var error := config.save(SAVE_PATH)
-	if error != OK:
-		info_label.text = "تعذر حفظ الإعدادات؛ لم يتم اعتماد تغيير اللغة. رمز الخطأ: %s" % error
+	if not WalletManager.save_profile_metadata(config):
+		if name_changed and not name_change_blocked:
+			name_input.text = requested_name
+			name_input.editable = false
+			name_change_status.text = "الاسم الجديد محفوظ على الحساب، لكن تعذر تحديث الملف المحلي. ستتم مزامنته من الحساب عند نجاح الاتصال التالي."
+			info_label.text = "وافق الخادم على تغيير الاسم، لكن تعذر حفظ النسخة المحلية. لم نفقد الاسم؛ الحساب هو المرجع وسيُعاد جلبه عند المزامنة."
+		else:
+			info_label.text = "تعذر حفظ الإعدادات؛ لم يتم اعتماد التغييرات لحماية ملف اللاعب."
 		return
 	CityLanguage.set_language(selected_language)
 	_apply_settings()
 	_refresh_info()
 	if name_change_blocked:
-		info_label.text += "\nيمكن تغيير اسم اللاعب مرة واحدة فقط في اليوم. حاول مرة أخرى غدًا؛ تم حفظ بقية الإعدادات دون تغيير الاسم."
+		info_label.text += "\nتعذر اعتماد الاسم الجديد: %s تم حفظ بقية الإعدادات دون تغيير الاسم." % name_change_failure_message
 	info_label.text += "\nتم حفظ الإعدادات محليًا."
 	_update_name_change_status(config)
+	if not server_next_name_change_at.is_empty():
+		name_change_status.text += "\nموعد السماح التالي حسب الخادم: %s" % server_next_name_change_at
 
-func _update_name_change_status(config: ConfigFile) -> void:
+func _update_name_change_status(_config: ConfigFile) -> void:
 	if not is_instance_valid(name_change_status):
 		return
-	var last_change_value: Variant = config.get_value("profile", "player_name_change_date", "")
-	var last_change_date := str(last_change_value) if last_change_value is String else ""
-	var already_changed_today := last_change_date == Time.get_date_string_from_system()
-	name_input.editable = not already_changed_today
-	if already_changed_today:
-		name_change_status.text = "تم استخدام تغيير الاسم اليوم؛ سيُفتح التغيير مجددًا غدًا."
+	if SupabaseTestClient.is_authenticated():
+		name_input.editable = true
+		name_change_status.text = "تغيير الاسم يتم التحقق منه على الخادم مرة واحدة يوميًا."
 	else:
-		name_change_status.text = "يمكنك تغيير اسمك مرة واحدة يوميًا."
-	name_change_status.text += "\nملاحظة: هذا قيد محلي مؤقت؛ الحماية النهائية تتطلب اعتماد التوقيت من الخادم."
+		name_input.editable = false
+		name_change_status.text = "تغيير الاسم موقوف حتى تسجيل الدخول بحساب الاختبار؛ لا يُستخدم تاريخ الجهاز كحماية."
 
 func _apply_settings() -> void:
 	var master := AudioServer.get_bus_index("Master")
@@ -210,24 +295,32 @@ func _refresh_info() -> void:
 		info_label.text = "بيانات اللاعب غير متاحة."
 		return
 	var balances: Dictionary = WalletManager.get_balances()
+	var wallet_available := WalletManager.initialized and not WalletManager.integrity_blocked and not balances.is_empty()
 	var lines: Array[String] = [
 		"المستوى: %d" % mission_manager.player_level,
-		"الخبرة: %d" % mission_manager.xp,
-		"المال: %d" % int(balances.get("money", mission_manager.money)),
-		"الرقائق: %d" % int(balances.get("chips", mission_manager.chips)),
-		"الجواهر: %d" % int(balances.get("gems", 0)),
-		"",
-		"آخر حركات المحفظة:"
+		"الخبرة: %d" % mission_manager.xp
 	]
-	for entry in WalletManager.get_recent_transactions(5):
-		if str(entry.get("kind", "")) == "migration":
-			lines.append("تم ترحيل الأرصدة القديمة دون تغيير.")
-			continue
-		var currency := str(entry.get("currency", ""))
-		var currency_name: String = str({"money": "مال", "chips": "رقائق", "gems": "جواهر"}.get(currency, currency))
-		var change := int(entry.get("balance_after", 0)) - int(entry.get("balance_before", 0))
-		var sign: String = "+" if change >= 0 else ""
-		lines.append("%s %s%d — %s" % [currency_name, sign, change, str(entry.get("reason", "عملية محفظة"))])
-	if lines.size() == 7:
-		lines.append("لا توجد حركات مسجلة بعد.")
+	if wallet_available:
+		lines.append("المال: %d" % int(balances.get("money", 0)))
+		lines.append("الرقائق: %d" % int(balances.get("chips", 0)))
+		lines.append("الجواهر: %d" % int(balances.get("gems", 0)))
+		lines.append("")
+		lines.append("آخر حركات المحفظة:")
+		for entry in WalletManager.get_recent_transactions(5):
+			if str(entry.get("kind", "")) == "migration":
+				lines.append("تم ترحيل الأرصدة القديمة دون تغيير.")
+				continue
+			var currency := str(entry.get("currency", ""))
+			var currency_name: String = str({"money": "مال", "chips": "رقائق", "gems": "جواهر"}.get(currency, currency))
+			var change := int(entry.get("balance_after", 0)) - int(entry.get("balance_before", 0))
+			var sign: String = "+" if change >= 0 else ""
+			lines.append("%s %s%d — %s" % [currency_name, sign, change, str(entry.get("reason", "عملية محفظة"))])
+		if lines.size() == 7:
+			lines.append("لا توجد حركات مسجلة بعد.")
+	else:
+		lines.append("المال: موقوف للمراجعة")
+		lines.append("الرقائق: موقوفة للمراجعة")
+		lines.append("الجواهر: موقوفة للمراجعة")
+		lines.append("")
+		lines.append("سجل المحفظة موقوف حتى مراجعة سلامة ملف الحفظ.")
 	info_label.text = "\n".join(lines)
