@@ -68,6 +68,12 @@ func _create_approved_city_layout() -> void:
 
 
 func _process(_delta: float) -> void:
+	if GameModeManager.is_online_ready():
+		if is_instance_valid(vehicle_interaction_button):
+			vehicle_interaction_button.visible = false
+		if is_instance_valid(vehicle_summon_button):
+			vehicle_summon_button.visible = false
+		return
 	# المركبات تخص مساحة المدينة؛ أخفِ أدواتها طوال الانتقال أو الوجود داخل مبنى.
 	if interior_transition_busy or is_instance_valid(interior_root):
 		if is_instance_valid(vehicle_interaction_button):
@@ -99,6 +105,8 @@ func _process(_delta: float) -> void:
 		vehicle_interaction_button.text = "🚪 ركوب السيارة" if CityLanguage.get_language() == "ar" else "Enter vehicle"
 
 func _unhandled_input(event: InputEvent) -> void:
+	if GameModeManager.is_online_ready():
+		return
 	if event is InputEventKey and event.keycode == KEY_E:
 		if event.pressed and not event.echo and not _vehicle_key_was_down:
 			_vehicle_key_was_down = true
