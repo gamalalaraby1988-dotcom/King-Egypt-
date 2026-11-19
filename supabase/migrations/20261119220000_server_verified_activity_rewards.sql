@@ -207,3 +207,102 @@ comment on table private.player_reward_claims is
 'Immutable idempotency ledger for rewards atomically credited from a valid server-issued proof.';
 comment on function public.claim_verified_activity_reward(uuid) is
 'Atomically redeems a server-issued proof once. Reward amounts come only from the private catalog; the client cannot choose amounts or create proofs. SECURITY DEFINER is narrowly required to update wallet and private ledger atomically, and explicitly binds the proof to auth.uid().';
+
+
+-- Server-owned activity allowlist. Entries stay disabled until the game server,
+-- Edge Function, and reward-claim path have passed deployment tests.
+insert into private.player_activity_reward_catalog (
+    activity_kind, activity_id, reward_cash, reward_chips, reward_xp, enabled
+) values
+    ('job', 'courier_delivery', 180, 0, 30, false),
+    ('job', 'city_guide', 220, 1, 40, false),
+    ('job', 'city_maintenance', 250, 0, 45, false),
+    ('mission', 'mission_shop', 150, 0, 30, false),
+    ('mission', 'mission_restaurant', 220, 2, 44, false),
+    ('mission', 'mission_employment', 300, 5, 60, false)
+on conflict (activity_kind, activity_id) do nothing;
+
+
+-- Only the trusted game-proof Edge Function may call this RPC. It receives
+-- already HMAC-verified evidence and never accepts client-selected rewards.
+create or replace function public.issue_server_activity_proof(
+    p_user_id uuid,
+    p_activity_kind text,
+    p_activity_id text,
+    p_server_event_id uuid,
+    p_evidence_digest_hex text,
+    p_issued_at timestamptz,
+    p_expires_at timestamptz
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = ''
+as $function$
+declare
+    v_proof_id uuid;
+    v_existing private.player_activity_proofs%rowtype;
+    v_digest bytea;
+begin
+    if p_user_id is null or p_server_event_id is null
+       or p_activity_kind not in ('mission', 'job', 'achievement', 'daily_claim')
+       or p_activity_id !~ '^[a-z0-9][a-z0-9_.-]{0,79}$'
+       or p_evidence_digest_hex !~ '^[0-9a-f]{64}$'
+       or p_issued_at is null or p_expires_at is null then
+        raise exception 'invalid_server_proof_payload' using errcode = '22023';
+    end if;
+
+    if p_issued_at > pg_catalog.now() + interval '30 seconds'
+       or p_issued_at < pg_catalog.now() - interval '2 minutes'
+       or p_expires_at <> p_issued_at + interval '5 minutes' then
+        raise exception 'server_proof_timestamp_invalid' using errcode = '22023';
+    end if;
+
+    if not exists (
+        select 1
+        from private.player_activity_reward_catalog c
+        where c.activity_kind = p_activity_kind
+          and c.activity_id = p_activity_id
+          and c.enabled = true
+    ) then
+        raise exception 'activity_reward_not_enabled' using errcode = '22023';
+    end if;
+
+    v_digest := pg_catalog.decode(p_evidence_digest_hex, 'hex');
+
+    insert into private.player_activity_proofs (
+        user_id, activity_kind, activity_id, server_event_id,
+        evidence_digest, issued_at, expires_at
+    ) values (
+        p_user_id, p_activity_kind, p_activity_id, p_server_event_id,
+        v_digest, p_issued_at, p_expires_at
+    )
+    on conflict (user_id, server_event_id) do nothing
+    returning proof_id into v_proof_id;
+
+    if v_proof_id is not null then
+        return v_proof_id;
+    end if;
+
+    select * into v_existing
+    from private.player_activity_proofs
+    where user_id = p_user_id and server_event_id = p_server_event_id;
+
+    if not found
+       or v_existing.activity_kind <> p_activity_kind
+       or v_existing.activity_id <> p_activity_id
+       or v_existing.evidence_digest <> v_digest then
+        raise exception 'server_event_id_conflict' using errcode = '23505';
+    end if;
+
+    return v_existing.proof_id;
+end;
+$function$;
+
+revoke all on function public.issue_server_activity_proof(uuid, text, text, uuid, text, timestamptz, timestamptz)
+    from public, anon, authenticated;
+grant execute on function public.issue_server_activity_proof(uuid, text, text, uuid, text, timestamptz, timestamptz)
+    to service_role;
+
+comment on function public.issue_server_activity_proof(uuid, text, text, uuid, text, timestamptz, timestamptz) is
+'Backend-only proof insertion endpoint. The game-proof-issuer Edge Function verifies the dedicated-server HMAC before calling it with the server-owned identity and evidence digest. Reward catalog entries remain disabled until separately approved.';
