@@ -802,6 +802,7 @@ var mode_status_label: Label
 var online_address_input: LineEdit
 var founder_pin_input: LineEdit
 var founder_pin_confirm_input: LineEdit
+var founder_pin_button: Button
 var founder_pin_gate: VBoxContainer
 var game_mode_controls: VBoxContainer
 var founder_email_gate: VBoxContainer
@@ -860,20 +861,20 @@ func _create_mode_selection_ui() -> void:
 	founder_pin_confirm_input.max_length = 6
 	founder_pin_confirm_input.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_NUMBER
 	founder_pin_gate.add_child(founder_pin_confirm_input)
-	var pin_button := Button.new()
-	pin_button.custom_minimum_size.y = 44
-	pin_button.pressed.connect(_on_founder_pin_submit)
-	founder_pin_gate.add_child(pin_button)
+	founder_pin_button = Button.new()
+	founder_pin_button.custom_minimum_size.y = 44
+	founder_pin_button.pressed.connect(_on_founder_pin_submit)
+	founder_pin_gate.add_child(founder_pin_button)
 	var is_verified_founder := FounderIdentityManager.is_founder
 	founder_pin_gate.visible = is_verified_founder
 	if is_verified_founder:
 		if FounderPinManager.is_pin_configured():
 			founder_pin_confirm_input.visible = false
-			pin_button.text = "فتح حساب المؤسس"
+			founder_pin_button.text = "فتح حساب المؤسس"
 			mode_status_label = Label.new()
 			mode_status_label.text = "أدخل رمزك المحلي لفتح الحساب."
 		else:
-			pin_button.text = "حفظ رمز المؤسس"
+			founder_pin_button.text = "حفظ رمز المؤسس"
 			mode_status_label = Label.new()
 			mode_status_label.text = "أنشئ رمزًا خاصًا من 6 أرقام لهذا الجهاز."
 	else:
@@ -968,6 +969,16 @@ func _on_founder_entitlement_received(payload: String, signature_base64: String)
 		return
 	if is_instance_valid(founder_email_gate):
 		founder_email_gate.visible = false
+	if is_instance_valid(founder_pin_gate):
+		founder_pin_gate.visible = true
+	if is_instance_valid(game_mode_controls):
+		game_mode_controls.visible = false
+	if FounderPinManager.is_pin_configured():
+		founder_pin_confirm_input.visible = false
+		founder_pin_button.text = "فتح حساب المؤسس"
+	else:
+		founder_pin_confirm_input.visible = true
+		founder_pin_button.text = "حفظ رمز المؤسس"
 	if is_instance_valid(mode_status_label):
 		mode_status_label.text = "تم اعتماد هوية المؤسس وحفظ التذكرة لهذا الجهاز. أنشئ رمز PIN المحلي للمتابعة."
 
