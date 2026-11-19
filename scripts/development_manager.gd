@@ -14,6 +14,15 @@ const TOTAL_STAGES := TOTAL_BUILDINGS * STAGES_PER_BUILDING
 const BASE_STAGE_COST := 3500
 const COST_GROWTH := 1.065
 const INTERACTION_RADIUS := 4.5
+const BUILDING_LEVEL_RANGES := [
+	Vector2i(1, 179), Vector2i(180, 357), Vector2i(358, 536), Vector2i(537, 714),
+	Vector2i(715, 893), Vector2i(894, 1071), Vector2i(1072, 1250), Vector2i(1251, 1428),
+	Vector2i(1429, 1607), Vector2i(1608, 1785), Vector2i(1786, 1964), Vector2i(1965, 2142),
+	Vector2i(2143, 2321), Vector2i(2322, 2499), Vector2i(2500, 2678), Vector2i(2679, 2856),
+	Vector2i(2857, 3035), Vector2i(3036, 3213), Vector2i(3214, 3392), Vector2i(3393, 3570),
+	Vector2i(3571, 3749), Vector2i(3750, 3927), Vector2i(3928, 4106), Vector2i(4107, 4284),
+	Vector2i(4285, 4463), Vector2i(4464, 4641), Vector2i(4642, 4820), Vector2i(4821, 5000)
+]
 
 var player_level: int = 1
 var completed_stage_count: int = 0
@@ -245,9 +254,9 @@ func _load_progress() -> void:
 		saved_level = clampi(int(config.get_value("profile", "development_level", config.get_value("profile", "player_level", 1))), 1, MAX_PLAYER_LEVEL)
 		var saved_count: Variant = config.get_value("profile", "development_stage_count", null)
 		if saved_count == null:
-			completed_stage_count = clampi(int(floor(float(saved_level) * float(TOTAL_STAGES) / float(MAX_PLAYER_LEVEL))), 0, TOTAL_STAGES)
+			completed_stage_count = _completed_stages_for_level(saved_level)
 		else:
-			var legacy_level_stage_count := clampi(int(floor(float(saved_level) * float(TOTAL_STAGES) / float(MAX_PLAYER_LEVEL))), 0, TOTAL_STAGES)
+			var legacy_level_stage_count := _completed_stages_for_level(saved_level)
 			completed_stage_count = maxi(clampi(int(saved_count), 0, TOTAL_STAGES), legacy_level_stage_count)
 	player_level = max(saved_level, _level_for_stage(completed_stage_count))
 	if completed_stage_count >= TOTAL_STAGES:
@@ -256,7 +265,22 @@ func _load_progress() -> void:
 func _level_for_stage(completed_stages: int) -> int:
 	if completed_stages <= 0:
 		return 1
-	return mini(MAX_PLAYER_LEVEL, int(ceil(float(completed_stages * MAX_PLAYER_LEVEL) / float(TOTAL_STAGES))))
+	var safe_count := clampi(completed_stages, 1, TOTAL_STAGES)
+	var building_index := int((safe_count - 1) / STAGES_PER_BUILDING)
+	var stage_in_building := ((safe_count - 1) % STAGES_PER_BUILDING) + 1
+	var level_range: Vector2i = BUILDING_LEVEL_RANGES[building_index]
+	var range_size := level_range.y - level_range.x + 1
+	var stage_offset := int(ceil(float(range_size * stage_in_building) / float(STAGES_PER_BUILDING))) - 1
+	return mini(MAX_PLAYER_LEVEL, level_range.x + stage_offset)
+
+func _completed_stages_for_level(level: int) -> int:
+	var result := 0
+	for stage_number in range(1, TOTAL_STAGES + 1):
+		if _level_for_stage(stage_number) <= level:
+			result = stage_number
+		else:
+			break
+	return result
 
 func _cost_for_stage(stage_index_zero_based: int) -> int:
 	var raw_cost := float(BASE_STAGE_COST) * pow(COST_GROWTH, float(maxi(0, stage_index_zero_based)))
