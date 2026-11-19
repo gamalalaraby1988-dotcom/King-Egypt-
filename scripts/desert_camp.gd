@@ -6,8 +6,6 @@ const GOLD := Color(0.78, 0.57, 0.25)
 const DARK := Color(0.13, 0.09, 0.07)
 const FABRIC := Color(0.72, 0.57, 0.38)
 
-const CollisionProfile = preload("res://scripts/city_collision_profile.gd")
-
 func _ready() -> void:
 	_build_camp()
 
@@ -60,7 +58,17 @@ func _sphere(parent: Node3D, node_name: String, radius: float, pos: Vector3, col
 
 func _box_with_collision(parent: Node3D, node_name: String, size: Vector3, pos: Vector3, color: Color) -> void:
 	_box(parent, node_name, size, pos, color)
-	CollisionProfile.add_world_box_collider(parent, size, pos, node_name + "Collision")
+	var body := StaticBody3D.new()
+	body.name = node_name + "Collision"
+	body.collision_layer = 1
+	body.collision_mask = 1
+	body.position = pos
+	var collision := CollisionShape3D.new()
+	var shape := BoxShape3D.new()
+	shape.size = size
+	collision.shape = shape
+	body.add_child(collision)
+	parent.add_child(body)
 
 func _build_tent_seat(tent: Node3D, seat_name: String, pos: Vector3, royal: bool) -> void:
 	var seat := Node3D.new()
