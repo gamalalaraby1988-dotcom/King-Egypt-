@@ -10,10 +10,10 @@ select extensions.is((public.get_player_preference_snapshot()->>'revision')::big
 select extensions.is((public.save_player_preference_snapshot(0,'{"locale":"ar","volume":65,"quality":2}'::jsonb)->>'saved')::boolean,true,'saves allowlisted preference snapshot');
 select extensions.is((public.get_player_preference_snapshot()->>'revision')::bigint,1::bigint,'snapshot read returns committed revision');
 select extensions.is((public.save_player_preference_snapshot(0,'{"locale":"en"}'::jsonb)->>'conflict')::boolean,true,'stale snapshot revision returns conflict without overwrite');
-select extensions.throws_ok($select public.save_player_preference_snapshot(1,'{"wallet_balance":999999}'::jsonb)$,'22023','setting_key_not_allowed','snapshot rejects financial or unknown fields');
+select extensions.throws_ok($$select public.save_player_preference_snapshot(1,'{"wallet_balance":999999}'::jsonb)$$,'22023','setting_key_not_allowed','snapshot rejects financial or unknown fields');
 select pg_catalog.set_config('request.jwt.claim.sub','',true);
-select extensions.throws_ok($select public.get_player_preference_snapshot()$,'28000','authentication_required','snapshot read rejects unauthenticated access');
-select extensions.throws_ok($select public.save_player_preference_snapshot(0,'{}'::jsonb)$,'28000','authentication_required','snapshot write rejects unauthenticated access');
+select extensions.throws_ok($$select public.get_player_preference_snapshot()$$,'28000','authentication_required','snapshot read rejects unauthenticated access');
+select extensions.throws_ok($$select public.save_player_preference_snapshot(0,'{}'::jsonb)$$,'28000','authentication_required','snapshot write rejects unauthenticated access');
 select pg_catalog.set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000038',true);
 
 select extensions.is((public.submit_player_sync_events('[{"event_id":"10000000-0000-4000-8000-000000000001","event_type":"setting_changed","payload":{"key":"locale","value":"ar"}}]'::jsonb)->>'accepted')::integer,1,'accepts valid settings with invoker privileges');
@@ -21,7 +21,7 @@ select extensions.is((public.submit_player_sync_events('[{"event_id":"10000000-0
 select extensions.is(public.submit_player_sync_events('[{"event_id":"10000000-0000-4000-8000-000000000002","event_type":"setting_changed","payload":{"key":"music_enabled","value":true}}]'::jsonb)->>'authoritative','false','client observations are never authoritative');
 select extensions.is((public.submit_player_sync_events('[{"event_id":"10000000-0000-4000-8000-000000000009","event_type":"setting_changed","payload":{"key":"volume","value":65}}]'::jsonb)->>'accepted')::integer,1,'accepts bounded volume preference');
 select extensions.is((public.submit_player_sync_events('[{"event_id":"10000000-0000-4000-8000-000000000010","event_type":"setting_changed","payload":{"key":"quality","value":2}}]'::jsonb)->>'accepted')::integer,1,'accepts supported graphics quality preference');
-select extensions.throws_ok($select public.submit_player_sync_events('[{"event_id":"10000000-0000-4000-8000-000000000011","event_type":"setting_changed","payload":{"key":"quality","value":3}}]'::jsonb)$,'22023','invalid_setting_value','rejects graphics quality outside supported choices');
+select extensions.throws_ok($$select public.submit_player_sync_events('[{"event_id":"10000000-0000-4000-8000-000000000011","event_type":"setting_changed","payload":{"key":"quality","value":3}}]'::jsonb)$$,'22023','invalid_setting_value','rejects graphics quality outside supported choices');
 select extensions.throws_ok($$select public.submit_player_sync_events('[{"event_id":"10000000-0000-4000-8000-000000000003","event_type":"setting_changed","payload":{"key":"wallet_balance","value":999999}}]'::jsonb)$$,'22023','setting_key_not_allowed','rejects unapproved setting keys');
 select extensions.throws_ok($$select public.submit_player_sync_events('[{"event_id":"10000000-0000-4000-8000-000000000004","event_type":"mission_progress_observed","payload":{"progress_key":"mission.test","progress_value":1000001}}]'::jsonb)$$,'22023','invalid_progress_value','rejects progress values above the cap');
 select extensions.throws_ok($$select public.submit_player_sync_events('[{"event_id":"10000000-0000-4000-8000-000000000008","event_type":"achievement_progress_observed","payload":{"progress_key":"mission.fake","progress_value":1}}]'::jsonb)$$,'22023','progress_key_not_allowed','enforces event-specific progress namespaces');
