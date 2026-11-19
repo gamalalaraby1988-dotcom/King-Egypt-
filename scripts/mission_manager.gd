@@ -84,6 +84,10 @@ func _ready() -> void:
 	CityLanguage.language_changed.connect(_refresh_navigation_language)
 	AuthoritativeGameServer.job_start_result.connect(_on_server_job_start_result)
 	AuthoritativeGameServer.job_completed.connect(_on_server_job_completed)
+	AuthoritativeGameServer.mission_start_result.connect(_on_server_mission_start_result)
+	AuthoritativeGameServer.mission_completed.connect(_on_server_mission_completed)
+	AuthoritativeGameServer.activity_proof_received.connect(_on_server_activity_proof_received)
+	PlayerSyncClient.verified_reward_claim_finished.connect(_on_verified_reward_claim_finished)
 
 func _exit_tree() -> void:
 	if CityLanguage.language_changed.is_connected(_refresh_navigation_language):
@@ -92,6 +96,14 @@ func _exit_tree() -> void:
 		AuthoritativeGameServer.job_start_result.disconnect(_on_server_job_start_result)
 	if AuthoritativeGameServer.job_completed.is_connected(_on_server_job_completed):
 		AuthoritativeGameServer.job_completed.disconnect(_on_server_job_completed)
+	if AuthoritativeGameServer.mission_start_result.is_connected(_on_server_mission_start_result):
+		AuthoritativeGameServer.mission_start_result.disconnect(_on_server_mission_start_result)
+	if AuthoritativeGameServer.mission_completed.is_connected(_on_server_mission_completed):
+		AuthoritativeGameServer.mission_completed.disconnect(_on_server_mission_completed)
+	if AuthoritativeGameServer.activity_proof_received.is_connected(_on_server_activity_proof_received):
+		AuthoritativeGameServer.activity_proof_received.disconnect(_on_server_activity_proof_received)
+	if PlayerSyncClient.verified_reward_claim_finished.is_connected(_on_verified_reward_claim_finished):
+		PlayerSyncClient.verified_reward_claim_finished.disconnect(_on_verified_reward_claim_finished)
 
 func _refresh_navigation_language() -> void:
 	if is_instance_valid(navigation_cancel_button):
@@ -571,7 +583,7 @@ func _update_interaction_target() -> void:
 	for candidate in get_tree().get_nodes_in_group("city_interactables"):
 		if not is_instance_valid(candidate) or candidate.is_queued_for_deletion() or not candidate is Node3D:
 			continue
-		if GameModeManager.is_online_ready() and not candidate.has_method("get_job_data"):
+		if GameModeManager.is_online_ready() and not candidate.has_method("get_job_data") and not candidate.has_method("get_mission_data"):
 			continue
 		var radius_value: Variant = candidate.get("interaction_radius")
 		var allowed_distance := float(radius_value) if radius_value != null else 4.5
@@ -765,7 +777,7 @@ func open_building(building: Node3D) -> void:
 	selected_activity_kind = "mission"
 	active_mission = building
 	var data: Dictionary = building.get_mission_data()
-	if bool(data.get("requires_interior", false)):
+	if bool(data.get("requires_interior", false)) and not GameModeManager.is_online_ready():
 		interior_preview_active = false
 		interior_preview_building = building
 		var city_root := get_tree().current_scene
@@ -905,6 +917,59 @@ func _accept_job() -> void:
 	reward_label.text = "الأجر عند إتمام العمل: %d جنيه | %d رقائق | %d خبرة" % [int(data.get("money", 0)), int(data.get("chips", 0)), int(data.get("xp", 0))]
 	status_label.text = "توجّه إلى نقطة العمل."
 
+func _on_server_mission_start_result(success: bool, mission_id: String, server_target: Vector3, message: String) -> void:
+	if not GameModeManager.is_online_ready():
+		return
+	status_label.text = message
+	if not success:
+		accept_button.disabled = false
+		return
+	if not is_instance_valid(active_mission) or str(active_mission.get("building_id")) != mission_id:
+		accept_button.disabled = false
+		return
+	active_target = server_target
+	mission_running = true
+	target_marker.global_position = active_target
+	target_marker.visible = true
+	accept_button.disabled = true
+	description_label.text = "بدأت المهمة على الخادم. اتبع علامة الهدف."
+	reward_label.text = "سيتم اعتماد الإكمال والمكافأة من الخادم بعد التحقق."
+
+
+func _on_server_mission_completed(mission_id: String) -> void:
+	if not GameModeManager.is_online_ready() or not mission_running or not is_instance_valid(active_mission):
+		return
+	if str(active_mission.get("building_id")) != mission_id:
+		return
+	mission_running = false
+	target_marker.visible = false
+	status_label.text = "تحقق الخادم من وصولك إلى هدف المهمة."
+	description_label.text = "تم تسجيل الوصول خادميًا. جارٍ إصدار إثبات المكافأة الآمن."
+	reward_label.text = "لم تُضف أي مكافأة محليًا."
+
+
+func _on_server_activity_proof_received(activity_kind: String, activity_id: String, proof_id: String) -> void:
+	if not GameModeManager.is_online_ready() or not ["mission", "job"].has(activity_kind):
+		return
+	var expected_id := str(active_mission.get("building_id", "")) if activity_kind == "mission" and is_instance_valid(active_mission) else str(active_job.get("job_id", "")) if activity_kind == "job" and is_instance_valid(active_job) else ""
+	if expected_id != activity_id:
+		return
+	status_label.text = "وصل إثبات الإكمال من خادم اللعب. جارٍ اعتماد المكافأة."
+	PlayerSyncClient.claim_verified_activity_reward(proof_id)
+
+
+func _on_verified_reward_claim_finished(success: bool, result: Dictionary, message: String) -> void:
+	if not GameModeManager.is_online_ready():
+		return
+	status_label.text = message
+	if success:
+		description_label.text = "اعتمد الخادم المكافأة وسجلها في محفظتك المركزية."
+		reward_label.text = "أرصدتك الخادمية: %d جنيه | %d رقائق | %d خبرة" % [int(result.get("cash", 0)), int(result.get("chips", 0)), int(result.get("xp", 0))]
+	else:
+		description_label.text = "لم يتم إضافة أي رصيد محلي. سيظل الاعتماد متوقفًا حتى اكتمال إعداد الخدمة."
+		reward_label.text = "لا توجد مكافأة محلية بديلة في وضع Online."
+
+
 func _on_server_job_start_result(success: bool, job_id: String, server_target: Vector3, message: String) -> void:
 	if not GameModeManager.is_online_ready():
 		return
@@ -937,7 +1002,7 @@ func _on_server_job_completed(job_id: String) -> void:
 	job_running = false
 	target_marker.visible = false
 	status_label.text = "تحقق الخادم من وصولك إلى هدف الوظيفة."
-	description_label.text = "تم تسجيل الوصول خادميًا. لم تُصرف مكافأة لأن إصدار إثبات المكافأة لم يُوصل بعد."
+	description_label.text = "تم تسجيل الوصول خادميًا. جارٍ إصدار إثبات المكافأة الآمن."
 	reward_label.text = "مكافآت Online ما زالت مقفلة."
 	accept_button.disabled = true
 	panel.visible = true
@@ -974,7 +1039,12 @@ func _accept_mission() -> void:
 	navigation_arrival_remaining = 0.0
 	var data: Dictionary = active_mission.get_mission_data()
 	var key: String = str(active_mission.get("building_id"))
-	if completed_missions.has(key) or player_level < int(data["level"]):
+	if completed_missions.has(key) or (not GameModeManager.is_online_ready() and player_level < int(data["level"])):
+		return
+	if GameModeManager.is_online_ready():
+		accept_button.disabled = true
+		status_label.text = "يراجع الخادم موقعك ويبدأ المهمة..."
+		AuthoritativeGameServer.request_start_mission.rpc_id(1, key)
 		return
 	active_target = active_mission.global_position + data["target_offset"]
 	active_target.y = 0.15
