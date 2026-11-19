@@ -11,6 +11,7 @@ signal job_completed(job_id: String)
 signal mission_start_result(success: bool, mission_id: String, target: Vector3, message: String)
 signal mission_completed(mission_id: String)
 signal activity_proof_received(activity_kind: String, activity_id: String, proof_id: String)
+signal activity_proof_failed(activity_kind: String, activity_id: String, message: String)
 
 const DEFAULT_PORT := 2456
 const MAX_PLAYERS := 64
@@ -300,6 +301,10 @@ func request_start_job(job_id: String) -> void:
 	if not _sessions.has(peer_id) or not bool(_sessions[peer_id].get("authenticated", false)):
 		return
 	var session: Dictionary = _sessions[peer_id]
+	var active_mission: Dictionary = session.get("active_mission", {})
+	if not active_mission.is_empty():
+		rpc_id(peer_id, "receive_job_start_result", false, job_id, Vector3.ZERO, "أنهِ المهمة الحالية أولًا.")
+		return
 	var safe_job_id := job_id.strip_edges().to_lower()
 	var definition := _get_server_job_definition(safe_job_id)
 	if definition.is_empty():
@@ -365,7 +370,8 @@ func request_start_mission(mission_id: String) -> void:
 		rpc_id(peer_id, "receive_mission_start_result", false, safe_mission_id, Vector3.ZERO, "هذه المهمة غير معتمدة على الخادم.")
 		return
 	var active_mission: Dictionary = session.get("active_mission", {})
-	if not active_mission.is_empty() or not (session.get("active_job", {}) as Dictionary).is_empty():
+	var active_job: Dictionary = session.get("active_job", {})
+	if not active_mission.is_empty() or not active_job.is_empty():
 		rpc_id(peer_id, "receive_mission_start_result", false, safe_mission_id, Vector3.ZERO, "أنهِ النشاط الحالي أولًا.")
 		return
 	var completed_missions: Dictionary = session.get("completed_missions", {})
@@ -402,6 +408,18 @@ func receive_server_activity_proof(activity_kind: String, activity_id: String, p
 	activity_proof_received.emit(activity_kind, activity_id, proof_id)
 
 
+@rpc("authority", "call_remote", "reliable")
+func receive_server_activity_proof_failed(activity_kind: String, activity_id: String, message: String) -> void:
+	if multiplayer.is_server() or not is_authenticated():
+		return
+	activity_proof_failed.emit(activity_kind, activity_id, message)
+
+
+func _notify_proof_issue_failed(peer_id: int, activity_kind: String, activity_id: String, message: String) -> void:
+	if _sessions.has(peer_id) and multiplayer.get_peers().has(peer_id):
+		rpc_id(peer_id, "receive_server_activity_proof_failed", activity_kind, activity_id, message)
+
+
 func _new_server_event_uuid() -> String:
 	var bytes := Crypto.generate_random_bytes(16)
 	if bytes.size() != 16:
@@ -419,25 +437,30 @@ func _issue_activity_proof(peer_id: int, user_id: String, activity_kind: String,
 		if not _proof_secret_warning_shown:
 			push_warning("Online reward proofs are disabled: KING_CITY_PROOF_HMAC_SECRET_B64 is not configured on the dedicated server.")
 			_proof_secret_warning_shown = true
+		_notify_proof_issue_failed(peer_id, activity_kind, activity_id, "إعداد إثبات المكافأة غير مكتمل على الخادم.")
 		return
 	var base_url := str(ProjectSettings.get_setting("founder/auth/api_base_url", "")).strip_edges().trim_suffix("/")
 	var publishable_key := str(ProjectSettings.get_setting("founder/auth/publishable_key", "")).strip_edges()
 	if not base_url.begins_with("https://") or publishable_key.is_empty():
 		push_warning("Cannot issue activity proof: Supabase project settings are missing on the dedicated server.")
+		_notify_proof_issue_failed(peer_id, activity_kind, activity_id, "خدمة اعتماد المكافآت غير مهيأة على الخادم.")
 		return
 	var event_id := _new_server_event_uuid()
 	if event_id.is_empty():
 		push_warning("Cannot issue activity proof: secure random event id generation failed.")
+		_notify_proof_issue_failed(peer_id, activity_kind, activity_id, "تعذر إنشاء رقم إثبات آمن.")
 		return
 	var issued_at := int(Time.get_unix_time_from_system())
 	var expires_at := issued_at + 300
 	var canonical := _proof_signature_message(user_id, activity_kind, activity_id, event_id, issued_at, expires_at)
 	var digest_context := HashingContext.new()
 	if digest_context.start(HashingContext.HASH_SHA256) != OK or digest_context.update(canonical.to_utf8_buffer()) != OK:
+		_notify_proof_issue_failed(peer_id, activity_kind, activity_id, "تعذر تجهيز بصمة إثبات المكافأة.")
 		return
 	var evidence_digest := digest_context.finish()
 	var hmac_context := HMACContext.new()
 	if hmac_context.start(HashingContext.HASH_SHA256, _proof_hmac_secret) != OK or hmac_context.update(canonical.to_utf8_buffer()) != OK:
+		_notify_proof_issue_failed(peer_id, activity_kind, activity_id, "تعذر توقيع إثبات المكافأة.")
 		return
 	var signature := hmac_context.finish().hex_encode()
 	var request := HTTPRequest.new()
@@ -463,6 +486,7 @@ func _issue_activity_proof(peer_id: int, user_id: String, activity_kind: String,
 	if error != OK:
 		request.queue_free()
 		push_warning("Could not start secure activity proof request.")
+		_notify_proof_issue_failed(peer_id, activity_kind, activity_id, "تعذر الاتصال بخدمة إصدار إثبات المكافأة.")
 
 
 func _on_proof_issue_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray, request: HTTPRequest, peer_id: int, user_id: String, activity_kind: String, activity_id: String, event_id: String) -> void:
@@ -470,6 +494,7 @@ func _on_proof_issue_completed(result: int, response_code: int, _headers: Packed
 		request.queue_free()
 	if result != HTTPRequest.RESULT_SUCCESS or response_code != 200:
 		push_warning("Trusted proof issuer rejected or failed activity %s/%s (event %s)." % [activity_kind, activity_id, event_id])
+		_notify_proof_issue_failed(peer_id, activity_kind, activity_id, "لم تصدر خدمة المكافآت إثباتًا صالحًا؛ لم تُمنح مكافأة.")
 		return
 	var parsed: Variant = JSON.parse_string(body.get_string_from_utf8())
 	var proof_id := str(parsed.get("proof_id", "")) if parsed is Dictionary else ""
@@ -477,6 +502,7 @@ func _on_proof_issue_completed(result: int, response_code: int, _headers: Packed
 	uuid_pattern.compile("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$")
 	if uuid_pattern.search(proof_id) == null:
 		push_warning("Trusted proof issuer returned an invalid proof response.")
+		_notify_proof_issue_failed(peer_id, activity_kind, activity_id, "استجابة إثبات المكافأة غير صالحة.")
 		return
 	if not _sessions.has(peer_id) or str(_sessions[peer_id].get("user_id", "")) != user_id:
 		return
