@@ -17,6 +17,8 @@ var ride_visual: Node3D = null
 
 func _ready() -> void:
 	add_to_group("player")
+	if FounderIdentityManager.is_founder:
+		set_meta("founder_profile", FounderIdentityManager.get_founder_profile())
 
 func _physics_process(delta: float) -> void:
 	var sit_key_down := Input.is_key_pressed(KEY_C)
