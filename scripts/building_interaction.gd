@@ -2,6 +2,7 @@ extends Node3D
 ## بيانات مبنى ومهمته الوظيفية.
 
 @export var building_id: String = "building_default"
+@export var server_activity_id: String = ""
 @export var building_title: String = "مبنى"
 @export var mission_title: String = "مهمة"
 @export_multiline var mission_description: String = "نفّذ الهدف المحدد."
