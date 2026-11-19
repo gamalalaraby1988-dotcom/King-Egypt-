@@ -41,7 +41,7 @@
 
 ### إعداد الأسرار
 
-تتطلب الوظيفة السرّين التاليين في Supabase Dashboard > Edge Functions > Secrets:
+تتطلب الوظيفة الأسرار التالية في Supabase Dashboard > Edge Functions > Secrets:
 - `FOUNDER_AUTH_USER_ID`: UUID حساب Auth الأصلي للمؤسس.
 - `FOUNDER_AUTH_EMAIL`: البريد المعتمد لحساب المؤسس، محفوظ كسر خادمي ولا يُكتب داخل مصدر الوظيفة.
 - `FOUNDER_SIGNING_PRIVATE_KEY`: محتوى مفتاح RSA الخاص بصيغة PEM/PKCS#8.
