@@ -5,7 +5,7 @@
 ## إعدادات الإنتاج في Godot
 
 تم ضبط الإعدادات العامة التالية في `project.godot`:
-- عنوان مشروع الإنتاج: `https://lupmaktbymuaymhqsxxu.supabase.co`
+- عنوان مشروع الإنتاج.
 - مفتاح Supabase Publishable فقط، وهو مفتاح عميل عام وليس سرًا.
 
 لا تضع `service_role` أو أي Secret Key أو مفتاح توقيع خاص داخل Godot أو المستودع.
@@ -29,29 +29,27 @@
 
 ## إعداد وظيفة اعتماد المؤسس
 
-أُضيف مصدر Edge Function باسم `founder-entitlement` في:
+مصدر Edge Function باسم `founder-entitlement` موجود في:
 `supabase/functions/founder-entitlement/index.ts`
 
 تقوم الوظيفة بما يلي:
 1. تقبل POST فقط، مع دعم OPTIONS للـ CORS.
 2. تتحقق من صيغة Bearer access token ثم تستعلم عن المستخدم من Supabase Auth عبر `/auth/v1/user`؛ لا تثق ببريد أو UUID يرسلهما العميل في جسم الطلب.
-3. تشترط تطابق UUID المثبت في سر الخادم، والبريد `gamalalaraby1988@gmail.com`، ووجود `email_confirmed_at`.
+3. تشترط تطابق UUID المثبت في سر الخادم، والبريد الموثق المعتمد للمؤسس، ووجود `email_confirmed_at`.
 4. توقع مطالب التذكرة بمفتاح RSA خاص محفوظ في أسرار Edge Functions، وتعيد payload والتوقيع فقط.
 5. تصدر تذكرة Offline لمدة 30 يومًا. التذكرة لا تمنح وحدها صلاحيات إدارة خادمية.
 
 ### إعداد الأسرار
 
-أكد صاحب المشروع أنه أدخل السرّين التاليين يدويًا في Supabase Dashboard > Edge Functions > Secrets:
+تتطلب الوظيفة السرّين التاليين في Supabase Dashboard > Edge Functions > Secrets:
 - `FOUNDER_AUTH_USER_ID`: UUID حساب Auth الأصلي للمؤسس.
 - `FOUNDER_SIGNING_PRIVATE_KEY`: محتوى مفتاح RSA الخاص بصيغة PEM/PKCS#8.
 
-لا نعرض قيم الأسرار في المستودع أو اللعبة أو المحادثة. لا يلزم إضافة `SUPABASE_PUBLISHABLE_KEYS` يدويًا؛ Supabase يوفره افتراضيًا في بيئة Edge Functions كمجموعة JSON، والوظيفة تقرأ المفتاح المسمى `default`.
-
-حساب Auth الأصلي للمؤسس أُنشئ، وتم التحقق من UUID والبريد المؤكد مباشرةً. هذا لا يعني أن إرسال OTP أو SMTP قد تم اختباره.
+لا تضع قيم الأسرار في المستودع أو اللعبة أو المحادثة. لا يلزم إضافة `SUPABASE_PUBLISHABLE_KEYS` يدويًا؛ توفره بيئة Edge Functions، والوظيفة تقرأ المفتاح المسمى `default`.
 
 ### إعداد التحقق عند النشر
 
-أُضيف `supabase/config.toml` ويضبط:
+يضبط `supabase/config.toml`:
 ```toml
 [functions.founder-entitlement]
 verify_jwt = false
@@ -65,25 +63,26 @@ verify_jwt = false
 - `apikey`: مفتاح Publishable العام.
 - `Authorization: Bearer <access_token>`: جلسة المستخدم الناتجة عن OTP.
 
-لا تُفعّل `FounderIdentityManager` إلا إذا أعاد الخادم payload وتوقيعًا صالحين وقبلهما المفتاح العام المقابل. يحتفظ العميل بـ access token وrefresh token في الذاكرة فقط أثناء تشغيل اللعبة، ويجدد الجلسة تلقائيًا قبل انتهاء access token باستخدام `/auth/v1/token?grant_type=refresh_token`. يتم تدوير refresh token بعد نجاح التجديد، ولا تُكتب الرموز إلى القرص. عند فشل التجديد نهائيًا تنتهي جلسة Auth ويُطلب من المستخدم إعادة التحقق؛ لا يؤدي ذلك وحده إلى إلغاء التذكرة المحلية الموقعة.
+لا تُفعّل `FounderIdentityManager` إلا إذا أعاد الخادم payload وتوقيعًا صالحين وقبلهما المفتاح العام المقابل.
+
+يتولى `FounderAuthClient` تجديد الجلسة وتدوير refresh token. يوجد مصدر إضافة Android native باسم `FounderSecureStorage` يستخدم Android Keystore لحفظ refresh token مشفرًا فقط. لكن الاستعادة الدائمة لا تصبح متاحة داخل APK إلا بعد بناء ملفات AAR ودمجها في تصدير Android؛ عند غياب الإضافة تبقى الجلسة في الذاكرة فقط. راجع `docs/ANDROID_KEYSTORE_SESSION_STORAGE_AR.md` للتعليمات والحالة الدقيقة.
 
 ## حدود أمان وتشغيل متبقية
 
 - لم يتم بعد اختبار SMTP أو إرسال OTP فعلي.
-- لم تُنشر الوظيفة بعد، ولم تصدر تذكرة مؤسس إنتاجية.
+- مصدر وظيفة `founder-entitlement` موجود في المستودع، لكن فحص Edge Functions للمشروع في 2026-11-20 لم يُظهر أي وظائف منشورة؛ لذلك لا تعتبر نقطة اعتماد المؤسس متاحة للإنتاج حتى نشرها والتحقق من إعداداتها.
+- لم تصدر تذكرة مؤسس إنتاجية مثبتة باختبار طرف إلى طرف.
 - يلزم اختبار توقيع RSA من طرف إلى طرف: توقيع الوظيفة بالمفتاح الخاص والتحقق داخل Godot بالمفتاح العام.
 - يلزم اختبار إعداد `verify_jwt = false` مع التحقق اليدوي من Bearer token قبل النشر.
 - CORS يسمح حاليًا بأي Origin، مع عدم استخدام cookies أو credentials. يمكن تضييقه لاحقًا إذا أُضيف عميل متصفح بنطاق معروف.
-- أضيفت نقطة تكامل اختيارية لاستعادة refresh token عبر Android native singleton باسم `FounderSecureStorage`، مع طلب تجديد فوري عند بدء التشغيل. لا يوجد بعد Android plugin يوفّر هذا singleton؛ لذلك لا تعمل الاستعادة الدائمة فعليًا حتى تنفيذ المكوّن الأصلي وفق `docs/ANDROID_KEYSTORE_SESSION_STORAGE_AR.md`.
-- عند غياب المكوّن الأصلي لا يُستخدم تخزين نصي بديل، وتظل الجلسة في الذاكرة فقط. يلزم اختبار Android فعلي لتدوير refresh token والاستعادة والتعامل مع فشل Keystore قبل اعتماد الميزة.
+- مصدر إضافة Android Keystore موجود، لكن AAR لم تُبنَ ولم تُختبر الاستعادة الدائمة على جهاز Android فعلي.
 - التذكرة الموقعة تمنح تعريف المؤسس محليًا فقط؛ كل إجراء إداري Online يجب أن يتحقق خادميًا بصورة مستقلة.
 - لا ترسل PIN أو المفتاح الخاص في المحادثة.
 
 ## الحالة الحالية
 
-- حساب Auth الأصلي موجود وبريده مؤكد.
-- تم حفظ المفتاح العام في إعداد اللعبة على فرع التطوير.
-- أكد صاحب المشروع حفظ سرّي Edge Function يدويًا.
-- مصدر الوظيفة وإعداداتها موجودان في فرع التطوير، لكن الوظيفة **غير منشورة**.
-- PR رقم 35 ما زال مفتوحًا وغير مدمج.
+- طلب الدمج #35 الذي أضاف أساس تحقق بريد المؤسس ووظيفة الاعتماد أُغلق بعد دمجه في `main`.
+- إعدادات Auth وعميل المؤسس ومصدر Edge Function موجودة في المستودع.
+- لا توجد حاليًا Edge Functions منشورة في مشروع Supabase وفق فحص 2026-11-20؛ وظيفة اعتماد المؤسس لم تُنشر.
+- مصدر Android Keystore موجود، لكن AAR لم تُبنَ ولم يُختبر APK أو Android فعليًا.
 - لم يتم تشغيل Godot أو بناء APK أو اختبار Android في هذه المرحلة.
