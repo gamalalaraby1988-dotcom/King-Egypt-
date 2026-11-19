@@ -144,8 +144,17 @@ func _build_districts() -> void:
 		_building(self, str(e[0]), str(e[1]), e[2], e[3], float(e[4]), accent)
 
 func _build_nile_waterfront() -> void:
-	var water := _box(self, "NileWaterfront", Vector3(180, 0.22, 12), Vector3(0, -0.22, 84), Color(0.04, 0.30, 0.39))
-	water.material_override = _mat(Color(0.04, 0.30, 0.39), 0.25)
+	# A real open basin: the matching ground section is omitted in main.gd, so
+	# the player cannot walk on a hidden terrain floor beneath the water.
+	var water := _box(self, "NileWaterfront", Vector3(24.0, 0.18, 24.0), Vector3(0, -0.12, 90.0), Color(0.025, 0.24, 0.34))
+	var water_material := _mat(Color(0.025, 0.24, 0.34), 0.12)
+	water_material.roughness = 0.2
+	water.material_override = water_material
+	# Low sandstone quay edges define the basin without moving the promenade,
+	# ship, pier, or the service roads that pass outside the basin.
+	for side in [-1.0, 1.0]:
+		_box(self, "MarinaQuayEdge", Vector3(0.8, 0.55, 24.0), Vector3(side * 12.4, 0.12, 90.0), SAND)
+	_box(self, "MarinaSouthQuay", Vector3(24.0, 0.55, 0.8), Vector3(0, 0.12, 102.4), SAND)
 	_box(self, "WaterfrontPromenade", Vector3(180, 0.28, 3.0), Vector3(0, 0.02, 76), SAND)
 	for x in [-65.0,-45.0,-25.0,25.0,45.0,65.0]:
 		_box(self, "PromenadeLamp", Vector3(0.18, 3.0, 0.18), Vector3(x, 1.5, 74), GOLD)
@@ -329,9 +338,22 @@ func _build_royal_ship() -> void:
 		ship.add_child(flag)
 	# A side pier connects the waterfront promenade to the ship without blocking the quay.
 	_box(self, "RoyalShipPier", Vector3(8.0, 0.28, 14.0), Vector3(-6.0, 0.02, 84.0), SAND)
+	_add_static_box_collision(ship, "RoyalShipPierWalkable", Vector3(8.0, 0.28, 14.0), Vector3(-6.0, 0.02, -1.0))
 	for x in [-10.0, -2.0]:
 		for z in [79.0, 84.0, 89.0]:
 			_box(self, "RoyalShipPierPost", Vector3(0.35, 1.1, 0.35), Vector3(x, 0.5, z), GOLD)
+
+func _add_static_box_collision(parent: Node3D, label: String, size: Vector3, at: Vector3) -> void:
+	var body := StaticBody3D.new()
+	body.name = label
+	body.position = at
+	body.add_to_group("city_world_geometry")
+	var collision := CollisionShape3D.new()
+	var shape := BoxShape3D.new()
+	shape.size = size
+	collision.shape = shape
+	body.add_child(collision)
+	parent.add_child(body)
 
 func _build_access_roads_and_parking() -> void:
 	# A short connector links the royal square to the internal street grid.
