@@ -191,6 +191,7 @@ func _on_preference_snapshot_received(revision: int, remote_settings: Dictionary
 		"language": str(config.get_value("settings", "language", "auto"))
 	}
 	config.set_value("settings", "cloud_backup_before_apply", backup)
+	config.set_value("settings", "cloud_revision", revision)
 	config.set_value("settings", "volume", int(remote_settings.get("volume", volume_slider.value)))
 	config.set_value("settings", "quality", int(remote_settings.get("quality", quality_select.selected)))
 	var locale := str(remote_settings.get("locale", "auto"))
@@ -255,7 +256,8 @@ func _save_settings() -> void:
 		PlayerSyncClient.enqueue_setting_change("volume", int(volume_slider.value))
 		PlayerSyncClient.enqueue_setting_change("quality", quality_select.selected)
 		PlayerSyncClient.enqueue_setting_change("locale", selected_language)
-		PlayerSyncClient.save_preference_snapshot(_current_cloud_preferences())
+		if bool(ProjectSettings.get_setting("player_sync/enabled", false)):
+			PlayerSyncClient.save_preference_snapshot(_current_cloud_preferences())
 	_apply_settings()
 	_refresh_info()
 	if name_change_blocked:
