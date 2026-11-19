@@ -13,6 +13,11 @@ var forced_toggle: CheckBox
 var schedule_input: LineEdit
 var status_label: Label
 var publish_button: Button
+var supervisor_id_input: LineEdit
+var supervisor_role_option: OptionButton
+var supervisors_list: VBoxContainer
+var supervisor_status: Label
+var supervisor_drafts: Array[Dictionary] = []
 
 func _ready() -> void:
 	layer = 60
@@ -91,6 +96,31 @@ func _build_ui() -> void:
 	close.pressed.connect(func(): panel.visible = false)
 	header.add_child(close)
 
+	_add_field_label(content, "إدارة المشرفين المساعدين")
+	var supervisor_hint := Label.new()
+	supervisor_hint.text = "اختر لاعبين تثق بهم كمشرفين. الصلاحيات الفعلية لا تُفعّل إلا بعد اعتمادها والتحقق منها على الخادم."
+	supervisor_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	content.add_child(supervisor_hint)
+	supervisor_id_input = LineEdit.new()
+	supervisor_id_input.placeholder_text = "رمز اللاعب أو Player ID"
+	content.add_child(supervisor_id_input)
+	supervisor_role_option = OptionButton.new()
+	supervisor_role_option.add_item("مشرف محادثة — إدارة البلاغات والمحادثة", 0)
+	supervisor_role_option.add_item("مشرف فعاليات — متابعة الفعاليات", 1)
+	supervisor_role_option.add_item("مشرف دعم — مساعدة اللاعبين", 2)
+	content.add_child(supervisor_role_option)
+	var add_supervisor_button := Button.new()
+	add_supervisor_button.text = "إضافة إلى قائمة المشرفين المقترحين"
+	add_supervisor_button.pressed.connect(_add_supervisor_draft)
+	content.add_child(add_supervisor_button)
+	supervisors_list = VBoxContainer.new()
+	supervisors_list.add_theme_constant_override("separation", 4)
+	content.add_child(supervisors_list)
+	supervisor_status = Label.new()
+	supervisor_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	supervisor_status.text = "لا توجد تعيينات محفوظة. هذه قائمة مقترحة محلية وليست صلاحيات مفعّلة."
+	content.add_child(supervisor_status)
+
 	_add_field_label(content, "رقم الإصدار")
 	version_input = LineEdit.new()
 	version_input.placeholder_text = "مثال: 1.0.1"
@@ -150,6 +180,7 @@ func _save_draft() -> void:
 	config.set_value("draft", "forced", forced_toggle.button_pressed)
 	config.set_value("draft", "scheduled_at", schedule_input.text.strip_edges())
 	config.set_value("draft", "saved_at_unix", int(Time.get_unix_time_from_system()))
+	config.set_value("draft", "supervisors", supervisor_drafts)
 	var error := config.save(DRAFT_PATH)
 	if error == OK:
 		status_label.text = "تم حفظ المسودة محليًا على هذا الجهاز. لم يتم رفعها أو نشرها للاعبين."
@@ -165,4 +196,53 @@ func _load_draft() -> void:
 	notes_input.text = str(config.get_value("draft", "notes", ""))
 	forced_toggle.button_pressed = bool(config.get_value("draft", "forced", false))
 	schedule_input.text = str(config.get_value("draft", "scheduled_at", ""))
+	supervisor_drafts = config.get_value("draft", "supervisors", [])
+	_refresh_supervisors_list()
 	status_label.text = "تم استرجاع مسودة محفوظة على هذا الجهاز. النشر ما زال غير متاح حتى ربط خدمة الإصدار الآمنة."
+
+func _add_supervisor_draft() -> void:
+	if not is_instance_valid(FounderIdentityManager) or not FounderIdentityManager.is_founder:
+		supervisor_status.text = "تم رفض الإجراء: هذه الخاصية للمؤسس فقط."
+		return
+	var player_id := supervisor_id_input.text.strip_edges()
+	if player_id.is_empty():
+		supervisor_status.text = "أدخل رمز اللاعب أولًا."
+		return
+	for entry in supervisor_drafts:
+		if str(entry.get("player_id", "")) == player_id:
+			supervisor_status.text = "هذا اللاعب موجود بالفعل في القائمة."
+			return
+	var roles := ["مشرف محادثة", "مشرف فعاليات", "مشرف دعم"]
+	var role := roles[supervisor_role_option.selected]
+	supervisor_drafts.append({"player_id": player_id, "role": role})
+	supervisor_id_input.clear()
+	_refresh_supervisors_list()
+	supervisor_status.text = "أُضيف اللاعب إلى قائمة المشرفين المقترحين. احفظ المسودة للاحتفاظ بالقائمة على هذا الجهاز."
+
+func _refresh_supervisors_list() -> void:
+	if not is_instance_valid(supervisors_list):
+		return
+	for child in supervisors_list.get_children():
+		child.queue_free()
+	for index in range(supervisor_drafts.size()):
+		var entry: Dictionary = supervisor_drafts[index]
+		var row := HBoxContainer.new()
+		var label := Label.new()
+		label.text = "%s — %s" % [str(entry.get("player_id", "")), str(entry.get("role", ""))]
+		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		row.add_child(label)
+		var remove_button := Button.new()
+		remove_button.text = "إزالة"
+		remove_button.pressed.connect(_remove_supervisor_draft.bind(index))
+		row.add_child(remove_button)
+		supervisors_list.add_child(row)
+	if supervisor_drafts.is_empty():
+		supervisor_status.text = "لا توجد تعيينات محفوظة. هذه قائمة مقترحة محلية وليست صلاحيات مفعّلة."
+
+func _remove_supervisor_draft(index: int) -> void:
+	if index < 0 or index >= supervisor_drafts.size():
+		return
+	supervisor_drafts.remove_at(index)
+	_refresh_supervisors_list()
+	supervisor_status.text = "تمت إزالة اللاعب من القائمة المقترحة. احفظ المسودة لتثبيت التغيير محليًا."
