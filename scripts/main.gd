@@ -52,6 +52,7 @@ func _ready() -> void:
 	GameModeManager.online_connected.connect(_on_mode_connected)
 	AuthoritativeGameServer.authentication_completed.connect(_on_player_server_authenticated)
 	PlayerAccountAuthClient.session_access_token_changed.connect(_on_player_access_token_changed)
+	PlayerAccountAuthClient.session_expired.connect(_on_player_account_session_expired)
 	GameModeManager.online_disconnected.connect(_on_mode_disconnected)
 
 
@@ -1228,6 +1229,12 @@ func _on_mode_connected() -> void:
 		GameModeManager.disconnect_online()
 		return
 	AuthoritativeGameServer.authenticate_player.rpc_id(1, access_token)
+
+
+func _on_player_account_session_expired() -> void:
+	if GameModeManager.is_online_ready():
+		_on_mode_status_changed("انتهت جلسة حساب اللاعب؛ تم إنهاء اتصال Online لحماية الحساب.")
+		GameModeManager.disconnect_online()
 
 
 func _on_player_access_token_changed(access_token: String) -> void:
