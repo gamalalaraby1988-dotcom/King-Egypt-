@@ -94,6 +94,17 @@ func _process(_delta: float) -> void:
 	if vehicle_occupied:
 		if is_instance_valid(vehicle_interaction_button):
 			vehicle_interaction_button.visible = true
+			vehicle_interaction_button.text = "🚪↗"
+			vehicle_interaction_button.tooltip_text = "النزول" if CityLanguage.get_language() == "ar" else "Exit"
+		if is_instance_valid(vehicle_summon_button):
+			vehicle_summon_button.visible = false
+		return
+	var player := get_node_or_null("Player") as CharacterBody3D
+	if is_instance_valid(player) and (player.get("sitting") == true or player.get("animal_riding") == true):
+		if is_instance_valid(vehicle_interaction_button):
+			vehicle_interaction_button.visible = true
+			vehicle_interaction_button.text = "🚪↗"
+			vehicle_interaction_button.tooltip_text = "الوقوف / النزول" if CityLanguage.get_language() == "ar" else "Stand / Exit"
 		if is_instance_valid(vehicle_summon_button):
 			vehicle_summon_button.visible = false
 		return
@@ -104,7 +115,6 @@ func _process(_delta: float) -> void:
 		if is_instance_valid(vehicle_interaction_button):
 			vehicle_interaction_button.visible = false
 		return
-	var player := get_node_or_null("Player") as CharacterBody3D
 	if not is_instance_valid(player):
 		return
 	var close_enough := player.global_position.distance_to(city_vehicle.global_position) <= 5.0
@@ -225,6 +235,22 @@ func _toggle_vehicle_use() -> void:
 		_exit_player_vehicle()
 		return
 	var player := get_node_or_null("Player") as CharacterBody3D
+	if is_instance_valid(player) and player.get("animal_riding") == true:
+		if player.has_method("end_animal_ride"):
+			player.call("end_animal_ride")
+		if is_instance_valid(vehicle_interaction_button):
+			vehicle_interaction_button.visible = false
+		if is_instance_valid(vehicle_summon_button):
+			vehicle_summon_button.visible = true
+		return
+	if is_instance_valid(player) and player.get("sitting") == true:
+		if player.has_method("toggle_sit"):
+			player.call("toggle_sit")
+		if is_instance_valid(vehicle_interaction_button):
+			vehicle_interaction_button.visible = false
+		if is_instance_valid(vehicle_summon_button):
+			vehicle_summon_button.visible = true
+		return
 	if not is_instance_valid(player) or not is_instance_valid(city_vehicle):
 		return
 	if player.global_position.distance_to(city_vehicle.global_position) > 5.0:
@@ -255,7 +281,8 @@ func _toggle_vehicle_use() -> void:
 	if is_instance_valid(vehicle_camera):
 		vehicle_camera.current = true
 	if is_instance_valid(vehicle_interaction_button):
-		vehicle_interaction_button.text = "🚪 النزول من السيارة" if CityLanguage.get_language() == "ar" else "Exit vehicle"
+		vehicle_interaction_button.text = "🚪↗"
+		vehicle_interaction_button.tooltip_text = "النزول من السيارة" if CityLanguage.get_language() == "ar" else "Exit vehicle"
 		vehicle_interaction_button.visible = true
 
 func _recover_vehicle_occupancy() -> void:
@@ -288,6 +315,7 @@ func _recover_vehicle_occupancy() -> void:
 	if is_instance_valid(vehicle_interaction_button):
 		vehicle_interaction_button.visible = false
 		vehicle_interaction_button.text = "🚪 ركوب السيارة" if CityLanguage.get_language() == "ar" else "Enter vehicle"
+		vehicle_interaction_button.tooltip_text = "ركوب السيارة" if CityLanguage.get_language() == "ar" else "Enter vehicle"
 	if is_instance_valid(vehicle_summon_button):
 		vehicle_summon_button.visible = is_instance_valid(player)
 
@@ -325,6 +353,7 @@ func _exit_player_vehicle() -> void:
 	_set_mobile_hud_active(true)
 	if is_instance_valid(vehicle_interaction_button):
 		vehicle_interaction_button.text = "🚪 ركوب السيارة" if CityLanguage.get_language() == "ar" else "Enter vehicle"
+		vehicle_interaction_button.tooltip_text = "ركوب السيارة" if CityLanguage.get_language() == "ar" else "Enter vehicle"
 		vehicle_interaction_button.visible = player.global_position.distance_to(city_vehicle.global_position) <= 5.0
 
 func _create_interior_transition_ui() -> void:
