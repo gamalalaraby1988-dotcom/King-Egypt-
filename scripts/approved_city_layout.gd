@@ -170,7 +170,7 @@ func _tree(parent: Node3D, label: String, at: Vector3, scale_factor: float = 1.0
 func _build_royal_square_landscaping() -> void:
 	# Keep the center of the plaza open for large player gatherings.
 	for x in [-25.0, 25.0]:
-		for z in [-58.0, -26.0]:
+		for z in [-58.0, -23.0]:
 			_tree(self, "RoyalSquarePalm", Vector3(x, 0, z), 1.15)
 	for x in [-19.0, 19.0]:
 		_box(self, "RoyalSquarePlanter", Vector3(2.2, 0.45, 2.2), Vector3(x, 0.23, -42), SAND)
@@ -179,5 +179,5 @@ func _build_royal_square_landscaping() -> void:
 		_box(self, "RoyalSquareEdgeMarker", Vector3(0.35, 0.65, 0.35), Vector3(x, 0.34, -27.5), GOLD)
 
 func _build_waterfront_landscaping() -> void:
-	for x in range(-80, 81, 20):
+	for x in range(-60, 61, 20):
 		_tree(self, "WaterfrontPalm", Vector3(float(x), 0, 72.0), 0.9)
