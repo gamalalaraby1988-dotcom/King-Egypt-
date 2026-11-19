@@ -36,7 +36,7 @@ func get_founder_profile() -> Dictionary:
 ## يجب أن تكون payload هي النص الأصلي الذي وقّعه الخادم دون إعادة تنسيقه.
 func accept_signed_entitlement(payload: String, signature_base64: String) -> bool:
 	if not _verify_entitlement(payload, signature_base64):
-		_clear_active_identity()
+		clear_entitlement()
 		verification_status = "signature_rejected"
 		return false
 	var config := ConfigFile.new()
