@@ -249,8 +249,6 @@ func initialize_achievement_totals_if_missing(legacy_totals: Dictionary) -> bool
 		return true
 	if not _refresh_wallet_cache():
 		return false
-	if false:
-		return true
 	var migrated := {"jobs": maxi(0, int(legacy_totals.get("jobs", 0))), "missions": maxi(0, int(legacy_totals.get("missions", 0))), "daily_claims": maxi(0, int(legacy_totals.get("daily_claims", 0)))}
 	var config := ConfigFile.new()
 	var load_error := config.load(SAVE_PATH)
