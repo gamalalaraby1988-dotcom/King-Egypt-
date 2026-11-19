@@ -40,6 +40,7 @@ declare
     v_inserted integer := 0;
     v_duplicates integer := 0;
     v_event_count integer;
+    v_object_key_count integer;
 begin
     if v_user_id is null then
         raise exception 'authentication_required' using errcode = '28000';
@@ -58,10 +59,13 @@ begin
         if pg_catalog.jsonb_typeof(v_event) <> 'object' then
             raise exception 'invalid_event_shape' using errcode = '22023';
         end if;
+        select pg_catalog.count(*)::integer
+        into v_object_key_count
+        from pg_catalog.jsonb_object_keys(v_event);
         if not (v_event ? 'event_id')
            or not (v_event ? 'event_type')
            or not (v_event ? 'payload')
-           or pg_catalog.jsonb_object_length(v_event) <> 3 then
+           or v_object_key_count <> 3 then
             raise exception 'invalid_event_shape' using errcode = '22023';
         end if;
 
@@ -85,7 +89,10 @@ begin
         end if;
 
         if v_event_type = 'setting_changed' then
-            if pg_catalog.jsonb_object_length(v_payload) <> 2
+            select pg_catalog.count(*)::integer
+            into v_object_key_count
+            from pg_catalog.jsonb_object_keys(v_payload);
+            if v_object_key_count <> 2
                or not (v_payload ? 'key')
                or not (v_payload ? 'value') then
                 raise exception 'invalid_setting_event' using errcode = '22023';
@@ -129,7 +136,10 @@ begin
             'achievement_progress_observed',
             'activity_progress_observed'
         ) then
-            if pg_catalog.jsonb_object_length(v_payload) <> 2
+            select pg_catalog.count(*)::integer
+            into v_object_key_count
+            from pg_catalog.jsonb_object_keys(v_payload);
+            if v_object_key_count <> 2
                or not (v_payload ? 'progress_key')
                or not (v_payload ? 'progress_value') then
                 raise exception 'invalid_progress_event' using errcode = '22023';
