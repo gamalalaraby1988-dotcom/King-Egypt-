@@ -39,22 +39,26 @@ declare
     v_rows integer;
     v_inserted integer := 0;
     v_duplicates integer := 0;
+    v_event_count integer;
 begin
     if v_user_id is null then
         raise exception 'authentication_required' using errcode = '28000';
     end if;
 
-    if p_events is null
-       or pg_catalog.jsonb_typeof(p_events) <> 'array'
-       or pg_catalog.jsonb_array_length(p_events) < 1
-       or pg_catalog.jsonb_array_length(p_events) > 50 then
+    if p_events is null or pg_catalog.jsonb_typeof(p_events) <> 'array' then
+        raise exception 'invalid_event_batch' using errcode = '22023';
+    end if;
+    v_event_count := pg_catalog.jsonb_array_length(p_events);
+    if v_event_count < 1 or v_event_count > 50 then
         raise exception 'invalid_event_batch' using errcode = '22023';
     end if;
 
     for v_event in select value from pg_catalog.jsonb_array_elements(p_events)
     loop
-        if pg_catalog.jsonb_typeof(v_event) <> 'object'
-           or not (v_event ? 'event_id')
+        if pg_catalog.jsonb_typeof(v_event) <> 'object' then
+            raise exception 'invalid_event_shape' using errcode = '22023';
+        end if;
+        if not (v_event ? 'event_id')
            or not (v_event ? 'event_type')
            or not (v_event ? 'payload')
            or pg_catalog.jsonb_object_length(v_event) <> 3 then
@@ -66,13 +70,17 @@ begin
         exception when others then
             raise exception 'invalid_event_id' using errcode = '22023';
         end;
+        if v_event_id is null then
+            raise exception 'invalid_event_id' using errcode = '22023';
+        end if;
 
         v_event_type := v_event ->> 'event_type';
         v_payload := v_event -> 'payload';
 
-        if v_payload is null
-           or pg_catalog.jsonb_typeof(v_payload) <> 'object'
-           or pg_catalog.pg_column_size(v_payload) > 8192 then
+        if v_payload is null or pg_catalog.jsonb_typeof(v_payload) <> 'object' then
+            raise exception 'invalid_event_payload' using errcode = '22023';
+        end if;
+        if pg_catalog.pg_column_size(v_payload) > 8192 then
             raise exception 'invalid_event_payload' using errcode = '22023';
         end if;
 
@@ -87,13 +95,17 @@ begin
             v_value := v_payload -> 'value';
 
             if v_key = 'locale' then
-                if pg_catalog.jsonb_typeof(v_value) <> 'string'
-                   or pg_catalog.length(v_value #>> '{}') > 16 then
+                if pg_catalog.jsonb_typeof(v_value) <> 'string' then
+                    raise exception 'invalid_setting_value' using errcode = '22023';
+                end if;
+                if pg_catalog.length(v_value #>> '{}') > 16 then
                     raise exception 'invalid_setting_value' using errcode = '22023';
                 end if;
             elsif v_key = 'camera_sensitivity' then
-                if pg_catalog.jsonb_typeof(v_value) <> 'number'
-                   or (v_value #>> '{}')::numeric < 0.1
+                if pg_catalog.jsonb_typeof(v_value) <> 'number' then
+                    raise exception 'invalid_setting_value' using errcode = '22023';
+                end if;
+                if (v_value #>> '{}')::numeric < 0.1
                    or (v_value #>> '{}')::numeric > 3.0 then
                     raise exception 'invalid_setting_value' using errcode = '22023';
                 end if;
@@ -102,8 +114,10 @@ begin
                     raise exception 'invalid_setting_value' using errcode = '22023';
                 end if;
             elsif v_key = 'control_layout' then
-                if pg_catalog.jsonb_typeof(v_value) <> 'string'
-                   or v_value #>> '{}' not in ('classic', 'left_handed') then
+                if pg_catalog.jsonb_typeof(v_value) <> 'string' then
+                    raise exception 'invalid_setting_value' using errcode = '22023';
+                end if;
+                if v_value #>> '{}' not in ('classic', 'left_handed') then
                     raise exception 'invalid_setting_value' using errcode = '22023';
                 end if;
             else
@@ -121,12 +135,20 @@ begin
                 raise exception 'invalid_progress_event' using errcode = '22023';
             end if;
 
-            if pg_catalog.jsonb_typeof(v_payload -> 'progress_key') <> 'string'
-               or pg_catalog.length(v_payload ->> 'progress_key') < 1
-               or pg_catalog.length(v_payload ->> 'progress_key') > 80
-               or pg_catalog.jsonb_typeof(v_payload -> 'progress_value') <> 'number'
-               or (v_payload ->> 'progress_value') !~ '^[0-9]{1,7}$'
-               or (v_payload ->> 'progress_value')::integer > 1000000 then
+            if pg_catalog.jsonb_typeof(v_payload -> 'progress_key') <> 'string' then
+                raise exception 'invalid_progress_value' using errcode = '22023';
+            end if;
+            if pg_catalog.length(v_payload ->> 'progress_key') < 1
+               or pg_catalog.length(v_payload ->> 'progress_key') > 80 then
+                raise exception 'invalid_progress_value' using errcode = '22023';
+            end if;
+            if pg_catalog.jsonb_typeof(v_payload -> 'progress_value') <> 'number' then
+                raise exception 'invalid_progress_value' using errcode = '22023';
+            end if;
+            if (v_payload ->> 'progress_value') !~ '^[0-9]{1,7}$' then
+                raise exception 'invalid_progress_value' using errcode = '22023';
+            end if;
+            if (v_payload ->> 'progress_value')::integer > 1000000 then
                 raise exception 'invalid_progress_value' using errcode = '22023';
             end if;
         else
