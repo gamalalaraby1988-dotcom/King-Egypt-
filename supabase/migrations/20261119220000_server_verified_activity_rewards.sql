@@ -236,7 +236,7 @@ create or replace function public.issue_server_activity_proof(
 )
 returns uuid
 language plpgsql
-security definer
+security invoker
 set search_path = ''
 as $function$
 declare
@@ -306,4 +306,4 @@ grant execute on function public.issue_server_activity_proof(uuid, text, text, u
     to service_role;
 
 comment on function public.issue_server_activity_proof(uuid, text, text, uuid, text, timestamptz, timestamptz) is
-'Backend-only proof insertion endpoint. The game-proof-issuer Edge Function verifies the dedicated-server HMAC before calling it with the server-owned identity and evidence digest. Reward catalog entries remain disabled until separately approved.';
+'Backend-only proof insertion endpoint. The game-proof-issuer Edge Function verifies the dedicated-server HMAC before calling it with the server-owned identity and evidence digest. SECURITY INVOKER runs as service_role, which alone has the private-table grants and RLS bypass. Reward catalog entries remain disabled until separately approved.';
