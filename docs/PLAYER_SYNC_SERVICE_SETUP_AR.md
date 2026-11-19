@@ -4,6 +4,11 @@
 
 ## المكونات
 
+- تسجيل/دخول عام للاعبين عبر بريد OTP من Supabase Auth، مع إنشاء المستخدم الجديد تلقائيًا عند عدم وجوده.
+- عميل `scripts/player_account_auth_client.gd` مستقل عن `FounderAuthClient`، ويحفظ Refresh Token للاعب في Android Keystore باستخدام alias مختلف عن Alias المؤسس.
+- Migration `20261119170000_player_account_provisioning.sql` تنشئ ملف لاعب برمز فريد من 10 خانات ومحفظة بأرصدة صفرية عند إنشاء حساب Auth، وتستكمل الملفات/المحافظ الناقصة للحسابات الحالية بشكل idempotent.
+- واجهة تسجيل الدخول العامة تعرض البريد ومعرّف الحساب ورمز اللاعب، ولا تمنح أي صلاحية مؤسس.
+
 - عميل Godot: `scripts/player_sync_client.gd` مع قائمة انتظار محلية `user://player_sync_outbox.cfg`، ومعرّفات UUID ثابتة، ودفعات حتى 50 حدثًا، وحذف الحدث من القائمة فقط بعد تأكيد الخادم. عند فشل الحفظ بعد القبول يمكن إعادة الإرسال بأمان بفضل مفتاح idempotency.
 - ربط دورة جلسة المصادقة الحالية في `main.gd` مع العميل؛ يتم تمرير access token فقط، ولا يغادر refresh token مخزن Android الآمن.
 
