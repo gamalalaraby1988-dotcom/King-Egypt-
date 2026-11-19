@@ -3,13 +3,12 @@ class_name CityMasterPlan
 ## المرجع الرسمي الوحيد لتوزيع مباني KING OF EGYPT CITY.
 ## لا تُضاف مبانٍ مرئية خارج BUILDINGS؛ المعالم الطبيعية والطرق والساحات مدرجة منفصلة.
 ## الكازينو وVIP جناحان داخل القصر الملكي وليسا مبنيين مستقلين.
+## المباني المستقلة الأربعة الملغاة لا تعود إلى BUILDINGS؛ نقاط الوصول للشقة محفوظة كبوابات انتقال فقط.
 
 const BUILDINGS := [
 	{"id":"royal_palace","name":"القصر الملكي","district":"المنطقة الملكية","role":"قاعة العرش والاحتفالات والكازينو الأوروبي وصالة VIP والحديقة الداخلية"},
-	{"id":"royal_hotel","name":"الفندق الملكي","district":"المنطقة الملكية","role":"إقامة وخدمات الزوار"},
 	{"id":"royal_bank","name":"البنك الملكي","district":"المنطقة الملكية","role":"الخدمات المالية داخل المدينة"},
 
-	{"id":"shopping_mall","name":"المول التجاري","district":"المنطقة التجارية","role":"التسوق والمتاجر"},
 	{"id":"supermarket","name":"السوبر ماركت","district":"المنطقة التجارية","role":"الاحتياجات اليومية"},
 	{"id":"market","name":"السوق التجاري","district":"المنطقة التجارية","role":"المحال والأكشاك التجارية"},
 	{"id":"employment_center","name":"مركز التوظيف","district":"المنطقة التجارية","role":"الوظائف والتسجيل"},
@@ -41,6 +40,13 @@ const BUILDINGS := [
 	{"id":"adventure_center","name":"مركز المغامرات","district":"منطقة المغامرات والجبل","role":"الأنشطة والمغامرات"},
 	{"id":"desert_lodge","name":"نزل المخيم الصحراوي الملكي","district":"منطقة المغامرات والجبل","role":"الإقامة والأنشطة الصحراوية"},
 	{"id":"mountain_temple","name":"المعبد الملكي أعلى الجبل","district":"منطقة المغامرات والجبل","role":"معلم وموقع استكشاف"}
+]
+
+const APARTMENT_ACCESS_PORTALS := [
+	{"id":"royal_hotel_gate","name":"بوابة الفندق الملكي","destination":"player_private_apartment"},
+	{"id":"pharaonic_museum_gate","name":"بوابة المتحف الفرعوني","destination":"player_private_apartment"},
+	{"id":"royal_restaurant_gate","name":"بوابة المطعم الملكي","destination":"player_private_apartment"},
+	{"id":"shopping_center_gate","name":"بوابة مركز التسوق","destination":"player_private_apartment"}
 ]
 
 const PALACE_INTERIORS := [
