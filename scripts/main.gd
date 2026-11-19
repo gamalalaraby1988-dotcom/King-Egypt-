@@ -840,6 +840,7 @@ func _create_camp() -> void:
 func _create_royal_resort() -> void:
 	# المنتجع الملكي في القطاع الشرقي، منفصل عن مخيم الحيوانات والمناطق الصحراوية.
 	_create_box(self, "RoyalResortAccessRoad", Vector3(30, 0.08, 5), Vector3(110, 0.01, 50), Color(0.12, 0.13, 0.15), true)
+	_create_box(self, "RoyalResortApproachRoad", Vector3(5, 0.08, 15), Vector3(120, 0.01, 42.5), Color(0.12, 0.13, 0.15), true)
 	var resort := Node3D.new()
 	resort.name = "RoyalResort"
 	resort.position = Vector3(120, 0, 50)
