@@ -79,30 +79,39 @@ for each row execute function private.capture_player_progress_observation();
 
 create or replace function public.get_player_progress_observations()
 returns jsonb
-language sql
+language plpgsql
 security invoker
 set search_path = ''
 as $function$
-    select pg_catalog.jsonb_build_object(
+declare
+    v_user_id uuid := auth.uid();
+    v_observations jsonb;
+begin
+    if v_user_id is null then
+        raise exception 'authentication_required' using errcode = '28000';
+    end if;
+
+    select coalesce(
+        pg_catalog.jsonb_agg(
+            pg_catalog.jsonb_build_object(
+                'progress_key', progress_key,
+                'progress_value', observed_value,
+                'updated_at', updated_at
+            )
+            order by progress_key
+        ),
+        '[]'::jsonb
+    )
+    into v_observations
+    from private.player_progress_observations
+    where user_id = v_user_id;
+
+    return pg_catalog.jsonb_build_object(
         'authoritative', false,
         'trust', 'unverified_client_observations',
-        'observations',
-        coalesce(
-            (
-                select pg_catalog.jsonb_agg(
-                    pg_catalog.jsonb_build_object(
-                        'progress_key', progress_key,
-                        'progress_value', observed_value,
-                        'updated_at', updated_at
-                    )
-                    order by progress_key
-                )
-                from private.player_progress_observations
-                where user_id = (select auth.uid())
-            ),
-            '[]'::jsonb
-        )
+        'observations', v_observations
     );
+end;
 $function$;
 
 revoke all on function private.capture_player_progress_observation() from public, anon;
