@@ -668,7 +668,9 @@ func _build_mountain_route() -> void:
 		for offset in [-10.5, -5.5, 5.5, 10.5]:
 			_box(summit, "SummitBalustradePost", Vector3(0.32, 1.15, 0.32), Vector3(side * 14.35, 0.82, offset), GOLD)
 			_box(summit, "SummitBalustradePost", Vector3(0.32, 1.15, 0.32), Vector3(offset, 0.82, side * 14.35), GOLD)
-		_box(summit, "SummitBalustradeSide", Vector3(0.22, 0.18, 30.0), Vector3(side * 14.35, 1.22, 0.0), GOLD)
+		# Keep a wide vehicle-road opening on both side edges of the plaza.
+		for rail_side in [-1.0, 1.0]:
+			_box(summit, "SummitBalustradeSide", Vector3(0.22, 0.18, 10.0), Vector3(side * 14.35, 1.22, rail_side * 10.0), GOLD)
 		_box(summit, "SummitBalustradeBack", Vector3(30.0, 0.18, 0.22), Vector3(0.0, 1.22, side * 14.35), GOLD)
 	# Four restrained stone seating bays sit inside the corners, keeping the
 	# central panorama and circulation route open.
@@ -722,6 +724,10 @@ func _build_mountain_route() -> void:
 			var edge_marker := _box(mountain, "SummitRampEdge", Vector3(0.12, 0.22, ramp_length), ramp_midpoint + ramp_side * edge * 1.92 + Vector3(0.0, 0.18, 0.0), GOLD)
 			edge_marker.rotation = ramp.rotation
 
+	# Separate low-gradient access for cars and electric scooters. The original
+	# narrow walking trail and the four-flight pedestrian summit ramp stay intact.
+	_build_mountain_vehicle_access(mountain)
+
 	_box(summit, "SummitObelisk", Vector3(1.2, 4.5, 1.2), Vector3(0, 2.4, 0), GOLD)
 	_box(summit, "SummitCrown", Vector3(2.4, 0.35, 2.4), Vector3(0, 4.8, 0), GOLD)
 
@@ -740,6 +746,107 @@ func _process(delta: float) -> void:
 			animal.rotation.y = sin(mountain_wildlife_clock * 0.34 + phase) * 0.055
 			if animal.name == "MountainFalcon":
 				animal.position.y = mountain_wildlife_base_positions[i].y + sin(mountain_wildlife_clock * 1.8 + phase) * 0.045
+
+
+func _build_mountain_vehicle_access(mountain: Node3D) -> void:
+	var road := Node3D.new()
+	road.name = "MountainVehicleAccessRoad"
+	mountain.add_child(road)
+
+	# Join the eastern perimeter road at the existing mountain approach.
+	_add_sloped_vehicle_road_segment(road, "MountainVehicleRoadEntry",
+		Vector3(-3.0, 0.18, 28.0), Vector3(14.0, 0.18, 34.0), 6.5, false)
+
+	# Eight broad switchback legs climb around the outside of the mountain.
+	# Each 2.62 m rise is spread over roughly 41 m of travel (about 6.5% grade).
+	var route_points: Array[Vector3] = [
+		Vector3(14.0, 0.18, 34.0),
+		Vector3(54.0, 2.8, 26.0),
+		Vector3(14.0, 5.4, 18.0),
+		Vector3(54.0, 8.0, 10.0),
+		Vector3(14.0, 10.6, 2.0),
+		Vector3(54.0, 13.2, -6.0),
+		Vector3(14.0, 15.8, -14.0),
+		Vector3(54.0, 18.4, -22.0),
+		Vector3(14.0, 21.0, -30.0),
+		Vector3(14.0, 21.0, -1.0)
+	]
+	for i in range(route_points.size() - 1):
+		_add_sloped_vehicle_road_segment(road, "MountainVehicleRoad_%02d" % (i + 1),
+			route_points[i], route_points[i + 1], 6.5, true)
+
+	# Wide, collision-backed turning aprons keep the alternating bends usable.
+	for i in range(1, route_points.size() - 1):
+		var point: Vector3 = route_points[i]
+		var landing_center := Vector3(maxf(point.x, 17.5), point.y, point.z)
+		_box(road, "MountainVehicleTurnout_%02d" % i,
+			Vector3(12.0, 0.22, 12.0), landing_center, SAND)
+		var landing_body := StaticBody3D.new()
+		landing_body.name = "MountainVehicleTurnoutCollision_%02d" % i
+		landing_body.position = landing_center
+		landing_body.add_to_group("city_world_geometry")
+		var landing_shape := CollisionShape3D.new()
+		var landing_box := BoxShape3D.new()
+		landing_box.size = Vector3(12.0, 0.3, 12.0)
+		landing_shape.shape = landing_box
+		landing_body.add_child(landing_shape)
+		road.add_child(landing_body)
+
+	# A small upper pull-off lets drivers stop before walking onto the summit plaza.
+	var pull_off := _box(road, "MountainSummitVehiclePullOff",
+		Vector3(12.0, 0.22, 10.0), Vector3(14.0, 21.0, -1.0), IVORY)
+	var pull_off_body := StaticBody3D.new()
+	pull_off_body.name = "MountainSummitVehiclePullOffCollision"
+	pull_off_body.position = Vector3(14.0, 21.0, -1.0)
+	pull_off_body.add_to_group("city_world_geometry")
+	var pull_off_shape := CollisionShape3D.new()
+	var pull_off_box := BoxShape3D.new()
+	pull_off_box.size = Vector3(12.0, 0.3, 10.0)
+	pull_off_shape.shape = pull_off_box
+	pull_off_body.add_child(pull_off_shape)
+	road.add_child(pull_off_body)
+
+
+func _add_sloped_vehicle_road_segment(parent: Node3D, label: String,
+		start: Vector3, finish: Vector3, width: float, add_guardrails: bool) -> void:
+	var delta := finish - start
+	var length := delta.length()
+	var midpoint := (start + finish) * 0.5
+	var segment := _box(parent, label, Vector3(width, 0.28, length), midpoint, SAND)
+	segment.look_at(parent.to_global(start), Vector3.UP)
+
+	var body := StaticBody3D.new()
+	body.name = label + "Collision"
+	body.position = midpoint
+	body.look_at(parent.to_global(start), Vector3.UP)
+	body.add_to_group("city_world_geometry")
+	var collision := CollisionShape3D.new()
+	var shape := BoxShape3D.new()
+	shape.size = Vector3(width, 0.36, length + 0.25)
+	collision.shape = shape
+	body.add_child(collision)
+	parent.add_child(body)
+
+	if add_guardrails:
+		var rails := Node3D.new()
+		rails.name = label + "Guardrails"
+		rails.position = midpoint
+		rails.look_at(parent.to_global(start), Vector3.UP)
+		parent.add_child(rails)
+		for side in [-1.0, 1.0]:
+			var rail_at := Vector3(side * (width * 0.5 - 0.18), 0.55, 0.0)
+			_box(rails, "VehicleRoadGuardrail", Vector3(0.18, 0.9, length), rail_at, GOLD)
+			var rail_body := StaticBody3D.new()
+			rail_body.name = "VehicleRoadGuardrailCollision"
+			rail_body.position = rail_at
+			rail_body.add_to_group("city_world_geometry")
+			var rail_collision := CollisionShape3D.new()
+			var rail_shape := BoxShape3D.new()
+			rail_shape.size = Vector3(0.28, 1.0, length)
+			rail_collision.shape = rail_shape
+			rail_body.add_child(rail_collision)
+			rails.add_child(rail_body)
+
 
 func _build_mountain_animals() -> void:
 	var mountain := get_node_or_null("KingsMountainRoute") as Node3D
