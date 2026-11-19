@@ -4,6 +4,8 @@ extends Node
 
 signal sync_finished(success: bool, accepted: int, duplicates: int, message: String)
 signal outbox_changed(pending_count: int)
+signal preference_snapshot_received(revision: int, settings: Dictionary)
+signal preference_snapshot_finished(success: bool, message: String)
 
 const OUTBOX_PATH := "user://player_sync_outbox.cfg"
 const SYNC_ENABLED_SETTING := "player_sync/enabled"
@@ -17,6 +19,10 @@ const ALLOWED_EVENT_TYPES := [
 ]
 
 var _http: HTTPRequest
+var _snapshot_http: HTTPRequest
+var _snapshot_action := ""
+var _snapshot_revision := 0
+var _snapshot_request_active := false
 var _access_token := ""
 var _events: Array[Dictionary] = []
 var _pending_event_ids: Array[String] = []
@@ -32,6 +38,11 @@ func _ready() -> void:
 	_http.timeout = 25.0
 	add_child(_http)
 	_http.request_completed.connect(_on_request_completed)
+	_snapshot_http = HTTPRequest.new()
+	_snapshot_http.name = "PlayerPreferenceSnapshotHTTPRequest"
+	_snapshot_http.timeout = 25.0
+	add_child(_snapshot_http)
+	_snapshot_http.request_completed.connect(_on_snapshot_request_completed)
 	_retry_timer = Timer.new()
 	_retry_timer.one_shot = true
 	_retry_timer.timeout.connect(flush_pending)
@@ -42,13 +53,116 @@ func _ready() -> void:
 func set_session_access_token(access_token: String) -> void:
 	_access_token = access_token.strip_edges()
 	if not _access_token.is_empty():
+		call_deferred("fetch_preference_snapshot")
 		call_deferred("flush_pending")
 
 
 func clear_session_access_token() -> void:
 	_access_token = ""
+	_snapshot_action = ""
+	_snapshot_request_active = false
 	if is_instance_valid(_retry_timer):
 		_retry_timer.stop()
+
+
+
+func get_preference_snapshot_revision() -> int:
+	return _snapshot_revision
+
+
+func fetch_preference_snapshot() -> void:
+	if _access_token.is_empty() or _snapshot_request_active:
+		return
+	_start_snapshot_request("get_player_preference_snapshot", {}, "fetch")
+
+
+func save_preference_snapshot(settings: Dictionary) -> void:
+	if _access_token.is_empty() or _snapshot_request_active:
+		preference_snapshot_finished.emit(false, "سجّل الدخول أولًا أو انتظر انتهاء طلب الإعدادات.")
+		return
+	if not _is_valid_preference_snapshot(settings):
+		preference_snapshot_finished.emit(false, "تحتوي الإعدادات على قيمة غير مسموحة.")
+		return
+	_start_snapshot_request("save_player_preference_snapshot", {
+		"p_expected_revision": _snapshot_revision,
+		"p_settings": settings.duplicate(true)
+	}, "save")
+
+
+func _is_valid_preference_snapshot(settings: Dictionary) -> bool:
+	if settings.size() > 3:
+		return false
+	if settings.has("locale") and (typeof(settings.locale) != TYPE_STRING or str(settings.locale) not in ["auto", "ar", "en"]):
+		return false
+	if settings.has("volume") and (typeof(settings.volume) != TYPE_INT or int(settings.volume) < 0 or int(settings.volume) > 100):
+		return false
+	if settings.has("quality") and (typeof(settings.quality) != TYPE_INT or int(settings.quality) not in [0, 1, 2]):
+		return false
+	return true
+
+
+func _start_snapshot_request(rpc_name: String, payload: Dictionary, action: String) -> void:
+	var base_url := str(ProjectSettings.get_setting("founder/auth/api_base_url", "")).strip_edges().trim_suffix("/")
+	var publishable_key := str(ProjectSettings.get_setting("founder/auth/publishable_key", "")).strip_edges()
+	if not base_url.begins_with("https://") or publishable_key.is_empty():
+		preference_snapshot_finished.emit(false, "إعدادات مزامنة الحساب غير مكتملة.")
+		return
+	var headers := PackedStringArray([
+		"Content-Type: application/json",
+		"Accept: application/json",
+		"apikey: " + publishable_key,
+		"Authorization: Bearer " + _access_token
+	])
+	var request_body := JSON.stringify(payload) if action == "save" else "{}"
+	var error := _snapshot_http.request(
+		base_url + "/rest/v1/rpc/" + rpc_name,
+		headers,
+		HTTPClient.METHOD_POST,
+		request_body
+	)
+	if error != OK:
+		preference_snapshot_finished.emit(false, "تعذر بدء مزامنة إعدادات الحساب.")
+		return
+	_snapshot_action = action
+	_snapshot_request_active = true
+
+
+func _on_snapshot_request_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+	var action := _snapshot_action
+	_snapshot_action = ""
+	_snapshot_request_active = false
+	if result != HTTPRequest.RESULT_SUCCESS or response_code < 200 or response_code >= 300:
+		preference_snapshot_finished.emit(false, "تعذر جلب أو حفظ إعدادات الحساب. بقيت الإعدادات المحلية دون تغيير.")
+		return
+	var parsed: Variant = JSON.parse_string(body.get_string_from_utf8())
+	if parsed is Array and parsed.size() == 1:
+		parsed = parsed[0]
+	if not (parsed is Dictionary):
+		preference_snapshot_finished.emit(false, "استجابة إعدادات الحساب غير صالحة.")
+		return
+	if action == "fetch":
+		var revision := int(parsed.get("revision", -1))
+		var settings_value: Variant = parsed.get("settings", {})
+		if revision < 0 or not (settings_value is Dictionary) or not _is_valid_preference_snapshot(settings_value):
+			preference_snapshot_finished.emit(false, "بيانات إعدادات الحساب غير صالحة؛ لم تُطبق.")
+			return
+		_snapshot_revision = revision
+		preference_snapshot_received.emit(revision, settings_value.duplicate(true))
+		preference_snapshot_finished.emit(true, "تم جلب إعدادات الحساب.")
+		return
+	if action == "save":
+		if bool(parsed.get("conflict", false)):
+			_snapshot_revision = int(parsed.get("revision", _snapshot_revision))
+			preference_snapshot_finished.emit(false, "توجد إعدادات أحدث على جهاز آخر؛ جارٍ جلب النسخة الأحدث.")
+			call_deferred("fetch_preference_snapshot")
+			return
+		if not bool(parsed.get("saved", false)):
+			preference_snapshot_finished.emit(false, "لم يؤكد الخادم حفظ إعدادات الحساب.")
+			return
+		_snapshot_revision = int(parsed.get("revision", _snapshot_revision))
+		preference_snapshot_finished.emit(true, "تمت مزامنة إعدادات الحساب.")
+		return
+	preference_snapshot_finished.emit(false, "حالة مزامنة غير معروفة.")
 
 
 func get_pending_count() -> int:
