@@ -6,7 +6,7 @@ var mission_manager: Node
 var landmark_buttons: Array[Button] = []
 var selected_landmark_key := ""
 var map_size := Vector2(220, 220)
-var world_radius := 90.0
+var world_radius := 145.0
 var map_visible := true
 var toggle_button: Button
 var destinations_button: Button
@@ -33,7 +33,14 @@ const CITY_LANDMARKS := [
 	{"key": "delivery", "position": Vector3(24.0, 0.0, 4.5)},
 	{"key": "city_guide", "position": Vector3(-24.0, 0.0, 4.5)},
 	{"key": "maintenance", "position": Vector3(4.5, 0.0, 24.0)},
-	{"key": "animal_camp", "position": Vector3(60.0, 0.0, 68.0)}
+	{"key": "animal_camp", "position": Vector3(60.0, 0.0, 68.0)},
+	{"key": "fuel_station", "position": Vector3(-75.0, 0.0, 38.0)},
+	{"key": "marina_terminal", "position": Vector3(75.0, 0.0, 38.0)},
+	{"key": "royal_yacht_club", "position": Vector3(75.0, 0.0, 58.0)},
+	{"key": "desert_lodge", "position": Vector3(-75.0, 0.0, 75.0)},
+	{"key": "mountain_temple", "position": Vector3(75.0, 0.0, 75.0)},
+	{"key": "royal_ship", "position": Vector3(0.0, 0.0, 85.0)},
+	{"key": "beach_handball", "position": Vector3(40.0, 0.0, 125.0)}
 ]
 
 func _ready() -> void:
@@ -374,6 +381,17 @@ func _draw() -> void:
 	]
 	for route_index in range(camp_route.size() - 1):
 		draw_line(_world_to_map(camp_route[route_index]), _world_to_map(camp_route[route_index + 1]), road_color, 1.8)
+	# Access network: west fuel/lodge, east marina/temple, and beach court.
+	var access_routes := [
+		[Vector3(-95.0, 0.0, 38.0), Vector3(-85.5, 0.0, 38.0)],
+		[Vector3(-95.0, 0.0, 58.0), Vector3(-84.0, 0.0, 58.0), Vector3(-84.0, 0.0, 75.0), Vector3(-75.0, 0.0, 84.0)],
+		[Vector3(95.0, 0.0, 38.0), Vector3(84.0, 0.0, 38.0), Vector3(84.0, 0.0, 62.0), Vector3(75.0, 0.0, 62.6)],
+		[Vector3(32.0, 0.0, 76.0), Vector3(32.0, 0.0, 106.0), Vector3(40.0, 0.0, 107.0)],
+		[Vector3(83.0, 0.0, 68.0), Vector3(75.0, 0.0, 84.0)]
+	]
+	for route in access_routes:
+		for route_index in range(route.size() - 1):
+			draw_line(_world_to_map(route[route_index]), _world_to_map(route[route_index + 1]), Color(0.54, 0.66, 0.62, 0.95), 1.8)
 	_draw_region_boundaries()
 	_draw_landmark_route()
 	_draw_landmark_labels(rect)
