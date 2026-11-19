@@ -113,26 +113,35 @@ func _build_nile_waterfront() -> void:
 		_box(self, "PromenadeLampHead", Vector3(0.8, 0.18, 0.8), Vector3(x, 3.0, 74), GOLD)
 
 func _build_pyramids() -> void:
-	for i in range(3):
+	# Place the Giza landmarks beyond the northern city skyline so they read as a distant desert region.
+	# The expanded ground in main.gd extends to z=-340; these landmarks remain inside the playable world.
+	var pyramid_positions: Array[Vector3] = [
+		Vector3(-48.0, 0.0, -252.0),
+		Vector3(0.0, 0.0, -270.0),
+		Vector3(48.0, 0.0, -252.0)
+	]
+	for i in range(pyramid_positions.size()):
 		var pyramid := MeshInstance3D.new()
-		pyramid.name = "ApprovedPyramid_%d" % (i + 1)
+		pyramid.name = "DistantGizaPyramid_%d" % (i + 1)
 		var mesh := CylinderMesh.new()
 		mesh.top_radius = 0.0
-		mesh.bottom_radius = 9.0 - i * 1.5
-		mesh.height = 15.0 - i * 2.0
+		mesh.bottom_radius = 18.0 - i * 2.0
+		mesh.height = 34.0 - i * 3.0
 		mesh.radial_segments = 4
 		mesh.rings = 1
 		pyramid.mesh = mesh
-		pyramid.position = Vector3(-65.0 + i * 24.0, 7.5, 90.0)
+		pyramid.position = pyramid_positions[i] + Vector3(0.0, mesh.height * 0.5, 0.0)
 		pyramid.material_override = _mat(Color(0.72, 0.58, 0.38))
+		pyramid.add_to_group("city_distant_landmarks")
 		add_child(pyramid)
 	var sphinx := MeshInstance3D.new()
-	sphinx.name = "ApprovedSphinxLandmark"
+	sphinx.name = "DistantSphinxLandmark"
 	var sphinx_mesh := BoxMesh.new()
-	sphinx_mesh.size = Vector3(7, 3, 3)
+	sphinx_mesh.size = Vector3(12.0, 4.0, 5.0)
 	sphinx.mesh = sphinx_mesh
-	sphinx.position = Vector3(35, 1.5, 91)
+	sphinx.position = Vector3(70.0, 2.0, -246.0)
 	sphinx.material_override = _mat(SAND)
+	sphinx.add_to_group("city_distant_landmarks")
 	add_child(sphinx)
 
 func _build_royal_gate_and_square() -> void:
