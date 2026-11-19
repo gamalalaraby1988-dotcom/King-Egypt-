@@ -2,7 +2,7 @@
 -- Run locally with: supabase test db
 begin;
 
-select extensions.plan(8);
+select extensions.plan(10);
 
 -- A disposable Auth user is required because accepted inbox rows reference auth.users.
 insert into auth.users (
@@ -69,6 +69,23 @@ select extensions.throws_ok(
     '22023',
     'invalid_progress_value',
     'rejects progress values above the configured cap'
+);
+
+-- 6. Event-specific progress namespaces prevent cross-domain key spoofing.
+select extensions.throws_ok(
+    $ select public.submit_player_sync_events(
+        '[{"event_id":"10000000-0000-4000-8000-000000000008","event_type":"achievement_progress_observed","payload":{"progress_key":"mission.fake","progress_value":1}}]'::jsonb
+    ) $,
+    '22023',
+    'progress_key_not_allowed',
+    'enforces event-specific progress key namespaces'
+);
+
+select extensions.is(
+    (select not prosecdef from pg_catalog.pg_proc
+     where oid = 'public.submit_player_sync_events(jsonb)'::regprocedure),
+    true,
+    'RPC executes as invoker and relies on RLS'
 );
 
 -- 6. Extra event fields are rejected rather than silently accepted.
