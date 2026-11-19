@@ -14,18 +14,11 @@ import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 
 /**
- * Godot Android plugin backing FounderAuthClient's optional FounderSecureStorage singleton.
- * Only ciphertext is written to app-private storage. AES keys remain non-exportable in Android Keystore.
+ * Godot Android plugin v2 singleton backing FounderAuthClient.
+ * Only ciphertext is persisted; AES keys remain non-exportable in Android Keystore.
  */
 class FounderSecureStoragePlugin(godot: Godot) : GodotPlugin(godot) {
     override fun getPluginName() = "FounderSecureStorage"
-
-    override fun getPluginMethods() = listOf(
-        org.godotengine.godot.plugin.GodotPluginMethod("is_available"),
-        org.godotengine.godot.plugin.GodotPluginMethod("save_secret"),
-        org.godotengine.godot.plugin.GodotPluginMethod("load_secret"),
-        org.godotengine.godot.plugin.GodotPluginMethod("delete_secret")
-    )
 
     @UsedByGodot
     fun is_available(): Boolean = android.os.Build.VERSION.SDK_INT >= 23
@@ -35,12 +28,11 @@ class FounderSecureStoragePlugin(godot: Godot) : GodotPlugin(godot) {
     fun save_secret(alias: String, value: String): Boolean {
         if (!is_available() || alias.isBlank() || value.isEmpty()) return false
         return try {
-            val key = getOrCreateKey(alias)
             val cipher = Cipher.getInstance(TRANSFORMATION)
-            cipher.init(Cipher.ENCRYPT_MODE, key)
-            val encrypted = cipher.doFinal(value.toByteArray(Charsets.UTF_8))
+            cipher.init(Cipher.ENCRYPT_MODE, getOrCreateKey(alias))
+            val ciphertext = cipher.doFinal(value.toByteArray(Charsets.UTF_8))
             val iv = cipher.iv
-            val packed = byteArrayOf(VERSION) + byteArrayOf(iv.size.toByte()) + iv + encrypted
+            val packed = byteArrayOf(VERSION, iv.size.toByte()) + iv + ciphertext
             val target = secretFile(alias)
             val temp = File(target.parentFile, target.name + ".tmp")
             temp.writeText(Base64.encodeToString(packed, Base64.NO_WRAP), Charsets.UTF_8)
@@ -75,7 +67,7 @@ class FounderSecureStoragePlugin(godot: Godot) : GodotPlugin(godot) {
             cipher.init(Cipher.DECRYPT_MODE, getOrCreateKey(alias), GCMParameterSpec(128, iv))
             String(cipher.doFinal(ciphertext), Charsets.UTF_8)
         } catch (_: Exception) {
-            // Corrupt data, invalidated key, or authentication failure: fail closed.
+            // Fail closed for corrupt data or an invalidated Keystore key.
             ""
         }
     }
@@ -87,18 +79,17 @@ class FounderSecureStoragePlugin(godot: Godot) : GodotPlugin(godot) {
         try {
             secretFile(alias).delete()
             val store = KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
-            val keyAlias = keyAlias(alias)
-            if (store.containsAlias(keyAlias)) store.deleteEntry(keyAlias)
+            val name = keyAlias(alias)
+            if (store.containsAlias(name)) store.deleteEntry(name)
         } catch (_: Exception) {
-            // Deletion is best-effort; callers never receive secret material here.
+            // Best-effort cleanup; never expose secret material to logs.
         }
     }
 
     private fun getOrCreateKey(alias: String): SecretKey {
         val store = KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
         val name = keyAlias(alias)
-        val existing = store.getKey(name, null) as? SecretKey
-        if (existing != null) return existing
+        (store.getKey(name, null) as? SecretKey)?.let { return it }
 
         val generator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, ANDROID_KEYSTORE)
         generator.init(
@@ -116,7 +107,7 @@ class FounderSecureStoragePlugin(godot: Godot) : GodotPlugin(godot) {
     }
 
     private fun secretFile(alias: String): File {
-        val directory = File(godot.getActivity().filesDir, "founder_secure").apply { mkdirs() }
+        val directory = File(activity.filesDir, "founder_secure").apply { mkdirs() }
         return File(directory, stableName(alias) + ".bin")
     }
 
