@@ -47,14 +47,19 @@ Deno.serve(async (req: Request) => {
     return json({ error: "sync_service_not_configured" }, 503);
   }
 
-  const contentLength = Number(req.headers.get("content-length") ?? "0");
-  if (contentLength > 512 * 1024) {
+  let rawBody = "";
+  try {
+    rawBody = await req.text();
+  } catch {
+    return json({ error: "invalid_json" }, 400);
+  }
+  if (new TextEncoder().encode(rawBody).byteLength > 512 * 1024) {
     return json({ error: "request_too_large" }, 413);
   }
 
   let body: unknown;
   try {
-    body = await req.json();
+    body = JSON.parse(rawBody);
   } catch {
     return json({ error: "invalid_json" }, 400);
   }
