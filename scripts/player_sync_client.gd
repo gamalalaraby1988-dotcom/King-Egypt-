@@ -6,8 +6,11 @@ signal sync_finished(success: bool, accepted: int, duplicates: int, message: Str
 signal outbox_changed(pending_count: int)
 signal preference_snapshot_received(revision: int, settings: Dictionary)
 signal preference_snapshot_finished(success: bool, message: String)
+signal progress_observations_received(observations: Array, trust_label: String)
+signal progress_observations_finished(success: bool, message: String)
 
 const OUTBOX_PATH := "user://player_sync_outbox.cfg"
+const PROGRESS_REVIEW_PATH := "user://player_sync_progress_review.cfg"
 const SYNC_ENABLED_SETTING := "player_sync/enabled"
 const MAX_PENDING_EVENTS := 500
 const MAX_BATCH_SIZE := 50
@@ -20,6 +23,8 @@ const ALLOWED_EVENT_TYPES := [
 
 var _http: HTTPRequest
 var _snapshot_http: HTTPRequest
+var _progress_http: HTTPRequest
+var _progress_request_active := false
 var _snapshot_action := ""
 var _snapshot_revision := 0
 var _snapshot_request_active := false
@@ -43,6 +48,11 @@ func _ready() -> void:
 	_snapshot_http.timeout = 25.0
 	add_child(_snapshot_http)
 	_snapshot_http.request_completed.connect(_on_snapshot_request_completed)
+	_progress_http = HTTPRequest.new()
+	_progress_http.name = "PlayerProgressRecoveryHTTPRequest"
+	_progress_http.timeout = 25.0
+	add_child(_progress_http)
+	_progress_http.request_completed.connect(_on_progress_recovery_completed)
 	_retry_timer = Timer.new()
 	_retry_timer.one_shot = true
 	_retry_timer.timeout.connect(flush_pending)
@@ -54,6 +64,7 @@ func set_session_access_token(access_token: String) -> void:
 	_access_token = access_token.strip_edges()
 	if not _access_token.is_empty() and bool(ProjectSettings.get_setting(SYNC_ENABLED_SETTING, false)):
 		call_deferred("fetch_preference_snapshot")
+		call_deferred("fetch_progress_observations")
 		call_deferred("flush_pending")
 
 
@@ -61,6 +72,7 @@ func clear_session_access_token() -> void:
 	_access_token = ""
 	_snapshot_action = ""
 	_snapshot_request_active = false
+	_progress_request_active = false
 	if is_instance_valid(_retry_timer):
 		_retry_timer.stop()
 
@@ -168,6 +180,101 @@ func _on_snapshot_request_completed(result: int, response_code: int, _headers: P
 		preference_snapshot_finished.emit(true, "تمت مزامنة إعدادات الحساب.")
 		return
 	preference_snapshot_finished.emit(false, "حالة مزامنة غير معروفة.")
+
+
+
+func fetch_progress_observations() -> void:
+	if not bool(ProjectSettings.get_setting(SYNC_ENABLED_SETTING, false)):
+		return
+	if _access_token.is_empty() or _progress_request_active:
+		return
+	var base_url := str(ProjectSettings.get_setting("founder/auth/api_base_url", "")).strip_edges().trim_suffix("/")
+	var publishable_key := str(ProjectSettings.get_setting("founder/auth/publishable_key", "")).strip_edges()
+	if not base_url.begins_with("https://") or publishable_key.is_empty():
+		progress_observations_finished.emit(false, "إعدادات استعادة التقدم غير مكتملة.")
+		return
+	var headers := PackedStringArray([
+		"Content-Type: application/json",
+		"Accept: application/json",
+		"apikey: " + publishable_key,
+		"Authorization: Bearer " + _access_token
+	])
+	var error := _progress_http.request(
+		base_url + "/rest/v1/rpc/get_player_progress_observations",
+		headers,
+		HTTPClient.METHOD_POST,
+		"{}"
+	)
+	if error != OK:
+		progress_observations_finished.emit(false, "تعذر بدء استعادة سجل التقدم.")
+		return
+	_progress_request_active = true
+
+
+func _on_progress_recovery_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+	_progress_request_active = false
+	if result != HTTPRequest.RESULT_SUCCESS or response_code < 200 or response_code >= 300:
+		progress_observations_finished.emit(false, "تعذر جلب سجل التقدم؛ لم تتغير بيانات اللعب.")
+		return
+	var parsed: Variant = JSON.parse_string(body.get_string_from_utf8())
+	if parsed is Array and parsed.size() == 1:
+		parsed = parsed[0]
+	if not (parsed is Dictionary):
+		progress_observations_finished.emit(false, "استجابة سجل التقدم غير صالحة.")
+		return
+	if bool(parsed.get("authoritative", true)) or str(parsed.get("trust", "")) != "unverified_client_observations":
+		progress_observations_finished.emit(false, "رفضت اللعبة استجابة لا تحمل تصنيف الثقة المطلوب.")
+		return
+	var observations_value: Variant = parsed.get("observations", [])
+	if not (observations_value is Array) or observations_value.size() > 500:
+		progress_observations_finished.emit(false, "قائمة التقدم المستعادة غير صالحة.")
+		return
+	var clean_observations: Array[Dictionary] = []
+	for item in observations_value:
+		if not (item is Dictionary):
+			progress_observations_finished.emit(false, "تحتوي قائمة التقدم على سجل غير صالح.")
+			return
+		var key := str(item.get("progress_key", ""))
+		var value: Variant = item.get("progress_value", -1)
+		if key.length() < 1 or key.length() > 80 or typeof(value) != TYPE_INT or int(value) < 0 or int(value) > 1000000:
+			progress_observations_finished.emit(false, "تحتوي قائمة التقدم على قيمة خارج الحدود.")
+			return
+		if not (key.begins_with("mission.") or key.begins_with("achievement.") or key.begins_with("activity.")):
+			progress_observations_finished.emit(false, "تحتوي قائمة التقدم على نوع غير مسموح.")
+			return
+		clean_observations.append({
+			"progress_key": key,
+			"progress_value": int(value),
+			"updated_at": str(item.get("updated_at", ""))
+		})
+	var config := ConfigFile.new()
+	var load_error := config.load(PROGRESS_REVIEW_PATH)
+	if load_error != OK and FileAccess.file_exists(PROGRESS_REVIEW_PATH):
+		progress_observations_finished.emit(false, "تعذر قراءة ملف مراجعة التقدم المحلي؛ لم تتم الكتابة فوقه.")
+		return
+	config.set_value("recovery", "trust", "unverified_client_observations")
+	config.set_value("recovery", "authoritative", false)
+	config.set_value("recovery", "observations", clean_observations)
+	config.set_value("recovery", "fetched_at", Time.get_datetime_string_from_system(true))
+	if config.save(PROGRESS_REVIEW_PATH) != OK:
+		progress_observations_finished.emit(false, "تعذر حفظ سجل التقدم المستعاد محليًا.")
+		return
+	progress_observations_received.emit(clean_observations.duplicate(true), "غير معتمد — يحتاج تحققًا خادميًا")
+	progress_observations_finished.emit(true, "تم حفظ سجل التقدم للمراجعة فقط؛ لم يُعتمد داخل اللعب ولم تُمنح مكافآت.")
+
+
+func get_unverified_progress_observations() -> Array[Dictionary]:
+	var config := ConfigFile.new()
+	if config.load(PROGRESS_REVIEW_PATH) != OK:
+		return []
+	var stored: Variant = config.get_value("recovery", "observations", [])
+	if not (stored is Array):
+		return []
+	var result: Array[Dictionary] = []
+	for item in stored:
+		if item is Dictionary:
+			result.append(item.duplicate(true))
+	return result
 
 
 func get_pending_count() -> int:
