@@ -64,7 +64,7 @@ const SECTIONS := {
 	"group": ["مجموعتي", "مجموعة صغيرة من أربعة لاعبين كحد أقصى: قائد وثلاثة أعضاء."],
 	"chat": ["المحادثة", "افتح محادثة مجموعتك للتواصل مع أعضائها. الرسائل بين الأجهزة تحتاج اتصال الخادم."],
 	"emotes": ["التعبيرات والحركات", "اختر تعبير وجه أو حركة اجتماعية للشخصية. الحركات المتاحة تظهر هنا عند ربط مكتبة التعبيرات."],
-	"party": ["حفلة في المدينة", "يمكن استضافة حفلة في موقع مناسب. منطقة الحفلة تستوعب حتى 50 لاعبًا، وتُمنح المكافآت لمن يقف داخل حدود المنطقة المضيئة فقط."],
+	"party": ["حفلة في المدينة", "تبدأ الحفلة بعد الدفع وتستمر 20 ثانية بالضبط. لا يوجد حد عددي اعتباطي للمشاركين؛ وتُمنح المكافآت وفق المشاركة الفعلية والتحقق ومنع التكرار."],
 	"pets": ["الحيوانات الأليفة", "تابع حيوانك الأليف ومهرجان الحيوانات، وطوّر الحيوان المؤقت للوصول إلى القط الفرعوني الذهبي."],
 	"settings": ["الإعدادات", "اضبط اللغة والصوت وجودة الرسوم بما يناسب جهازك."],
 }
@@ -77,6 +77,7 @@ func _ready() -> void:
 	_build_player_interaction_popup()
 	_build_group_popup()
 	_build_group_chat_popup()
+	_build_social_popup()
 	_refresh_wallet()
 
 
@@ -108,7 +109,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		pointer_position = event.position
 	if not pressed:
 		return
-	var open_popups: Array = [popup, phone_popup, player_popup, group_popup, group_chat_popup]
+	var open_popups: Array = [popup, phone_popup, player_popup, group_popup, group_chat_popup, social_popup]
 	for panel in open_popups:
 		if is_instance_valid(panel) and panel.visible and panel.get_global_rect().has_point(pointer_position):
 			return
@@ -123,15 +124,15 @@ func _build() -> void:
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(root)
 
-	# شريط تنقل رأسي موحد على يمين الشاشة؛ نترك اليسار ومساحة الوسط للمدينة والحركة.
+	# أزرار المدينة على اليسار؛ نترك الجانب الأيمن لنافذة الأصدقاء والمحادثات.
 	var dock := PanelContainer.new()
-	dock.name = "RightCityDock"
-	dock.anchor_left = 1.0
-	dock.anchor_right = 1.0
-	dock.anchor_top = 0.075
-	dock.anchor_bottom = 0.875
-	dock.offset_left = -150
-	dock.offset_right = -7
+	dock.name = "LeftCityDock"
+	dock.anchor_left = 0.012
+	dock.anchor_right = 0.012
+	dock.anchor_top = 0.15
+	dock.anchor_bottom = 0.68
+	dock.offset_left = 0
+	dock.offset_right = 143
 	dock.add_theme_stylebox_override("panel", _make_hud_panel_style())
 	root.add_child(dock)
 
@@ -201,6 +202,150 @@ func _build() -> void:
 	content.add_child(popup_body)
 
 
+
+var social_popup: PanelContainer
+var social_friend_list: VBoxContainer
+var social_chat_log: RichTextLabel
+var social_chat_input: LineEdit
+var social_status_label: Label
+var social_active_tab := "friends"
+
+func _build_social_popup() -> void:
+	social_popup = PanelContainer.new()
+	social_popup.name = "SocialHubPopup"
+	var viewport_width := get_viewport().get_visible_rect().size.x
+	var panel_width := clampf(viewport_width * 0.40, 205.0, 300.0)
+	social_popup.anchor_left = 1.0
+	social_popup.anchor_right = 1.0
+	social_popup.anchor_top = 0.02
+	social_popup.anchor_bottom = 0.98
+	social_popup.offset_left = -panel_width - 7.0
+	social_popup.offset_right = -7.0
+	social_popup.visible = false
+	social_popup.mouse_filter = Control.MOUSE_FILTER_STOP
+	social_popup.add_theme_stylebox_override("panel", _make_hud_panel_style())
+	root.add_child(social_popup)
+
+	var outer := VBoxContainer.new()
+	outer.add_theme_constant_override("separation", 8)
+	social_popup.add_child(outer)
+
+	var header := HBoxContainer.new()
+	outer.add_child(header)
+	var heading := Label.new()
+	heading.text = "الأصدقاء والمحادثات"
+	heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	heading.add_theme_font_size_override("font_size", 20)
+	heading.add_theme_color_override("font_color", Color(0.94, 0.82, 0.55))
+	header.add_child(heading)
+	var close := Button.new()
+	close.text = "✕"
+	close.custom_minimum_size = Vector2(36, 36)
+	close.pressed.connect(func(): social_popup.visible = false)
+	header.add_child(close)
+
+	var tabs := HBoxContainer.new()
+	tabs.add_theme_constant_override("separation", 6)
+	outer.add_child(tabs)
+	var friends_tab := Button.new()
+	friends_tab.text = "الأصدقاء"
+	friends_tab.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	friends_tab.pressed.connect(_show_social_tab.bind("friends"))
+	tabs.add_child(friends_tab)
+	var public_tab := Button.new()
+	public_tab.text = "العامة"
+	public_tab.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	public_tab.pressed.connect(_show_social_tab.bind("public"))
+	tabs.add_child(public_tab)
+
+	var columns := HBoxContainer.new()
+	columns.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	columns.add_theme_constant_override("separation", 6)
+	outer.add_child(columns)
+
+	var friends_panel := PanelContainer.new()
+	friends_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	friends_panel.custom_minimum_size.x = 78
+	columns.add_child(friends_panel)
+	var friends_column := VBoxContainer.new()
+	friends_column.add_theme_constant_override("separation", 6)
+	friends_panel.add_child(friends_column)
+	var friends_heading := Label.new()
+	friends_heading.text = "قائمة اللاعبين"
+	friends_heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	friends_column.add_child(friends_heading)
+	var friends_scroll := ScrollContainer.new()
+	friends_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	friends_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	friends_column.add_child(friends_scroll)
+	social_friend_list = VBoxContainer.new()
+	social_friend_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	friends_scroll.add_child(social_friend_list)
+
+	var chat_panel := PanelContainer.new()
+	chat_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	columns.add_child(chat_panel)
+	var chat_column := VBoxContainer.new()
+	chat_column.add_theme_constant_override("separation", 6)
+	chat_panel.add_child(chat_column)
+	var chat_heading := Label.new()
+	chat_heading.text = "المحادثة"
+	chat_heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	chat_column.add_child(chat_heading)
+	social_chat_log = RichTextLabel.new()
+	social_chat_log.bbcode_enabled = true
+	social_chat_log.fit_content = false
+	social_chat_log.scroll_following = true
+	social_chat_log.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	social_chat_log.custom_minimum_size = Vector2(0, 180)
+	chat_column.add_child(social_chat_log)
+	social_chat_input = LineEdit.new()
+	social_chat_input.placeholder_text = "بانتظار ربط خدمة المحادثة"
+	social_chat_input.editable = false
+	chat_column.add_child(social_chat_input)
+
+	social_status_label = Label.new()
+	social_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	social_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	outer.add_child(social_status_label)
+	_show_social_tab("friends")
+
+
+func _open_social_popup(tab: String = "friends") -> void:
+	if not is_instance_valid(social_popup):
+		_build_social_popup()
+	_show_social_tab(tab)
+	social_popup.visible = true
+	for panel in [popup, phone_popup, player_popup, group_popup, group_chat_popup]:
+		if is_instance_valid(panel):
+			panel.visible = false
+
+
+func _show_social_tab(tab: String) -> void:
+	social_active_tab = tab
+	if not is_instance_valid(social_friend_list) or not is_instance_valid(social_chat_log):
+		return
+	for child in social_friend_list.get_children():
+		child.queue_free()
+	if tab == "friends":
+		var empty_friends := Label.new()
+		empty_friends.text = "لا توجد قائمة أصدقاء متصلة بعد."
+		empty_friends.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		social_friend_list.add_child(empty_friends)
+		social_chat_log.text = "اختر صديقًا من القائمة لعرض المحادثة الخاصة."
+		social_chat_input.placeholder_text = "المحادثة الخاصة تحتاج اتصال الحسابات"
+		social_status_label.text = "تصميم النافذة جاهز؛ قائمة الأصدقاء والرسائل الحقيقية تنتظر ربط خدمة الحسابات."
+	else:
+		var empty_players := Label.new()
+		empty_players.text = "لا توجد قائمة لاعبين متصلين بعد."
+		empty_players.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		social_friend_list.add_child(empty_players)
+		social_chat_log.text = "ستظهر رسائل المدينة هنا بعد ربط خدمة المحادثة العامة."
+		social_chat_input.placeholder_text = "المحادثة العامة غير متصلة بعد"
+		social_status_label.text = "واجهة المحادثة العامة موضوعة؛ الإرسال والاستقبال الفعليان لم يُفعّلا بعد."
+
+
 func _make_hud_panel_style() -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color(0.035, 0.045, 0.06, 0.88)
@@ -238,13 +383,16 @@ func _open_section(section: String) -> void:
 	if section == "phone":
 		_open_vehicle_store_phone()
 		return
+	if section == "social":
+		_open_social_popup("friends")
+		return
+	if section == "chat":
+		_open_social_popup("public")
+		return
 	popup_title.text = str(SECTIONS[section][0])
 	popup_body.text = str(SECTIONS[section][1])
 	if section == "group":
 		_open_group_popup()
-		return
-	if section == "chat":
-		_open_group_chat()
 		return
 	if section == "rewards":
 		var daily := main_scene.get_node_or_null("DailyActivities") if is_instance_valid(main_scene) else null
