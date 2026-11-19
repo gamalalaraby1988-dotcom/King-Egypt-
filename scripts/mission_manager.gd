@@ -300,6 +300,28 @@ func complete_activity_once(activity_id: String, activity_kind: String, money_am
 	achievement_stats_initialized = true
 	daily_task_progress = next_daily_progress
 	daily_task_events = next_daily_events
+
+	# Queue non-authoritative progress observations only after the local completion
+	# and wallet receipt have been saved successfully. These events never grant rewards.
+	if is_instance_valid(PlayerSyncClient):
+		if activity_kind == "mission":
+			PlayerSyncClient.enqueue_progress_observation(
+				"mission_progress_observed",
+				"mission.completed",
+				int(next_achievement_totals.get("missions", 0))
+			)
+		else:
+			PlayerSyncClient.enqueue_progress_observation(
+				"activity_progress_observed",
+				"activity.jobs_completed",
+				int(next_achievement_totals.get("jobs", 0))
+			)
+		var achievement_key := "missions" if activity_kind == "mission" else "jobs"
+		PlayerSyncClient.enqueue_progress_observation(
+			"achievement_progress_observed",
+			"achievement." + achievement_key,
+			int(next_achievement_totals.get(achievement_key, 0))
+		)
 	return true
 
 
