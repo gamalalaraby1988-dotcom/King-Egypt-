@@ -101,6 +101,7 @@ func _on_connected_to_server() -> void:
 
 
 func _on_connection_failed() -> void:
+	AuthoritativeGameServer.clear_client_session()
 	_close_active_peer()
 	multiplayer.multiplayer_peer = OfflineMultiplayerPeer.new()
 	current_mode = Mode.UNSELECTED
@@ -110,6 +111,7 @@ func _on_connection_failed() -> void:
 
 
 func _on_server_disconnected() -> void:
+	AuthoritativeGameServer.clear_client_session()
 	_close_active_peer()
 	multiplayer.multiplayer_peer = OfflineMultiplayerPeer.new()
 	current_mode = Mode.UNSELECTED
