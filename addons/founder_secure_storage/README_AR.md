@@ -1,0 +1,32 @@
+# إضافة FounderSecureStorage
+
+هذه إضافة Godot Android Plugin v2. توفر singleton باسم `FounderSecureStorage` وتنفذ التخزين الآمن باستخدام Android Keystore.
+
+## بناء AAR
+
+من مجلد `android/plugins/founder_secure_storage`:
+
+- `gradle :plugin:copyDebugAARToAddon`
+- `gradle :plugin:copyReleaseAARToAddon`
+
+ينبغي استخدام JDK 17 وAndroid SDK مع platform/build tools الملائمة لـ compileSdk 36، ومطابقة إصدار مكتبة Godot Android مع نسخة محرر المشروع. الإعداد الحالي مثبت على Godot `4.7.0.stable` ويجب تعديله إذا اختلفت نسخة التصدير الفعلية.
+
+## تفعيل الإضافة
+
+بعد بناء ملفات AAR وظهورها في `addons/founder_secure_storage/bin/debug` و`release`:
+
+1. افتح المشروع في Godot.
+2. من Project Settings > Plugins فعّل FounderSecureStorage.
+3. استخدم Gradle Build في Android Export Preset.
+4. أعد تصدير APK.
+
+لا تفعّل الإضافة أو تصدر Android قبل وجود ملف AAR المناسب. لم يُبنَ AAR في هذه المرحلة.
+
+## الواجهة
+
+- `is_available()`
+- `save_secret(alias, value)`
+- `load_secret(alias)`
+- `delete_secret(alias)`
+
+لا تُسجل الرموز أو محتويات التخزين في السجلات. اختبر الحفظ والاستعادة والحذف وإبطال المفتاح على جهاز Android فعلي قبل اعتماد الميزة.
