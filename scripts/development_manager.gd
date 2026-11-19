@@ -38,7 +38,7 @@ func register_city_layout(layout: Node3D) -> void:
 	for building in approved:
 		if not is_instance_valid(building) or not layout.is_ancestor_of(building):
 			continue
-		var building_id := str(building.name)
+		var building_id := "fuel_station" if str(building.name) == "OpenFuelStation" else str(building.name).trim_prefix("Approved_")
 		var definition := CityMasterPlan.get_building_by_id(building_id)
 		if definition.is_empty() or building.get_meta("development_interaction_created", false):
 			continue
