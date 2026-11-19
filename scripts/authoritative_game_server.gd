@@ -76,6 +76,17 @@ func clear_client_session() -> void:
 	_client_authenticated = false
 
 
+func _process(_delta: float) -> void:
+	if not multiplayer.is_server():
+		return
+	var now_usec := Time.get_ticks_usec()
+	for peer_id_variant in _sessions.keys():
+		var peer_id := int(peer_id_variant)
+		var session: Dictionary = _sessions[peer_id]
+		if not bool(session.get("authenticated", false)) and now_usec - int(session.get("connected_at_usec", now_usec)) > 10000000:
+			multiplayer.multiplayer_peer.disconnect_peer(peer_id)
+
+
 func _on_peer_connected(peer_id: int) -> void:
 	if _sessions.size() >= MAX_PLAYERS:
 		multiplayer.multiplayer_peer.disconnect_peer(peer_id)
@@ -91,7 +102,8 @@ func _on_peer_connected(peer_id: int) -> void:
 		"last_input_usec": 0,
 		"input_window_usec": Time.get_ticks_usec(),
 		"input_count": 0,
-		"reached_objectives": {}
+		"reached_objectives": {},
+		"connected_at_usec": Time.get_ticks_usec()
 	}
 
 
@@ -295,6 +307,9 @@ func _physics_process(delta: float) -> void:
 		var body := session.get("body") as CharacterBody3D
 		if not is_instance_valid(body):
 			continue
+		if body.global_position.y < -15.0:
+			body.global_position = SPAWN_POSITION
+			body.velocity = Vector3.ZERO
 		var direction: Vector3 = session.get("direction", Vector3.ZERO)
 		var last_input_usec := int(session.get("last_input_usec", 0))
 		if Time.get_ticks_usec() - last_input_usec > 250000:
