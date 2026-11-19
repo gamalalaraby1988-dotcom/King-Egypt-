@@ -648,6 +648,14 @@ func _set_mobile_hud_active(active: bool) -> void:
 
 
 func _create_interactive_buildings() -> void:
+	if AuthoritativeGameServer.is_dedicated_server_requested():
+		_add_functional_building(null, "المتجر", "مهمة شراء احتياجات", "تعرّف على المتجر واستلم قائمة احتياجات تجريبية من البوابة.", Vector3(16, 0, 16), Color(0.20, 0.48, 0.30), 150, 0, 1)
+		_add_functional_building(null, "المطعم", "مهمة توصيل وجبة", "استلم طلب توصيل تجريبي من المطعم.", Vector3(-16, 0, 16), Color(0.65, 0.30, 0.18), 220, 2, 1)
+		_add_functional_building(null, "مركز التوظيف", "مهمة التسجيل في وظيفة", "تعرّف على الوظائف المتاحة وشروط الالتحاق بها.", Vector3(16, 0, -16), Color(0.22, 0.34, 0.62), 300, 5, 1)
+		_create_job_board("وظيفة التوصيل", "توصيل طلب إلى نقطة الاستلام المحددة في المدينة.", Vector3(24, 0, 4.5), Vector3(0, 0, 9.5), 180, 0, 30, "courier_delivery")
+		_create_job_board("مرشد المدينة", "اذهب إلى نقطة المعلم السياحي وساعد الزائرين على اكتشاف المدينة.", Vector3(-24, 0, 4.5), Vector3(0, 0, -18.5), 220, 1, 40, "city_guide")
+		_create_job_board("عامل صيانة", "توجّه إلى موقع الصيانة المحدد وأكمل جولة الفحص الميدانية.", Vector3(4.5, 0, 24), Vector3(9.5, 0, 0), 250, 0, 45, "city_maintenance", PI / 2.0)
+		return
 	var manager := Node.new()
 	manager.name = "MissionManager"
 	manager.set_script(load("res://scripts/mission_manager.gd"))
@@ -709,7 +717,8 @@ func _add_functional_building(manager: Node, title: String, mission: String, des
 	elif title == "مركز التوظيف":
 		sign_key = "employment"
 	_add_sign_label(building, sign_key, Vector3(0, 4.25, 3.70), PI)
-	manager.register_building(building)
+	if is_instance_valid(manager) and manager.has_method("register_building"):
+		manager.register_building(building)
 
 
 func _create_job_board(title: String, description: String, pos: Vector3, target_offset: Vector3, reward: int, chips_reward: int, xp_reward: int, job_id: String, yaw: float = 0.0) -> void:
