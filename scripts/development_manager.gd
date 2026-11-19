@@ -24,6 +24,40 @@ const BUILDING_LEVEL_RANGES := [
 	Vector2i(4285, 4463), Vector2i(4464, 4641), Vector2i(4642, 4820), Vector2i(4821, 5000)
 ]
 
+
+# قيم المكافآت مستقلة لكل مبنى وقابلة للتعديل بعد اعتماد اقتصاد المدينة.
+# الصفر يعني أن قيمة هذه المكافأة لم تُحدد بعد؛ لا تُصرف مكافأة صفرية ولا يُنشأ إيصال لها.
+const BUILDING_MILESTONE_REWARDS := {
+	"royal_palace": {"stage_2": {"money": 0, "chips": 0}, "stage_5": {"money": 0, "chips": 0}},
+	"royal_bank": {"stage_2": {"money": 0, "chips": 0}, "stage_5": {"money": 0, "chips": 0}},
+	"supermarket": {"stage_2": {"money": 0, "chips": 0}, "stage_5": {"money": 0, "chips": 0}},
+	"market": {"stage_2": {"money": 0, "chips": 0}, "stage_5": {"money": 0, "chips": 0}},
+	"employment_center": {"stage_2": {"money": 0, "chips": 0}, "stage_5": {"money": 0, "chips": 0}},
+	"main_restaurant": {"stage_2": {"money": 0, "chips": 0}, "stage_5": {"money": 0, "chips": 0}},
+	"royal_cafe": {"stage_2": {"money": 0, "chips": 0}, "stage_5": {"money": 0, "chips": 0}},
+	"commercial_services": {"stage_2": {"money": 0, "chips": 0}, "stage_5": {"money": 0, "chips": 0}},
+	"apartment_palace_1": {"stage_2": {"money": 0, "chips": 0}, "stage_5": {"money": 0, "chips": 0}},
+	"apartment_palace_2": {"stage_2": {"money": 0, "chips": 0}, "stage_5": {"money": 0, "chips": 0}},
+	"apartment_palace_3": {"stage_2": {"money": 0, "chips": 0}, "stage_5": {"money": 0, "chips": 0}},
+	"apartment_palace_4": {"stage_2": {"money": 0, "chips": 0}, "stage_5": {"money": 0, "chips": 0}},
+	"cinema": {"stage_2": {"money": 0, "chips": 0}, "stage_5": {"money": 0, "chips": 0}},
+	"royal_theater": {"stage_2": {"money": 0, "chips": 0}, "stage_5": {"money": 0, "chips": 0}},
+	"stadium": {"stage_2": {"money": 0, "chips": 0}, "stage_5": {"money": 0, "chips": 0}},
+	"sports_club": {"stage_2": {"money": 0, "chips": 0}, "stage_5": {"money": 0, "chips": 0}},
+	"water_city": {"stage_2": {"money": 0, "chips": 0}, "stage_5": {"money": 0, "chips": 0}},
+	"daily_arcade": {"stage_2": {"money": 0, "chips": 0}, "stage_5": {"money": 0, "chips": 0}},
+	"police_station": {"stage_2": {"money": 0, "chips": 0}, "stage_5": {"money": 0, "chips": 0}},
+	"courthouse": {"stage_2": {"money": 0, "chips": 0}, "stage_5": {"money": 0, "chips": 0}},
+	"fire_rescue": {"stage_2": {"money": 0, "chips": 0}, "stage_5": {"money": 0, "chips": 0}},
+	"train_station": {"stage_2": {"money": 0, "chips": 0}, "stage_5": {"money": 0, "chips": 0}},
+	"fuel_station": {"stage_2": {"money": 0, "chips": 0}, "stage_5": {"money": 0, "chips": 0}},
+	"marina_terminal": {"stage_2": {"money": 0, "chips": 0}, "stage_5": {"money": 0, "chips": 0}},
+	"royal_yacht_club": {"stage_2": {"money": 0, "chips": 0}, "stage_5": {"money": 0, "chips": 0}},
+	"adventure_center": {"stage_2": {"money": 0, "chips": 0}, "stage_5": {"money": 0, "chips": 0}},
+	"desert_lodge": {"stage_2": {"money": 0, "chips": 0}, "stage_5": {"money": 0, "chips": 0}},
+	"mountain_temple": {"stage_2": {"money": 0, "chips": 0}, "stage_5": {"money": 0, "chips": 0}}
+}
+
 var player_level: int = 1
 var completed_stage_count: int = 0
 var _active_building_id := ""
@@ -38,6 +72,7 @@ var _upgrade_button: Button
 
 func _ready() -> void:
 	_load_progress()
+	_process_pending_milestone_rewards()
 
 func register_city_layout(layout: Node3D) -> void:
 	if not is_instance_valid(layout):
@@ -227,6 +262,7 @@ func _purchase_current_stage() -> void:
 	completed_stage_count = next_count
 	player_level = next_level
 	_sync_mission_manager()
+	_process_pending_milestone_rewards()
 	progression_changed.emit(player_level, completed_stage_count)
 	if completed_stage_count >= TOTAL_STAGES:
 		_refresh_panel("مبروك! وصلت إلى المستوى 5000.")
@@ -236,6 +272,34 @@ func _purchase_current_stage() -> void:
 			_refresh_panel("اكتملت مراحل هذا المبنى. تم فتح المبنى التالي؛ توجه إليه لإجراء التطوير القادم.")
 		else:
 			_refresh_panel("تم التطوير بنجاح. أصبح مستواك %d." % player_level)
+
+
+func _process_pending_milestone_rewards() -> void:
+	# يعيد المحاولة للمراحل المكتملة سابقًا إذا كانت القيم غير محددة ثم ضُبطت لاحقًا.
+	for building_index in range(TOTAL_BUILDINGS):
+		var completed_in_building := completed_stage_count - (building_index * STAGES_PER_BUILDING)
+		if completed_in_building >= 2:
+			_grant_building_milestone_reward(building_index, 2)
+		if completed_in_building >= STAGES_PER_BUILDING:
+			_grant_building_milestone_reward(building_index, 5)
+
+func _grant_building_milestone_reward(building_index: int, milestone_stage: int) -> bool:
+	if building_index < 0 or building_index >= TOTAL_BUILDINGS or not [2, 5].has(milestone_stage):
+		return false
+	var definition: Dictionary = CityMasterPlan.BUILDINGS[building_index]
+	var building_id := str(definition.get("id", ""))
+	var building_rewards: Dictionary = BUILDING_MILESTONE_REWARDS.get(building_id, {})
+	var reward: Dictionary = building_rewards.get("stage_%d" % milestone_stage, {})
+	var money_reward := int(reward.get("money", 0))
+	var chips_reward := int(reward.get("chips", 0))
+	if money_reward == 0 and chips_reward == 0:
+		return true
+	if money_reward < 0 or chips_reward < 0:
+		push_error("Development reward configuration is invalid for %s." % building_id)
+		return false
+	var transaction_id := "development_reward_%s_stage_%d" % [building_id, milestone_stage]
+	var reason := "مكافأة إكمال %s عند المرحلة %d" % [str(definition.get("name", building_id)), milestone_stage]
+	return WalletManager.credit_bundle_once(transaction_id, money_reward, chips_reward, reason)
 
 func _sync_mission_manager() -> void:
 	var manager := get_tree().current_scene.get_node_or_null("MissionManager") if is_instance_valid(get_tree().current_scene) else null
