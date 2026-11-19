@@ -48,6 +48,13 @@ var group_follow_button: Button
 var group_meeting_point_button: Button
 var group_move_button: Button
 var group_member_markers: Dictionary = {}
+var social_popup: PanelContainer
+var social_friend_list: VBoxContainer
+var social_chat_log: RichTextLabel
+var social_chat_input: LineEdit
+var social_status_label: Label
+var social_active_tab := "friends"
+
 
 const GROUP_MAX_MEMBERS := 4
 const GROUP_CHAT_MAX_LENGTH := 300
@@ -202,13 +209,6 @@ func _build() -> void:
 	content.add_child(popup_body)
 
 
-
-var social_popup: PanelContainer
-var social_friend_list: VBoxContainer
-var social_chat_log: RichTextLabel
-var social_chat_input: LineEdit
-var social_status_label: Label
-var social_active_tab := "friends"
 
 func _build_social_popup() -> void:
 	social_popup = PanelContainer.new()
