@@ -27,6 +27,10 @@ func _ready() -> void:
 		_create_city()
 		_create_approved_city_layout()
 		_create_city_signage()
+		var local_player := get_node_or_null("Player")
+		if is_instance_valid(local_player):
+			remove_child(local_player)
+			local_player.queue_free()
 		_create_interactive_buildings()
 		_create_camp()
 		return
