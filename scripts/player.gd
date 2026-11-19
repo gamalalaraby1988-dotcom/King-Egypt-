@@ -169,6 +169,17 @@ func end_animal_ride() -> void:
 		if avatar.has_method("set_motion_state"):
 			avatar.set_motion_state("idle", 0.0)
 
+func sit_at_position(world_position: Vector3, facing_y: float = 0.0) -> bool:
+	if animal_riding:
+		return false
+	global_position = world_position
+	rotation.y = facing_y
+	velocity = Vector3.ZERO
+	mobile_move = Vector2.ZERO
+	mobile_sprint = false
+	sitting = true
+	return true
+
 func toggle_sit() -> void:
 	# الجلوس غير متاح أثناء ركوب الحيوان حتى لا تتعارض حالتا الحركة.
 	if animal_riding:

@@ -630,6 +630,10 @@ func _update_interaction_target() -> void:
 	nearest_building = best if is_instance_valid(best) and best.has_method("get_mission_data") else null
 
 func _interaction_action_key(target: Node3D) -> String:
+	if target.has_method("get_royal_resort_gate_data"):
+		return "interaction_enter"
+	if target.has_method("sit_player"):
+		return "interaction_talk"
 	if target.has_method("get_development_data"):
 		return "interaction_enter"
 	if target.has_method("get_job_data"):
@@ -651,7 +655,9 @@ func _update_interaction_hud() -> void:
 		interact_button.visible = true
 	elif is_instance_valid(nearest_interactable):
 		var display_name := CityLanguage.translate("interaction_place")
-		if nearest_interactable.has_method("get_development_data"):
+		if nearest_interactable.has_method("get_royal_resort_gate_data"):
+			display_name = str(nearest_interactable.get_royal_resort_gate_data().get("title", "بوابة المنتجع الملكي"))
+		elif nearest_interactable.has_method("get_development_data"):
 			display_name = str(nearest_interactable.get_development_data().get("title", "مبنى التطوير"))
 		elif nearest_interactable.has_method("get_job_data"):
 			display_name = str(nearest_interactable.get_job_data().get("title", CityLanguage.translate("interaction_job_name")))
@@ -664,7 +670,7 @@ func _update_interaction_hud() -> void:
 			display_name = str(interaction_data.get("title", nearest_interactable.get("character_name")))
 		else:
 			display_name = str(nearest_interactable.get("character_name"))
-		interact_button.text = CityLanguage.translate(_interaction_action_key(nearest_interactable))
+		interact_button.text = "جلوس" if nearest_interactable.has_method("sit_player") else CityLanguage.translate(_interaction_action_key(nearest_interactable))
 		prompt_label.text = "%s %s — %s" % [CityLanguage.translate("interaction_near"), display_name, CityLanguage.translate("interaction_press_hint")]
 		interact_button.visible = true
 	else:
@@ -692,6 +698,15 @@ func open_interactable(target: Node3D) -> void:
 	if player.global_position.distance_to(target.global_position) > clampf(allowed_distance, 0.5, 4.8) + 0.65:
 		_update_interaction_target()
 		return
+	if target.has_method("sit_player"):
+		var seated := bool(target.call("sit_player", player))
+		if seated:
+			panel.visible = false
+			prompt_label.text = "استمتع بالجلوس ومشاهدة الأهرامات"
+		return
+	if target.has_method("get_royal_resort_gate_data"):
+		_open_royal_resort_gate(target)
+		return
 	if target.has_method("is_shop_owner") and target.is_shop_owner() and is_instance_valid(shop_manager):
 		shop_manager.open_shop()
 		return
@@ -716,6 +731,28 @@ func open_interactable(target: Node3D) -> void:
 		description_label.text = str(info.get("description", ""))
 		reward_label.text = CityLanguage.translate("service_npc_no_rewards")
 		status_label.text = CityLanguage.translate("service_npc_dialogue_status")
+		accept_button.visible = false
+		panel.visible = true
+
+
+func _open_royal_resort_gate(gate: Node3D) -> void:
+	var city_root := get_tree().current_scene
+	var resort := city_root.get_node_or_null("RoyalResort") if is_instance_valid(city_root) else null
+	if not is_instance_valid(resort) or not resort.has_method("activate_gate"):
+		status_label.text = "المنتجع الملكي غير متاح حاليًا."
+		return
+	var result: Dictionary = resort.activate_gate(gate, player, player_level)
+	var gate_message := str(result.get("message", ""))
+	status_label.text = gate_message
+	prompt_label.text = gate_message
+	if bool(result.get("success", false)):
+		player.velocity = Vector3.ZERO
+		_update_interaction_target()
+		_update_interaction_hud()
+	else:
+		title_label.text = str(gate.get_royal_resort_gate_data().get("title", "بوابة المنتجع الملكي"))
+		description_label.text = gate_message
+		reward_label.text = ""
 		accept_button.visible = false
 		panel.visible = true
 
