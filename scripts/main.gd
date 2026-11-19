@@ -913,6 +913,8 @@ func _create_mode_selection_ui() -> void:
 		FounderAuthClient.request_finished.connect(_on_founder_auth_request_finished)
 		FounderAuthClient.email_verified.connect(_on_founder_email_verified)
 		FounderAuthClient.auth_session_received.connect(_on_founder_auth_session_received)
+		FounderAuthClient.founder_entitlement_received.connect(_on_founder_entitlement_received)
+		FounderAuthClient.founder_entitlement_failed.connect(_on_founder_entitlement_failed)
 
 	game_mode_controls = VBoxContainer.new()
 	game_mode_controls.add_theme_constant_override("separation", 8)
@@ -950,9 +952,6 @@ func _on_founder_verify_code() -> void:
 func _on_founder_auth_request_finished(success: bool, message: String) -> void:
 	if is_instance_valid(mode_status_label):
 		mode_status_label.text = message
-	if success and message.contains("تم التحقق"):
-		if is_instance_valid(founder_email_gate):
-			founder_email_gate.visible = false
 
 func _on_founder_email_verified(_user_id: String, verified_email: String) -> void:
 	founder_email_verified = true
@@ -962,6 +961,19 @@ func _on_founder_email_verified(_user_id: String, verified_email: String) -> voi
 func _on_founder_auth_session_received(_access_token: String, _refresh_token: String) -> void:
 	# لا نخزن الجلسة محليًا حتى تكتمل آلية إدارة الجلسات وتجديدها الآمنة.
 	pass
+
+func _on_founder_entitlement_received(payload: String, signature_base64: String) -> void:
+	if not FounderIdentityManager.accept_signed_entitlement(payload, signature_base64):
+		_on_founder_entitlement_failed("رفض الجهاز التذكرة الموقعة أو تعذر حفظها بأمان.")
+		return
+	if is_instance_valid(founder_email_gate):
+		founder_email_gate.visible = false
+	if is_instance_valid(mode_status_label):
+		mode_status_label.text = "تم اعتماد هوية المؤسس وحفظ التذكرة لهذا الجهاز. أنشئ رمز PIN المحلي للمتابعة."
+
+func _on_founder_entitlement_failed(message: String) -> void:
+	if is_instance_valid(mode_status_label):
+		mode_status_label.text = message + " لم تُمنح صلاحيات المؤسس."
 
 func _on_founder_pin_submit() -> void:
 	if not FounderIdentityManager.is_founder:
