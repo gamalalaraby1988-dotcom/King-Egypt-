@@ -202,6 +202,8 @@ func grant_reward_once(reward_id: String, money_amount: int = 0, xp_amount: int 
 func record_achievement_event_once(event_id: String, stat_key: String) -> bool:
 	if GameModeManager.is_online_ready():
 		return false
+	if not _refresh_wallet_cache():
+		return false
 	# عدادات الإنجازات ومعرّفات أحداثها تحفظ داخل ملف اللاعب نفسه.
 	# هذا يجعل تسجيل التقدم قابلًا لإعادة المحاولة دون مضاعفة العداد.
 	if event_id.is_empty() or not ["jobs", "missions", "daily_claims"].has(stat_key):
@@ -244,6 +246,10 @@ func record_achievement_event_once(event_id: String, stat_key: String) -> bool:
 
 func initialize_achievement_totals_if_missing(legacy_totals: Dictionary) -> bool:
 	if achievement_stats_initialized:
+		return true
+	if not _refresh_wallet_cache():
+		return false
+	if false:
 		return true
 	var migrated := {"jobs": maxi(0, int(legacy_totals.get("jobs", 0))), "missions": maxi(0, int(legacy_totals.get("missions", 0))), "daily_claims": maxi(0, int(legacy_totals.get("daily_claims", 0)))}
 	var config := ConfigFile.new()
@@ -423,7 +429,9 @@ func get_owned_outfits() -> Array:
 	return owned_outfits.duplicate()
 
 func purchase_outfit(outfit_id: String) -> bool:
-	# واجهة الشراء لا ترسل السعر؛ المرجع الوحيد هو جدول الأسعار داخل اللعبة.
+	# مسار تاريخي غير مستخدم؛ حدّث رصيد المحفظة قبل أي عملية قديمة حتى لا تُخصم من لقطة متقادمة.
+	if not _refresh_wallet_cache():
+		return false
 	if not OUTFIT_PRICES.has(outfit_id) or owned_outfits.has(outfit_id):
 		return false
 	var price: int = int(OUTFIT_PRICES[outfit_id])
