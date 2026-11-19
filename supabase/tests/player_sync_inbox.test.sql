@@ -1,9 +1,19 @@
 begin;
-select extensions.plan(14);
+select extensions.plan(21);
 insert into auth.users (id,aud,role,email,encrypted_password,email_confirmed_at)
 values ('00000000-0000-4000-8000-000000000038','authenticated','authenticated','player-sync-inbox-test@example.invalid','',pg_catalog.now())
 on conflict (id) do nothing;
 set local role authenticated;
+select pg_catalog.set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000038',true);
+
+select extensions.is((public.get_player_preference_snapshot()->>'revision')::bigint,0::bigint,'new account starts with empty preference snapshot revision');
+select extensions.is((public.save_player_preference_snapshot(0,'{"locale":"ar","volume":65,"quality":2}'::jsonb)->>'saved')::boolean,true,'saves allowlisted preference snapshot');
+select extensions.is((public.get_player_preference_snapshot()->>'revision')::bigint,1::bigint,'snapshot read returns committed revision');
+select extensions.is((public.save_player_preference_snapshot(0,'{"locale":"en"}'::jsonb)->>'conflict')::boolean,true,'stale snapshot revision returns conflict without overwrite');
+select extensions.throws_ok($select public.save_player_preference_snapshot(1,'{"wallet_balance":999999}'::jsonb)$,'22023','setting_key_not_allowed','snapshot rejects financial or unknown fields');
+select pg_catalog.set_config('request.jwt.claim.sub','',true);
+select extensions.throws_ok($select public.get_player_preference_snapshot()$,'28000','authentication_required','snapshot read rejects unauthenticated access');
+select extensions.throws_ok($select public.save_player_preference_snapshot(0,'{}'::jsonb)$,'28000','authentication_required','snapshot write rejects unauthenticated access');
 select pg_catalog.set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000038',true);
 
 select extensions.is((public.submit_player_sync_events('[{"event_id":"10000000-0000-4000-8000-000000000001","event_type":"setting_changed","payload":{"key":"locale","value":"ar"}}]'::jsonb)->>'accepted')::integer,1,'accepts valid settings with invoker privileges');
@@ -34,7 +44,7 @@ begin
             'payload',pg_catalog.jsonb_build_object('key','locale','value','ar')
         ))
         into batch_events
-        from pg_catalog.generate_series(batch_no * 50 + 1, least(batch_no * 50 + 50, 196)) gs;
+        from pg_catalog.generate_series(batch_no * 50 + 1, least(batch_no * 50 + 50, 197)) gs;
         perform public.submit_player_sync_events(batch_events);
     end loop;
 end;
