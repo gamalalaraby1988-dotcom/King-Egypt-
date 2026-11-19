@@ -25,6 +25,7 @@ var _http: HTTPRequest
 var _snapshot_http: HTTPRequest
 var _progress_http: HTTPRequest
 var _progress_request_active := false
+var _progress_request_token := ""
 var _snapshot_action := ""
 var _snapshot_revision := 0
 var _snapshot_request_active := false
@@ -73,6 +74,7 @@ func clear_session_access_token() -> void:
 	_snapshot_action = ""
 	_snapshot_request_active = false
 	_progress_request_active = false
+	_progress_request_token = ""
 	if is_instance_valid(_retry_timer):
 		_retry_timer.stop()
 
@@ -209,10 +211,17 @@ func fetch_progress_observations() -> void:
 		progress_observations_finished.emit(false, "تعذر بدء استعادة سجل التقدم.")
 		return
 	_progress_request_active = true
+	_progress_request_token = _access_token
 
 
 func _on_progress_recovery_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
 	_progress_request_active = false
+	var request_token := _progress_request_token
+	_progress_request_token = ""
+	if request_token.is_empty() or request_token != _access_token:
+		if not _access_token.is_empty():
+			call_deferred("fetch_progress_observations")
+		return
 	if result != HTTPRequest.RESULT_SUCCESS or response_code < 200 or response_code >= 300:
 		progress_observations_finished.emit(false, "تعذر جلب سجل التقدم؛ لم تتغير بيانات اللعب.")
 		return
