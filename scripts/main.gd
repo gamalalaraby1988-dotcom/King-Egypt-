@@ -603,6 +603,13 @@ func _create_mobile_hud() -> void:
 	layer.add_child(touch_hud)
 	touch_hud.set("player", get_node_or_null("Player"))
 
+	# إنشاء واجهة المدينة مرة واحدة عند بدء اللعب، لا عند ركوب المركبة.
+	if get_node_or_null("CityActionHUD") == null:
+		var hud_layer := CanvasLayer.new()
+		hud_layer.name = "CityActionHUD"
+		hud_layer.set_script(load("res://scripts/city_hud.gd"))
+		add_child(hud_layer)
+
 func _set_mobile_hud_active(active: bool) -> void:
 	var touch_hud := get_node_or_null("MobileHUD/TouchControls") as Control
 	if not is_instance_valid(touch_hud):
@@ -610,11 +617,6 @@ func _set_mobile_hud_active(active: bool) -> void:
 	if touch_hud.has_method("_clear_touch_state"):
 		touch_hud.call("_clear_touch_state")
 	touch_hud.visible = active
-
-	var hud_layer := CanvasLayer.new()
-	hud_layer.name = "CityActionHUD"
-	hud_layer.set_script(load("res://scripts/city_hud.gd"))
-	add_child(hud_layer)
 
 
 func _create_interactive_buildings() -> void:
