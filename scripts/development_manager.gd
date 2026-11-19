@@ -224,9 +224,7 @@ func _purchase_current_stage() -> void:
 	else:
 		var new_building_index := int(completed_stage_count / STAGES_PER_BUILDING)
 		if new_building_index != building_index:
-			_active_building_id = str(CityMasterPlan.BUILDINGS[new_building_index].get("id", ""))
-			_active_building_name = str(CityMasterPlan.BUILDINGS[new_building_index].get("name", ""))
-			_refresh_panel("اكتملت مراحل هذا المبنى. تم فتح المبنى التالي في تسلسل التطوير.")
+			_refresh_panel("اكتملت مراحل هذا المبنى. تم فتح المبنى التالي؛ توجه إليه لإجراء التطوير القادم.")
 		else:
 			_refresh_panel("تم التطوير بنجاح. أصبح مستواك %d." % player_level)
 
