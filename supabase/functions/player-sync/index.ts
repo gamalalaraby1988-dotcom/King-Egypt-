@@ -62,13 +62,25 @@ Deno.serve(async (req: Request) => {
 
   let publishableKey = "";
   try {
-    const keys = JSON.parse(publishableKeysRaw);
-    const publishableKeyEnvName = String(keys.default ?? "");
-    publishableKey = Deno.env.get(publishableKeyEnvName) ?? "";
+    const keys = JSON.parse(publishableKeysRaw) as Record<string, unknown>;
+    publishableKey = typeof keys.default === "string" ? keys.default : "";
   } catch {
     return json({ error: "sync_service_not_configured" }, 503);
   }
   if (!publishableKey) return json({ error: "sync_service_not_configured" }, 503);
+
+  // verify_jwt is disabled for the new publishable-key model. Validate the
+  // user's actual Supabase Auth access token explicitly before touching data.
+  let authResponse: Response;
+  try {
+    authResponse = await fetch(projectUrl + "/auth/v1/user", {
+      method: "GET",
+      headers: { "apikey": publishableKey, "Authorization": authorization },
+    });
+  } catch {
+    return json({ error: "auth_service_unavailable" }, 503);
+  }
+  if (!authResponse.ok) return json({ error: "unauthorized" }, 401);
 
   const rawBody = await readBoundedBody(req);
   if (rawBody === null) return json({ error: "request_too_large" }, 413);
