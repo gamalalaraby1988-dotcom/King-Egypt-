@@ -11,6 +11,7 @@ config/description="مشروع مدينة ثلاثية الأبعاد قابل �
 CityLanguage="*res://scripts/city_language.gd"
 WalletManager="*res://scripts/wallet_manager.gd"
 GameModeManager="*res://scripts/game_mode_manager.gd"
+FounderIdentityManager="*res://scripts/founder_identity_manager.gd"
 VehicleStoreManager="*res://scripts/vehicle_store_manager.gd"
 
 [display]
