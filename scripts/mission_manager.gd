@@ -158,6 +158,8 @@ func _notification(what: int) -> void:
 func grant_reward_once(reward_id: String, money_amount: int = 0, xp_amount: int = 0, chips_amount: int = 0) -> bool:
 	if GameModeManager.is_online_ready():
 		return false
+	if not _refresh_wallet_cache():
+		return false
 	# يسجل الإيصال والمحفظة في ملف واحد؛ تكرار نفس المعرف لا يصرف المكافأة مجددًا.
 	xp_amount = 0
 	if reward_id.is_empty() or money_amount < 0 or xp_amount < 0 or chips_amount < 0 or money + money_amount > MAX_CURRENCY_BALANCE or chips + chips_amount > MAX_CURRENCY_BALANCE or reward_receipts.has(reward_id):
@@ -199,6 +201,8 @@ func grant_reward_once(reward_id: String, money_amount: int = 0, xp_amount: int 
 
 func record_achievement_event_once(event_id: String, stat_key: String) -> bool:
 	if GameModeManager.is_online_ready():
+		return false
+	if not _refresh_wallet_cache():
 		return false
 	# عدادات الإنجازات ومعرّفات أحداثها تحفظ داخل ملف اللاعب نفسه.
 	# هذا يجعل تسجيل التقدم قابلًا لإعادة المحاولة دون مضاعفة العداد.
@@ -243,6 +247,8 @@ func record_achievement_event_once(event_id: String, stat_key: String) -> bool:
 func initialize_achievement_totals_if_missing(legacy_totals: Dictionary) -> bool:
 	if achievement_stats_initialized:
 		return true
+	if not _refresh_wallet_cache():
+		return false
 	var migrated := {"jobs": maxi(0, int(legacy_totals.get("jobs", 0))), "missions": maxi(0, int(legacy_totals.get("missions", 0))), "daily_claims": maxi(0, int(legacy_totals.get("daily_claims", 0)))}
 	var config := ConfigFile.new()
 	var load_error := config.load(SAVE_PATH)
@@ -277,6 +283,8 @@ func has_reward_receipt(reward_id: String) -> bool:
 
 func complete_activity_once(activity_id: String, activity_kind: String, money_amount: int = 0, xp_amount: int = 0, chips_amount: int = 0) -> bool:
 	if GameModeManager.is_online_ready():
+		return false
+	if not _refresh_wallet_cache():
 		return false
 	# حفظ إكمال النشاط وإيصال المكافأة والمحفظة في ملف واحد يمنع إعادة الصرف بعد إعادة التشغيل.
 	xp_amount = 0
@@ -392,6 +400,8 @@ func complete_activity_once(activity_id: String, activity_kind: String, money_am
 
 func spend_money_once(transaction_id: String, amount: int) -> bool:
 	# تأجير الخدمات المدفوعة يستخدم إيصال المحفظة نفسه لمنع الخصم المكرر.
+	if not _refresh_wallet_cache():
+		return false
 	if transaction_id.strip_edges().is_empty() or amount <= 0 or amount > MAX_CURRENCY_BALANCE:
 		return false
 	var receipt_id := "spend_%s" % transaction_id
@@ -417,7 +427,9 @@ func get_owned_outfits() -> Array:
 	return owned_outfits.duplicate()
 
 func purchase_outfit(outfit_id: String) -> bool:
-	# واجهة الشراء لا ترسل السعر؛ المرجع الوحيد هو جدول الأسعار داخل اللعبة.
+	# مسار تاريخي غير مستخدم؛ حدّث رصيد المحفظة قبل أي عملية قديمة حتى لا تُخصم من لقطة متقادمة.
+	if not _refresh_wallet_cache():
+		return false
 	if not OUTFIT_PRICES.has(outfit_id) or owned_outfits.has(outfit_id):
 		return false
 	var price: int = int(OUTFIT_PRICES[outfit_id])
@@ -439,7 +451,26 @@ func purchase_outfit(outfit_id: String) -> bool:
 	reward_receipts = next_receipts
 	return true
 
+
+func _refresh_wallet_cache() -> bool:
+	# المحفظة هي مصدر الرصيد؛ لا تستخدم نسخ المال/الرقائق القديمة قبل أي مكافأة أو حفظ.
+	if not WalletManager.initialized or WalletManager.integrity_warning:
+		return false
+	var snapshot: Dictionary = WalletManager.get_balances()
+	if snapshot.is_empty():
+		return false
+	var next_money := int(snapshot.get("money", -1))
+	var next_chips := int(snapshot.get("chips", -1))
+	if next_money < 0 or next_chips < 0:
+		return false
+	money = next_money
+	chips = next_chips
+	return true
+
 func _save_profile() -> bool:
+	if not _refresh_wallet_cache():
+		push_warning("تخطي حفظ ملف اللاعب لأن المحفظة غير مهيأة أو موقوفة للمراجعة.")
+		return false
 	var config := ConfigFile.new()
 	var load_error := config.load(SAVE_PATH)
 	if load_error != OK and FileAccess.file_exists(SAVE_PATH):
@@ -758,6 +789,7 @@ func _open_royal_resort_gate(gate: Node3D) -> void:
 
 func open_animal_rental(staff: Node3D) -> void:
 	selected_animal_staff = staff
+	var wallet_ready := _refresh_wallet_cache()
 	selected_activity_kind = "animal_rental"
 	# يُنشأ المعرف عند فتح نافذة جديدة، لا عند الضغط على زر الدفع؛
 	# تكرار إشارة الزر داخل النافذة نفسها سيصطدم بالإيصال نفسه.
@@ -776,6 +808,9 @@ func open_animal_rental(staff: Node3D) -> void:
 	if is_instance_valid(player) and player.has_method("is_riding_animal") and player.is_riding_animal():
 		status_label.text = "أنت تركب حيوانًا بالفعل. انزل أولًا قبل استئجار حيوان آخر."
 		accept_button.disabled = true
+	elif not wallet_ready:
+		status_label.text = "المحفظة غير مهيأة أو موقوفة للمراجعة؛ لا يمكن التأجير الآن."
+		accept_button.disabled = true
 	elif money < price:
 		status_label.text = "رصيدك لا يكفي. رصيدك الحالي: %d جنيه." % money
 		accept_button.disabled = true
@@ -787,6 +822,10 @@ func open_animal_rental(staff: Node3D) -> void:
 
 func _rent_selected_animal() -> void:
 	if not is_instance_valid(selected_animal_staff) or not is_instance_valid(player):
+		return
+	if not _refresh_wallet_cache():
+		status_label.text = "المحفظة غير مهيأة أو موقوفة للمراجعة؛ لم يبدأ الركوب ولم يُخصم شيء."
+		accept_button.disabled = true
 		return
 	if player.has_method("is_riding_animal") and player.is_riding_animal():
 		status_label.text = "انزل من الحيوان الحالي قبل استئجار حيوان آخر."
