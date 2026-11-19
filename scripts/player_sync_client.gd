@@ -13,6 +13,7 @@ signal verified_reward_claim_finished(success: bool, result: Dictionary, message
 const OUTBOX_PATH := "user://player_sync_outbox.cfg"
 const PROGRESS_REVIEW_PATH := "user://player_sync_progress_review.cfg"
 const SYNC_ENABLED_SETTING := "player_sync/enabled"
+const REWARDS_ENABLED_SETTING := "game_rewards/enabled"
 const MAX_PENDING_EVENTS := 500
 const MAX_BATCH_SIZE := 50
 const ALLOWED_EVENT_TYPES := [
@@ -284,8 +285,8 @@ func _on_progress_recovery_completed(result: int, response_code: int, _headers: 
 
 
 func claim_verified_activity_reward(proof_id: String) -> void:
-	if not bool(ProjectSettings.get_setting(SYNC_ENABLED_SETTING, false)):
-		verified_reward_claim_finished.emit(false, {}, "مزامنة الحساب مغلقة.")
+	if not bool(ProjectSettings.get_setting(REWARDS_ENABLED_SETTING, false)):
+		verified_reward_claim_finished.emit(false, {}, "اعتماد المكافآت Online مغلق حتى اكتمال النشر والاختبار.")
 		return
 	if _access_token.is_empty() or _reward_claim_active:
 		verified_reward_claim_finished.emit(false, {}, "سجّل الدخول أولًا أو انتظر انتهاء طلب المكافأة الحالي.")
