@@ -5,36 +5,58 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Headers": "authorization, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
+const MAX_BODY_BYTES = 512 * 1024;
 
-function json(data: unknown, status = 200): Response {
+function json(data: unknown, status = 200, extraHeaders: Record<string, string> = {}): Response {
   return new Response(JSON.stringify(data), {
     status,
-    headers: {
-      ...CORS_HEADERS,
-      "Content-Type": "application/json",
-      "Cache-Control": "no-store",
-    },
+    headers: { ...CORS_HEADERS, ...extraHeaders, "Content-Type": "application/json", "Cache-Control": "no-store" },
   });
 }
 
-Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: CORS_HEADERS });
+async function readBoundedBody(req: Request): Promise<string | null> {
+  const contentLength = req.headers.get("Content-Length");
+  if (contentLength && /^\\d+$/.test(contentLength) && Number(contentLength) > MAX_BODY_BYTES) return null;
+  if (!req.body) return "";
+  const reader = req.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > MAX_BODY_BYTES) {
+        await reader.cancel();
+        return null;
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
   }
-  if (req.method !== "POST") {
-    return json({ error: "method_not_allowed" }, 405);
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return new TextDecoder().decode(bytes);
+}
+
+Deno.serve(async (req: Request) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: CORS_HEADERS });
+  if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
+  if (!/^application\\/json(?:\\s*;|$)/i.test(req.headers.get("Content-Type") ?? "")) {
+    return json({ error: "content_type_must_be_json" }, 415);
   }
 
   const authorization = req.headers.get("Authorization") ?? "";
-  if (!/^Bearer\s+\S+$/i.test(authorization)) {
-    return json({ error: "unauthorized" }, 401);
-  }
+  if (!/^Bearer\\s+\\S+$/i.test(authorization)) return json({ error: "unauthorized" }, 401);
 
-  const projectUrl = Deno.env.get("SUPABASE_URL")?.replace(/\/$/, "");
+  const projectUrl = Deno.env.get("SUPABASE_URL")?.replace(/\\/$/, "");
   const publishableKeysRaw = Deno.env.get("SUPABASE_PUBLISHABLE_KEYS");
-  if (!projectUrl || !publishableKeysRaw) {
-    return json({ error: "sync_service_not_configured" }, 503);
-  }
+  if (!projectUrl || !publishableKeysRaw) return json({ error: "sync_service_not_configured" }, 503);
 
   let publishableKey = "";
   try {
@@ -43,19 +65,10 @@ Deno.serve(async (req: Request) => {
   } catch {
     return json({ error: "sync_service_not_configured" }, 503);
   }
-  if (!publishableKey) {
-    return json({ error: "sync_service_not_configured" }, 503);
-  }
+  if (!publishableKey) return json({ error: "sync_service_not_configured" }, 503);
 
-  let rawBody = "";
-  try {
-    rawBody = await req.text();
-  } catch {
-    return json({ error: "invalid_json" }, 400);
-  }
-  if (new TextEncoder().encode(rawBody).byteLength > 512 * 1024) {
-    return json({ error: "request_too_large" }, 413);
-  }
+  const rawBody = await readBoundedBody(req);
+  if (rawBody === null) return json({ error: "request_too_large" }, 413);
 
   let body: unknown;
   try {
@@ -64,55 +77,40 @@ Deno.serve(async (req: Request) => {
     return json({ error: "invalid_json" }, 400);
   }
   if (
-    typeof body !== "object" ||
-    body === null ||
-    Array.isArray(body) ||
-    !("events" in body) ||
-    !Array.isArray((body as { events: unknown }).events) ||
+    typeof body !== "object" || body === null || Array.isArray(body) ||
+    !("events" in body) || !Array.isArray((body as { events: unknown }).events) ||
     (body as { events: unknown[] }).events.length < 1 ||
     (body as { events: unknown[] }).events.length > 50
-  ) {
-    return json({ error: "invalid_event_batch" }, 400);
-  }
+  ) return json({ error: "invalid_event_batch" }, 400);
 
-  // The database RPC validates the exact event shape, event types and payload allowlist.
-  // It derives user_id from auth.uid(); the client cannot choose another account.
+  // The invoker RPC applies RLS and per-account rate limits; user_id comes from auth.uid().
   let rpcResponse: Response;
   try {
-    rpcResponse = await fetch(
-      `${projectUrl}/rest/v1/rpc/submit_player_sync_events`,
-      {
-        method: "POST",
-        headers: {
-          "apikey": publishableKey,
-          "Authorization": authorization,
-          "Content-Type": "application/json",
-          "Accept": "application/json",
-        },
-        body: JSON.stringify({
-          p_events: (body as { events: unknown[] }).events,
-        }),
+    rpcResponse = await fetch(projectUrl + "/rest/v1/rpc/submit_player_sync_events", {
+      method: "POST",
+      headers: {
+        "apikey": publishableKey,
+        "Authorization": authorization,
+        "Content-Type": "application/json",
+        "Accept": "application/json",
       },
-    );
+      body: JSON.stringify({ p_events: (body as { events: unknown[] }).events }),
+    });
   } catch {
     return json({ error: "sync_database_unavailable" }, 503);
   }
 
   if (!rpcResponse.ok) {
-    if (rpcResponse.status === 401 || rpcResponse.status === 403) {
-      return json({ error: "unauthorized" }, rpcResponse.status);
-    }
-    if (rpcResponse.status === 400 || rpcResponse.status === 422) {
-      return json({ error: "invalid_or_rejected_events" }, 400);
-    }
+    const errorText = await rpcResponse.text();
+    if (rpcResponse.status === 401 || rpcResponse.status === 403) return json({ error: "unauthorized" }, rpcResponse.status);
+    if (errorText.includes("sync_rate_limited")) return json({ error: "rate_limited" }, 429, { "Retry-After": "60" });
+    if (rpcResponse.status === 400 || rpcResponse.status === 422) return json({ error: "invalid_or_rejected_events" }, 400);
     return json({ error: "sync_database_error" }, 502);
   }
 
-  let result: unknown;
   try {
-    result = await rpcResponse.json();
+    return json({ ok: true, result: await rpcResponse.json() });
   } catch {
     return json({ error: "sync_response_invalid" }, 502);
   }
-  return json({ ok: true, result });
 });
