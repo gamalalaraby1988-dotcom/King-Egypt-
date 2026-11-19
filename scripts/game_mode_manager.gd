@@ -19,6 +19,7 @@ func is_online_ready() -> bool:
 
 
 func select_offline() -> void:
+	AuthoritativeGameServer.clear_client_session()
 	_close_active_peer()
 	multiplayer.multiplayer_peer = OfflineMultiplayerPeer.new()
 	current_mode = Mode.OFFLINE
@@ -62,6 +63,7 @@ func connect_online(address: String, port: int = 2456) -> void:
 
 
 func disconnect_online() -> void:
+	AuthoritativeGameServer.clear_client_session()
 	if peer == null and not is_online_ready():
 		return
 	_close_active_peer()
