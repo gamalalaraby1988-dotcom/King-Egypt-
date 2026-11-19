@@ -62,6 +62,16 @@
 - طلبات Snapshot تخضع لنفس `player_sync/enabled=false`؛ لن تُرسل طلبات شبكة حتى تفعيل المفتاح صراحة في إعدادات اللعبة. لم يتم تفعيله.
 - لم يتم اختبار العميل أو استدعاء RPC عبر HTTP؛ Migration لقطة التفضيلات لا تزال غير مطبقة على مشروع الاختبار أو الإنتاج.
 
+## استعادة ملاحظات التقدم غير المعتمدة
+
+- Migration: `20261119210000_player_progress_observation_recovery.sql`.
+- جدول خاص `private.player_progress_observations`، بمفتاح (user_id, progress_key) وقيمة ملاحظة قصوى لا تنخفض عند إعادة إرسال قيمة أصغر.
+- Trigger بصلاحية `SECURITY INVOKER` يلتقط أحداث mission/achievement/activity المقبولة في صندوق الأحداث؛ RLS تضمن أن المستخدم لا يكتب أو يقرأ إلا صفوف حسابه.
+- RPC `public.get_player_progress_observations()` تعيد `authoritative=false` ووسم `unverified_client_observations` ولا تمنح أي استحقاق.
+- عميل Godot يطلب السجل بعد المصادقة ويحفظه في `user://player_sync_progress_review.cfg` منفصلًا عن ملف تقدم اللعبة. لا يطبق القيم على المهام المكتملة أو الإنجازات أو المستوى أو المحفظة.
+- تمت إضافة 8 اختبارات مصدرية جديدة (29 assertion إجمالًا) للتحقق من القراءة، ووسم عدم الاعتماد، وتجميع القيم دون خفض، ورفض غير المصادق. لم تُشغّل الاختبارات بعد.
+- Migration لم تُطبق على مشروع الاختبار أو الإنتاج، ولم تُختبر RPC عبر HTTP. هذه استعادة لملاحظات العميل فقط وليست استعادة تقدم موثوق.
+
 ## مفتاح التشغيل
 
 - `player_sync/enabled` مضبوط على `false` افتراضيًا في `project.godot`.
