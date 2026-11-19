@@ -87,6 +87,7 @@ func _ready() -> void:
 	AuthoritativeGameServer.mission_start_result.connect(_on_server_mission_start_result)
 	AuthoritativeGameServer.mission_completed.connect(_on_server_mission_completed)
 	AuthoritativeGameServer.activity_proof_received.connect(_on_server_activity_proof_received)
+	AuthoritativeGameServer.activity_proof_failed.connect(_on_server_activity_proof_failed)
 	PlayerSyncClient.verified_reward_claim_finished.connect(_on_verified_reward_claim_finished)
 
 func _exit_tree() -> void:
@@ -102,6 +103,8 @@ func _exit_tree() -> void:
 		AuthoritativeGameServer.mission_completed.disconnect(_on_server_mission_completed)
 	if AuthoritativeGameServer.activity_proof_received.is_connected(_on_server_activity_proof_received):
 		AuthoritativeGameServer.activity_proof_received.disconnect(_on_server_activity_proof_received)
+	if AuthoritativeGameServer.activity_proof_failed.is_connected(_on_server_activity_proof_failed):
+		AuthoritativeGameServer.activity_proof_failed.disconnect(_on_server_activity_proof_failed)
 	if PlayerSyncClient.verified_reward_claim_finished.is_connected(_on_verified_reward_claim_finished):
 		PlayerSyncClient.verified_reward_claim_finished.disconnect(_on_verified_reward_claim_finished)
 
@@ -521,6 +524,9 @@ func _process(_delta: float) -> void:
 		if job_running:
 			var server_job_distance := Vector2(player.global_position.x, player.global_position.z).distance_to(Vector2(active_job_target.x, active_job_target.z))
 			status_label.text = "الوظيفة Online: اقترب من الهدف. المتبقي %.1f متر" % server_job_distance
+		elif mission_running:
+			var server_mission_distance := Vector2(player.global_position.x, player.global_position.z).distance_to(Vector2(active_target.x, active_target.z))
+			status_label.text = "المهمة Online: اقترب من الهدف. المتبقي %.1f متر" % server_mission_distance
 		_update_navigation_hud()
 		return
 	if navigation_arrival_remaining > 0.0:
@@ -956,6 +962,17 @@ func _on_server_activity_proof_received(activity_kind: String, activity_id: Stri
 		return
 	status_label.text = "وصل إثبات الإكمال من خادم اللعب. جارٍ اعتماد المكافأة."
 	PlayerSyncClient.claim_verified_activity_reward(proof_id)
+
+
+func _on_server_activity_proof_failed(activity_kind: String, activity_id: String, message: String) -> void:
+	if not GameModeManager.is_online_ready():
+		return
+	var expected_id := str(active_mission.get("building_id", "")) if activity_kind == "mission" and is_instance_valid(active_mission) else str(active_job.get("job_id", "")) if activity_kind == "job" and is_instance_valid(active_job) else ""
+	if expected_id != activity_id:
+		return
+	status_label.text = message
+	description_label.text = "اكتمل التحقق من الوصول، لكن خدمة إصدار الإثبات غير جاهزة."
+	reward_label.text = "لم تُصرف مكافأة ولم يُضف أي رصيد."
 
 
 func _on_verified_reward_claim_finished(success: bool, result: Dictionary, message: String) -> void:
