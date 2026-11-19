@@ -309,6 +309,7 @@ func _build_mountain_route() -> void:
 	upper.material_override = _mat(Color(0.61, 0.49, 0.34))
 	mountain.add_child(upper)
 	# Switchback walking route, with two rest stops and two observation decks.
+	_path_segment(mountain, "MountainTrailEntrance", Vector3(-3.0, 0.18, 28.0), Vector3(-15.0, 0.18, 28.0), 3.2, SAND)
 	var p0 := Vector3(-15.0, 0.18, 28.0)
 	var p1 := Vector3(-9.0, 0.18, 20.0)
 	var p2 := Vector3(-14.0, 0.18, 12.0)
