@@ -859,7 +859,6 @@ func _create_desert_camp() -> void:
 
 func _create_pyramids_area() -> void:
 	# منطقة الأهرامات وأبو الهول متصلة بطريق المخيم الصحراوي.
-	_create_box(self, "PyramidsAccessRoad_West", Vector3(40, 0.08, 5), Vector3(-110, 0.01, 70), Color(0.12, 0.13, 0.15), true)
 	_create_box(self, "PyramidsAccessRoad_North", Vector3(5, 0.08, 40), Vector3(-90, 0.01, 90), Color(0.12, 0.13, 0.15), true)
 	var pyramids := Node3D.new()
 	pyramids.name = "GizaPyramidsArea"
