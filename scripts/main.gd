@@ -77,7 +77,7 @@ func _process(_delta: float) -> void:
 	var close_enough := player.global_position.distance_to(city_vehicle.global_position) <= 5.0
 	if is_instance_valid(vehicle_interaction_button):
 		vehicle_interaction_button.visible = close_enough
-		vehicle_interaction_button.text = "ركوب السيارة" if CityLanguage.get_language() == "ar" else "Enter vehicle"
+		vehicle_interaction_button.text = "🚪 ركوب السيارة" if CityLanguage.get_language() == "ar" else "Enter vehicle"
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.keycode == KEY_E:
@@ -94,33 +94,44 @@ func _create_player_vehicle() -> void:
 	layer.layer = 20
 	add_child(layer)
 
+	# أزرار المركبة صغيرة ومثبتة أسفل اليمين؛ زر السيارة أعلى زر الركوب/الخروج.
+	var viewport_size := get_viewport().get_visible_rect().size
+	var control_scale := clampf(minf(viewport_size.x, viewport_size.y) / 720.0, 0.58, 1.0)
+	var control_width := 142.0 * control_scale
+	var control_height := 36.0 * control_scale
+	var control_gap := 4.0 * control_scale
+	var right_margin := 7.0 * control_scale
+	var bottom_margin := 8.0 * control_scale
+
 	vehicle_summon_button = Button.new()
 	vehicle_summon_button.name = "VehicleSummonButton"
-	vehicle_summon_button.text = "إحضار السيارة"
-	vehicle_summon_button.custom_minimum_size = Vector2(190, 58)
-	vehicle_summon_button.anchor_left = 0.0
-	vehicle_summon_button.anchor_right = 0.0
-	vehicle_summon_button.anchor_top = 0.0
-	vehicle_summon_button.anchor_bottom = 0.0
-	vehicle_summon_button.offset_left = 24
-	vehicle_summon_button.offset_right = 214
-	vehicle_summon_button.offset_top = 24
-	vehicle_summon_button.offset_bottom = 82
+	vehicle_summon_button.text = "🚗 إحضار السيارة"
+	vehicle_summon_button.custom_minimum_size = Vector2(control_width, control_height)
+	vehicle_summon_button.anchor_left = 1.0
+	vehicle_summon_button.anchor_right = 1.0
+	vehicle_summon_button.anchor_top = 1.0
+	vehicle_summon_button.anchor_bottom = 1.0
+	vehicle_summon_button.offset_left = -control_width - right_margin
+	vehicle_summon_button.offset_right = -right_margin
+	vehicle_summon_button.offset_top = -(bottom_margin + control_height * 2.0 + control_gap)
+	vehicle_summon_button.offset_bottom = -(bottom_margin + control_height + control_gap)
+	vehicle_summon_button.add_theme_font_size_override("font_size", 12)
 	vehicle_summon_button.pressed.connect(_summon_player_vehicle)
 	layer.add_child(vehicle_summon_button)
 
 	vehicle_interaction_button = Button.new()
 	vehicle_interaction_button.name = "VehicleInteractionButton"
-	vehicle_interaction_button.text = "ركوب السيارة"
-	vehicle_interaction_button.custom_minimum_size = Vector2(190, 58)
-	vehicle_interaction_button.anchor_left = 0.5
-	vehicle_interaction_button.anchor_right = 0.5
+	vehicle_interaction_button.text = "🚪 ركوب السيارة"
+	vehicle_interaction_button.custom_minimum_size = Vector2(control_width, control_height)
+	vehicle_interaction_button.anchor_left = 1.0
+	vehicle_interaction_button.anchor_right = 1.0
 	vehicle_interaction_button.anchor_top = 1.0
 	vehicle_interaction_button.anchor_bottom = 1.0
-	vehicle_interaction_button.offset_left = -95
-	vehicle_interaction_button.offset_right = 95
-	vehicle_interaction_button.offset_top = -150
-	vehicle_interaction_button.offset_bottom = -92
+	vehicle_interaction_button.offset_left = -control_width - right_margin
+	vehicle_interaction_button.offset_right = -right_margin
+	vehicle_interaction_button.offset_top = -(bottom_margin + control_height)
+	vehicle_interaction_button.offset_bottom = -bottom_margin
+	vehicle_interaction_button.add_theme_font_size_override("font_size", 12)
 	vehicle_interaction_button.visible = false
 	vehicle_interaction_button.pressed.connect(_toggle_vehicle_use)
 	layer.add_child(vehicle_interaction_button)
@@ -209,7 +220,7 @@ func _toggle_vehicle_use() -> void:
 	if is_instance_valid(vehicle_camera):
 		vehicle_camera.current = true
 	if is_instance_valid(vehicle_interaction_button):
-		vehicle_interaction_button.text = "النزول من السيارة" if CityLanguage.get_language() == "ar" else "Exit vehicle"
+		vehicle_interaction_button.text = "🚪 النزول من السيارة" if CityLanguage.get_language() == "ar" else "Exit vehicle"
 		vehicle_interaction_button.visible = true
 
 func _recover_vehicle_occupancy() -> void:
@@ -241,7 +252,7 @@ func _recover_vehicle_occupancy() -> void:
 	_set_mobile_hud_active(is_instance_valid(player))
 	if is_instance_valid(vehicle_interaction_button):
 		vehicle_interaction_button.visible = false
-		vehicle_interaction_button.text = "ركوب السيارة" if CityLanguage.get_language() == "ar" else "Enter vehicle"
+		vehicle_interaction_button.text = "🚪 ركوب السيارة" if CityLanguage.get_language() == "ar" else "Enter vehicle"
 	if is_instance_valid(vehicle_summon_button):
 		vehicle_summon_button.visible = is_instance_valid(player)
 
@@ -278,7 +289,7 @@ func _exit_player_vehicle() -> void:
 	vehicle_occupied = false
 	_set_mobile_hud_active(true)
 	if is_instance_valid(vehicle_interaction_button):
-		vehicle_interaction_button.text = "ركوب السيارة" if CityLanguage.get_language() == "ar" else "Enter vehicle"
+		vehicle_interaction_button.text = "🚪 ركوب السيارة" if CityLanguage.get_language() == "ar" else "Enter vehicle"
 		vehicle_interaction_button.visible = player.global_position.distance_to(city_vehicle.global_position) <= 5.0
 
 func _create_interior_transition_ui() -> void:
