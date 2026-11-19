@@ -20,6 +20,9 @@ func _ready() -> void:
 	_build_waterfront_landscaping()
 	_build_royal_ship()
 	_build_access_roads_and_parking()
+	_build_public_gardens()
+	_build_mountain_route()
+	_build_city_lighting_and_wayfinding()
 
 func _mat(color: Color, metallic: float = 0.0) -> StandardMaterial3D:
 	var m := StandardMaterial3D.new()
@@ -235,10 +238,161 @@ func _build_access_roads_and_parking() -> void:
 	_box(self, "RoyalSquareSouthConnector", Vector3(5.0, 0.08, 12.0), Vector3(0, 0.01, -21.0), DARK)
 	# Small parking courts sit beside the service edge, outside building footprints and the main carriageways.
 	for side in [-1.0, 1.0]:
-		var parking := _box(self, "ServiceParkingCourt", Vector3(12.0, 0.06, 18.0), Vector3(side * 86.0, 0.015, 34.0), Color(0.20, 0.22, 0.23))
+		# Keep each court in the narrow clear strip between the outer service buildings and perimeter road.
+		# The 10 m width ends at the road edge and starts beyond the 81.5 m building footprint.
+		var parking := _box(self, "ServiceParkingCourt", Vector3(10.0, 0.06, 18.0), Vector3(side * 87.0, 0.015, 34.0), Color(0.20, 0.22, 0.23))
 		for slot in range(3):
 			_box(parking, "ParkingBayLine", Vector3(0.12, 0.025, 4.8), Vector3(-3.6 + float(slot) * 3.6, 0.06, 0), IVORY)
-	# Green buffers line the outer edges while keeping sidewalks and building entrances clear.
+	# Green buffers line the outer edges while keeping sidewalks, parking courts, and entrances clear.
 	for side in [-1.0, 1.0]:
-		for z in [-65.0, -35.0, -5.0, 25.0, 55.0]:
+		for z in [-65.0, -35.0, -5.0, 55.0]:
 			_tree(self, "OuterBoulevardPalm", Vector3(side * 87.0, 0, z), 0.85)
+
+
+func _build_public_gardens() -> void:
+	# Small landscaped pockets occupy the gaps between approved building footprints.
+	for side in [-1.0, 1.0]:
+		var garden := Node3D.new()
+		garden.name = "PublicGarden_WestEast_%s" % str(side)
+		garden.position = Vector3(side * 45.0, 0, 0)
+		add_child(garden)
+		_box(garden, "GardenLawn", Vector3(13.0, 0.12, 12.0), Vector3(0, 0.06, 0), Color(0.20, 0.38, 0.22))
+		_box(garden, "GardenPath", Vector3(2.0, 0.08, 11.0), Vector3(0, 0.14, 0), SAND)
+		for z in [-4.0, 4.0]:
+			_tree(garden, "GardenPalm", Vector3(-4.5, 0, z), 0.72)
+			_tree(garden, "GardenPalm", Vector3(4.5, 0, z), 0.72)
+		_box(garden, "GardenBenchSeat", Vector3(3.0, 0.22, 0.65), Vector3(0, 0.72, -4.0), SAND)
+		_box(garden, "GardenBenchBack", Vector3(3.0, 0.9, 0.18), Vector3(0, 1.12, -4.25), GOLD)
+	# A modest fountain is a landmark inside the central pedestrian garden pocket.
+	var fountain := Node3D.new()
+	fountain.name = "CentralGardenFountain"
+	fountain.position = Vector3(45, 0, 30)
+	add_child(fountain)
+	_box(fountain, "FountainBase", Vector3(5.0, 0.5, 5.0), Vector3(0, 0.25, 0), SAND)
+	_box(fountain, "FountainBasin", Vector3(3.8, 0.45, 3.8), Vector3(0, 0.72, 0), TEAL)
+	_box(fountain, "FountainColumn", Vector3(0.65, 1.8, 0.65), Vector3(0, 1.65, 0), IVORY)
+	_box(fountain, "FountainCrown", Vector3(1.8, 0.25, 1.8), Vector3(0, 2.65, 0), GOLD)
+	for x in [-2.0, 2.0]:
+		_tree(fountain, "FountainGardenPalm", Vector3(x, 0, 3.8), 0.65)
+
+func _path_segment(parent: Node3D, label: String, start: Vector3, finish: Vector3, width: float, color: Color) -> void:
+	var delta := finish - start
+	var segment := _box(parent, label, Vector3(width, 0.12, delta.length()), (start + finish) * 0.5, color)
+	segment.rotation.y = atan2(delta.x, delta.z)
+
+func _build_mountain_route() -> void:
+	# The mountain zone is placed at the far eastern edge, beyond the service-building row.
+	var mountain := Node3D.new()
+	mountain.name = "KingsMountainRoute"
+	mountain.position = Vector3(98, 0, 40)
+	add_child(mountain)
+	var lower := MeshInstance3D.new()
+	lower.name = "MountainLowerSlope"
+	var lower_mesh := CylinderMesh.new()
+	lower_mesh.top_radius = 1.8
+	lower_mesh.bottom_radius = 10.5
+	lower_mesh.height = 15.0
+	lower_mesh.radial_segments = 7
+	lower_mesh.rings = 3
+	lower.mesh = lower_mesh
+	lower.position = Vector3(0, 7.5, 0)
+	lower.material_override = _mat(Color(0.48, 0.39, 0.28))
+	mountain.add_child(lower)
+	var upper := MeshInstance3D.new()
+	upper.name = "MountainUpperPeak"
+	var upper_mesh := CylinderMesh.new()
+	upper_mesh.top_radius = 0.0
+	upper_mesh.bottom_radius = 6.0
+	upper_mesh.height = 12.0
+	upper_mesh.radial_segments = 7
+	upper_mesh.rings = 2
+	upper.mesh = upper_mesh
+	upper.position = Vector3(0, 17.0, 0)
+	upper.material_override = _mat(Color(0.61, 0.49, 0.34))
+	mountain.add_child(upper)
+	# Switchback walking route, with two rest stops and two observation decks.
+	_path_segment(mountain, "MountainTrailEntrance", Vector3(-3.0, 0.18, 28.0), Vector3(-15.0, 0.18, 28.0), 3.2, SAND)
+	var p0 := Vector3(-15.0, 0.18, 28.0)
+	var p1 := Vector3(-9.0, 0.18, 20.0)
+	var p2 := Vector3(-14.0, 0.18, 12.0)
+	var p3 := Vector3(-7.0, 0.18, 5.0)
+	var p4 := Vector3(-2.0, 0.18, -3.0)
+	_path_segment(mountain, "MountainTrail_01", p0, p1, 3.2, SAND)
+	_path_segment(mountain, "MountainTrail_02", p1, p2, 3.2, SAND)
+	_path_segment(mountain, "MountainTrail_03", p2, p3, 3.2, SAND)
+	_path_segment(mountain, "MountainTrail_04", p3, p4, 3.2, SAND)
+	for i in range(4):
+		var point: Vector3 = [p0, p1, p2, p3][i]
+		var rail := _box(mountain, "TrailEdgeRail", Vector3(0.18, 0.75, 4.0), point + Vector3(-1.8, 0.55, 0), GOLD)
+		rail.rotation.y = 0.55
+	# Rest stop one.
+	for stop_index in range(2):
+		var stop := Node3D.new()
+		stop.name = "MountainRestStop_%d" % (stop_index + 1)
+		stop.position = Vector3(-12.0 + float(stop_index) * 7.0, 0.2, 18.0 - float(stop_index) * 13.0)
+		mountain.add_child(stop)
+		_box(stop, "RestStopFloor", Vector3(7.0, 0.2, 5.0), Vector3(0, 0.1, 0), IVORY)
+		for x in [-3.0, 3.0]:
+			for z in [-2.0, 2.0]:
+				_box(stop, "RestStopColumn", Vector3(0.28, 2.6, 0.28), Vector3(x, 1.4, z), GOLD)
+		_box(stop, "RestStopCanopy", Vector3(7.5, 0.35, 5.5), Vector3(0, 2.85, 0), SAND)
+		_box(stop, "RestStopBench", Vector3(2.6, 0.25, 0.65), Vector3(0, 0.75, -1.2), DARK)
+	# Observation platforms and the summit landmark.
+	for i in range(2):
+		var deck := Node3D.new()
+		deck.name = "MountainViewPlatform_%d" % (i + 1)
+		deck.position = Vector3(-2.0 + float(i) * 1.5, 7.0 + float(i) * 4.0, 4.0 - float(i) * 3.0)
+		mountain.add_child(deck)
+		_box(deck, "ViewDeck", Vector3(8.0, 0.35, 6.0), Vector3(0, 0, 0), SAND)
+		for x in [-3.7, 3.7]:
+			_box(deck, "ViewRail", Vector3(0.18, 1.0, 6.0), Vector3(x, 0.65, 0), GOLD)
+		_box(deck, "ViewRailFront", Vector3(8.0, 1.0, 0.18), Vector3(0, 0.65, 2.8), GOLD)
+	var summit := Node3D.new()
+	summit.name = "KingsSummit"
+	summit.position = Vector3(0, 21.0, -1.0)
+	mountain.add_child(summit)
+	_box(summit, "SummitPlatform", Vector3(8.0, 0.4, 7.0), Vector3(0, 0, 0), IVORY)
+	_box(summit, "SummitObelisk", Vector3(1.2, 4.5, 1.2), Vector3(0, 2.4, 0), GOLD)
+	_box(summit, "SummitCrown", Vector3(2.4, 0.35, 2.4), Vector3(0, 4.8, 0), GOLD)
+
+func _build_city_lighting_and_wayfinding() -> void:
+	# Low-cost decorative lamp posts mark the main pedestrian routes and plaza edges.
+	var lamp_points := [
+		Vector3(-24, 0, -42), Vector3(24, 0, -42),
+		Vector3(-45, 0, -18), Vector3(45, 0, -18),
+		Vector3(-45, 0, 18), Vector3(45, 0, 18),
+		Vector3(-45, 0, 48), Vector3(45, 0, 48),
+		Vector3(-80, 0, 34), Vector3(80, 0, 34)
+	]
+	for i in range(lamp_points.size()):
+		var lamp := Node3D.new()
+		lamp.name = "CityLamp_%02d" % i
+		lamp.position = lamp_points[i]
+		add_child(lamp)
+		_box(lamp, "LampPost", Vector3(0.22, 4.2, 0.22), Vector3(0, 2.1, 0), GOLD)
+		_box(lamp, "LampArm", Vector3(1.1, 0.16, 0.16), Vector3(0.48, 4.0, 0), GOLD)
+		_box(lamp, "LampHead", Vector3(0.7, 0.32, 0.55), Vector3(0.95, 3.85, 0), IVORY)
+	# Direction markers use bilingual labels without adding standalone buildings.
+	var sign_specs := [
+		["Sign_RoyalSquare", Vector3(8, 0, -24), "الميدان الملكي"],
+		["Sign_CommercialDistrict", Vector3(44, 0, -8), "المنطقة التجارية"],
+		["Sign_EntertainmentDistrict", Vector3(-44, 0, 48), "المنطقة الترفيهية"],
+		["Sign_Harbor", Vector3(20, 0, 70), "الميناء الملكي"],
+		["Sign_KingsMountain", Vector3(88, 0, 62), "طريق قمة الملوك"]
+	]
+	for spec in sign_specs:
+		var sign := Node3D.new()
+		sign.name = str(spec[0])
+		sign.position = spec[1]
+		add_child(sign)
+		_box(sign, "SignBoard", Vector3(4.6, 1.0, 0.18), Vector3(0, 2.8, 0), DARK)
+		_box(sign, "SignTopTrim", Vector3(4.8, 0.12, 0.22), Vector3(0, 3.35, 0), GOLD)
+		var label := Label3D.new()
+		label.name = "DistrictLabel"
+		label.text = str(spec[2])
+		label.position = Vector3(0, 2.8, -0.13)
+		label.font_size = 32
+		label.pixel_size = 0.012
+		label.modulate = Color(1.0, 0.9, 0.64)
+		label.outline_size = 6
+		sign.add_child(label)
