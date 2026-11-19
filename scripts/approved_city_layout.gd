@@ -22,6 +22,7 @@ func _ready() -> void:
 	_build_royal_ship()
 	_build_access_roads_and_parking()
 	_build_public_gardens()
+	_build_pedestrian_green_pockets()
 	_build_mountain_route()
 	_build_mountain_animals()
 	_build_city_lighting_and_wayfinding()
@@ -520,6 +521,40 @@ func _build_public_gardens() -> void:
 	_box(fountain, "FountainCrown", Vector3(1.8, 0.25, 1.8), Vector3(0, 2.65, 0), GOLD)
 	for x in [-2.0, 2.0]:
 		_tree(fountain, "FountainGardenPalm", Vector3(x, 0, 3.8), 0.65)
+
+
+func _build_pedestrian_green_pockets() -> void:
+	# Three additional landscaped pockets fill the clear block gaps without moving
+	# approved buildings, changing street alignments, or narrowing vehicle lanes.
+	var pocket_centres: Array[Vector2] = [
+		Vector2(-45.0, -30.0),
+		Vector2(45.0, -30.0),
+		Vector2(-45.0, 30.0)
+	]
+	for index in range(pocket_centres.size()):
+		var centre := pocket_centres[index]
+		var pocket := Node3D.new()
+		pocket.name = "PedestrianGreenPocket_%02d" % (index + 1)
+		pocket.position = Vector3(centre.x, 0.0, centre.y)
+		add_child(pocket)
+		_box(pocket, "PocketLawn", Vector3(10.0, 0.12, 10.0), Vector3(0.0, 0.06, 0.0), Color(0.20, 0.38, 0.22))
+		# A central stone walk remains clear between the seating and palm planters.
+		_box(pocket, "PocketWalkway", Vector3(2.0, 0.08, 9.8), Vector3(0.0, 0.15, 0.0), SAND)
+		_add_static_box_collision(pocket, "PocketWalkwayCollision", Vector3(2.0, 0.22, 9.8), Vector3(0.0, 0.10, 0.0))
+		for x in [-4.0, 4.0]:
+			for z in [-4.0, 4.0]:
+				_tree(pocket, "PocketPalm", Vector3(x, 0.0, z), 0.62)
+		for side in [-1.0, 1.0]:
+			var bench_x := side * 2.9
+			_box(pocket, "PocketBenchSeat", Vector3(2.2, 0.22, 0.62), Vector3(bench_x, 0.72, 0.0), SAND)
+			_box(pocket, "PocketBenchBack", Vector3(2.2, 0.82, 0.16), Vector3(bench_x, 1.12, -0.22), GOLD)
+			_add_static_box_collision(pocket, "PocketBenchCollision", Vector3(2.2, 1.0, 0.62), Vector3(bench_x, 0.62, 0.0))
+		# Join each pocket to the existing cross streets with collision-backed
+		# pedestrian links; these links stay inside the open block gap.
+		var upper_road_z := centre.y - 12.0
+		var lower_road_z := centre.y + 12.0
+		_path_segment(self, "PocketNorthWalk_%02d" % (index + 1), Vector3(centre.x, 0.12, upper_road_z + 3.0), Vector3(centre.x, 0.12, centre.y - 5.0), 2.4, SAND)
+		_path_segment(self, "PocketSouthWalk_%02d" % (index + 1), Vector3(centre.x, 0.12, centre.y + 5.0), Vector3(centre.x, 0.12, lower_road_z - 3.0), 2.4, SAND)
 
 func _path_segment(parent: Node3D, label: String, start: Vector3, finish: Vector3, width: float, color: Color) -> void:
 	var delta := finish - start
