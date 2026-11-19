@@ -825,6 +825,7 @@ func _create_mode_selection_ui() -> void:
 	FounderAuthClient.request_finished.connect(_on_founder_auth_request_finished)
 	FounderAuthClient.email_verified.connect(_on_founder_email_verified)
 	FounderAuthClient.auth_session_received.connect(_on_founder_auth_session_received)
+	FounderAuthClient.auth_session_refreshed.connect(_on_founder_auth_session_refreshed)
 	FounderAuthClient.auth_session_restored.connect(_on_founder_auth_session_restored)
 	FounderAuthClient.auth_session_expired.connect(_on_founder_auth_session_expired)
 	FounderAuthClient.founder_entitlement_received.connect(_on_founder_entitlement_received)
@@ -964,16 +965,23 @@ func _on_founder_email_verified(_user_id: String, verified_email: String) -> voi
 		mode_status_label.text = "تم تأكيد ملكية البريد %s. تفعيل حساب المؤسس ينتظر اعتماد التذكرة الخادمية." % verified_email
 
 func _on_founder_auth_session_expired() -> void:
+	PlayerSyncClient.clear_session_access_token()
 	# انتهاء جلسة Auth لا يلغي التذكرة المحلية الموقعة؛ لكنه يمنع طلبات Online التي تحتاج جلسة.
 	if FounderIdentityManager.is_founder and is_instance_valid(mode_status_label):
 		mode_status_label.text = "انتهت جلسة الاتصال الآمنة. أعد التحقق من بريد المؤسس للعمليات Online؛ تذكرة Offline الصالحة لا تتأثر."
 
 
-func _on_founder_auth_session_received(_access_token: String, _refresh_token: String) -> void:
-	# FounderAuthClient stores the refresh token through Android Keystore.
-	pass
+func _on_founder_auth_session_received(access_token: String, _refresh_token: String) -> void:
+	# Refresh token stays in FounderAuthClient / Android Keystore; sync client receives access token only.
+	PlayerSyncClient.set_session_access_token(access_token)
 
-func _on_founder_auth_session_restored(_access_token: String) -> void:
+
+func _on_founder_auth_session_refreshed(access_token: String) -> void:
+	PlayerSyncClient.set_session_access_token(access_token)
+
+
+func _on_founder_auth_session_restored(access_token: String) -> void:
+	PlayerSyncClient.set_session_access_token(access_token)
 	# Revalidate the founder entitlement after a persisted Auth session is recovered.
 	FounderAuthClient.request_founder_entitlement_for_active_session()
 
