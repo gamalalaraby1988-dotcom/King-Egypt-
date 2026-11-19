@@ -6,3 +6,6 @@ project_id = "lupmaktbymuaymhqsxxu"
 # /auth/v1/user before issuing any founder entitlement.
 [functions.founder-entitlement]
 verify_jwt = false
+
+[functions.player-sync]
+verify_jwt = true
