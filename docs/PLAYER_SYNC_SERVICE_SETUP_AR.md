@@ -4,6 +4,9 @@
 
 ## المكونات
 
+- عميل Godot: `scripts/player_sync_client.gd` مع قائمة انتظار محلية `user://player_sync_outbox.cfg`، ومعرّفات UUID ثابتة، ودفعات حتى 50 حدثًا، وحذف الحدث من القائمة فقط بعد تأكيد الخادم. عند فشل الحفظ بعد القبول يمكن إعادة الإرسال بأمان بفضل مفتاح idempotency.
+- ربط دورة جلسة المصادقة الحالية في `main.gd` مع العميل؛ يتم تمرير access token فقط، ولا يغادر refresh token مخزن Android الآمن.
+
 - Migration: `20261119160000_player_sync_inbox.sql`
 - Edge Function: `player-sync`
 - RPC: `public.submit_player_sync_events(jsonb)`
