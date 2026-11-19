@@ -820,6 +820,14 @@ func _create_mode_selection_ui() -> void:
 	mode_selection_layer.name = "GameModeSelection"
 	mode_selection_layer.layer = 100
 	add_child(mode_selection_layer)
+	# Connect auth lifecycle even when the founder identity is already cached locally.
+	FounderAuthClient.request_finished.connect(_on_founder_auth_request_finished)
+	FounderAuthClient.email_verified.connect(_on_founder_email_verified)
+	FounderAuthClient.auth_session_received.connect(_on_founder_auth_session_received)
+	FounderAuthClient.auth_session_restored.connect(_on_founder_auth_session_restored)
+	FounderAuthClient.auth_session_expired.connect(_on_founder_auth_session_expired)
+	FounderAuthClient.founder_entitlement_received.connect(_on_founder_entitlement_received)
+	FounderAuthClient.founder_entitlement_failed.connect(_on_founder_entitlement_failed)
 	var backdrop := ColorRect.new()
 	backdrop.color = Color(0.025, 0.035, 0.05, 0.94)
 	backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -911,11 +919,6 @@ func _create_mode_selection_ui() -> void:
 		verify_code_button.custom_minimum_size.y = 40
 		verify_code_button.pressed.connect(_on_founder_verify_code)
 		founder_email_gate.add_child(verify_code_button)
-		FounderAuthClient.request_finished.connect(_on_founder_auth_request_finished)
-		FounderAuthClient.email_verified.connect(_on_founder_email_verified)
-		FounderAuthClient.auth_session_received.connect(_on_founder_auth_session_received)
-		FounderAuthClient.founder_entitlement_received.connect(_on_founder_entitlement_received)
-		FounderAuthClient.founder_entitlement_failed.connect(_on_founder_entitlement_failed)
 
 	game_mode_controls = VBoxContainer.new()
 	game_mode_controls.add_theme_constant_override("separation", 8)
@@ -959,9 +962,19 @@ func _on_founder_email_verified(_user_id: String, verified_email: String) -> voi
 	if is_instance_valid(mode_status_label):
 		mode_status_label.text = "تم تأكيد ملكية البريد %s. تفعيل حساب المؤسس ينتظر اعتماد التذكرة الخادمية." % verified_email
 
+func _on_founder_auth_session_expired() -> void:
+	# انتهاء جلسة Auth لا يلغي التذكرة المحلية الموقعة؛ لكنه يمنع طلبات Online التي تحتاج جلسة.
+	if FounderIdentityManager.is_founder and is_instance_valid(mode_status_label):
+		mode_status_label.text = "انتهت جلسة الاتصال الآمنة. أعد التحقق من بريد المؤسس للعمليات Online؛ تذكرة Offline الصالحة لا تتأثر."
+
+
 func _on_founder_auth_session_received(_access_token: String, _refresh_token: String) -> void:
-	# لا نخزن الجلسة محليًا حتى تكتمل آلية إدارة الجلسات وتجديدها الآمنة.
+	# FounderAuthClient stores the refresh token through Android Keystore.
 	pass
+
+func _on_founder_auth_session_restored(_access_token: String) -> void:
+	# Revalidate the founder entitlement after a persisted Auth session is recovered.
+	FounderAuthClient.request_founder_entitlement_for_active_session()
 
 func _on_founder_entitlement_received(payload: String, signature_base64: String) -> void:
 	if not FounderIdentityManager.accept_signed_entitlement(payload, signature_base64):

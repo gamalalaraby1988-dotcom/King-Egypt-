@@ -3,6 +3,9 @@ extends Node
 signal request_finished(success: bool, message: String)
 signal email_verified(user_id: String, email: String)
 signal auth_session_received(access_token: String, refresh_token: String)
+signal auth_session_refreshed(access_token: String)
+signal auth_session_restored(access_token: String)
+signal auth_session_expired
 signal founder_entitlement_received(payload: String, signature_base64: String)
 signal founder_entitlement_failed(message: String)
 
@@ -10,11 +13,20 @@ const API_BASE_SETTING := "founder/auth/api_base_url"
 const PUBLISHABLE_KEY_SETTING := "founder/auth/publishable_key"
 const OTP_PATH := "/auth/v1/otp"
 const VERIFY_PATH := "/auth/v1/verify"
+const REFRESH_PATH := "/auth/v1/token?grant_type=refresh_token"
+const SECURE_STORAGE_SINGLETON := "FounderSecureStorage"
+const REFRESH_TOKEN_ALIAS := "king_of_egypt_city.founder.refresh_token.v1"
 const ENTITLEMENT_PATH := "/functions/v1/founder-entitlement"
 
 var _http: HTTPRequest
 var _pending_action := ""
 var _pending_email := ""
+var _session_access_token := ""
+var _session_refresh_token := ""
+var _session_expires_at := 0
+var _session_refresh_timer: Timer
+var _restoring_session := false
+var _restore_retry_pending := false
 
 func _ready() -> void:
 	_http = HTTPRequest.new()
@@ -22,6 +34,12 @@ func _ready() -> void:
 	_http.timeout = 20.0
 	add_child(_http)
 	_http.request_completed.connect(_on_request_completed)
+	_session_refresh_timer = Timer.new()
+	_session_refresh_timer.name = "FounderAuthSessionRefreshTimer"
+	_session_refresh_timer.one_shot = true
+	add_child(_session_refresh_timer)
+	_session_refresh_timer.timeout.connect(_refresh_auth_session)
+	call_deferred("_restore_persisted_session")
 
 func is_configured() -> bool:
 	var base := _api_base_url()
@@ -85,14 +103,29 @@ func _on_request_completed(result: int, response_code: int, _headers: PackedStri
 	_pending_action = ""
 	var parsed := JSON.new()
 	if result != HTTPRequest.RESULT_SUCCESS:
-		request_finished.emit(false, "فشل الاتصال بخدمة التحقق. حاول لاحقًا.")
+		if action == "refresh_session":
+			if _restoring_session:
+				_retry_restore_or_clear()
+			else:
+				_retry_or_expire_session()
+		else:
+			request_finished.emit(false, "فشل الاتصال بخدمة التحقق. حاول لاحقًا.")
 		return
 	if parsed.parse(body.get_string_from_utf8()) != OK or not (parsed.data is Dictionary):
-		request_finished.emit(false, "استجابة غير صالحة من خدمة التحقق.")
+		if action == "refresh_session":
+			_retry_or_expire_session()
+		else:
+			request_finished.emit(false, "استجابة غير صالحة من خدمة التحقق.")
 		return
 	var response: Dictionary = parsed.data
 	if response_code < 200 or response_code >= 300:
-		request_finished.emit(false, _safe_auth_error(response))
+		if action == "refresh_session":
+			_handle_refresh_failure(response_code, response)
+		else:
+			request_finished.emit(false, _safe_auth_error(response))
+		return
+	if action == "refresh_session":
+		_handle_refresh_success(response)
 		return
 	if action == "request_code":
 		request_finished.emit(true, "إذا كان البريد صالحًا للإرسال، فسيصلك رمز التحقق.")
@@ -111,6 +144,11 @@ func _on_request_completed(result: int, response_code: int, _headers: PackedStri
 		if verified_email != _pending_email or confirmed_at.is_empty() or user_id.is_empty():
 			request_finished.emit(false, "لم يثبت الخادم ملكية البريد المطلوب.")
 			return
+		var expires_in := int(response.get("expires_in", 3600))
+		if expires_in <= 0:
+			request_finished.emit(false, "مدة جلسة المصادقة التي أعادها الخادم غير صالحة.")
+			return
+		_store_auth_session(access_token, refresh_token, expires_in)
 		email_verified.emit(user_id, verified_email)
 		auth_session_received.emit(access_token, refresh_token)
 		request_finished.emit(true, "تم التحقق من البريد. جارٍ طلب اعتماد هوية المؤسس من الخادم...")
@@ -141,6 +179,166 @@ func _request_founder_entitlement(access_token: String) -> void:
 		founder_entitlement_failed.emit("تعذر الاتصال بخدمة اعتماد المؤسس.")
 		return
 	_pending_action = "founder_entitlement"
+
+
+func has_active_auth_session() -> bool:
+	return not _session_access_token.is_empty() and Time.get_unix_time_from_system() < _session_expires_at
+
+func get_current_access_token() -> String:
+	if not has_active_auth_session():
+		return ""
+	return _session_access_token
+
+func clear_auth_session() -> void:
+	_expire_auth_session()
+
+func request_founder_entitlement_for_active_session() -> bool:
+	if not has_active_auth_session():
+		founder_entitlement_failed.emit("لا توجد جلسة مصادقة نشطة لاعتماد المؤسس.")
+		return false
+	if _pending_action != "":
+		return false
+	_request_founder_entitlement(_session_access_token)
+	return _pending_action == "founder_entitlement"
+
+func _store_auth_session(access_token: String, refresh_token: String, expires_in: int) -> void:
+	_session_access_token = access_token
+	_session_refresh_token = refresh_token
+	_session_expires_at = int(Time.get_unix_time_from_system()) + expires_in
+	_persist_refresh_token_securely(refresh_token)
+	_schedule_session_refresh()
+
+func _secure_storage_available() -> bool:
+	if not Engine.has_singleton(SECURE_STORAGE_SINGLETON):
+		return false
+	var storage: Object = Engine.get_singleton(SECURE_STORAGE_SINGLETON)
+	return storage.has_method("is_available") and bool(storage.call("is_available"))
+
+func _persist_refresh_token_securely(refresh_token: String) -> void:
+	if not _secure_storage_available():
+		return
+	var storage: Object = Engine.get_singleton(SECURE_STORAGE_SINGLETON)
+	if not storage.has_method("save_secret"):
+		return
+	if not bool(storage.call("save_secret", REFRESH_TOKEN_ALIAS, refresh_token)):
+		if storage.has_method("delete_secret"):
+			storage.call("delete_secret", REFRESH_TOKEN_ALIAS)
+		push_warning("تعذر حفظ جلسة المؤسس في مخزن Android الآمن؛ ستظل الجلسة الحالية مؤقتة.")
+
+func _restore_persisted_session() -> void:
+	if not _secure_storage_available():
+		return
+	var storage: Object = Engine.get_singleton(SECURE_STORAGE_SINGLETON)
+	if not storage.has_method("load_secret"):
+		return
+	var saved_token := str(storage.call("load_secret", REFRESH_TOKEN_ALIAS))
+	if saved_token.is_empty():
+		return
+	_session_refresh_token = saved_token
+	_request_session_refresh(true)
+
+func _delete_persisted_refresh_token() -> void:
+	if not _secure_storage_available():
+		return
+	var storage: Object = Engine.get_singleton(SECURE_STORAGE_SINGLETON)
+	if storage.has_method("delete_secret"):
+		storage.call("delete_secret", REFRESH_TOKEN_ALIAS)
+
+func _schedule_session_refresh() -> void:
+	if not is_instance_valid(_session_refresh_timer) or _session_refresh_token.is_empty():
+		return
+	var remaining := float(_session_expires_at) - Time.get_unix_time_from_system()
+	if remaining <= 0.0:
+		_expire_auth_session()
+		return
+	var delay := remaining * 0.8
+	if remaining > 20.0:
+		delay = minf(delay, remaining - 10.0)
+	else:
+		delay = remaining * 0.5
+	_session_refresh_timer.start(maxf(1.0, delay))
+
+func _refresh_auth_session() -> void:
+	_request_session_refresh(_restore_retry_pending)
+
+func _request_session_refresh(restoring: bool) -> void:
+	if _session_refresh_token.is_empty():
+		return
+	if not restoring and Time.get_unix_time_from_system() >= _session_expires_at:
+		_expire_auth_session()
+		return
+	if _pending_action != "":
+		_session_refresh_timer.start(5.0)
+		return
+	var headers := PackedStringArray([
+		"Content-Type: application/json",
+		"Accept: application/json",
+		"apikey: " + _publishable_key()
+	])
+	var payload := {"refresh_token": _session_refresh_token}
+	var error := _http.request(_api_base_url() + REFRESH_PATH, headers, HTTPClient.METHOD_POST, JSON.stringify(payload))
+	if error != OK:
+		if restoring:
+			_retry_restore_or_clear()
+		else:
+			_retry_or_expire_session()
+		return
+	_restoring_session = restoring
+	_pending_action = "refresh_session"
+
+func _handle_refresh_success(response: Dictionary) -> void:
+	var was_restoring := _restoring_session
+	_restoring_session = false
+	_restore_retry_pending = false
+	var access_token := str(response.get("access_token", ""))
+	var refresh_token := str(response.get("refresh_token", ""))
+	var expires_in := int(response.get("expires_in", 3600))
+	if access_token.is_empty() or refresh_token.is_empty() or expires_in <= 0:
+		_retry_or_expire_session()
+		return
+	_store_auth_session(access_token, refresh_token, expires_in)
+	auth_session_refreshed.emit(access_token)
+	if was_restoring:
+		auth_session_restored.emit(access_token)
+
+func _handle_refresh_failure(response_code: int, response: Dictionary) -> void:
+	var was_restoring := _restoring_session
+	_restoring_session = false
+	var error_code := str(response.get("code", response.get("error", ""))).to_lower()
+	if response_code == 400 and error_code in ["invalid_grant", "refresh_token_not_found", "refresh_token_already_used", "invalid_refresh_token"]:
+		_expire_auth_session()
+		return
+	if was_restoring:
+		_retry_restore_or_clear()
+	else:
+		_retry_or_expire_session()
+
+func _retry_or_expire_session() -> void:
+	if _session_refresh_token.is_empty():
+		return
+	var remaining := float(_session_expires_at) - Time.get_unix_time_from_system()
+	if remaining <= 5.0:
+		_expire_auth_session()
+	else:
+		_session_refresh_timer.start(minf(15.0, remaining - 2.0))
+
+func _retry_restore_or_clear() -> void:
+	if _session_refresh_token.is_empty():
+		return
+	# الشبكة غير متاحة؛ احتفظ بالرمز الآمن وحاول مجددًا عند توفر الاتصال.
+	_restore_retry_pending = true
+	_session_refresh_timer.start(15.0)
+
+func _expire_auth_session() -> void:
+	_restore_retry_pending = false
+	_restoring_session = false
+	_delete_persisted_refresh_token()
+	if is_instance_valid(_session_refresh_timer):
+		_session_refresh_timer.stop()
+	_session_access_token = ""
+	_session_refresh_token = ""
+	_session_expires_at = 0
+	auth_session_expired.emit()
 
 func _safe_auth_error(response: Dictionary) -> String:
 	match str(response.get("code", "")):
