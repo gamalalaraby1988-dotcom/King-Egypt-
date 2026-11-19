@@ -496,6 +496,9 @@ func _create_building_interior(building_title: String) -> void:
 	interior_root.name = "GeneratedBuildingInterior"
 	interior_root.position = INTERIOR_WORLD_POSITION
 	add_child(interior_root)
+	if building_title == "القصر الملكي":
+		_create_royal_palace_interior(interior_root)
+		return
 	# غرفة أولية خفيفة مبنية من المجسمات البدائية الموجودة بالفعل في المشروع.
 	_create_box(interior_root, "InteriorFloor", Vector3(14, 0.35, 14), Vector3(0, 0, 0), Color(0.48, 0.39, 0.27), true)
 	_create_box(interior_root, "BackWall", Vector3(14, 5, 0.35), Vector3(0, 2.5, -7), Color(0.69, 0.59, 0.43), true)
@@ -523,6 +526,72 @@ func _create_building_interior(building_title: String) -> void:
 	light.light_energy = 1.2
 	light.omni_range = 18.0
 	interior_root.add_child(light)
+
+func _create_royal_palace_interior(root: Node3D) -> void:
+	# جناح داخلي واحد متصل؛ المناطق الخمس أجنحة داخل القصر وليست مباني مستقلة.
+	_create_box(root, "PalaceMarbleFloor", Vector3(30, 0.35, 24), Vector3(0, 0, 0), Color(0.72, 0.66, 0.54), true)
+	_create_box(root, "PalaceBackWall", Vector3(30, 6.5, 0.4), Vector3(0, 3.25, -12), Color(0.78, 0.70, 0.56), true)
+	_create_box(root, "PalaceLeftWall", Vector3(0.4, 6.5, 24), Vector3(-15, 3.25, 0), Color(0.70, 0.61, 0.47), true)
+	_create_box(root, "PalaceRightWall", Vector3(0.4, 6.5, 24), Vector3(15, 3.25, 0), Color(0.70, 0.61, 0.47), true)
+	_create_box(root, "PalaceFrontLeft", Vector3(9, 6.5, 0.4), Vector3(-10.5, 3.25, 12), Color(0.78, 0.70, 0.56), true)
+	_create_box(root, "PalaceFrontRight", Vector3(9, 6.5, 0.4), Vector3(10.5, 3.25, 12), Color(0.78, 0.70, 0.56), true)
+	_create_box(root, "PalaceEntranceLintel", Vector3(12, 1.0, 0.45), Vector3(0, 5.9, 12), Color(0.86, 0.67, 0.30), true)
+	_create_box(root, "PalaceCeilingBand", Vector3(29.2, 0.22, 0.25), Vector3(0, 5.2, -11.72), Color(0.88, 0.69, 0.32))
+	var zones := [
+		{"id":"ThroneHall","name":"قاعة العرش الملكية","position":Vector3(-9, 0, -6),"color":Color(0.52, 0.34, 0.22)},
+		{"id":"CelebrationHall","name":"قاعة الاحتفالات","position":Vector3(0, 0, -6),"color":Color(0.48, 0.25, 0.22)},
+		{"id":"EuropeanCasino","name":"الكازينو الأوروبي","position":Vector3(9, 0, -6),"color":Color(0.12, 0.30, 0.29)},
+		{"id":"VIPLounge","name":"صالة VIP","position":Vector3(-7, 0, 6),"color":Color(0.16, 0.22, 0.30)},
+		{"id":"IndoorGarden","name":"الحديقة الملكية الداخلية","position":Vector3(7, 0, 6),"color":Color(0.19, 0.34, 0.23)}
+	]
+	for zone in zones:
+		var zone_id := str(zone["id"])
+		var zone_position: Vector3 = zone["position"]
+		var zone_color: Color = zone["color"]
+		_create_box(root, zone_id + "FloorAccent", Vector3(7.4, 0.08, 5.4), zone_position + Vector3(0, 0.22, 0), zone_color)
+		_create_box(root, zone_id + "GoldBorderFront", Vector3(7.5, 0.12, 0.16), zone_position + Vector3(0, 0.29, 2.7), Color(0.86, 0.67, 0.30))
+		_create_box(root, zone_id + "GoldBorderBack", Vector3(7.5, 0.12, 0.16), zone_position + Vector3(0, 0.29, -2.7), Color(0.86, 0.67, 0.30))
+		var plaque := Label3D.new()
+		plaque.name = zone_id + "Plaque"
+		plaque.text = str(zone["name"])
+		plaque.position = zone_position + Vector3(0, 2.7, -2.45)
+		plaque.font_size = 30
+		plaque.pixel_size = 0.012
+		plaque.modulate = Color(1.0, 0.88, 0.58)
+		plaque.outline_size = 7
+		root.add_child(plaque)
+		_create_box(root, zone_id + "Feature", Vector3(2.8, 1.0, 1.0), zone_position + Vector3(0, 0.85, 0.3), zone_color, true)
+		for side in [-1.0, 1.0]:
+			_create_box(root, zone_id + "Column_" + str(side), Vector3(0.28, 3.0, 0.28), zone_position + Vector3(side * 3.35, 1.7, -2.2), Color(0.84, 0.68, 0.39))
+	# عرش مرتفع، طاولات احتفال، منصات ماكينات شكلية، مقاعد VIP وأحواض نباتية.
+	_create_box(root, "ThroneDais", Vector3(3.8, 0.45, 2.6), Vector3(-9, 0.48, -8.0), Color(0.58, 0.43, 0.24), true)
+	_create_box(root, "ThroneSeat", Vector3(1.8, 1.8, 1.0), Vector3(-9, 1.6, -8.0), Color(0.42, 0.12, 0.12), true)
+	for i in range(3):
+		var x := -2.0 + float(i) * 2.0
+		_create_box(root, "CelebrationTable_%d" % i, Vector3(1.3, 0.18, 1.3), Vector3(x, 0.85, -6.2), Color(0.48, 0.27, 0.14), true)
+	for i in range(3):
+		var x := 6.5 + float(i) * 2.2
+		_create_box(root, "CasinoMachinePedestal_%d" % i, Vector3(1.0, 1.8, 0.8), Vector3(x, 1.0, -6.2), Color(0.12, 0.19, 0.20), true)
+		_create_box(root, "CasinoMachineScreen_%d" % i, Vector3(0.82, 0.75, 0.12), Vector3(x, 2.0, -6.62), Color(0.75, 0.53, 0.20))
+	for i in range(2):
+		_create_box(root, "VIPSofa_%d" % i, Vector3(2.8, 0.75, 1.0), Vector3(-8.5 + float(i) * 3.0, 0.45, 7.1), Color(0.12, 0.20, 0.28), true)
+	for i in range(3):
+		_create_box(root, "GardenPlanter_%d" % i, Vector3(1.5, 0.65, 1.5), Vector3(5.0 + float(i) * 2.0, 0.45, 7.0), Color(0.20, 0.36, 0.22), true)
+		_create_box(root, "GardenPlant_%d" % i, Vector3(0.65, 1.8, 0.65), Vector3(5.0 + float(i) * 2.0, 1.55, 7.0), Color(0.15, 0.42, 0.20))
+	var title := Label3D.new()
+	title.name = "RoyalPalaceInteriorTitle"
+	title.text = "القصر الملكي"
+	title.position = Vector3(0, 4.4, -11.72)
+	title.font_size = 56
+	title.pixel_size = 0.012
+	title.modulate = Color(1.0, 0.88, 0.58)
+	root.add_child(title)
+	var light := OmniLight3D.new()
+	light.position = Vector3(0, 5.2, 0)
+	light.light_color = Color(1.0, 0.82, 0.57)
+	light.light_energy = 1.6
+	light.omni_range = 32.0
+	root.add_child(light)
 
 func _create_interior_furnishings(root: Node3D, building_title: String) -> void:
 	# أثاث هندسي خفيف ومختلف لكل مبنى، دون صور أو خامات أو مكتبات إضافية.
