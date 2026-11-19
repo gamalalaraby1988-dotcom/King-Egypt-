@@ -23,6 +23,7 @@ func _ready() -> void:
 	_build_access_roads_and_parking()
 	_build_public_gardens()
 	_build_mountain_route()
+	_build_mountain_animals()
 	_build_city_lighting_and_wayfinding()
 	_build_npc_population()
 
@@ -614,6 +615,156 @@ func _build_mountain_route() -> void:
 	_box(summit, "SummitPlatform", Vector3(8.0, 0.4, 7.0), Vector3(0, 0, 0), IVORY)
 	_box(summit, "SummitObelisk", Vector3(1.2, 4.5, 1.2), Vector3(0, 2.4, 0), GOLD)
 	_box(summit, "SummitCrown", Vector3(2.4, 0.35, 2.4), Vector3(0, 4.8, 0), GOLD)
+
+
+# نسخ إضافية من حيوانات المخيم موزعة على جوانب الجبل بعيداً عن مسار الصعود.
+var mountain_wildlife_nodes: Array[Node3D] = []
+var mountain_wildlife_clock := 0.0
+
+func _process(delta: float) -> void:
+	mountain_wildlife_clock += delta
+	for i in range(mountain_wildlife_nodes.size()):
+		var animal := mountain_wildlife_nodes[i]
+		if is_instance_valid(animal):
+			var phase := float(i) * 0.91
+			animal.rotation.y = sin(mountain_wildlife_clock * 0.34 + phase) * 0.055
+			if animal.name == "MountainFalcon":
+				animal.position.y += sin(mountain_wildlife_clock * 1.8 + phase) * 0.002
+
+func _build_mountain_animals() -> void:
+	var mountain := get_node_or_null("KingsMountainRoute") as Node3D
+	if mountain == null:
+		return
+	var wildlife := [
+		{"id":"MountainArabianCamel","label":"جمل عربي","kind":"camel","at":Vector3(8.2,0.25,22.0),"color":Color(0.62,0.43,0.25)},
+		{"id":"MountainArabianHorse","label":"حصان عربي","kind":"horse","at":Vector3(15.0,0.2,15.0),"color":Color(0.28,0.16,0.11)},
+		{"id":"MountainArabianOryx","label":"مها عربي","kind":"oryx","at":Vector3(-7.0,2.7,5.0),"color":Color(0.88,0.82,0.68)},
+		{"id":"MountainGazelle","label":"غزال","kind":"gazelle","at":Vector3(7.8,2.5,4.5),"color":Color(0.70,0.48,0.29)},
+		{"id":"MountainFennecFox","label":"ثعلب صحراوي","kind":"fox","at":Vector3(4.5,2.8,-7.2),"color":Color(0.86,0.62,0.34)},
+		{"id":"MountainSheep","label":"أغنام","kind":"sheep","at":Vector3(-8.2,2.3,-2.0),"color":Color(0.82,0.78,0.67)},
+		{"id":"MountainGoat","label":"ماعز","kind":"goat","at":Vector3(6.5,3.0,7.5),"color":Color(0.48,0.34,0.22)},
+		{"id":"MountainFalcon","label":"صقر","kind":"falcon","at":Vector3(2.5,13.5,-1.5),"color":Color(0.48,0.34,0.22)}
+	]
+	for spec in wildlife:
+		var animal := Node3D.new()
+		animal.name = str(spec["id"])
+		animal.position = spec["at"]
+		animal.add_to_group("mountain_wildlife")
+		mountain.add_child(animal)
+		_build_mountain_animal_mesh(animal, str(spec["kind"]), spec["color"])
+		var label := Label3D.new()
+		label.name = "WildlifeName"
+		label.text = str(spec["label"])
+		label.position = Vector3(0, 2.5, 0)
+		label.font_size = 25
+		label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		animal.add_child(label)
+		mountain_wildlife_nodes.append(animal)
+
+func _build_mountain_animal_mesh(animal: Node3D, kind: String, coat: Color) -> void:
+	var body := MeshInstance3D.new()
+	body.name = "WildlifeBody"
+	var body_mesh := SphereMesh.new()
+	body_mesh.radius = 0.48 if kind != "camel" else 0.62
+	body_mesh.height = body_mesh.radius * 2.0
+	body_mesh.radial_segments = 7
+	body_mesh.rings = 4
+	body.mesh = body_mesh
+	body.scale = Vector3(1.25, 0.9, 1.55)
+	body.position = Vector3(0, 0.95, 0)
+	body.material_override = _mat(coat)
+	animal.add_child(body)
+
+	var head := MeshInstance3D.new()
+	head.name = "WildlifeHead"
+	var head_mesh := SphereMesh.new()
+	head_mesh.radius = 0.25
+	head_mesh.height = 0.5
+	head_mesh.radial_segments = 7
+	head_mesh.rings = 4
+	head.mesh = head_mesh
+	head.position = Vector3(0, 1.48, -0.58)
+	head.material_override = _mat(coat.lightened(0.08))
+	animal.add_child(head)
+
+	if kind == "falcon":
+		body.position.y = 1.0
+		head.position = Vector3(0, 1.42, -0.35)
+		for side in [-1.0, 1.0]:
+			var wing := MeshInstance3D.new()
+			wing.name = "FalconWing"
+			var wing_mesh := BoxMesh.new()
+			wing_mesh.size = Vector3(0.16, 0.12, 1.2)
+			wing.mesh = wing_mesh
+			wing.position = Vector3(side * 0.48, 1.05, 0.0)
+			wing.rotation.z = side * -0.12
+			wing.material_override = _mat(coat.darkened(0.12))
+			animal.add_child(wing)
+		return
+
+	if kind == "camel":
+		var hump := MeshInstance3D.new()
+		hump.name = "CamelHump"
+		var hump_mesh := SphereMesh.new()
+		hump_mesh.radius = 0.38
+		hump_mesh.height = 0.76
+		hump.mesh = hump_mesh
+		hump.position = Vector3(0, 1.55, 0.05)
+		hump.material_override = _mat(coat.darkened(0.06))
+		animal.add_child(hump)
+
+	for side in [-1.0, 1.0]:
+		for front_back in [-1.0, 1.0]:
+			var leg := MeshInstance3D.new()
+			leg.name = "WildlifeLeg"
+			var leg_mesh := CylinderMesh.new()
+			leg_mesh.top_radius = 0.07
+			leg_mesh.bottom_radius = 0.10
+			leg_mesh.height = 0.78
+			leg_mesh.radial_segments = 6
+			leg.mesh = leg_mesh
+			leg.position = Vector3(side * 0.25, 0.42, front_back * 0.34)
+			leg.material_override = _mat(coat.darkened(0.16))
+			animal.add_child(leg)
+
+	if kind == "oryx" or kind == "gazelle" or kind == "goat":
+		for side in [-1.0, 1.0]:
+			var horn := MeshInstance3D.new()
+			horn.name = "WildlifeHorn"
+			var horn_mesh := CylinderMesh.new()
+			horn_mesh.top_radius = 0.015
+			horn_mesh.bottom_radius = 0.075
+			horn_mesh.height = 0.62 if kind != "oryx" else 0.9
+			horn_mesh.radial_segments = 5
+			horn.mesh = horn_mesh
+			horn.position = Vector3(side * 0.16, 1.95, -0.58)
+			horn.rotation.z = side * -0.16
+			horn.material_override = _mat(Color(0.22, 0.17, 0.12))
+			animal.add_child(horn)
+
+	if kind == "fox":
+		var tail := MeshInstance3D.new()
+		tail.name = "FennecTail"
+		var tail_mesh := SphereMesh.new()
+		tail_mesh.radius = 0.22
+		tail_mesh.height = 0.44
+		tail.mesh = tail_mesh
+		tail.position = Vector3(0, 0.95, 0.72)
+		tail.scale = Vector3(0.85, 0.85, 1.8)
+		tail.material_override = _mat(Color(0.94, 0.84, 0.68))
+		animal.add_child(tail)
+
+	if kind == "sheep":
+		for i in range(4):
+			var wool := MeshInstance3D.new()
+			wool.name = "SheepWool"
+			var wool_mesh := SphereMesh.new()
+			wool_mesh.radius = 0.24
+			wool_mesh.height = 0.48
+			wool.mesh = wool_mesh
+			wool.position = Vector3(float(i - 2) * 0.2, 1.2, 0.12)
+			wool.material_override = _mat(coat.lightened(0.08))
+			animal.add_child(wool)
 
 func _build_city_lighting_and_wayfinding() -> void:
 	# Low-cost decorative lamp posts mark the main pedestrian routes and plaza edges.
