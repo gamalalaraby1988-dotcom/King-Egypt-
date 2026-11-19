@@ -680,11 +680,17 @@ func _interaction_action_key(target: Node3D) -> String:
 func _update_interaction_hud() -> void:
 	if not is_instance_valid(interact_button) or not is_instance_valid(prompt_label):
 		return
-	if is_instance_valid(player) and player.has_method("is_riding_animal") and player.is_riding_animal():
-		prompt_label.text = CityLanguage.translate("interaction_riding_prompt")
-		interact_button.text = CityLanguage.translate("interaction_dismount")
-		interact_button.visible = true
-	elif is_instance_valid(nearest_interactable):
+	var player_is_busy := is_instance_valid(player) and (player.get("sitting") == true or player.get("animal_riding") == true)
+	var has_interaction := is_instance_valid(nearest_interactable) and not player_is_busy
+	interact_button.visible = true
+	interact_button.text = "✋"
+	interact_button.add_theme_font_size_override("font_size", 28)
+	var hand_color := Color(0.20, 0.62, 1.0, 1.0) if has_interaction else Color.WHITE
+	interact_button.add_theme_color_override("font_color", hand_color)
+	interact_button.add_theme_color_override("font_hover_color", hand_color)
+	interact_button.add_theme_color_override("font_pressed_color", hand_color)
+	interact_button.tooltip_text = CityLanguage.translate(_interaction_action_key(nearest_interactable)) if has_interaction else CityLanguage.translate("interaction_approach")
+	if has_interaction:
 		var display_name := CityLanguage.translate("interaction_place")
 		if nearest_interactable.has_method("get_royal_resort_gate_data"):
 			display_name = str(nearest_interactable.get_royal_resort_gate_data().get("title", "بوابة المنتجع الملكي"))
@@ -703,17 +709,17 @@ func _update_interaction_hud() -> void:
 			display_name = str(nearest_interactable.get("character_name"))
 		interact_button.text = "جلوس" if nearest_interactable.has_method("sit_player") else CityLanguage.translate(_interaction_action_key(nearest_interactable))
 		prompt_label.text = "%s %s — %s" % [CityLanguage.translate("interaction_near"), display_name, CityLanguage.translate("interaction_press_hint")]
-		interact_button.visible = true
 	else:
-		prompt_label.text = CityLanguage.translate("interaction_approach")
-		interact_button.text = CityLanguage.translate("interaction_button")
-		interact_button.visible = false
+		if is_instance_valid(player) and player.get("animal_riding") == true:
+			prompt_label.text = CityLanguage.translate("interaction_riding_prompt") + " — استخدم زر الباب للنزول."
+		elif is_instance_valid(player) and player.get("sitting") == true:
+			prompt_label.text = "استخدم زر الباب للوقوف."
+		else:
+			prompt_label.text = CityLanguage.translate("interaction_approach")
 
 func interact() -> void:
 	_update_interaction_target()
-	if is_instance_valid(player) and player.has_method("is_riding_animal") and player.is_riding_animal():
-		player.end_animal_ride()
-		prompt_label.text = CityLanguage.translate("interaction_dismounted")
+	if is_instance_valid(player) and (player.get("animal_riding") == true or player.get("sitting") == true):
 		_update_interaction_hud()
 		return
 	if mission_running or job_running:
