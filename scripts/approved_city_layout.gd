@@ -778,15 +778,16 @@ func _build_mountain_vehicle_access(mountain: Node3D) -> void:
 	# Wide, collision-backed turning aprons keep the alternating bends usable.
 	for i in range(1, route_points.size() - 1):
 		var point: Vector3 = route_points[i]
-		var landing := _box(road, "MountainVehicleTurnout_%02d" % i,
-			Vector3(14.0, 0.22, 14.0), Vector3(point.x, point.y, point.z), SAND)
+		var landing_center := Vector3(maxf(point.x, 17.5), point.y, point.z)
+		_box(road, "MountainVehicleTurnout_%02d" % i,
+			Vector3(12.0, 0.22, 12.0), landing_center, SAND)
 		var landing_body := StaticBody3D.new()
 		landing_body.name = "MountainVehicleTurnoutCollision_%02d" % i
-		landing_body.position = point
+		landing_body.position = landing_center
 		landing_body.add_to_group("city_world_geometry")
 		var landing_shape := CollisionShape3D.new()
 		var landing_box := BoxShape3D.new()
-		landing_box.size = Vector3(14.0, 0.3, 14.0)
+		landing_box.size = Vector3(12.0, 0.3, 12.0)
 		landing_shape.shape = landing_box
 		landing_body.add_child(landing_shape)
 		road.add_child(landing_body)
@@ -833,8 +834,18 @@ func _add_sloped_vehicle_road_segment(parent: Node3D, label: String,
 		rails.look_at(start, Vector3.UP)
 		parent.add_child(rails)
 		for side in [-1.0, 1.0]:
-			_box(rails, "VehicleRoadGuardrail", Vector3(0.18, 0.9, length),
-				Vector3(side * (width * 0.5 - 0.18), 0.55, 0.0), GOLD)
+			var rail_at := Vector3(side * (width * 0.5 - 0.18), 0.55, 0.0)
+			_box(rails, "VehicleRoadGuardrail", Vector3(0.18, 0.9, length), rail_at, GOLD)
+			var rail_body := StaticBody3D.new()
+			rail_body.name = "VehicleRoadGuardrailCollision"
+			rail_body.position = rail_at
+			rail_body.add_to_group("city_world_geometry")
+			var rail_collision := CollisionShape3D.new()
+			var rail_shape := BoxShape3D.new()
+			rail_shape.size = Vector3(0.28, 1.0, length)
+			rail_collision.shape = rail_shape
+			rail_body.add_child(rail_collision)
+			rails.add_child(rail_body)
 
 
 func _build_mountain_animals() -> void:
