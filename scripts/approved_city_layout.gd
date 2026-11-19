@@ -172,6 +172,10 @@ func _build_pyramids() -> void:
 		pyramid.position = pyramid_positions[i] + Vector3(0.0, mesh.height * 0.5, 0.0)
 		pyramid.material_override = _mat(Color(0.72, 0.58, 0.38))
 		pyramid.add_to_group("city_distant_landmarks")
+		pyramid.add_to_group("city_world_geometry")
+		pyramid.visibility_range_begin = 0.0
+		pyramid.visibility_range_end = 500.0
+		pyramid.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		add_child(pyramid)
 	var sphinx := MeshInstance3D.new()
 	sphinx.name = "DistantSphinxLandmark"
@@ -181,6 +185,10 @@ func _build_pyramids() -> void:
 	sphinx.position = Vector3(70.0, 2.0, -246.0)
 	sphinx.material_override = _mat(SAND)
 	sphinx.add_to_group("city_distant_landmarks")
+	sphinx.add_to_group("city_world_geometry")
+	sphinx.visibility_range_begin = 0.0
+	sphinx.visibility_range_end = 500.0
+	sphinx.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(sphinx)
 
 func _build_royal_gate_and_square() -> void:
@@ -219,6 +227,50 @@ func _tree(parent: Node3D, label: String, at: Vector3, scale_factor: float = 1.0
 		leaf.material_override = _mat(Color(0.16, 0.34, 0.20))
 		leaf.add_to_group("city_world_geometry")
 		root.add_child(leaf)
+	_add_tree_lod_proxy(root, scale_factor)
+
+
+func _add_tree_lod_proxy(root: Node3D, scale_factor: float) -> void:
+	# Keep the five-frond palm close to the player; use a compact two-mesh silhouette at distance.
+	for child in root.get_children():
+		if child is GeometryInstance3D:
+			child.visibility_range_end = 90.0
+
+	var proxy := Node3D.new()
+	proxy.name = "PalmLODProxy"
+	root.add_child(proxy)
+
+	var trunk := MeshInstance3D.new()
+	trunk.name = "LowDetailTrunk"
+	var trunk_mesh := CylinderMesh.new()
+	trunk_mesh.top_radius = 0.13 * scale_factor
+	trunk_mesh.bottom_radius = 0.22 * scale_factor
+	trunk_mesh.height = 3.2 * scale_factor
+	trunk_mesh.radial_segments = 5
+	trunk.mesh = trunk_mesh
+	trunk.position.y = 1.6 * scale_factor
+	trunk.material_override = _mat(Color(0.38, 0.24, 0.13))
+	trunk.visibility_range_begin = 90.0
+	trunk.visibility_range_end = 480.0
+	trunk.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	trunk.add_to_group("city_world_geometry")
+	proxy.add_child(trunk)
+
+	var crown := MeshInstance3D.new()
+	crown.name = "LowDetailPalmCrown"
+	var crown_mesh := SphereMesh.new()
+	crown_mesh.radius = 1.25 * scale_factor
+	crown_mesh.height = 0.75 * scale_factor
+	crown_mesh.radial_segments = 5
+	crown_mesh.rings = 3
+	crown.mesh = crown_mesh
+	crown.position.y = 3.15 * scale_factor
+	crown.material_override = _mat(Color(0.16, 0.34, 0.20))
+	crown.visibility_range_begin = 90.0
+	crown.visibility_range_end = 480.0
+	crown.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	crown.add_to_group("city_world_geometry")
+	proxy.add_child(crown)
 
 func _build_royal_square_landscaping() -> void:
 	# Keep the center of the plaza open for large player gatherings.
