@@ -22,6 +22,14 @@ var _player_saved_collision_mask := 1
 const INTERIOR_WORLD_POSITION := Vector3(1000.0, 0.0, 1000.0)
 
 func _ready() -> void:
+	if AuthoritativeGameServer.is_dedicated_server_requested():
+		_create_ground()
+		_create_city()
+		_create_approved_city_layout()
+		_create_city_signage()
+		_create_interactive_buildings()
+		_create_camp()
+		return
 	_create_ground()
 	_create_city()
 	_create_approved_city_layout()
@@ -38,6 +46,7 @@ func _ready() -> void:
 	_create_mode_selection_ui()
 	GameModeManager.status_changed.connect(_on_mode_status_changed)
 	GameModeManager.online_connected.connect(_on_mode_connected)
+	AuthoritativeGameServer.authentication_completed.connect(_on_player_server_authenticated)
 	GameModeManager.online_disconnected.connect(_on_mode_disconnected)
 
 
@@ -1183,7 +1192,7 @@ func _select_online_mode() -> void:
 	if address.is_empty():
 		mode_status_label.text = "لم يتم إعداد عنوان خادم Online بعد. أدخل عنوان الخادم عند توفره."
 		return
-	mode_status_label.text = "جارٍ الاتصال بالخادم..."
+	mode_status_label.text = "جارٍ إنشاء اتصال آمن والتحقق من حساب اللاعب..."
 	GameModeManager.connect_online(address, 2456)
 
 func _enter_selected_game_mode() -> void:
@@ -1199,7 +1208,20 @@ func _on_mode_status_changed(message: String) -> void:
 		mode_status_label.text = message
 
 func _on_mode_connected() -> void:
-	_enter_selected_game_mode()
+	var access_token := PlayerAccountAuthClient.get_access_token()
+	if access_token.is_empty():
+		_on_mode_status_changed("سجّل الدخول إلى حساب اللاعب قبل دخول Online.")
+		GameModeManager.disconnect_online()
+		return
+	AuthoritativeGameServer.authenticate_player.rpc_id(1, access_token)
+
+
+func _on_player_server_authenticated(success: bool, message: String) -> void:
+	_on_mode_status_changed(message)
+	if success:
+		_enter_selected_game_mode()
+	else:
+		GameModeManager.disconnect_online()
 
 func _on_mode_disconnected() -> void:
 	# أعد نافذة اختيار الوضع بعد فقد الخادم، ولا تحوّل الجلسة تلقائيًا إلى Offline.
