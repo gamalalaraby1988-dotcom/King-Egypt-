@@ -48,8 +48,8 @@ func _build_ui() -> void:
 	panel.anchor_top = 0.5
 	panel.anchor_bottom = 0.5
 	var viewport_size := get_viewport().get_visible_rect().size
-	var panel_width := minf(420.0, maxf(260.0, viewport_size.x - 16.0))
-	var panel_height := minf(540.0, maxf(360.0, viewport_size.y - 16.0))
+	var panel_width := minf(420.0, maxf(220.0, viewport_size.x - 16.0))
+	var panel_height := minf(540.0, maxf(280.0, viewport_size.y - 16.0))
 	panel.offset_left = -panel_width * 0.5
 	panel.offset_right = panel_width * 0.5
 	panel.offset_top = -panel_height * 0.5
@@ -68,9 +68,15 @@ func _build_ui() -> void:
 	panel.add_theme_stylebox_override("panel", style)
 	root.add_child(panel)
 
+	var scroll := ScrollContainer.new()
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	panel.add_child(scroll)
 	var content := VBoxContainer.new()
+	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	content.add_theme_constant_override("separation", 9)
-	panel.add_child(content)
+	scroll.add_child(content)
 
 	var header := HBoxContainer.new()
 	content.add_child(header)
