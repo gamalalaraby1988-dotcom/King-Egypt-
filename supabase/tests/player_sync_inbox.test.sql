@@ -1,5 +1,5 @@
 begin;
-select extensions.plan(10);
+select extensions.plan(11);
 insert into auth.users (id,aud,role,email,encrypted_password,email_confirmed_at)
 values ('00000000-0000-4000-8000-000000000038','authenticated','authenticated','player-sync-inbox-test@example.invalid','',pg_catalog.now())
 on conflict (id) do nothing;
@@ -20,6 +20,19 @@ select pg_catalog.set_config('request.jwt.claim.sub','',true);
 select extensions.throws_ok($$select public.submit_player_sync_events('[{"event_id":"10000000-0000-4000-8000-000000000006","event_type":"setting_changed","payload":{"key":"locale","value":"ar"}}]'::jsonb)$$,'28000','authentication_required','rejects unauthenticated submissions');
 select pg_catalog.set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000038',true);
 select extensions.throws_ok($$select public.submit_player_sync_events((select pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object('event_id','10000000-0000-4000-8000-000000000007','event_type','setting_changed','payload',pg_catalog.jsonb_build_object('key','locale','value','ar'))) from pg_catalog.generate_series(1,51)))$$,'22023','invalid_event_batch','rejects batches over 50 events');
+
+select extensions.throws_ok(
+    $select public.submit_player_sync_events(
+        (select pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object(
+            'event_id', ('20000000-0000-4000-8000-' || pg_catalog.lpad(gs::text,12,'0'))::text,
+            'event_type','setting_changed',
+            'payload',pg_catalog.jsonb_build_object('key','locale','value','ar')
+        )) from pg_catalog.generate_series(1,198) gs)
+    )$,
+    'P0001',
+    'sync_rate_limited',
+    'enforces the per-player rolling event limit'
+);
 
 reset role;
 delete from auth.users where id='00000000-0000-4000-8000-000000000038';
