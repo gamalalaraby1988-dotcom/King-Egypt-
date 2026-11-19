@@ -102,73 +102,62 @@ func _build() -> void:
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(root)
 
-	var top := HBoxContainer.new()
-	top.anchor_left = 0.18
-	top.anchor_right = 0.82
-	top.anchor_top = 0.015
-	top.anchor_bottom = 0.015
-	top.offset_bottom = 52
-	top.alignment = BoxContainer.ALIGNMENT_CENTER
-	top.add_theme_constant_override("separation", 8)
-	root.add_child(top)
-	money_label = _make_button(top, "ذهب: 0  +", "wallet")
-	chips_label = _make_button(top, "رقائق: 0  +", "wallet")
-	gems_label = _make_button(top, "جواهر: 0", "wallet")
+	# شريط تنقل رأسي موحد على يمين الشاشة؛ نترك اليسار ومساحة الوسط للمدينة والحركة.
+	var dock := PanelContainer.new()
+	dock.name = "RightCityDock"
+	dock.anchor_left = 1.0
+	dock.anchor_right = 1.0
+	dock.anchor_top = 0.075
+	dock.anchor_bottom = 0.875
+	dock.offset_left = -150
+	dock.offset_right = -7
+	dock.add_theme_stylebox_override("panel", _make_hud_panel_style())
+	root.add_child(dock)
 
-	var left := VBoxContainer.new()
-	left.anchor_left = 0.012
-	left.anchor_top = 0.15
-	left.anchor_bottom = 0.68
-	left.offset_right = 150
-	left.add_theme_constant_override("separation", 7)
-	root.add_child(left)
-	_make_button(left, "👤 الملف", "profile")
-	_make_button(left, "📜 المهام", "missions")
-	_make_button(left, "🎁 المكافآت", "rewards")
-	_make_button(left, "🏆 الإنجازات", "missions")
+	var scroll := ScrollContainer.new()
+	scroll.name = "CityDockScroll"
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	dock.add_child(scroll)
 
-	var right := VBoxContainer.new()
-	right.anchor_left = 1.0
-	right.anchor_right = 1.0
-	right.anchor_top = 0.17
-	right.anchor_bottom = 0.72
-	right.offset_left = -158
-	right.offset_right = -8
-	right.add_theme_constant_override("separation", 7)
-	root.add_child(right)
-	_make_button(right, "👑 الفعاليات", "events")
-	_make_button(right, "🎟 الموسم", "pass")
-	_make_button(right, "📱 الهاتف", "phone")
-	_make_button(right, "🗺 الخريطة", "map")
-	_make_button(right, "🐈 الحيوانات", "pets")
+	var actions := VBoxContainer.new()
+	actions.name = "CityDockActions"
+	actions.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	actions.add_theme_constant_override("separation", 4)
+	scroll.add_child(actions)
 
-	var bottom := HBoxContainer.new()
-	bottom.anchor_left = 0.28
-	bottom.anchor_right = 0.72
-	bottom.anchor_top = 1.0
-	bottom.anchor_bottom = 1.0
-	bottom.offset_top = -66
-	bottom.alignment = BoxContainer.ALIGNMENT_CENTER
-	bottom.add_theme_constant_override("separation", 8)
-	root.add_child(bottom)
-	_make_button(bottom, "💬 محادثة", "chat")
-	_make_button(bottom, "👥 أصدقاء", "social")
-	_make_button(bottom, "🛡 مجموعتي", "group")
-	_make_button(bottom, "😊 تعبيرات", "emotes")
-	_make_button(bottom, "🎉 حفلة", "party")
-	_make_button(bottom, "⚙", "settings")
+	money_label = _make_button(actions, "ذهب: 0 +", "wallet")
+	chips_label = _make_button(actions, "رقائق: 0 +", "wallet")
+	gems_label = _make_button(actions, "جواهر: 0", "wallet")
+	_make_button(actions, "👤 الملف", "profile")
+	_make_button(actions, "📜 المهام", "missions")
+	_make_button(actions, "🎁 المكافآت", "rewards")
+	_make_button(actions, "🏆 الإنجازات", "missions")
+	_make_button(actions, "👑 الفعاليات", "events")
+	_make_button(actions, "🎟 الموسم", "pass")
+	_make_button(actions, "📱 الهاتف", "phone")
+	_make_button(actions, "🗺 الخريطة", "map")
+	_make_button(actions, "🐈 الحيوانات", "pets")
+	_make_button(actions, "💬 محادثة", "chat")
+	_make_button(actions, "👥 أصدقاء", "social")
+	_make_button(actions, "🛡 مجموعتي", "group")
+	_make_button(actions, "😊 تعبيرات", "emotes")
+	_make_button(actions, "🎉 حفلة", "party")
+	_make_button(actions, "⚙ الإعدادات", "settings")
 
 	popup = PanelContainer.new()
 	popup.anchor_left = 0.5
 	popup.anchor_right = 0.5
 	popup.anchor_top = 0.5
 	popup.anchor_bottom = 0.5
-	popup.offset_left = -210
-	popup.offset_right = 210
+	popup.offset_left = -190
+	popup.offset_right = 190
 	popup.offset_top = -145
 	popup.offset_bottom = 145
 	popup.visible = false
 	popup.mouse_filter = Control.MOUSE_FILTER_STOP
+	popup.add_theme_stylebox_override("panel", _make_hud_panel_style())
 	root.add_child(popup)
 	var content := VBoxContainer.new()
 	content.add_theme_constant_override("separation", 12)
@@ -186,11 +175,25 @@ func _build() -> void:
 	close.pressed.connect(func(): popup.visible = false)
 	content.add_child(close)
 
+
+func _make_hud_panel_style() -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.035, 0.045, 0.06, 0.88)
+	style.border_color = Color(0.72, 0.57, 0.29, 0.82)
+	style.set_border_width_all(1)
+	style.set_corner_radius_all(12)
+	style.content_margin_left = 5
+	style.content_margin_right = 5
+	style.content_margin_top = 6
+	style.content_margin_bottom = 6
+	return style
+
 func _make_button(parent: Control, caption: String, section: String) -> Button:
 	var button := Button.new()
 	button.text = caption
-	button.custom_minimum_size = Vector2(118, 42)
-	button.add_theme_font_size_override("font_size", 14)
+	button.custom_minimum_size = Vector2(126, 34)
+	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	button.add_theme_font_size_override("font_size", 12)
 	button.pressed.connect(_on_button_pressed.bind(section))
 	parent.add_child(button)
 	return button
@@ -243,14 +246,18 @@ func _open_vehicle_store_phone() -> void:
 func _build_vehicle_store_phone() -> void:
 	phone_popup = PanelContainer.new()
 	phone_popup.name = "VehicleStorePhone"
-	phone_popup.anchor_left = 0.5
-	phone_popup.anchor_right = 0.5
-	phone_popup.anchor_top = 0.5
-	phone_popup.anchor_bottom = 0.5
-	phone_popup.offset_left = -190
-	phone_popup.offset_right = 190
-	phone_popup.offset_top = -285
-	phone_popup.offset_bottom = 285
+	# الهاتف لوحة جانبية عمودية ملتصقة باليمين، وتترك أكبر مساحة ممكنة للمدينة.
+	var viewport_width := get_viewport().get_visible_rect().size.x
+	var panel_width := clampf(viewport_width * 0.42, 220.0, 300.0)
+	phone_popup.anchor_left = 1.0
+	phone_popup.anchor_right = 1.0
+	phone_popup.anchor_top = 0.02
+	phone_popup.anchor_bottom = 0.98
+	phone_popup.offset_left = -panel_width - 7.0
+	phone_popup.offset_right = -7.0
+	phone_popup.offset_top = 0.0
+	phone_popup.offset_bottom = 0.0
+	phone_popup.add_theme_stylebox_override("panel", _make_hud_panel_style())
 	phone_popup.visible = false
 	phone_popup.mouse_filter = Control.MOUSE_FILTER_STOP
 	root.add_child(phone_popup)
