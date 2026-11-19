@@ -19,13 +19,23 @@ select extensions.throws_ok($$select public.submit_player_sync_events('[{"event_
 select pg_catalog.set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000038',true);
 select extensions.throws_ok($$select public.submit_player_sync_events((select pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object('event_id','10000000-0000-4000-8000-000000000007','event_type','setting_changed','payload',pg_catalog.jsonb_build_object('key','locale','value','ar'))) from pg_catalog.generate_series(1,51)))$$,'22023','invalid_event_batch','rejects batches over 50 events');
 
-select public.submit_player_sync_events(
-    (select pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object(
-        'event_id',('20000000-0000-4000-8000-' || pg_catalog.lpad(gs::text,12,'0'))::text,
-        'event_type','setting_changed',
-        'payload',pg_catalog.jsonb_build_object('key','locale','value','ar')
-    )) from pg_catalog.generate_series(1,198) gs)
-);
+do $rate_test$
+declare
+    batch_no integer;
+    batch_events jsonb;
+begin
+    for batch_no in 0..3 loop
+        select pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object(
+            'event_id',('20000000-0000-4000-8000-' || pg_catalog.lpad(gs::text,12,'0'))::text,
+            'event_type','setting_changed',
+            'payload',pg_catalog.jsonb_build_object('key','locale','value','ar')
+        ))
+        into batch_events
+        from pg_catalog.generate_series(batch_no * 50 + 1, least(batch_no * 50 + 50, 198)) gs;
+        perform public.submit_player_sync_events(batch_events);
+    end loop;
+end;
+$rate_test$;
 select extensions.throws_ok($$select public.submit_player_sync_events('[{"event_id":"30000000-0000-4000-8000-000000000001","event_type":"setting_changed","payload":{"key":"locale","value":"ar"}}]'::jsonb)$$,'P0001','sync_rate_limited','enforces the per-player rolling event limit');
 
 reset role;
