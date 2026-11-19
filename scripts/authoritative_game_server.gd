@@ -5,6 +5,7 @@ extends Node
 
 signal authentication_completed(success: bool, message: String)
 signal authoritative_state_received(position: Vector3, rotation_y: float, velocity: Vector3)
+signal server_objective_reached(user_id: String, activity_kind: String, activity_id: String)
 
 const DEFAULT_PORT := 2456
 const MAX_PLAYERS := 64
@@ -23,6 +24,7 @@ var _is_dedicated_server := false
 var _input_sequence := 0
 var _snapshot_elapsed := 0.0
 var _client_authenticated := false
+var _objective_zones: Dictionary = {}
 
 
 func _ready() -> void:
@@ -67,7 +69,7 @@ func start_dedicated_server() -> void:
 	multiplayer.multiplayer_peer = _server_peer
 	multiplayer.peer_connected.connect(_on_peer_connected)
 	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
-	print("KING OF EGYPT CITY authoritative WSS server listening on UDP/TCP-independent WebSocket TCP port %d." % port)
+	print("KING OF EGYPT CITY authoritative WSS server listening on TCP port %d." % port)
 
 
 func clear_client_session() -> void:
@@ -88,7 +90,8 @@ func _on_peer_connected(peer_id: int) -> void:
 		"last_sequence": -1,
 		"last_input_usec": 0,
 		"input_window_usec": Time.get_ticks_usec(),
-		"input_count": 0
+		"input_count": 0,
+		"reached_objectives": {}
 	}
 
 
@@ -241,6 +244,45 @@ func submit_movement_input(sequence: int, direction: Vector3, sprint: bool) -> v
 	_sessions[peer_id] = session
 
 
+func register_server_objective_zone(activity_kind: String, activity_id: String, center: Vector3, radius: float) -> bool:
+	if not multiplayer.is_server() or not ["mission", "job", "achievement", "daily_claim"].has(activity_kind):
+		return false
+	var safe_id := activity_id.strip_edges().to_lower()
+	var id_pattern := RegEx.new()
+	id_pattern.compile("^[a-z0-9][a-z0-9_.-]{0,79}$")
+	if id_pattern.search(safe_id) == null or not is_finite(center.x) or not is_finite(center.y) or not is_finite(center.z):
+		return false
+	if not is_finite(radius) or radius < 0.75 or radius > 20.0:
+		return false
+	var zone_key := activity_kind + ":" + safe_id
+	_objective_zones[zone_key] = {
+		"activity_kind": activity_kind,
+		"activity_id": safe_id,
+		"center": center,
+		"radius": radius
+	}
+	return true
+
+
+func _evaluate_server_objective_zones(peer_id: int, session: Dictionary, body: CharacterBody3D) -> Dictionary:
+	var reached: Dictionary = session.get("reached_objectives", {})
+	for zone_key in _objective_zones.keys():
+		if reached.has(zone_key):
+			continue
+		var zone: Dictionary = _objective_zones[zone_key]
+		var center: Vector3 = zone["center"]
+		var radius := float(zone["radius"])
+		if body.global_position.distance_to(center) <= radius:
+			reached[zone_key] = true
+			server_objective_reached.emit(
+				str(session.get("user_id", "")),
+				str(zone["activity_kind"]),
+				str(zone["activity_id"])
+			)
+	session["reached_objectives"] = reached
+	return session
+
+
 func _physics_process(delta: float) -> void:
 	if not multiplayer.is_server():
 		return
@@ -271,6 +313,7 @@ func _physics_process(delta: float) -> void:
 		body.velocity = velocity
 		body.move_and_slide()
 		session["velocity"] = body.velocity
+		session = _evaluate_server_objective_zones(peer_id, session, body)
 		_sessions[peer_id] = session
 	_snapshot_elapsed += safe_delta
 	if _snapshot_elapsed >= SNAPSHOT_INTERVAL:
