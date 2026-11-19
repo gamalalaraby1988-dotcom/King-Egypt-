@@ -66,6 +66,7 @@ func _create_approved_city_layout() -> void:
 	layout.name = "ApprovedCityLayout"
 	layout.set_script(layout_script)
 	add_child(layout)
+	DevelopmentManager.register_city_layout(layout)
 
 
 func _process(_delta: float) -> void:
