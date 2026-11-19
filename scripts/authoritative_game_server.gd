@@ -295,10 +295,12 @@ func request_start_job(job_id: String) -> void:
 	if definition.is_empty():
 		rpc_id(peer_id, "receive_job_start_result", false, safe_job_id, Vector3.ZERO, "هذه الوظيفة غير معتمدة على الخادم.")
 		return
-	if not (session.get("active_job", {}) as Dictionary).is_empty():
+	var current_job: Dictionary = session.get("active_job", {})
+	if not current_job.is_empty():
 		rpc_id(peer_id, "receive_job_start_result", false, safe_job_id, Vector3.ZERO, "لديك وظيفة أخرى قيد التنفيذ.")
 		return
-	if (session.get("completed_jobs", {}) as Dictionary).has(safe_job_id):
+	var completed_jobs: Dictionary = session.get("completed_jobs", {})
+	if completed_jobs.has(safe_job_id):
 		rpc_id(peer_id, "receive_job_start_result", false, safe_job_id, Vector3.ZERO, "أنجزت هذه الوظيفة بالفعل في جلسة اللعب.")
 		return
 	var body := session.get("body") as CharacterBody3D
