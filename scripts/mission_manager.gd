@@ -1458,7 +1458,7 @@ func _build_ui() -> void:
 	root_control.add_child(navigation_label)
 
 	navigation_arrow = Label.new()
-	navigation_arrow.text = "➤"
+	navigation_arrow.text = "▲"
 	navigation_arrow.set_anchors_preset(Control.PRESET_TOP_WIDE)
 	navigation_arrow.anchor_left = 0.5
 	navigation_arrow.anchor_right = 0.5
