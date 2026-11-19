@@ -1,7 +1,6 @@
 extends Node3D
-## موظف المخيم المسؤول عن تأجير الحيوانات الثمانية لجميع اللاعبين.
+## موظف استقبال المخيم؛ لا توجد أسعار أو أجور أو نظام تأجير.
 
-@export var ride_price: int = 25
 @export var interaction_radius: float = 4.5
 
 func _ready() -> void:
@@ -31,13 +30,27 @@ func _build_visual() -> void:
 	head.material_override = skin
 	add_child(head)
 
-func get_animal_rental_data() -> Dictionary:
-	var animals: Array[String] = []
-	for i in range(1, 9):
-		animals.append("الحيوان رقم %d" % i)
+	var reception_sign := Label3D.new()
+	reception_sign.name = "CampReceptionLabel"
+	reception_sign.text = "استقبال وترحيب"
+	reception_sign.position = Vector3(0, 2.45, -0.15)
+	reception_sign.font_size = 30
+	reception_sign.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	reception_sign.modulate = Color(1.0, 0.88, 0.58)
+	add_child(reception_sign)
+
+func get_reception_data() -> Dictionary:
 	return {
-		"title": "موظف حيوانات المخيم",
-		"description": "مرحبًا بك في المخيم! اختر واحدًا من الحيوانات الثمانية وادفع أجرة الركوب.",
-		"animals": animals,
-		"price": ride_price
+		"title": "استقبال المخيم الصحراوي الملكي",
+		"description": "أهلاً بك في المخيم الملكي. يمكنني إرشادك إلى الحيوانات ومناطق المشاهدة داخل المخيم.",
+		"animals": [
+			"الجمل العربي",
+			"الحصان العربي",
+			"المها العربي",
+			"الغزال",
+			"الثعلب الصحراوي",
+			"الأغنام",
+			"الماعز",
+			"الصقر"
+		]
 	}
