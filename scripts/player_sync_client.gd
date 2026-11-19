@@ -89,6 +89,10 @@ func _is_valid_event_payload(event_type: String, payload: Dictionary) -> bool:
 		var key := str(payload.get("key", ""))
 		var value: Variant = payload.get("value")
 		match key:
+			"volume":
+				return typeof(value) == TYPE_INT and int(value) >= 0 and int(value) <= 100
+			"quality":
+				return typeof(value) == TYPE_INT and int(value) in [0, 1, 2]
 			"locale":
 				return typeof(value) == TYPE_STRING and str(value).length() <= 16
 			"camera_sensitivity":
