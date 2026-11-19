@@ -719,7 +719,7 @@ func _add_functional_building(manager: Node, title: String, mission: String, des
 	building.reward_chips = chips_reward
 	building.reward_xp = max(20, int(reward / 5))
 	building.required_level = level
-	building.requires_interior = true
+	building.requires_interior = false
 	add_child(building)
 	_create_box(building, "BuildingBody", Vector3(8, 5, 7), Vector3(0, 2.5, 0), color, true)
 	_create_box(building, "Entrance", Vector3(1.5, 2.4, 0.12), Vector3(0, 1.2, 3.56), Color(0.12, 0.14, 0.18), false)
