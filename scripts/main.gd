@@ -35,6 +35,9 @@ func _ready() -> void:
 	_create_city_map()
 	_create_interior_transition_ui()
 	_create_player_vehicle()
+	_create_mode_selection_ui()
+	GameModeManager.status_changed.connect(_on_mode_status_changed)
+	GameModeManager.online_connected.connect(_on_mode_connected)
 
 
 func _create_approved_city_layout() -> void:
@@ -790,3 +793,108 @@ func _create_camp() -> void:
 	camp.position = Vector3(60, 0, 75)
 	camp.set_script(load("res://scripts/camp_system.gd"))
 	add_child(camp)
+
+
+# اختيار يدوي بين اللعب المحلي واللعب الجماعي.
+var mode_selection_layer: CanvasLayer
+var mode_selection_panel: PanelContainer
+var mode_status_label: Label
+var online_address_input: LineEdit
+
+func _create_mode_selection_ui() -> void:
+	var player := get_node_or_null("Player")
+	if is_instance_valid(player):
+		player.set_physics_process(false)
+		player.set_process(false)
+
+	mode_selection_layer = CanvasLayer.new()
+	mode_selection_layer.name = "GameModeSelection"
+	mode_selection_layer.layer = 100
+	add_child(mode_selection_layer)
+
+	var backdrop := ColorRect.new()
+	backdrop.color = Color(0.025, 0.035, 0.05, 0.94)
+	backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	mode_selection_layer.add_child(backdrop)
+
+	mode_selection_panel = PanelContainer.new()
+	mode_selection_panel.custom_minimum_size = Vector2(320, 300)
+	mode_selection_panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	mode_selection_panel.position = Vector2(-160, -150)
+	mode_selection_panel.add_theme_stylebox_override("panel", _make_mode_panel_style())
+	backdrop.add_child(mode_selection_panel)
+
+	var content := VBoxContainer.new()
+	content.add_theme_constant_override("separation", 12)
+	mode_selection_panel.add_child(content)
+
+	var heading := Label.new()
+	heading.text = "KING OF EGYPT CITY"
+	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	heading.add_theme_font_size_override("font_size", 22)
+	heading.add_theme_color_override("font_color", Color(0.94, 0.79, 0.43))
+	content.add_child(heading)
+
+	var subtitle := Label.new()
+	subtitle.text = "اختر طريقة اللعب"
+	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	content.add_child(subtitle)
+
+	var offline_button := Button.new()
+	offline_button.text = "اللعب دون إنترنت"
+	offline_button.custom_minimum_size.y = 48
+	offline_button.pressed.connect(_select_offline_mode)
+	content.add_child(offline_button)
+
+	online_address_input = LineEdit.new()
+	online_address_input.placeholder_text = "عنوان خادم اللعب الجماعي"
+	online_address_input.text = str(ProjectSettings.get_setting("network/online/server_address", ""))
+	content.add_child(online_address_input)
+
+	var online_button := Button.new()
+	online_button.text = "اللعب عبر الإنترنت"
+	online_button.custom_minimum_size.y = 48
+	online_button.pressed.connect(_select_online_mode)
+	content.add_child(online_button)
+
+	mode_status_label = Label.new()
+	mode_status_label.text = "اللعب دون إنترنت يحفظ تقدمك على هذا الجهاز."
+	mode_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	mode_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	content.add_child(mode_status_label)
+
+func _make_mode_panel_style() -> StyleBox:
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.07, 0.085, 0.11, 0.98)
+	style.border_color = Color(0.72, 0.55, 0.25, 0.9)
+	style.set_border_width_all(2)
+	style.set_corner_radius_all(12)
+	style.set_content_margin_all(18)
+	return style
+
+func _select_offline_mode() -> void:
+	GameModeManager.select_offline()
+	_enter_selected_game_mode()
+
+func _select_online_mode() -> void:
+	var address := online_address_input.text.strip_edges()
+	if address.is_empty():
+		mode_status_label.text = "لم يتم إعداد عنوان خادم Online بعد. أدخل عنوان الخادم عند توفره."
+		return
+	mode_status_label.text = "جارٍ الاتصال بالخادم..."
+	GameModeManager.connect_online(address, 2456)
+
+func _enter_selected_game_mode() -> void:
+	if is_instance_valid(mode_selection_layer):
+		mode_selection_layer.queue_free()
+	var player := get_node_or_null("Player")
+	if is_instance_valid(player):
+		player.set_process(true)
+		player.set_physics_process(true)
+
+func _on_mode_status_changed(message: String) -> void:
+	if is_instance_valid(mode_status_label):
+		mode_status_label.text = message
+
+func _on_mode_connected() -> void:
+	_enter_selected_game_mode()
