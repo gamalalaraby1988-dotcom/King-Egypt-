@@ -170,7 +170,7 @@ func end_animal_ride() -> void:
 			avatar.set_motion_state("idle", 0.0)
 
 func sit_at_position(world_position: Vector3, facing_y: float = 0.0) -> bool:
-	if animal_riding or scooter_riding:
+	if animal_riding:
 		return false
 	global_position = world_position
 	rotation.y = facing_y
