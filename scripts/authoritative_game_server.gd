@@ -85,6 +85,8 @@ func _process(_delta: float) -> void:
 		var session: Dictionary = _sessions[peer_id]
 		if not bool(session.get("authenticated", false)) and now_usec - int(session.get("connected_at_usec", now_usec)) > 10000000:
 			multiplayer.multiplayer_peer.disconnect_peer(peer_id)
+		elif bool(session.get("authenticated", false)) and now_usec - int(session.get("last_auth_usec", now_usec)) > 3300000000:
+			multiplayer.multiplayer_peer.disconnect_peer(peer_id)
 
 
 func _on_peer_connected(peer_id: int) -> void:
@@ -103,7 +105,8 @@ func _on_peer_connected(peer_id: int) -> void:
 		"input_window_usec": Time.get_ticks_usec(),
 		"input_count": 0,
 		"reached_objectives": {},
-		"connected_at_usec": Time.get_ticks_usec()
+		"connected_at_usec": Time.get_ticks_usec(),
+		"last_auth_usec": 0
 	}
 
 
@@ -125,7 +128,7 @@ func authenticate_player(access_token: String) -> void:
 	if not multiplayer.is_server():
 		return
 	var peer_id := multiplayer.get_remote_sender_id()
-	if not _sessions.has(peer_id) or bool(_sessions[peer_id].get("authenticated", false)) or _auth_requests.has(peer_id):
+	if not _sessions.has(peer_id) or _auth_requests.has(peer_id):
 		return
 	if access_token.length() < 40 or access_token.length() > 8192:
 		_reject_peer(peer_id, "رمز جلسة الحساب غير صالح.")
@@ -172,6 +175,13 @@ func _on_auth_request_completed(result: int, response_code: int, _headers: Packe
 	if uuid_pattern.search(user_id) == null:
 		_reject_peer(peer_id, "لم يتم تأكيد هوية حساب اللاعب.")
 		return
+	if bool(_sessions[peer_id].get("authenticated", false)):
+		if str(_sessions[peer_id].get("user_id", "")) != user_id:
+			_reject_peer(peer_id, "تغيرت هوية الحساب أثناء جلسة اللعب.")
+			return
+		_sessions[peer_id]["last_auth_usec"] = Time.get_ticks_usec()
+		rpc_id(peer_id, "receive_authentication_result", true, "تم تجديد التحقق من حساب اللاعب.")
+		return
 	var body_node := CharacterBody3D.new()
 	body_node.name = "AuthoritativePlayer_%d" % peer_id
 	body_node.position = SPAWN_POSITION
@@ -190,6 +200,7 @@ func _on_auth_request_completed(result: int, response_code: int, _headers: Packe
 	_sessions[peer_id]["authenticated"] = true
 	_sessions[peer_id]["user_id"] = user_id
 	_sessions[peer_id]["body"] = body_node
+	_sessions[peer_id]["last_auth_usec"] = Time.get_ticks_usec()
 	rpc_id(peer_id, "receive_authentication_result", true, "تم التحقق من حساب اللاعب.")
 	print("Authenticated game peer %d." % peer_id)
 
