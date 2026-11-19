@@ -704,11 +704,11 @@ func _build_mountain_route() -> void:
 		var ramp_length := ramp_delta.length()
 		var ramp_midpoint := (ramp_start + ramp_end) * 0.5
 		var ramp := _box(mountain, "SummitAccessRamp_%02d" % (ramp_index + 1), Vector3(3.8, 0.28, ramp_length), ramp_midpoint, SAND)
-		ramp.look_at(ramp_end, Vector3.UP)
+		ramp.look_at(mountain.to_global(ramp_end), Vector3.UP)
 		var ramp_body := StaticBody3D.new()
 		ramp_body.name = "SummitAccessRampCollision_%02d" % (ramp_index + 1)
 		ramp_body.position = ramp_midpoint
-		ramp_body.look_at(ramp_end, Vector3.UP)
+		ramp_body.look_at(mountain.to_global(ramp_end), Vector3.UP)
 		ramp_body.add_to_group("city_world_geometry")
 		var ramp_collision := CollisionShape3D.new()
 		var ramp_shape := BoxShape3D.new()
@@ -717,9 +717,10 @@ func _build_mountain_route() -> void:
 		ramp_body.add_child(ramp_collision)
 		mountain.add_child(ramp_body)
 		# Narrow gold edge markers make each ramp flight legible at a glance.
+		var ramp_side := Vector3(-ramp_delta.z, 0.0, ramp_delta.x).normalized()
 		for edge in [-1.0, 1.0]:
-			var edge_marker := _box(mountain, "SummitRampEdge", Vector3(0.12, 0.22, ramp_length), ramp_midpoint + Vector3(edge * 1.92, 0.18, 0.0), GOLD)
-			edge_marker.look_at(ramp_end, Vector3.UP)
+			var edge_marker := _box(mountain, "SummitRampEdge", Vector3(0.12, 0.22, ramp_length), ramp_midpoint + ramp_side * edge * 1.92 + Vector3(0.0, 0.18, 0.0), GOLD)
+			edge_marker.rotation = ramp.rotation
 
 	_box(summit, "SummitObelisk", Vector3(1.2, 4.5, 1.2), Vector3(0, 2.4, 0), GOLD)
 	_box(summit, "SummitCrown", Vector3(2.4, 0.35, 2.4), Vector3(0, 4.8, 0), GOLD)
