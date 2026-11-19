@@ -2,7 +2,7 @@ extends Control
 ## واجهة لمس متجاوبة: عصا حركة يسارًا، وجلوس وكاميرا دون زر جري مستقل.
 
 @export var joystick_radius: float = 72.0
-@export @export var sit_radius: float = 39.0
+@export var sit_radius: float = 39.0
 @export var camera_sensitivity: float = 0.006
 
 var player: CharacterBody3D
