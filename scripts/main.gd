@@ -971,7 +971,7 @@ func _create_player_account_window() -> void:
 	player_account_window.min_size = Vector2i(340, 320)
 	player_account_window.unresizable = false
 	player_account_window.exclusive = true
-	mode_selection_layer.add_child(player_account_window)
+	add_child(player_account_window)
 
 	var panel := PanelContainer.new()
 	panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -1102,8 +1102,7 @@ func _on_founder_email_verified(_user_id: String, verified_email: String) -> voi
 		mode_status_label.text = "تم تأكيد ملكية البريد %s. تفعيل حساب المؤسس ينتظر اعتماد التذكرة الخادمية." % verified_email
 
 func _on_founder_auth_session_expired() -> void:
-	PlayerSyncClient.clear_session_access_token()
-	# انتهاء جلسة Auth لا يلغي التذكرة المحلية الموقعة؛ لكنه يمنع طلبات Online التي تحتاج جلسة.
+	# انتهاء جلسة المؤسس لا يمس جلسة حساب اللاعب المستقلة أو رمز مزامنته.
 	if FounderIdentityManager.is_founder and is_instance_valid(mode_status_label):
 		mode_status_label.text = "انتهت جلسة الاتصال الآمنة. أعد التحقق من بريد المؤسس للعمليات Online؛ تذكرة Offline الصالحة لا تتأثر."
 
