@@ -22,7 +22,7 @@ var region_notice_remaining := 0.0
 # حدود تقريبية لمناطق النموذج الحالي، وليست خريطة مساحية نهائية.
 const REGION_BOUNDS := {
 	"region_city_center": {"center": Vector2(0.0, 0.0), "half_size": Vector2(84.0, 84.0)},
-	"region_pyramids_camp": {"center": Vector2(54.0, 56.0), "half_size": Vector2(32.0, 34.0)}
+	"region_pyramids_camp": {"center": Vector2(50.5, 56.0), "half_size": Vector2(33.5, 28.0)}
 }
 
 # معالم مثبتة في main.gd؛ لا تُضاف البوابة أو الميناء قبل وجود مواقع فعلية لهما.
@@ -179,7 +179,7 @@ func _player_position() -> Vector3:
 	return Vector3.ZERO
 
 func _get_region_key(position_3d: Vector3) -> String:
-	# يُفحص المخيم أولًا لأنه يقع داخل مستطيل وسط المدينة في النموذج الحالي.
+	# تُفحص المنطقة الفرعية أولًا؛ فهي داخل حدود وسط المدينة وتضم الأهرامات والمخيم وأبو الهول.
 	if _is_inside_region("region_pyramids_camp", position_3d):
 		return "region_pyramids_camp"
 	if _is_inside_region("region_city_center", position_3d):
