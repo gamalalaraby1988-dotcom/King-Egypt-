@@ -77,7 +77,7 @@ func _process(_delta: float) -> void:
 	var close_enough := player.global_position.distance_to(city_vehicle.global_position) <= 5.0
 	if is_instance_valid(vehicle_interaction_button):
 		vehicle_interaction_button.visible = close_enough
-		vehicle_interaction_button.text = "ركوب السيارة" if CityLanguage.get_language() == "ar" else "Enter vehicle"
+		vehicle_interaction_button.text = "🚪 ركوب السيارة" if CityLanguage.get_language() == "ar" else "Enter vehicle"
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.keycode == KEY_E:
@@ -220,7 +220,7 @@ func _toggle_vehicle_use() -> void:
 	if is_instance_valid(vehicle_camera):
 		vehicle_camera.current = true
 	if is_instance_valid(vehicle_interaction_button):
-		vehicle_interaction_button.text = "النزول من السيارة" if CityLanguage.get_language() == "ar" else "Exit vehicle"
+		vehicle_interaction_button.text = "🚪 النزول من السيارة" if CityLanguage.get_language() == "ar" else "Exit vehicle"
 		vehicle_interaction_button.visible = true
 
 func _recover_vehicle_occupancy() -> void:
@@ -252,7 +252,7 @@ func _recover_vehicle_occupancy() -> void:
 	_set_mobile_hud_active(is_instance_valid(player))
 	if is_instance_valid(vehicle_interaction_button):
 		vehicle_interaction_button.visible = false
-		vehicle_interaction_button.text = "ركوب السيارة" if CityLanguage.get_language() == "ar" else "Enter vehicle"
+		vehicle_interaction_button.text = "🚪 ركوب السيارة" if CityLanguage.get_language() == "ar" else "Enter vehicle"
 	if is_instance_valid(vehicle_summon_button):
 		vehicle_summon_button.visible = is_instance_valid(player)
 
@@ -289,7 +289,7 @@ func _exit_player_vehicle() -> void:
 	vehicle_occupied = false
 	_set_mobile_hud_active(true)
 	if is_instance_valid(vehicle_interaction_button):
-		vehicle_interaction_button.text = "ركوب السيارة" if CityLanguage.get_language() == "ar" else "Enter vehicle"
+		vehicle_interaction_button.text = "🚪 ركوب السيارة" if CityLanguage.get_language() == "ar" else "Enter vehicle"
 		vehicle_interaction_button.visible = player.global_position.distance_to(city_vehicle.global_position) <= 5.0
 
 func _create_interior_transition_ui() -> void:
