@@ -21,6 +21,9 @@ var _access_token := ""
 var _events: Array[Dictionary] = []
 var _pending_event_ids: Array[String] = []
 var _request_active := false
+var _retry_timer: Timer
+var _retry_delay_seconds := 5.0
+const MAX_RETRY_DELAY_SECONDS := 300.0
 
 
 func _ready() -> void:
@@ -29,6 +32,10 @@ func _ready() -> void:
 	_http.timeout = 25.0
 	add_child(_http)
 	_http.request_completed.connect(_on_request_completed)
+	_retry_timer = Timer.new()
+	_retry_timer.one_shot = true
+	_retry_timer.timeout.connect(flush_pending)
+	add_child(_retry_timer)
 	_load_outbox()
 
 
@@ -40,6 +47,8 @@ func set_session_access_token(access_token: String) -> void:
 
 func clear_session_access_token() -> void:
 	_access_token = ""
+	if is_instance_valid(_retry_timer):
+		_retry_timer.stop()
 
 
 func get_pending_count() -> int:
@@ -143,6 +152,7 @@ func flush_pending() -> void:
 	if error != OK:
 		_pending_event_ids.clear()
 		sync_finished.emit(false, 0, 0, "تعذر بدء مزامنة التقدم. ستبقى الأحداث محفوظة على الجهاز.")
+		_schedule_retry()
 		return
 	_request_active = true
 
@@ -152,18 +162,21 @@ func _on_request_completed(result: int, response_code: int, _headers: PackedStri
 	if result != HTTPRequest.RESULT_SUCCESS or response_code < 200 or response_code >= 300:
 		_pending_event_ids.clear()
 		sync_finished.emit(false, 0, 0, "تعذرت المزامنة الآن. ستبقى الأحداث في قائمة الانتظار.")
+		_schedule_retry()
 		return
 
 	var parsed: Variant = JSON.parse_string(body.get_string_from_utf8())
 	if not (parsed is Dictionary) or not bool(parsed.get("ok", false)):
 		_pending_event_ids.clear()
 		sync_finished.emit(false, 0, 0, "استجابة المزامنة غير صالحة. لم تُحذف البيانات المحلية.")
+		_schedule_retry()
 		return
 
 	var result_value: Variant = parsed.get("result", {})
 	if not (result_value is Dictionary):
 		_pending_event_ids.clear()
 		sync_finished.emit(false, 0, 0, "تعذر تأكيد نتيجة المزامنة. ستبقى الأحداث محفوظة.")
+		_schedule_retry()
 		return
 
 	var accepted := int(result_value.get("accepted", 0))
@@ -171,10 +184,14 @@ func _on_request_completed(result: int, response_code: int, _headers: PackedStri
 	if accepted < 0 or duplicates < 0 or accepted + duplicates != _pending_event_ids.size():
 		_pending_event_ids.clear()
 		sync_finished.emit(false, 0, 0, "لم يكتمل تأكيد كل أحداث الدفعة؛ لم تُحذف البيانات المحلية.")
+		_schedule_retry()
 		return
 
 	_remove_confirmed_events()
 	_pending_event_ids.clear()
+	_retry_delay_seconds = 5.0
+	if is_instance_valid(_retry_timer):
+		_retry_timer.stop()
 	sync_finished.emit(true, accepted, duplicates, "تم تسجيل أحداث المزامنة بأمان. لا يعني ذلك اعتماد مكافآت أو أرصدة.")
 	outbox_changed.emit(_events.size())
 
@@ -221,8 +238,10 @@ func _load_outbox() -> void:
 	var stored: Variant = config.get_value("outbox", "events", [])
 	if not (stored is Array):
 		return
+	# Never truncate a previously persisted queue on load. The enqueue cap only
+	# prevents adding more events; already stored events remain available to retry.
 	for item in stored:
-		if item is Dictionary and _events.size() < MAX_PENDING_EVENTS:
+		if item is Dictionary:
 			_events.append(item.duplicate(true))
 	outbox_changed.emit(_events.size())
 
@@ -231,3 +250,12 @@ func _save_outbox() -> bool:
 	var config := ConfigFile.new()
 	config.set_value("outbox", "events", _events)
 	return config.save(OUTBOX_PATH) == OK
+
+
+func _schedule_retry() -> void:
+	if not bool(ProjectSettings.get_setting(SYNC_ENABLED_SETTING, false)):
+		return
+	if _access_token.is_empty() or _events.is_empty() or not is_instance_valid(_retry_timer):
+		return
+	_retry_timer.start(_retry_delay_seconds)
+	_retry_delay_seconds = minf(_retry_delay_seconds * 2.0, MAX_RETRY_DELAY_SECONDS)
