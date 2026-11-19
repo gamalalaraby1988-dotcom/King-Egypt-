@@ -33,7 +33,6 @@ func _ready() -> void:
 			local_player.queue_free()
 		_create_interactive_buildings()
 		_create_camp()
-		_create_royal_resort()
 		_create_desert_camp()
 		_create_pyramids_area()
 		return
@@ -47,7 +46,6 @@ func _ready() -> void:
 		key_light.add_to_group("quality_shadow_light")
 	_create_interactive_buildings()
 	_create_camp()
-	_create_royal_resort()
 	_create_desert_camp()
 	_create_pyramids_area()
 	_create_navigation_destinations()
@@ -865,16 +863,6 @@ func _create_camp() -> void:
 	camp.set_script(load("res://scripts/camp_system.gd"))
 	add_child(camp)
 
-
-func _create_royal_resort() -> void:
-	# المنتجع الملكي في القطاع الشرقي، منفصل عن مخيم الحيوانات والمناطق الصحراوية.
-	_create_box(self, "RoyalResortAccessRoad", Vector3(30, 0.08, 5), Vector3(110, 0.01, 50), Color(0.12, 0.13, 0.15), true)
-	_create_box(self, "RoyalResortApproachRoad", Vector3(5, 0.08, 15), Vector3(120, 0.01, 42.5), Color(0.12, 0.13, 0.15), true)
-	var resort := Node3D.new()
-	resort.name = "RoyalResort"
-	resort.position = Vector3(120, 0, 50)
-	resort.set_script(load("res://scripts/royal_resort.gd"))
-	add_child(resort)
 
 func _create_desert_camp() -> void:
 	# مخيم صحراوي ملكي مستقل غرب المدينة؛ لا يستبدل مخيم الحيوانات الحالي.

@@ -17,7 +17,6 @@ const CITY_LANDMARKS := [
 	{"key": "city_guide", "position": Vector3(-24.0, 0.0, 4.5)},
 	{"key": "maintenance", "position": Vector3(4.5, 0.0, 24.0)},
 	{"key": "animal_camp", "position": Vector3(60.0, 0.0, 68.0)},
-	{"key": "royal_resort", "position": Vector3(120.0, 0.0, 35.0)},
 	{"key": "desert_camp", "position": Vector3(-130.0, 0.0, 54.0)},
 	{"key": "pyramids_camp", "position": Vector3(-90.0, 0.0, 110.0)},
 	{"key": "fuel_station", "position": Vector3(-75.0, 0.0, 38.0)},
