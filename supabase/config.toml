@@ -1,0 +1,8 @@
+project_id = "lupmaktbymuaymhqsxxu"
+
+# The project uses the new sb_publishable_* API key. Supabase's gateway
+# verify_jwt check only supports legacy JWT-based API keys in this mode.
+# The function validates the user's Bearer access token itself through
+# /auth/v1/user before issuing any founder entitlement.
+[functions.founder-entitlement]
+verify_jwt = false

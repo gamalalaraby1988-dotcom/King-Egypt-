@@ -802,8 +802,13 @@ var mode_status_label: Label
 var online_address_input: LineEdit
 var founder_pin_input: LineEdit
 var founder_pin_confirm_input: LineEdit
+var founder_pin_button: Button
 var founder_pin_gate: VBoxContainer
 var game_mode_controls: VBoxContainer
+var founder_email_gate: VBoxContainer
+var founder_email_input: LineEdit
+var founder_email_code_input: LineEdit
+var founder_email_verified := false
 
 func _create_mode_selection_ui() -> void:
 	var player := get_node_or_null("Player")
@@ -821,9 +826,9 @@ func _create_mode_selection_ui() -> void:
 	mode_selection_layer.add_child(backdrop)
 
 	mode_selection_panel = PanelContainer.new()
-	mode_selection_panel.custom_minimum_size = Vector2(340, 440)
+	mode_selection_panel.custom_minimum_size = Vector2(360, 590)
 	mode_selection_panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-	mode_selection_panel.position = Vector2(-170, -220)
+	mode_selection_panel.position = Vector2(-180, -295)
 	mode_selection_panel.add_theme_stylebox_override("panel", _make_mode_panel_style())
 	backdrop.add_child(mode_selection_panel)
 	var content := VBoxContainer.new()
@@ -856,20 +861,20 @@ func _create_mode_selection_ui() -> void:
 	founder_pin_confirm_input.max_length = 6
 	founder_pin_confirm_input.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_NUMBER
 	founder_pin_gate.add_child(founder_pin_confirm_input)
-	var pin_button := Button.new()
-	pin_button.custom_minimum_size.y = 44
-	pin_button.pressed.connect(_on_founder_pin_submit)
-	founder_pin_gate.add_child(pin_button)
+	founder_pin_button = Button.new()
+	founder_pin_button.custom_minimum_size.y = 44
+	founder_pin_button.pressed.connect(_on_founder_pin_submit)
+	founder_pin_gate.add_child(founder_pin_button)
 	var is_verified_founder := FounderIdentityManager.is_founder
 	founder_pin_gate.visible = is_verified_founder
 	if is_verified_founder:
 		if FounderPinManager.is_pin_configured():
 			founder_pin_confirm_input.visible = false
-			pin_button.text = "فتح حساب المؤسس"
+			founder_pin_button.text = "فتح حساب المؤسس"
 			mode_status_label = Label.new()
 			mode_status_label.text = "أدخل رمزك المحلي لفتح الحساب."
 		else:
-			pin_button.text = "حفظ رمز المؤسس"
+			founder_pin_button.text = "حفظ رمز المؤسس"
 			mode_status_label = Label.new()
 			mode_status_label.text = "أنشئ رمزًا خاصًا من 6 أرقام لهذا الجهاز."
 	else:
@@ -878,6 +883,39 @@ func _create_mode_selection_ui() -> void:
 	mode_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	mode_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	content.add_child(mode_status_label)
+
+	if not is_verified_founder:
+		founder_email_gate = VBoxContainer.new()
+		founder_email_gate.add_theme_constant_override("separation", 7)
+		content.add_child(founder_email_gate)
+		var email_heading := Label.new()
+		email_heading.text = "التحقق من بريد حساب المؤسس"
+		email_heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		founder_email_gate.add_child(email_heading)
+		founder_email_input = LineEdit.new()
+		founder_email_input.placeholder_text = "البريد الإلكتروني"
+		founder_email_input.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_EMAIL_ADDRESS
+		founder_email_gate.add_child(founder_email_input)
+		var send_code_button := Button.new()
+		send_code_button.text = "إرسال رمز التحقق"
+		send_code_button.custom_minimum_size.y = 40
+		send_code_button.pressed.connect(_on_founder_send_code)
+		founder_email_gate.add_child(send_code_button)
+		founder_email_code_input = LineEdit.new()
+		founder_email_code_input.placeholder_text = "رمز البريد المكوّن من 6 أرقام"
+		founder_email_code_input.max_length = 6
+		founder_email_code_input.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_NUMBER
+		founder_email_gate.add_child(founder_email_code_input)
+		var verify_code_button := Button.new()
+		verify_code_button.text = "تأكيد البريد"
+		verify_code_button.custom_minimum_size.y = 40
+		verify_code_button.pressed.connect(_on_founder_verify_code)
+		founder_email_gate.add_child(verify_code_button)
+		FounderAuthClient.request_finished.connect(_on_founder_auth_request_finished)
+		FounderAuthClient.email_verified.connect(_on_founder_email_verified)
+		FounderAuthClient.auth_session_received.connect(_on_founder_auth_session_received)
+		FounderAuthClient.founder_entitlement_received.connect(_on_founder_entitlement_received)
+		FounderAuthClient.founder_entitlement_failed.connect(_on_founder_entitlement_failed)
 
 	game_mode_controls = VBoxContainer.new()
 	game_mode_controls.add_theme_constant_override("separation", 8)
@@ -897,6 +935,56 @@ func _create_mode_selection_ui() -> void:
 	online_button.pressed.connect(_select_online_mode)
 	game_mode_controls.add_child(online_button)
 	game_mode_controls.visible = not is_verified_founder
+
+func _on_founder_send_code() -> void:
+	if not is_instance_valid(founder_email_input):
+		return
+	mode_status_label.text = "جارٍ طلب رمز التحقق..."
+	if not FounderAuthClient.request_email_code(founder_email_input.text):
+		mode_status_label.text = "تعذر بدء طلب الرمز. راجع البريد والإعدادات."
+
+func _on_founder_verify_code() -> void:
+	if not is_instance_valid(founder_email_input) or not is_instance_valid(founder_email_code_input):
+		return
+	mode_status_label.text = "جارٍ التحقق من الرمز..."
+	if not FounderAuthClient.verify_email_code(founder_email_input.text, founder_email_code_input.text):
+		mode_status_label.text = "تعذر بدء التحقق. راجع البريد والرمز."
+
+func _on_founder_auth_request_finished(success: bool, message: String) -> void:
+	if is_instance_valid(mode_status_label):
+		mode_status_label.text = message
+
+func _on_founder_email_verified(_user_id: String, verified_email: String) -> void:
+	founder_email_verified = true
+	if is_instance_valid(mode_status_label):
+		mode_status_label.text = "تم تأكيد ملكية البريد %s. تفعيل حساب المؤسس ينتظر اعتماد التذكرة الخادمية." % verified_email
+
+func _on_founder_auth_session_received(_access_token: String, _refresh_token: String) -> void:
+	# لا نخزن الجلسة محليًا حتى تكتمل آلية إدارة الجلسات وتجديدها الآمنة.
+	pass
+
+func _on_founder_entitlement_received(payload: String, signature_base64: String) -> void:
+	if not FounderIdentityManager.accept_signed_entitlement(payload, signature_base64):
+		_on_founder_entitlement_failed("رفض الجهاز التذكرة الموقعة أو تعذر حفظها بأمان.")
+		return
+	if is_instance_valid(founder_email_gate):
+		founder_email_gate.visible = false
+	if is_instance_valid(founder_pin_gate):
+		founder_pin_gate.visible = true
+	if is_instance_valid(game_mode_controls):
+		game_mode_controls.visible = false
+	if FounderPinManager.is_pin_configured():
+		founder_pin_confirm_input.visible = false
+		founder_pin_button.text = "فتح حساب المؤسس"
+	else:
+		founder_pin_confirm_input.visible = true
+		founder_pin_button.text = "حفظ رمز المؤسس"
+	if is_instance_valid(mode_status_label):
+		mode_status_label.text = "تم اعتماد هوية المؤسس وحفظ التذكرة لهذا الجهاز. أنشئ رمز PIN المحلي للمتابعة."
+
+func _on_founder_entitlement_failed(message: String) -> void:
+	if is_instance_valid(mode_status_label):
+		mode_status_label.text = message + " لم تُمنح صلاحيات المؤسس."
 
 func _on_founder_pin_submit() -> void:
 	if not FounderIdentityManager.is_founder:
