@@ -44,7 +44,7 @@ func _ready() -> void:
 		key_light.add_to_group("quality_shadow_light")
 	_create_interactive_buildings()
 	_create_camp()
-	_create_city_map()
+	_create_navigation_destinations()
 	_create_interior_transition_ui()
 	_create_player_vehicle()
 	_create_mode_selection_ui()
@@ -795,12 +795,12 @@ func _add_sign_label(parent: Node3D, key: String, pos: Vector3, y_rotation: floa
 	parent.add_child(label)
 
 
-func _create_city_map() -> void:
+func _create_navigation_destinations() -> void:
 	var layer := CanvasLayer.new()
-	layer.name = "CityMapHUD"
+	layer.name = "NavigationDestinationsHUD"
 	add_child(layer)
 	var map_control := Control.new()
-	map_control.name = "CityMap"
+	map_control.name = "NavigationDestinations"
 	map_control.set_script(load("res://scripts/city_map.gd"))
 	map_control.player = get_node_or_null("Player")
 	map_control.mission_manager = get_node_or_null("MissionManager")
