@@ -113,6 +113,12 @@ func _save_state() -> void:
 		push_warning("تعذر حفظ الإنجازات: %s" % error)
 	else:
 		last_saved_walk_meters = walked_meters
+		if is_instance_valid(PlayerSyncClient):
+			PlayerSyncClient.enqueue_progress_observation(
+				"achievement_progress_observed",
+				"achievement.walked_meters",
+				int(walked_meters)
+			)
 
 func _load_state() -> void:
 	var cfg := ConfigFile.new()
