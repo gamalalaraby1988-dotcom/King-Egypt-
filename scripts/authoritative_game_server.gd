@@ -77,7 +77,7 @@ func clear_client_session() -> void:
 
 
 func _on_peer_connected(peer_id: int) -> void:
-	if _sessions.size() + _auth_requests.size() >= MAX_PLAYERS:
+	if _sessions.size() >= MAX_PLAYERS:
 		multiplayer.multiplayer_peer.disconnect_peer(peer_id)
 		return
 	_sessions[peer_id] = {
@@ -312,6 +312,8 @@ func _physics_process(delta: float) -> void:
 			velocity.y = 0.0
 		body.velocity = velocity
 		body.move_and_slide()
+		if direction.length() > 0.1:
+			body.rotation.y = atan2(direction.x, direction.z)
 		session["velocity"] = body.velocity
 		session = _evaluate_server_objective_zones(peer_id, session, body)
 		_sessions[peer_id] = session
