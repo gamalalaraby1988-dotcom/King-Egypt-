@@ -82,10 +82,16 @@ func _ready() -> void:
 	_create_target_marker()
 	_load_profile()
 	CityLanguage.language_changed.connect(_refresh_navigation_language)
+	AuthoritativeGameServer.job_start_result.connect(_on_server_job_start_result)
+	AuthoritativeGameServer.job_completed.connect(_on_server_job_completed)
 
 func _exit_tree() -> void:
 	if CityLanguage.language_changed.is_connected(_refresh_navigation_language):
 		CityLanguage.language_changed.disconnect(_refresh_navigation_language)
+	if AuthoritativeGameServer.job_start_result.is_connected(_on_server_job_start_result):
+		AuthoritativeGameServer.job_start_result.disconnect(_on_server_job_start_result)
+	if AuthoritativeGameServer.job_completed.is_connected(_on_server_job_completed):
+		AuthoritativeGameServer.job_completed.disconnect(_on_server_job_completed)
 
 func _refresh_navigation_language() -> void:
 	if is_instance_valid(navigation_cancel_button):
@@ -492,10 +498,18 @@ func register_building(building: Node3D) -> void:
 
 func _process(_delta: float) -> void:
 	if GameModeManager.is_online_ready():
-		if is_instance_valid(panel):
-			panel.visible = false
-		if is_instance_valid(interact_button):
-			interact_button.visible = false
+		if not is_instance_valid(player):
+			return
+		_update_interaction_target()
+		_update_interaction_hud()
+		var online_interaction_down := Input.is_key_pressed(KEY_E)
+		if online_interaction_down and not _key_was_down and not job_running:
+			interact()
+		_key_was_down = online_interaction_down
+		if job_running:
+			var server_job_distance := Vector2(player.global_position.x, player.global_position.z).distance_to(Vector2(active_job_target.x, active_job_target.z))
+			status_label.text = "الوظيفة Online: اقترب من الهدف. المتبقي %.1f متر" % server_job_distance
+		_update_navigation_hud()
 		return
 	if navigation_arrival_remaining > 0.0:
 		navigation_arrival_remaining = maxf(navigation_arrival_remaining - _delta, 0.0)
@@ -556,6 +570,8 @@ func _update_interaction_target() -> void:
 	var best_distance := INF
 	for candidate in get_tree().get_nodes_in_group("city_interactables"):
 		if not is_instance_valid(candidate) or candidate.is_queued_for_deletion() or not candidate is Node3D:
+			continue
+		if GameModeManager.is_online_ready() and not candidate.has_method("get_job_data"):
 			continue
 		var radius_value: Variant = candidate.get("interaction_radius")
 		var allowed_distance := float(radius_value) if radius_value != null else 4.5
@@ -873,6 +889,11 @@ func _accept_job() -> void:
 	var key := str(data.get("job_id", active_job.name))
 	if completed_jobs.has(key) or player_level < int(data.get("level", 1)):
 		return
+	if GameModeManager.is_online_ready():
+		accept_button.disabled = true
+		status_label.text = "يراجع الخادم موقعك ويبدأ الوظيفة..."
+		AuthoritativeGameServer.request_start_job.rpc_id(1, key)
+		return
 	active_job_target = active_job.global_position + data.get("target_offset", Vector3(0, 0, -10))
 	active_job_target.y = 0.15
 	active_job_reward = data.duplicate(true)
@@ -883,6 +904,44 @@ func _accept_job() -> void:
 	description_label.text = "بدأت الوظيفة! اتبع علامة العمل حتى تصل إلى الموقع المطلوب."
 	reward_label.text = "الأجر عند إتمام العمل: %d جنيه | %d رقائق | %d خبرة" % [int(data.get("money", 0)), int(data.get("chips", 0)), int(data.get("xp", 0))]
 	status_label.text = "توجّه إلى نقطة العمل."
+
+func _on_server_job_start_result(success: bool, job_id: String, server_target: Vector3, message: String) -> void:
+	if not GameModeManager.is_online_ready():
+		return
+	status_label.text = message
+	if not success:
+		accept_button.disabled = false
+		return
+	if not is_instance_valid(active_job):
+		accept_button.disabled = false
+		return
+	var data: Dictionary = active_job.get_job_data()
+	if str(data.get("job_id", "")) != job_id:
+		accept_button.disabled = false
+		return
+	active_job_target = server_target
+	active_job_reward = data.duplicate(true)
+	job_running = true
+	target_marker.global_position = active_job_target
+	target_marker.visible = true
+	accept_button.disabled = true
+	description_label.text = "بدأت الوظيفة على الخادم. لا تعتمد المكافأة إلا بعد التحقق الخادمي."
+	reward_label.text = "سيتم اعتماد الإكمال من الخادم؛ لا توجد مكافأة Online مفعلة حاليًا."
+
+
+func _on_server_job_completed(job_id: String) -> void:
+	if not GameModeManager.is_online_ready() or not job_running:
+		return
+	if str(active_job_reward.get("job_id", "")) != job_id:
+		return
+	job_running = false
+	target_marker.visible = false
+	status_label.text = "تحقق الخادم من وصولك إلى هدف الوظيفة."
+	description_label.text = "تم تسجيل الوصول خادميًا. لم تُصرف مكافأة لأن إصدار إثبات المكافأة لم يُوصل بعد."
+	reward_label.text = "مكافآت Online ما زالت مقفلة."
+	accept_button.disabled = true
+	panel.visible = true
+
 
 func _complete_active_job() -> void:
 	if not job_running:
