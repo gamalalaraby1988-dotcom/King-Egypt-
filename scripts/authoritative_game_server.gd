@@ -44,7 +44,7 @@ func is_authenticated() -> bool:
 
 
 func start_dedicated_server() -> void:
-	if not _is_dedicated_server or multiplayer.multiplayer_peer.get_connection_status() != MultiplayerPeer.CONNECTION_DISCONNECTED:
+	if not _is_dedicated_server or _server_peer != null:
 		return
 	var key_path := OS.get_environment("KING_CITY_TLS_KEY_PATH").strip_edges()
 	var cert_path := OS.get_environment("KING_CITY_TLS_CERT_PATH").strip_edges()
