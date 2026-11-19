@@ -38,8 +38,6 @@ func connect_online(address: String, port: int = 2456) -> void:
 			status_changed.emit("يجب إدخال اسم نطاق الخادم فقط أو عنوان wss:// كامل.")
 			return
 		endpoint = "wss://%s:%d" % [endpoint, port]
-
-		return
 	if connection_state == "connecting" or is_online_ready():
 		status_changed.emit("يوجد اتصال Online قائم أو جارٍ بالفعل.")
 		return
