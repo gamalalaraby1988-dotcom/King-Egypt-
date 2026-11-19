@@ -3,11 +3,14 @@ extends Node
 signal request_finished(success: bool, message: String)
 signal email_verified(user_id: String, email: String)
 signal auth_session_received(access_token: String, refresh_token: String)
+signal founder_entitlement_received(payload: String, signature_base64: String)
+signal founder_entitlement_failed(message: String)
 
 const API_BASE_SETTING := "founder/auth/api_base_url"
 const PUBLISHABLE_KEY_SETTING := "founder/auth/publishable_key"
 const OTP_PATH := "/auth/v1/otp"
 const VERIFY_PATH := "/auth/v1/verify"
+const ENTITLEMENT_PATH := "/functions/v1/founder-entitlement"
 
 var _http: HTTPRequest
 var _pending_action := ""
@@ -110,7 +113,34 @@ func _on_request_completed(result: int, response_code: int, _headers: PackedStri
 			return
 		email_verified.emit(user_id, verified_email)
 		auth_session_received.emit(access_token, refresh_token)
-		request_finished.emit(true, "تم التحقق من البريد بنجاح. صلاحيات المؤسس تحتاج اعتمادًا خادميًا منفصلًا.")
+		request_finished.emit(true, "تم التحقق من البريد. جارٍ طلب اعتماد هوية المؤسس من الخادم...")
+		_request_founder_entitlement(access_token)
+		return
+	if action == "founder_entitlement":
+		var payload := str(response.get("payload", ""))
+		var signature := str(response.get("signature", ""))
+		if payload.is_empty() or signature.is_empty():
+			founder_entitlement_failed.emit("لم يُرجع الخادم تذكرة مؤسس صالحة.")
+			return
+		founder_entitlement_received.emit(payload, signature)
+		return
+
+func _request_founder_entitlement(access_token: String) -> void:
+	if _pending_action != "":
+		founder_entitlement_failed.emit("تعذر بدء طلب اعتماد المؤسس.")
+		return
+	var endpoint := _api_base_url() + ENTITLEMENT_PATH
+	var headers := PackedStringArray([
+		"Content-Type: application/json",
+		"Accept: application/json",
+		"apikey: " + _publishable_key(),
+		"Authorization: Bearer " + access_token
+	])
+	var error := _http.request(endpoint, headers, HTTPClient.METHOD_POST, "{}")
+	if error != OK:
+		founder_entitlement_failed.emit("تعذر الاتصال بخدمة اعتماد المؤسس.")
+		return
+	_pending_action = "founder_entitlement"
 
 func _safe_auth_error(response: Dictionary) -> String:
 	match str(response.get("code", "")):
