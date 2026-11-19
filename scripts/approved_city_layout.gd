@@ -619,6 +619,7 @@ func _build_mountain_route() -> void:
 
 # نسخ إضافية من حيوانات المخيم موزعة على جوانب الجبل بعيداً عن مسار الصعود.
 var mountain_wildlife_nodes: Array[Node3D] = []
+var mountain_wildlife_base_positions: Array[Vector3] = []
 var mountain_wildlife_clock := 0.0
 
 func _process(delta: float) -> void:
@@ -629,7 +630,7 @@ func _process(delta: float) -> void:
 			var phase := float(i) * 0.91
 			animal.rotation.y = sin(mountain_wildlife_clock * 0.34 + phase) * 0.055
 			if animal.name == "MountainFalcon":
-				animal.position.y += sin(mountain_wildlife_clock * 1.8 + phase) * 0.002
+				animal.position.y = mountain_wildlife_base_positions[i].y + sin(mountain_wildlife_clock * 1.8 + phase) * 0.045
 
 func _build_mountain_animals() -> void:
 	var mountain := get_node_or_null("KingsMountainRoute") as Node3D
@@ -660,6 +661,7 @@ func _build_mountain_animals() -> void:
 		label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 		animal.add_child(label)
 		mountain_wildlife_nodes.append(animal)
+		mountain_wildlife_base_positions.append(animal.position)
 
 func _build_mountain_animal_mesh(animal: Node3D, kind: String, coat: Color) -> void:
 	var body := MeshInstance3D.new()
