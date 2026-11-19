@@ -182,7 +182,9 @@ func _build_royal_square_landscaping() -> void:
 
 func _build_waterfront_landscaping() -> void:
 	for x in range(-60, 61, 20):
-		_tree(self, "WaterfrontPalm", Vector3(float(x), 0, 72.0), 0.9)
+		# Keep the ship approach and pier centerline free of palms.
+		if x != 0:
+			_tree(self, "WaterfrontPalm", Vector3(float(x), 0, 72.0), 0.9)
 
 
 func _build_royal_ship() -> void:
