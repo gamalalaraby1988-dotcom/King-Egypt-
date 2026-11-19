@@ -103,8 +103,8 @@ Deno.serve(async (req: Request) => {
   if (
     !UUID_RE.test(userId) || !UUID_RE.test(eventId) ||
     !ACTIVITY_KINDS.has(activityKind) || !ACTIVITY_ID_RE.test(activityId) ||
-    !Number.isSafeInteger(issuedAt) || !Number.isSafeInteger(expiresAt) ||
     typeof issuedAt !== "number" || typeof expiresAt !== "number" ||
+    !Number.isSafeInteger(issuedAt) || !Number.isSafeInteger(expiresAt) ||
     !/^[0-9a-f]{64}$/.test(suppliedDigest) || !/^[0-9a-f]{64}$/.test(signatureHex)
   ) return json({ error: "invalid_proof_payload" }, 400);
 
