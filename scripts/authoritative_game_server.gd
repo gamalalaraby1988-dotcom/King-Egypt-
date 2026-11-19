@@ -1,0 +1,657 @@
+extends Node
+## Dedicated WSS game authority. Clients submit bounded movement input, never positions.
+## Server-side collision uses the loaded city physics world. Objective zones remain disabled
+## until their canonical server coordinates and evidence rules are configured.
+
+signal authentication_completed(success: bool, message: String)
+signal authoritative_state_received(position: Vector3, rotation_y: float, velocity: Vector3)
+signal server_objective_reached(user_id: String, activity_kind: String, activity_id: String)
+signal job_start_result(success: bool, job_id: String, target: Vector3, message: String)
+signal job_completed(job_id: String)
+signal mission_start_result(success: bool, mission_id: String, target: Vector3, message: String)
+signal mission_completed(mission_id: String)
+signal activity_proof_received(activity_kind: String, activity_id: String, proof_id: String)
+signal activity_proof_failed(activity_kind: String, activity_id: String, message: String)
+
+const DEFAULT_PORT := 2456
+const MAX_PLAYERS := 64
+const MAX_INPUT_RATE := 35.0
+const WALK_SPEED := 4.0
+const RUN_SPEED := 6.2
+const ACCELERATION := 18.0
+const GRAVITY := 20.0
+const SNAPSHOT_INTERVAL := 0.05
+const SPAWN_POSITION := Vector3(0.0, 1.0, -42.0)
+
+var _server_peer: WebSocketMultiplayerPeer
+var _sessions: Dictionary = {}
+var _auth_requests: Dictionary = {}
+var _is_dedicated_server := false
+var _input_sequence := 0
+var _snapshot_elapsed := 0.0
+var _client_authenticated := false
+var _objective_zones: Dictionary = {}
+var _proof_hmac_secret := PackedByteArray()
+var _proof_secret_warning_shown := false
+
+
+func _ready() -> void:
+	_is_dedicated_server = OS.get_cmdline_user_args().has("--dedicated-server")
+	if _is_dedicated_server:
+		var secret_b64 := OS.get_environment("KING_CITY_PROOF_HMAC_SECRET_B64").strip_edges()
+		if not secret_b64.is_empty():
+			_proof_hmac_secret = Marshalls.base64_to_raw(secret_b64)
+		call_deferred("start_dedicated_server")
+
+
+func is_dedicated_server_requested() -> bool:
+	return _is_dedicated_server
+
+
+func is_authenticated() -> bool:
+	if _is_dedicated_server:
+		return true
+	return _client_authenticated
+
+
+func start_dedicated_server() -> void:
+	if not _is_dedicated_server or _server_peer != null:
+		return
+	var key_path := OS.get_environment("KING_CITY_TLS_KEY_PATH").strip_edges()
+	var cert_path := OS.get_environment("KING_CITY_TLS_CERT_PATH").strip_edges()
+	if key_path.is_empty() or cert_path.is_empty():
+		push_error("Dedicated server requires KING_CITY_TLS_KEY_PATH and KING_CITY_TLS_CERT_PATH.")
+		return
+	var private_key := CryptoKey.new()
+	var key_error := private_key.load(key_path)
+	var certificate := X509Certificate.new()
+	var cert_error := certificate.load(cert_path)
+	if key_error != OK or cert_error != OK:
+		push_error("Dedicated server TLS key/certificate could not be loaded.")
+		return
+	var tls_options := TLSOptions.server(private_key, certificate)
+	_server_peer = WebSocketMultiplayerPeer.new()
+	var port := int(OS.get_environment("KING_CITY_GAME_PORT")) if not OS.get_environment("KING_CITY_GAME_PORT").is_empty() else DEFAULT_PORT
+	var error := _server_peer.create_server(port, "0.0.0.0", tls_options)
+	if error != OK:
+		push_error("Could not start secure WebSocket game server: %s" % error_string(error))
+		_server_peer = null
+		return
+	multiplayer.multiplayer_peer = _server_peer
+	multiplayer.peer_connected.connect(_on_peer_connected)
+	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
+	print("KING OF EGYPT CITY authoritative WSS server listening on TCP port %d." % port)
+
+
+func clear_client_session() -> void:
+	_client_authenticated = false
+
+
+func _process(_delta: float) -> void:
+	if not multiplayer.is_server():
+		return
+	var now_usec := Time.get_ticks_usec()
+	for peer_id_variant in _sessions.keys():
+		var peer_id := int(peer_id_variant)
+		var session: Dictionary = _sessions[peer_id]
+		if not bool(session.get("authenticated", false)) and now_usec - int(session.get("connected_at_usec", now_usec)) > 10000000:
+			multiplayer.multiplayer_peer.disconnect_peer(peer_id)
+		elif bool(session.get("authenticated", false)) and now_usec - int(session.get("last_auth_usec", now_usec)) > 3300000000:
+			multiplayer.multiplayer_peer.disconnect_peer(peer_id)
+
+
+func _on_peer_connected(peer_id: int) -> void:
+	if _sessions.size() >= MAX_PLAYERS:
+		multiplayer.multiplayer_peer.disconnect_peer(peer_id)
+		return
+	_sessions[peer_id] = {
+		"authenticated": false,
+		"user_id": "",
+		"body": null,
+		"direction": Vector3.ZERO,
+		"sprint": false,
+		"velocity": Vector3.ZERO,
+		"last_sequence": -1,
+		"last_input_usec": 0,
+		"input_window_usec": Time.get_ticks_usec(),
+		"input_count": 0,
+		"reached_objectives": {},
+		"connected_at_usec": Time.get_ticks_usec(),
+		"last_auth_usec": 0,
+		"active_job": {},
+		"completed_jobs": {},
+		"active_mission": {},
+		"completed_missions": {}
+	}
+
+
+func _on_peer_disconnected(peer_id: int) -> void:
+	var session: Dictionary = _sessions.get(peer_id, {})
+	var body := session.get("body") as CharacterBody3D
+	if is_instance_valid(body):
+		body.queue_free()
+	_sessions.erase(peer_id)
+	if _auth_requests.has(peer_id):
+		var request := _auth_requests[peer_id] as HTTPRequest
+		if is_instance_valid(request):
+			request.queue_free()
+		_auth_requests.erase(peer_id)
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func authenticate_player(access_token: String) -> void:
+	if not multiplayer.is_server():
+		return
+	var peer_id := multiplayer.get_remote_sender_id()
+	if not _sessions.has(peer_id) or _auth_requests.has(peer_id):
+		return
+	if access_token.length() < 40 or access_token.length() > 8192:
+		_reject_peer(peer_id, "رمز جلسة الحساب غير صالح.")
+		return
+	var base_url := str(ProjectSettings.get_setting("founder/auth/api_base_url", "")).strip_edges().trim_suffix("/")
+	var publishable_key := str(ProjectSettings.get_setting("founder/auth/publishable_key", "")).strip_edges()
+	if not base_url.begins_with("https://") or publishable_key.is_empty():
+		_reject_peer(peer_id, "إعدادات التحقق من حساب اللاعب غير مكتملة على الخادم.")
+		return
+	var request := HTTPRequest.new()
+	request.timeout = 8.0
+	add_child(request)
+	request.request_completed.connect(_on_auth_request_completed.bind(peer_id))
+	_auth_requests[peer_id] = request
+	var headers := PackedStringArray([
+		"Accept: application/json",
+		"apikey: " + publishable_key,
+		"Authorization: Bearer " + access_token
+	])
+	var error := request.request(base_url + "/auth/v1/user", headers, HTTPClient.METHOD_GET)
+	if error != OK:
+		_auth_requests.erase(peer_id)
+		request.queue_free()
+		_reject_peer(peer_id, "تعذر بدء التحقق من حساب اللاعب.")
+
+
+func _on_auth_request_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray, peer_id: int) -> void:
+	var request := _auth_requests.get(peer_id) as HTTPRequest
+	_auth_requests.erase(peer_id)
+	if is_instance_valid(request):
+		request.queue_free()
+	if not _sessions.has(peer_id):
+		return
+	if result != HTTPRequest.RESULT_SUCCESS or response_code != 200:
+		_reject_peer(peer_id, "انتهت جلسة الحساب أو تعذر التحقق منها.")
+		return
+	var parsed: Variant = JSON.parse_string(body.get_string_from_utf8())
+	if not (parsed is Dictionary):
+		_reject_peer(peer_id, "استجابة التحقق من الحساب غير صالحة.")
+		return
+	var user_id := str(parsed.get("id", ""))
+	var uuid_pattern := RegEx.new()
+	uuid_pattern.compile("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$")
+	if uuid_pattern.search(user_id) == null:
+		_reject_peer(peer_id, "لم يتم تأكيد هوية حساب اللاعب.")
+		return
+	if bool(_sessions[peer_id].get("authenticated", false)):
+		if str(_sessions[peer_id].get("user_id", "")) != user_id:
+			_reject_peer(peer_id, "تغيرت هوية الحساب أثناء جلسة اللعب.")
+			return
+		_sessions[peer_id]["last_auth_usec"] = Time.get_ticks_usec()
+		rpc_id(peer_id, "receive_authentication_result", true, "تم تجديد التحقق من حساب اللاعب.")
+		return
+	var body_node := CharacterBody3D.new()
+	body_node.name = "AuthoritativePlayer_%d" % peer_id
+	body_node.position = SPAWN_POSITION
+	body_node.floor_snap_length = 0.25
+	var collision := CollisionShape3D.new()
+	var capsule := CapsuleShape3D.new()
+	capsule.radius = 0.42
+	capsule.height = 1.8
+	collision.shape = capsule
+	body_node.add_child(collision)
+	var world_root := get_tree().current_scene
+	if not is_instance_valid(world_root):
+		_reject_peer(peer_id, "عالم المدينة غير جاهز على الخادم.")
+		return
+	world_root.add_child(body_node)
+	_sessions[peer_id]["authenticated"] = true
+	_sessions[peer_id]["user_id"] = user_id
+	_sessions[peer_id]["body"] = body_node
+	_sessions[peer_id]["last_auth_usec"] = Time.get_ticks_usec()
+	rpc_id(peer_id, "receive_authentication_result", true, "تم التحقق من حساب اللاعب.")
+	print("Authenticated game peer %d." % peer_id)
+
+
+func _reject_peer(peer_id: int, reason: String) -> void:
+	if multiplayer.is_server() and multiplayer.get_peers().has(peer_id):
+		rpc_id(peer_id, "receive_authentication_result", false, reason)
+		multiplayer.multiplayer_peer.disconnect_peer(peer_id)
+
+
+@rpc("authority", "call_remote", "reliable")
+func receive_authentication_result(success: bool, message: String) -> void:
+	if multiplayer.is_server():
+		return
+	if success:
+		_client_authenticated = true
+		authentication_completed.emit(true, message)
+	else:
+		_client_authenticated = false
+		authentication_completed.emit(false, message)
+
+
+func send_movement_input(world_direction: Vector3, sprint: bool) -> void:
+	if _is_dedicated_server or not is_authenticated():
+		return
+	var direction := world_direction
+	direction.y = 0.0
+	if direction.length() > 1.0:
+		direction = direction.normalized()
+	_input_sequence += 1
+	submit_movement_input.rpc_id(1, _input_sequence, direction, sprint)
+
+
+@rpc("any_peer", "call_remote", "unreliable_ordered")
+func submit_movement_input(sequence: int, direction: Vector3, sprint: bool) -> void:
+	if not multiplayer.is_server():
+		return
+	var peer_id := multiplayer.get_remote_sender_id()
+	if not _sessions.has(peer_id) or not bool(_sessions[peer_id].get("authenticated", false)):
+		return
+	var session: Dictionary = _sessions[peer_id]
+	if sequence <= int(session.get("last_sequence", -1)):
+		return
+	var now_usec := Time.get_ticks_usec()
+	var window_usec := int(session.get("input_window_usec", now_usec))
+	var count := int(session.get("input_count", 0))
+	if now_usec - window_usec >= 1000000:
+		window_usec = now_usec
+		count = 0
+	count += 1
+	if count > int(MAX_INPUT_RATE):
+		session["input_window_usec"] = window_usec
+		session["input_count"] = count
+		_sessions[peer_id] = session
+		return
+	if not is_finite(direction.x) or not is_finite(direction.y) or not is_finite(direction.z) or absf(direction.y) > 0.001 or direction.length() > 1.05:
+		return
+	session["last_sequence"] = sequence
+	session["last_input_usec"] = now_usec
+	session["input_window_usec"] = window_usec
+	session["input_count"] = count
+	session["direction"] = direction.limit_length(1.0)
+	session["sprint"] = sprint
+	_sessions[peer_id] = session
+
+
+func _get_server_job_definition(job_id: String) -> Dictionary:
+	match job_id:
+		"courier_delivery":
+			return {"board": Vector3(24.0, 0.0, 4.5), "target": Vector3(24.0, 0.15, 14.0)}
+		"city_guide":
+			return {"board": Vector3(-24.0, 0.0, 4.5), "target": Vector3(-24.0, 0.15, -14.0)}
+		"city_maintenance":
+			return {"board": Vector3(4.5, 0.0, 24.0), "target": Vector3(14.0, 0.15, 24.0)}
+	return {}
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func request_start_job(job_id: String) -> void:
+	if not multiplayer.is_server():
+		return
+	var peer_id := multiplayer.get_remote_sender_id()
+	if not _sessions.has(peer_id) or not bool(_sessions[peer_id].get("authenticated", false)):
+		return
+	var session: Dictionary = _sessions[peer_id]
+	var active_mission: Dictionary = session.get("active_mission", {})
+	if not active_mission.is_empty():
+		rpc_id(peer_id, "receive_job_start_result", false, job_id, Vector3.ZERO, "أنهِ المهمة الحالية أولًا.")
+		return
+	var safe_job_id := job_id.strip_edges().to_lower()
+	var definition := _get_server_job_definition(safe_job_id)
+	if definition.is_empty():
+		rpc_id(peer_id, "receive_job_start_result", false, safe_job_id, Vector3.ZERO, "هذه الوظيفة غير معتمدة على الخادم.")
+		return
+	var current_job: Dictionary = session.get("active_job", {})
+	if not current_job.is_empty():
+		rpc_id(peer_id, "receive_job_start_result", false, safe_job_id, Vector3.ZERO, "لديك وظيفة أخرى قيد التنفيذ.")
+		return
+	var completed_jobs: Dictionary = session.get("completed_jobs", {})
+	if completed_jobs.has(safe_job_id):
+		rpc_id(peer_id, "receive_job_start_result", false, safe_job_id, Vector3.ZERO, "أنجزت هذه الوظيفة بالفعل في جلسة اللعب.")
+		return
+	var body := session.get("body") as CharacterBody3D
+	if not is_instance_valid(body) or body.global_position.distance_to(definition["board"]) > 5.0:
+		rpc_id(peer_id, "receive_job_start_result", false, safe_job_id, Vector3.ZERO, "اقترب من لوحة الوظائف أولًا.")
+		return
+	session["active_job"] = {
+		"job_id": safe_job_id,
+		"target": definition["target"],
+		"radius": 2.2
+	}
+	_sessions[peer_id] = session
+	rpc_id(peer_id, "receive_job_start_result", true, safe_job_id, definition["target"], "بدأت الوظيفة على الخادم. اتبع علامة الهدف.")
+
+
+@rpc("authority", "call_remote", "reliable")
+func receive_job_start_result(success: bool, job_id: String, target: Vector3, message: String) -> void:
+	if multiplayer.is_server():
+		return
+	job_start_result.emit(success, job_id, target, message)
+
+
+@rpc("authority", "call_remote", "reliable")
+func receive_server_job_completed(job_id: String) -> void:
+	if multiplayer.is_server() or not is_authenticated():
+		return
+	job_completed.emit(job_id)
+
+
+func _get_server_mission_definition(mission_id: String) -> Dictionary:
+	match mission_id:
+		"mission_shop":
+			return {"board": Vector3(16.0, 0.0, 16.0), "target": Vector3(16.0, 0.15, 6.0)}
+		"mission_restaurant":
+			return {"board": Vector3(-16.0, 0.0, 16.0), "target": Vector3(-16.0, 0.15, 6.0)}
+		"mission_employment":
+			return {"board": Vector3(16.0, 0.0, -16.0), "target": Vector3(16.0, 0.15, -26.0)}
+	return {}
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func request_start_mission(mission_id: String) -> void:
+	if not multiplayer.is_server():
+		return
+	var peer_id := multiplayer.get_remote_sender_id()
+	if not _sessions.has(peer_id) or not bool(_sessions[peer_id].get("authenticated", false)):
+		return
+	var session: Dictionary = _sessions[peer_id]
+	var safe_mission_id := mission_id.strip_edges().to_lower()
+	var definition := _get_server_mission_definition(safe_mission_id)
+	if definition.is_empty():
+		rpc_id(peer_id, "receive_mission_start_result", false, safe_mission_id, Vector3.ZERO, "هذه المهمة غير معتمدة على الخادم.")
+		return
+	var active_mission: Dictionary = session.get("active_mission", {})
+	var active_job: Dictionary = session.get("active_job", {})
+	if not active_mission.is_empty() or not active_job.is_empty():
+		rpc_id(peer_id, "receive_mission_start_result", false, safe_mission_id, Vector3.ZERO, "أنهِ النشاط الحالي أولًا.")
+		return
+	var completed_missions: Dictionary = session.get("completed_missions", {})
+	if completed_missions.has(safe_mission_id):
+		rpc_id(peer_id, "receive_mission_start_result", false, safe_mission_id, Vector3.ZERO, "أنجزت هذه المهمة بالفعل في جلسة اللعب.")
+		return
+	var body := session.get("body") as CharacterBody3D
+	if not is_instance_valid(body) or body.global_position.distance_to(definition["board"]) > 5.0:
+		rpc_id(peer_id, "receive_mission_start_result", false, safe_mission_id, Vector3.ZERO, "اقترب من المبنى أولًا.")
+		return
+	session["active_mission"] = {"mission_id": safe_mission_id, "target": definition["target"], "radius": 2.2}
+	_sessions[peer_id] = session
+	rpc_id(peer_id, "receive_mission_start_result", true, safe_mission_id, definition["target"], "بدأت المهمة على الخادم. اتبع علامة الهدف.")
+
+
+@rpc("authority", "call_remote", "reliable")
+func receive_mission_start_result(success: bool, mission_id: String, target: Vector3, message: String) -> void:
+	if multiplayer.is_server():
+		return
+	mission_start_result.emit(success, mission_id, target, message)
+
+
+@rpc("authority", "call_remote", "reliable")
+func receive_server_mission_completed(mission_id: String) -> void:
+	if multiplayer.is_server() or not is_authenticated():
+		return
+	mission_completed.emit(mission_id)
+
+
+@rpc("authority", "call_remote", "reliable")
+func receive_server_activity_proof(activity_kind: String, activity_id: String, proof_id: String) -> void:
+	if multiplayer.is_server() or not is_authenticated():
+		return
+	activity_proof_received.emit(activity_kind, activity_id, proof_id)
+
+
+@rpc("authority", "call_remote", "reliable")
+func receive_server_activity_proof_failed(activity_kind: String, activity_id: String, message: String) -> void:
+	if multiplayer.is_server() or not is_authenticated():
+		return
+	activity_proof_failed.emit(activity_kind, activity_id, message)
+
+
+func _notify_proof_issue_failed(peer_id: int, activity_kind: String, activity_id: String, message: String) -> void:
+	if _sessions.has(peer_id) and multiplayer.get_peers().has(peer_id):
+		rpc_id(peer_id, "receive_server_activity_proof_failed", activity_kind, activity_id, message)
+
+
+func _new_server_event_uuid() -> String:
+	var crypto := Crypto.new()
+	var bytes := crypto.generate_random_bytes(16)
+	if bytes.size() != 16:
+		return ""
+	bytes[6] = (bytes[6] & 0x0f) | 0x40
+	bytes[8] = (bytes[8] & 0x3f) | 0x80
+	var hex := bytes.hex_encode()
+	return "%s-%s-%s-%s-%s" % [hex.substr(0, 8), hex.substr(8, 4), hex.substr(12, 4), hex.substr(16, 4), hex.substr(20, 12)]
+
+
+func _proof_signature_message(user_id: String, activity_kind: String, activity_id: String, event_id: String, issued_at: int, expires_at: int) -> String:
+	return "v1|%s|%s|%s|%s|%d|%d" % [user_id, activity_kind, activity_id, event_id, issued_at, expires_at]
+
+
+func _issue_activity_proof(peer_id: int, user_id: String, activity_kind: String, activity_id: String) -> void:
+	if _proof_hmac_secret.size() < 32:
+		if not _proof_secret_warning_shown:
+			push_warning("Online reward proofs are disabled: KING_CITY_PROOF_HMAC_SECRET_B64 is not configured on the dedicated server.")
+			_proof_secret_warning_shown = true
+		_notify_proof_issue_failed(peer_id, activity_kind, activity_id, "إعداد إثبات المكافأة غير مكتمل على الخادم.")
+		return
+	var base_url := str(ProjectSettings.get_setting("founder/auth/api_base_url", "")).strip_edges().trim_suffix("/")
+	var publishable_key := str(ProjectSettings.get_setting("founder/auth/publishable_key", "")).strip_edges()
+	if not base_url.begins_with("https://") or publishable_key.is_empty():
+		push_warning("Cannot issue activity proof: Supabase project settings are missing on the dedicated server.")
+		_notify_proof_issue_failed(peer_id, activity_kind, activity_id, "خدمة اعتماد المكافآت غير مهيأة على الخادم.")
+		return
+	var event_id := _new_server_event_uuid()
+	if event_id.is_empty():
+		push_warning("Cannot issue activity proof: secure random event id generation failed.")
+		_notify_proof_issue_failed(peer_id, activity_kind, activity_id, "تعذر إنشاء رقم إثبات آمن.")
+		return
+	var issued_at := int(Time.get_unix_time_from_system())
+	var expires_at := issued_at + 300
+	var canonical := _proof_signature_message(user_id, activity_kind, activity_id, event_id, issued_at, expires_at)
+	var digest_context := HashingContext.new()
+	if digest_context.start(HashingContext.HASH_SHA256) != OK or digest_context.update(canonical.to_utf8_buffer()) != OK:
+		_notify_proof_issue_failed(peer_id, activity_kind, activity_id, "تعذر تجهيز بصمة إثبات المكافأة.")
+		return
+	var evidence_digest := digest_context.finish()
+	var hmac_context := HMACContext.new()
+	if hmac_context.start(HashingContext.HASH_SHA256, _proof_hmac_secret) != OK or hmac_context.update(canonical.to_utf8_buffer()) != OK:
+		_notify_proof_issue_failed(peer_id, activity_kind, activity_id, "تعذر توقيع إثبات المكافأة.")
+		return
+	var payload := {
+		"user_id": user_id,
+		"activity_kind": activity_kind,
+		"activity_id": activity_id,
+		"server_event_id": event_id,
+		"issued_at": issued_at,
+		"expires_at": expires_at,
+		"evidence_digest_hex": evidence_digest.hex_encode(),
+		"signature_hex": hmac_context.finish().hex_encode()
+	}
+	_send_activity_proof_request(peer_id, payload, 0, base_url, publishable_key)
+
+
+func _send_activity_proof_request(peer_id: int, payload: Dictionary, attempt: int, base_url: String, publishable_key: String) -> void:
+	if not _sessions.has(peer_id) or not multiplayer.get_peers().has(peer_id):
+		return
+	var request := HTTPRequest.new()
+	request.timeout = 10.0
+	add_child(request)
+	request.request_completed.connect(_on_proof_issue_completed.bind(request, peer_id, payload, attempt, base_url, publishable_key))
+	var error := request.request(
+		base_url + "/functions/v1/game-proof-issuer",
+		PackedStringArray(["Content-Type: application/json", "apikey: " + publishable_key]),
+		HTTPClient.METHOD_POST,
+		JSON.stringify(payload)
+	)
+	if error != OK:
+		request.queue_free()
+		_schedule_activity_proof_retry(peer_id, payload, attempt, base_url, publishable_key)
+
+
+func _schedule_activity_proof_retry(peer_id: int, payload: Dictionary, attempt: int, base_url: String, publishable_key: String) -> void:
+	if attempt >= 3:
+		_notify_proof_issue_failed(peer_id, str(payload.get("activity_kind", "")), str(payload.get("activity_id", "")), "تعذر إصدار إثبات المكافأة بعد عدة محاولات؛ لم تُمنح مكافأة.")
+		return
+	var delays := [2.0, 5.0, 15.0]
+	_retry_activity_proof_after(peer_id, payload, attempt + 1, delays[attempt], base_url, publishable_key)
+
+
+func _retry_activity_proof_after(peer_id: int, payload: Dictionary, attempt: int, delay_seconds: float, base_url: String, publishable_key: String) -> void:
+	await get_tree().create_timer(delay_seconds).timeout
+	_send_activity_proof_request(peer_id, payload, attempt, base_url, publishable_key)
+
+
+func _on_proof_issue_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray, request: HTTPRequest, peer_id: int, payload: Dictionary, attempt: int, base_url: String, publishable_key: String) -> void:
+	if is_instance_valid(request):
+		request.queue_free()
+	var activity_kind := str(payload.get("activity_kind", ""))
+	var activity_id := str(payload.get("activity_id", ""))
+	if result != HTTPRequest.RESULT_SUCCESS or response_code == 429 or response_code >= 500:
+		_schedule_activity_proof_retry(peer_id, payload, attempt, base_url, publishable_key)
+		return
+	if response_code != 200:
+		push_warning("Trusted proof issuer rejected activity %s/%s with HTTP %d." % [activity_kind, activity_id, response_code])
+		_notify_proof_issue_failed(peer_id, activity_kind, activity_id, "لم تصدر خدمة المكافآت إثباتًا صالحًا؛ لم تُمنح مكافأة.")
+		return
+	var parsed: Variant = JSON.parse_string(body.get_string_from_utf8())
+	var proof_id := str(parsed.get("proof_id", "")) if parsed is Dictionary else ""
+	var uuid_pattern := RegEx.new()
+	uuid_pattern.compile("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$")
+	if uuid_pattern.search(proof_id) == null:
+		push_warning("Trusted proof issuer returned an invalid proof response.")
+		_notify_proof_issue_failed(peer_id, activity_kind, activity_id, "استجابة إثبات المكافأة غير صالحة.")
+		return
+	var user_id := str(payload.get("user_id", ""))
+	if not _sessions.has(peer_id) or str(_sessions[peer_id].get("user_id", "")) != user_id:
+		return
+	rpc_id(peer_id, "receive_server_activity_proof", activity_kind, activity_id, proof_id)
+
+
+func register_server_objective_zone(activity_kind: String, activity_id: String, center: Vector3, radius: float) -> bool:
+	if not multiplayer.is_server() or not ["mission", "job", "achievement", "daily_claim"].has(activity_kind):
+		return false
+	var safe_id := activity_id.strip_edges().to_lower()
+	var id_pattern := RegEx.new()
+	id_pattern.compile("^[a-z0-9][a-z0-9_.-]{0,79}$")
+	if id_pattern.search(safe_id) == null or not is_finite(center.x) or not is_finite(center.y) or not is_finite(center.z):
+		return false
+	if not is_finite(radius) or radius < 0.75 or radius > 20.0:
+		return false
+	var zone_key := activity_kind + ":" + safe_id
+	_objective_zones[zone_key] = {
+		"activity_kind": activity_kind,
+		"activity_id": safe_id,
+		"center": center,
+		"radius": radius
+	}
+	return true
+
+
+func _evaluate_server_objective_zones(peer_id: int, session: Dictionary, body: CharacterBody3D) -> Dictionary:
+	var reached: Dictionary = session.get("reached_objectives", {})
+	for zone_key in _objective_zones.keys():
+		if reached.has(zone_key):
+			continue
+		var zone: Dictionary = _objective_zones[zone_key]
+		var center: Vector3 = zone["center"]
+		var radius := float(zone["radius"])
+		if body.global_position.distance_to(center) <= radius:
+			reached[zone_key] = true
+			server_objective_reached.emit(
+				str(session.get("user_id", "")),
+				str(zone["activity_kind"]),
+				str(zone["activity_id"])
+			)
+	session["reached_objectives"] = reached
+	return session
+
+
+func _physics_process(delta: float) -> void:
+	if not multiplayer.is_server():
+		return
+	var safe_delta := clampf(delta, 0.0, 0.05)
+	for peer_id_variant in _sessions.keys():
+		var peer_id := int(peer_id_variant)
+		var session: Dictionary = _sessions[peer_id]
+		if not bool(session.get("authenticated", false)):
+			continue
+		var body := session.get("body") as CharacterBody3D
+		if not is_instance_valid(body):
+			continue
+		if body.global_position.y < -15.0:
+			body.global_position = SPAWN_POSITION
+			body.velocity = Vector3.ZERO
+		var direction: Vector3 = session.get("direction", Vector3.ZERO)
+		var last_input_usec := int(session.get("last_input_usec", 0))
+		if Time.get_ticks_usec() - last_input_usec > 250000:
+			direction = Vector3.ZERO
+			session["direction"] = direction
+			session["sprint"] = false
+		var speed := RUN_SPEED if bool(session.get("sprint", false)) else WALK_SPEED
+		var target := direction * speed
+		var velocity: Vector3 = session.get("velocity", Vector3.ZERO)
+		velocity.x = move_toward(velocity.x, target.x, ACCELERATION * safe_delta)
+		velocity.z = move_toward(velocity.z, target.z, ACCELERATION * safe_delta)
+		if not body.is_on_floor():
+			velocity.y -= GRAVITY * safe_delta
+		else:
+			velocity.y = 0.0
+		body.velocity = velocity
+		body.move_and_slide()
+		if direction.length() > 0.1:
+			body.rotation.y = atan2(direction.x, direction.z)
+		session["velocity"] = body.velocity
+		session = _evaluate_server_objective_zones(peer_id, session, body)
+		var active_job: Dictionary = session.get("active_job", {})
+		if not active_job.is_empty():
+			var job_target: Vector3 = active_job.get("target", Vector3.ZERO)
+			var planar_distance := Vector2(body.global_position.x, body.global_position.z).distance_to(Vector2(job_target.x, job_target.z))
+			if planar_distance <= float(active_job.get("radius", 2.2)):
+				var completed_job_id := str(active_job.get("job_id", ""))
+				var completed: Dictionary = session.get("completed_jobs", {})
+				completed[completed_job_id] = true
+				session["completed_jobs"] = completed
+				session["active_job"] = {}
+				server_objective_reached.emit(str(session.get("user_id", "")), "job", completed_job_id)
+				rpc_id(peer_id, "receive_server_job_completed", completed_job_id)
+				_issue_activity_proof(peer_id, str(session.get("user_id", "")), "job", completed_job_id)
+		var active_mission: Dictionary = session.get("active_mission", {})
+		if not active_mission.is_empty():
+			var mission_target: Vector3 = active_mission.get("target", Vector3.ZERO)
+			var mission_distance := Vector2(body.global_position.x, body.global_position.z).distance_to(Vector2(mission_target.x, mission_target.z))
+			if mission_distance <= float(active_mission.get("radius", 2.2)):
+				var completed_mission_id := str(active_mission.get("mission_id", ""))
+				var completed_missions: Dictionary = session.get("completed_missions", {})
+				completed_missions[completed_mission_id] = true
+				session["completed_missions"] = completed_missions
+				session["active_mission"] = {}
+				server_objective_reached.emit(str(session.get("user_id", "")), "mission", completed_mission_id)
+				rpc_id(peer_id, "receive_server_mission_completed", completed_mission_id)
+				_issue_activity_proof(peer_id, str(session.get("user_id", "")), "mission", completed_mission_id)
+		_sessions[peer_id] = session
+	_snapshot_elapsed += safe_delta
+	if _snapshot_elapsed >= SNAPSHOT_INTERVAL:
+		_snapshot_elapsed = 0.0
+		for peer_id_variant in _sessions.keys():
+			var peer_id := int(peer_id_variant)
+			var session: Dictionary = _sessions[peer_id]
+			if not bool(session.get("authenticated", false)):
+				continue
+			var body := session.get("body") as CharacterBody3D
+			if is_instance_valid(body):
+				rpc_id(peer_id, "receive_authoritative_state", body.global_position, body.rotation.y, body.velocity)
+
+
+@rpc("authority", "call_remote", "unreliable_ordered")
+func receive_authoritative_state(position: Vector3, rotation_y: float, velocity: Vector3) -> void:
+	if multiplayer.is_server() or not is_authenticated():
+		return
+	authoritative_state_received.emit(position, rotation_y, velocity)

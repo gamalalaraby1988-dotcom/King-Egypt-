@@ -22,6 +22,18 @@ var _player_saved_collision_mask := 1
 const INTERIOR_WORLD_POSITION := Vector3(1000.0, 0.0, 1000.0)
 
 func _ready() -> void:
+	if AuthoritativeGameServer.is_dedicated_server_requested():
+		_create_ground()
+		_create_city()
+		_create_approved_city_layout()
+		_create_city_signage()
+		var local_player := get_node_or_null("Player")
+		if is_instance_valid(local_player):
+			remove_child(local_player)
+			local_player.queue_free()
+		_create_interactive_buildings()
+		_create_camp()
+		return
 	_create_ground()
 	_create_city()
 	_create_approved_city_layout()
@@ -38,6 +50,10 @@ func _ready() -> void:
 	_create_mode_selection_ui()
 	GameModeManager.status_changed.connect(_on_mode_status_changed)
 	GameModeManager.online_connected.connect(_on_mode_connected)
+	AuthoritativeGameServer.authentication_completed.connect(_on_player_server_authenticated)
+	PlayerAccountAuthClient.session_access_token_changed.connect(_on_player_access_token_changed)
+	PlayerAccountAuthClient.session_expired.connect(_on_player_account_session_expired)
+	GameModeManager.online_disconnected.connect(_on_mode_disconnected)
 
 
 func _create_approved_city_layout() -> void:
@@ -52,6 +68,12 @@ func _create_approved_city_layout() -> void:
 
 
 func _process(_delta: float) -> void:
+	if GameModeManager.is_online_ready():
+		if is_instance_valid(vehicle_interaction_button):
+			vehicle_interaction_button.visible = false
+		if is_instance_valid(vehicle_summon_button):
+			vehicle_summon_button.visible = false
+		return
 	# المركبات تخص مساحة المدينة؛ أخفِ أدواتها طوال الانتقال أو الوجود داخل مبنى.
 	if interior_transition_busy or is_instance_valid(interior_root):
 		if is_instance_valid(vehicle_interaction_button):
@@ -83,6 +105,8 @@ func _process(_delta: float) -> void:
 		vehicle_interaction_button.text = "🚪 ركوب السيارة" if CityLanguage.get_language() == "ar" else "Enter vehicle"
 
 func _unhandled_input(event: InputEvent) -> void:
+	if GameModeManager.is_online_ready():
+		return
 	if event is InputEventKey and event.keycode == KEY_E:
 		if event.pressed and not event.echo and not _vehicle_key_was_down:
 			_vehicle_key_was_down = true
@@ -634,6 +658,14 @@ func _set_mobile_hud_active(active: bool) -> void:
 
 
 func _create_interactive_buildings() -> void:
+	if AuthoritativeGameServer.is_dedicated_server_requested():
+		_add_functional_building(null, "المتجر", "مهمة شراء احتياجات", "تعرّف على المتجر واستلم قائمة احتياجات تجريبية من البوابة.", Vector3(16, 0, 16), Color(0.20, 0.48, 0.30), 150, 0, 1)
+		_add_functional_building(null, "المطعم", "مهمة توصيل وجبة", "استلم طلب توصيل تجريبي من المطعم.", Vector3(-16, 0, 16), Color(0.65, 0.30, 0.18), 220, 2, 1)
+		_add_functional_building(null, "مركز التوظيف", "مهمة التسجيل في وظيفة", "تعرّف على الوظائف المتاحة وشروط الالتحاق بها.", Vector3(16, 0, -16), Color(0.22, 0.34, 0.62), 300, 5, 1)
+		_create_job_board("وظيفة التوصيل", "توصيل طلب إلى نقطة الاستلام المحددة في المدينة.", Vector3(24, 0, 4.5), Vector3(0, 0, 9.5), 180, 0, 30, "courier_delivery")
+		_create_job_board("مرشد المدينة", "اذهب إلى نقطة المعلم السياحي وساعد الزائرين على اكتشاف المدينة.", Vector3(-24, 0, 4.5), Vector3(0, 0, -18.5), 220, 1, 40, "city_guide")
+		_create_job_board("عامل صيانة", "توجّه إلى موقع الصيانة المحدد وأكمل جولة الفحص الميدانية.", Vector3(4.5, 0, 24), Vector3(9.5, 0, 0), 250, 0, 45, "city_maintenance", PI / 2.0)
+		return
 	var manager := Node.new()
 	manager.name = "MissionManager"
 	manager.set_script(load("res://scripts/mission_manager.gd"))
@@ -676,6 +708,7 @@ func _add_functional_building(manager: Node, title: String, mission: String, des
 	building.name = "Functional_" + title
 	building.set_script(load("res://scripts/building_interaction.gd"))
 	building.building_id = "mission_" + str(title.hash())
+	building.server_activity_id = "mission_shop" if title == "المتجر" else ("mission_restaurant" if title == "المطعم" else "mission_employment")
 	building.position = pos
 	building.building_title = title
 	building.mission_title = mission
@@ -695,7 +728,8 @@ func _add_functional_building(manager: Node, title: String, mission: String, des
 	elif title == "مركز التوظيف":
 		sign_key = "employment"
 	_add_sign_label(building, sign_key, Vector3(0, 4.25, 3.70), PI)
-	manager.register_building(building)
+	if is_instance_valid(manager) and manager.has_method("register_building"):
+		manager.register_building(building)
 
 
 func _create_job_board(title: String, description: String, pos: Vector3, target_offset: Vector3, reward: int, chips_reward: int, xp_reward: int, job_id: String, yaw: float = 0.0) -> void:
@@ -809,6 +843,13 @@ var founder_email_gate: VBoxContainer
 var founder_email_input: LineEdit
 var founder_email_code_input: LineEdit
 var founder_email_verified := false
+var player_account_window: Window
+var player_account_email_input: LineEdit
+var player_account_code_input: LineEdit
+var player_account_status_label: Label
+var player_account_button: Button
+var player_account_profile_label: Label
+
 
 func _create_mode_selection_ui() -> void:
 	var player := get_node_or_null("Player")
@@ -824,10 +865,19 @@ func _create_mode_selection_ui() -> void:
 	FounderAuthClient.request_finished.connect(_on_founder_auth_request_finished)
 	FounderAuthClient.email_verified.connect(_on_founder_email_verified)
 	FounderAuthClient.auth_session_received.connect(_on_founder_auth_session_received)
+	FounderAuthClient.auth_session_refreshed.connect(_on_founder_auth_session_refreshed)
 	FounderAuthClient.auth_session_restored.connect(_on_founder_auth_session_restored)
 	FounderAuthClient.auth_session_expired.connect(_on_founder_auth_session_expired)
 	FounderAuthClient.founder_entitlement_received.connect(_on_founder_entitlement_received)
 	FounderAuthClient.founder_entitlement_failed.connect(_on_founder_entitlement_failed)
+	PlayerAccountAuthClient.request_finished.connect(_on_player_account_request_finished)
+	PlayerAccountAuthClient.account_authenticated.connect(_on_player_account_authenticated)
+	PlayerAccountAuthClient.session_access_token_changed.connect(_on_player_account_access_token_changed)
+	PlayerAccountAuthClient.session_expired.connect(_on_player_account_session_expired)
+	PlayerAccountAuthClient.player_profile_ready.connect(_on_player_profile_ready)
+	PlayerAccountAuthClient.player_profile_failed.connect(_on_player_profile_failed)
+	if PlayerAccountAuthClient.has_active_session():
+		PlayerSyncClient.set_session_access_token(PlayerAccountAuthClient.get_access_token())
 	var backdrop := ColorRect.new()
 	backdrop.color = Color(0.025, 0.035, 0.05, 0.94)
 	backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -849,6 +899,13 @@ func _create_mode_selection_ui() -> void:
 	heading.add_theme_font_size_override("font_size", 22)
 	heading.add_theme_color_override("font_color", Color(0.94, 0.79, 0.43))
 	content.add_child(heading)
+
+	player_account_button = Button.new()
+	player_account_button.text = "حساب اللاعب - تسجيل الدخول وحفظ التقدم"
+	player_account_button.custom_minimum_size.y = 40
+	player_account_button.pressed.connect(_open_player_account_window)
+	content.add_child(player_account_button)
+	_create_player_account_window()
 
 	founder_pin_gate = VBoxContainer.new()
 	founder_pin_gate.add_theme_constant_override("separation", 8)
@@ -929,7 +986,7 @@ func _create_mode_selection_ui() -> void:
 	offline_button.pressed.connect(_select_offline_mode)
 	game_mode_controls.add_child(offline_button)
 	online_address_input = LineEdit.new()
-	online_address_input.placeholder_text = "عنوان خادم اللعب الجماعي"
+	online_address_input.placeholder_text = "اسم نطاق خادم WSS الآمن"
 	online_address_input.text = str(ProjectSettings.get_setting("network/online/server_address", ""))
 	game_mode_controls.add_child(online_address_input)
 	var online_button := Button.new()
@@ -938,6 +995,121 @@ func _create_mode_selection_ui() -> void:
 	online_button.pressed.connect(_select_online_mode)
 	game_mode_controls.add_child(online_button)
 	game_mode_controls.visible = not is_verified_founder
+
+ 
+func _create_player_account_window() -> void:
+	player_account_window = Window.new()
+	player_account_window.title = "حساب اللاعب"
+	player_account_window.size = Vector2i(380, 360)
+	player_account_window.min_size = Vector2i(340, 320)
+	player_account_window.unresizable = false
+	player_account_window.exclusive = true
+	add_child(player_account_window)
+
+	var panel := PanelContainer.new()
+	panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	player_account_window.add_child(panel)
+	var content := VBoxContainer.new()
+	content.add_theme_constant_override("separation", 9)
+	panel.add_child(content)
+
+	var heading := Label.new()
+	heading.text = "حساب اللاعب"
+	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	content.add_child(heading)
+
+	player_account_status_label = Label.new()
+	player_account_status_label.text = "سجّل ببريدك لحفظ هوية اللاعب والتقدم بين الأجهزة."
+	player_account_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	player_account_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	content.add_child(player_account_status_label)
+
+	player_account_email_input = LineEdit.new()
+	player_account_email_input.placeholder_text = "البريد الإلكتروني"
+	player_account_email_input.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_EMAIL_ADDRESS
+	content.add_child(player_account_email_input)
+
+	var send_button := Button.new()
+	send_button.text = "إنشاء حساب / إرسال رمز الدخول"
+	send_button.custom_minimum_size.y = 42
+	send_button.pressed.connect(_on_player_account_send_code)
+	content.add_child(send_button)
+
+	player_account_code_input = LineEdit.new()
+	player_account_code_input.placeholder_text = "رمز التحقق المكوّن من 6 أرقام"
+	player_account_code_input.max_length = 6
+	player_account_code_input.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_NUMBER
+	content.add_child(player_account_code_input)
+
+	var verify_button := Button.new()
+	verify_button.text = "تأكيد الرمز وتسجيل الدخول"
+	verify_button.custom_minimum_size.y = 42
+	verify_button.pressed.connect(_on_player_account_verify_code)
+	content.add_child(verify_button)
+
+	player_account_profile_label = Label.new()
+	player_account_profile_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	player_account_profile_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	content.add_child(player_account_profile_label)
+
+	if PlayerAccountAuthClient.has_active_session():
+		player_account_email_input.text = PlayerAccountAuthClient.get_email()
+		player_account_status_label.text = "الحساب متصل. رمز اللاعب مرتبط بهوية الحساب الثابتة."
+		player_account_button.text = "حساب اللاعب - متصل"
+		if not PlayerAccountAuthClient.get_user_id().is_empty():
+			player_account_profile_label.text = "معرّف الحساب: " + PlayerAccountAuthClient.get_user_id()
+
+func _open_player_account_window() -> void:
+	if not is_instance_valid(player_account_window):
+		return
+	if PlayerAccountAuthClient.has_active_session():
+		player_account_email_input.text = PlayerAccountAuthClient.get_email()
+		player_account_status_label.text = "الحساب متصل. يمكنك استخدامه على أجهزتك الأخرى."
+	player_account_window.popup_centered()
+
+func _on_player_account_send_code() -> void:
+	if not is_instance_valid(player_account_email_input):
+		return
+	player_account_status_label.text = "جارٍ إرسال رمز الدخول..."
+	if not PlayerAccountAuthClient.request_email_code(player_account_email_input.text):
+		player_account_status_label.text = "تعذر بدء طلب الرمز. راجع البريد والإعدادات."
+
+func _on_player_account_verify_code() -> void:
+	if not is_instance_valid(player_account_email_input) or not is_instance_valid(player_account_code_input):
+		return
+	player_account_status_label.text = "جارٍ التحقق من الرمز..."
+	if not PlayerAccountAuthClient.verify_email_code(player_account_email_input.text, player_account_code_input.text):
+		player_account_status_label.text = "تعذر بدء التحقق. راجع البريد والرمز."
+
+func _on_player_account_request_finished(success: bool, message: String) -> void:
+	if is_instance_valid(player_account_status_label):
+		player_account_status_label.text = message
+
+func _on_player_account_authenticated(user_id: String, email: String) -> void:
+	if is_instance_valid(player_account_button):
+		player_account_button.text = "حساب اللاعب - متصل"
+	if is_instance_valid(player_account_status_label):
+		player_account_status_label.text = "تم ربط الحساب %s بهوية لاعب ثابتة." % email
+	if is_instance_valid(player_account_profile_label):
+		player_account_profile_label.text = "معرّف الحساب: " + user_id
+
+func _on_player_account_access_token_changed(access_token: String) -> void:
+	PlayerSyncClient.set_session_access_token(access_token)
+
+func _on_player_account_session_expired() -> void:
+	PlayerSyncClient.clear_session_access_token()
+	if is_instance_valid(player_account_button):
+		player_account_button.text = "حساب اللاعب - تسجيل الدخول وحفظ التقدم"
+	if is_instance_valid(player_account_status_label):
+		player_account_status_label.text = "انتهت جلسة الحساب. سجّل الدخول مجددًا لاستعادة المزامنة."
+
+func _on_player_profile_ready(_user_id: String, player_code: String, display_name: String) -> void:
+	if is_instance_valid(player_account_profile_label):
+		player_account_profile_label.text = "اسم اللاعب: %s\nرمز اللاعب: %s" % [display_name, player_code]
+
+func _on_player_profile_failed(message: String) -> void:
+	if is_instance_valid(player_account_profile_label):
+		player_account_profile_label.text = message
 
 func _on_founder_send_code() -> void:
 	if not is_instance_valid(founder_email_input):
@@ -963,14 +1135,19 @@ func _on_founder_email_verified(_user_id: String, verified_email: String) -> voi
 		mode_status_label.text = "تم تأكيد ملكية البريد %s. تفعيل حساب المؤسس ينتظر اعتماد التذكرة الخادمية." % verified_email
 
 func _on_founder_auth_session_expired() -> void:
-	# انتهاء جلسة Auth لا يلغي التذكرة المحلية الموقعة؛ لكنه يمنع طلبات Online التي تحتاج جلسة.
+	# انتهاء جلسة المؤسس لا يمس جلسة حساب اللاعب المستقلة أو رمز مزامنته.
 	if FounderIdentityManager.is_founder and is_instance_valid(mode_status_label):
 		mode_status_label.text = "انتهت جلسة الاتصال الآمنة. أعد التحقق من بريد المؤسس للعمليات Online؛ تذكرة Offline الصالحة لا تتأثر."
 
 
-func _on_founder_auth_session_received(_access_token: String, _refresh_token: String) -> void:
-	# FounderAuthClient stores the refresh token through Android Keystore.
+func _on_founder_auth_session_received(access_token: String, _refresh_token: String) -> void:
+	# Founder session remains isolated; player sync uses PlayerAccountAuthClient only.
 	pass
+
+
+func _on_founder_auth_session_refreshed(_access_token: String) -> void:
+	pass
+
 
 func _on_founder_auth_session_restored(_access_token: String) -> void:
 	# Revalidate the founder entitlement after a persisted Auth session is recovered.
@@ -1037,14 +1214,14 @@ func _select_offline_mode() -> void:
 func _select_online_mode() -> void:
 	var address := online_address_input.text.strip_edges()
 	if address.is_empty():
-		mode_status_label.text = "لم يتم إعداد عنوان خادم Online بعد. أدخل عنوان الخادم عند توفره."
+		mode_status_label.text = "أدخل اسم نطاق خادم WSS الآمن بعد تجهيز شهادة TLS."
 		return
-	mode_status_label.text = "جارٍ الاتصال بالخادم..."
+	mode_status_label.text = "جارٍ إنشاء اتصال آمن والتحقق من حساب اللاعب..."
 	GameModeManager.connect_online(address, 2456)
 
 func _enter_selected_game_mode() -> void:
 	if is_instance_valid(mode_selection_layer):
-		mode_selection_layer.queue_free()
+		mode_selection_layer.visible = false
 	var player := get_node_or_null("Player")
 	if is_instance_valid(player):
 		player.set_process(true)
@@ -1055,4 +1232,37 @@ func _on_mode_status_changed(message: String) -> void:
 		mode_status_label.text = message
 
 func _on_mode_connected() -> void:
-	_enter_selected_game_mode()
+	var access_token := PlayerAccountAuthClient.get_access_token()
+	if access_token.is_empty():
+		_on_mode_status_changed("سجّل الدخول إلى حساب اللاعب قبل دخول Online.")
+		GameModeManager.disconnect_online()
+		return
+	AuthoritativeGameServer.authenticate_player.rpc_id(1, access_token)
+
+
+func _on_player_account_session_expired() -> void:
+	if GameModeManager.is_online_ready():
+		_on_mode_status_changed("انتهت جلسة حساب اللاعب؛ تم إنهاء اتصال Online لحماية الحساب.")
+		GameModeManager.disconnect_online()
+
+
+func _on_player_access_token_changed(access_token: String) -> void:
+	if GameModeManager.is_online_ready() and not access_token.is_empty():
+		AuthoritativeGameServer.authenticate_player.rpc_id(1, access_token)
+
+
+func _on_player_server_authenticated(success: bool, message: String) -> void:
+	_on_mode_status_changed(message)
+	if success:
+		_enter_selected_game_mode()
+	else:
+		GameModeManager.disconnect_online()
+
+func _on_mode_disconnected() -> void:
+	# أعد نافذة اختيار الوضع بعد فقد الخادم، ولا تحوّل الجلسة تلقائيًا إلى Offline.
+	var player := get_node_or_null("Player")
+	if is_instance_valid(player):
+		player.set_process(false)
+		player.set_physics_process(false)
+	if is_instance_valid(mode_selection_layer):
+		mode_selection_layer.visible = true

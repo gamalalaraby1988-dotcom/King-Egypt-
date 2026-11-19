@@ -17,6 +17,8 @@ var ride_visual: Node3D = null
 
 func _ready() -> void:
 	add_to_group("player")
+	if not AuthoritativeGameServer.authoritative_state_received.is_connected(_apply_authoritative_state):
+		AuthoritativeGameServer.authoritative_state_received.connect(_apply_authoritative_state)
 	if FounderIdentityManager.is_founder:
 		set_meta("founder_profile", FounderIdentityManager.get_founder_profile())
 		var avatar := get_node_or_null("AvatarVisual")
@@ -24,6 +26,9 @@ func _ready() -> void:
 			avatar.call("apply_founder_style")
 
 func _physics_process(delta: float) -> void:
+	if GameModeManager.is_online_ready():
+		_process_online_input()
+		return
 	var sit_key_down := Input.is_key_pressed(KEY_C)
 	if sit_key_down and not _sit_key_was_down:
 		toggle_sit()
@@ -75,6 +80,39 @@ func _physics_process(delta: float) -> void:
 	if planar_speed > 0.25:
 		motion_state = "run" if running else "walk"
 	_update_avatar_animation(motion_state, planar_speed)
+
+func _process_online_input() -> void:
+	if not AuthoritativeGameServer.is_authenticated():
+		return
+	var input_vector := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
+	if mobile_move.length() > 0.08:
+		input_vector = mobile_move
+	if sitting:
+		input_vector = Vector2.ZERO
+	var direction := Vector3(input_vector.x, 0.0, input_vector.y)
+	if direction.length() > 1.0:
+		direction = direction.normalized()
+	var basis := camera_pivot.global_transform.basis
+	var forward := -basis.z
+	var right := basis.x
+	forward.y = 0.0
+	right.y = 0.0
+	forward = forward.normalized()
+	right = right.normalized()
+	var world_direction := (right * direction.x + forward * -direction.z).normalized()
+	var running := Input.is_action_pressed("sprint") or mobile_sprint
+	AuthoritativeGameServer.send_movement_input(world_direction, running)
+
+
+func _apply_authoritative_state(server_position: Vector3, server_rotation_y: float, server_velocity: Vector3) -> void:
+	if not GameModeManager.is_online_ready():
+		return
+	global_position = server_position
+	rotation.y = server_rotation_y
+	velocity = server_velocity
+	var planar_speed := Vector2(velocity.x, velocity.z).length()
+	_update_avatar_animation("run" if planar_speed > 4.2 else "walk" if planar_speed > 0.25 else ("sit" if sitting else "idle"), planar_speed)
+
 
 func is_riding_animal() -> bool:
 	return animal_riding

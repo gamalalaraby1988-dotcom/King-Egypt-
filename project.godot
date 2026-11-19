@@ -11,10 +11,19 @@ config/description="مشروع مدينة ثلاثية الأبعاد قابل �
 CityLanguage="*res://scripts/city_language.gd"
 WalletManager="*res://scripts/wallet_manager.gd"
 GameModeManager="*res://scripts/game_mode_manager.gd"
+AuthoritativeGameServer="*res://scripts/authoritative_game_server.gd"
 FounderIdentityManager="*res://scripts/founder_identity_manager.gd"
 FounderPinManager="*res://scripts/founder_pin_manager.gd"
 FounderAuthClient="*res://scripts/founder_auth_client.gd"
+PlayerSyncClient="*res://scripts/player_sync_client.gd"
+PlayerAccountAuthClient="*res://scripts/player_account_auth_client.gd"
 VehicleStoreManager="*res://scripts/vehicle_store_manager.gd"
+
+[player_sync]
+enabled=false
+
+[game_rewards]
+enabled=false
 
 [founder]
 security/public_key_pem="-----BEGIN PUBLIC KEY-----\nMIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEAighakuZgDl8O8Ahmfd7F\n5djU6URqzaB6KqxSm7PyyAWt1/uziC+SiltBHm8KrCQTbRW/kVBmTKwK+zl/KooL\nZd1As1ULzRNaD/lFrVNiuDDB702ictX1iQrrhYMAO1hSU7u/mCyMoRyBhndjvDFh\nWWRalFuStpR1IwRK91ynU0Z0WkEWTyLxrkWjUNdrTNUuWRVoUMSOMgXOZakTm+Y3\nPcUXqTHKCyTTGKZFyAdsOktY6s07Vpyzz/vWcSVnoQj+jQVBJxRWqHVS4QxF2Bwl\nRoktamLaIQadLnJbUop1nfDPdQT4D2ssP6IW0kBCG49YWi0K+HbSgIiIayOzcq75\njCSSNEm3T/tbh7ekeNKQNLGwzoaeljchIw093GAvnpVPwDb2cehtFYUsvu2GVerm\nXT6XB6dP04sDOdQFUPkgNl+3V6xQ2USRMTOpISyThGn+1/F2X9cZylXD3DdcCi0U\nMAw2NRNCV4zglg/SqJy/dwBmgHbYWVsDTkMcNKHE9LIPAgMBAAE=\n-----END PUBLIC KEY-----"

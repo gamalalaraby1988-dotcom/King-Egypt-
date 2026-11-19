@@ -34,6 +34,8 @@ func _ready() -> void:
 	_check_all()
 
 func _process(_delta: float) -> void:
+	if GameModeManager.is_online_ready():
+		return
 	if not is_instance_valid(player):
 		return
 	var current := player.global_position
@@ -59,6 +61,8 @@ func record_daily_claimed(day_id: String) -> void:
 	_record_event_once("daily:%s" % day_id, "daily_claims")
 
 func _record_event_once(event_id: String, stat_key: String) -> void:
+	if GameModeManager.is_online_ready():
+		return
 	if not is_instance_valid(mission_manager) or not mission_manager.has_method("record_achievement_event_once"):
 		return
 	if mission_manager.record_achievement_event_once(event_id, stat_key):
@@ -76,6 +80,8 @@ func _current_value(kind: String) -> int:
 			return int(totals.get(kind, 0))
 
 func _check_all() -> void:
+	if GameModeManager.is_online_ready():
+		return
 	if is_instance_valid(mission_manager) and mission_manager.has_method("get_achievement_totals"):
 		totals = mission_manager.get_achievement_totals()
 	var changed := false
@@ -113,6 +119,12 @@ func _save_state() -> void:
 		push_warning("تعذر حفظ الإنجازات: %s" % error)
 	else:
 		last_saved_walk_meters = walked_meters
+		if is_instance_valid(PlayerSyncClient):
+			PlayerSyncClient.enqueue_progress_observation(
+				"achievement_progress_observed",
+				"achievement.walked_meters",
+				int(walked_meters)
+			)
 
 func _load_state() -> void:
 	var cfg := ConfigFile.new()

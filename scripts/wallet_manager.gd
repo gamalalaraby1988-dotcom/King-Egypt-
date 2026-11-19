@@ -94,6 +94,9 @@ func _refresh_legacy_balances() -> void:
 	return
 
 func save_profile_update(config: ConfigFile, money_value: int, chips_value: int) -> bool:
+	# في Online لا نكتب اقتصادًا محليًا؛ لا يوجد اعتماد خادمي موصول بعد.
+	if _online_economy_locked():
+		return false
 	# حفظ بيانات اللاعب وتغيير أرصدته وسجل المحفظة في الملف الذري نفسه.
 	if not initialized or not _valid_amount(money_value) or not _valid_amount(chips_value):
 		return false
@@ -140,6 +143,9 @@ func has_transaction(transaction_id: String) -> bool:
 	return receipts.has(transaction_id)
 
 func purchase_once(transaction_id: String, currency: String, amount: int, reason: String, profile_updates: Dictionary = {}) -> bool:
+	# يطبق الخصم محليًا فقط؛ Online ينتظر عملية شراء مؤكدة من الخادم.
+	if _online_economy_locked():
+		return false
 	# يطبق الخصم وتحديث الملكية/الإيصال في الملف نفسه؛ لا توجد ملكية دون خصم ناجح.
 	if not initialized or transaction_id.strip_edges().is_empty() or not CURRENCIES.has(currency):
 		return false
@@ -192,6 +198,8 @@ func debit(transaction_id: String, currency: String, amount: int, reason: String
 	return _transact(transaction_id, currency, amount, "debit", reason)
 
 func _transact(transaction_id: String, currency: String, amount: int, kind: String, reason: String) -> bool:
+	if _online_economy_locked():
+		return false
 	if not initialized or transaction_id.strip_edges().is_empty() or not CURRENCIES.has(currency):
 		return false
 	if amount <= 0 or amount > MAX_BALANCE or receipts.has(transaction_id):
@@ -289,3 +297,9 @@ func _compute_integrity_seal(balance_data: Dictionary, receipt_data: Dictionary,
 		return ""
 	context.update(canonical.to_utf8_buffer())
 	return context.finish().hex_encode()
+
+
+func _online_economy_locked() -> bool:
+	# ENet يثبت الاتصال فقط، ولا يثبت صلاحية المعاملات أو وجود اقتصاد خادمي موثوق.
+	var mode_manager := get_node_or_null("/root/GameModeManager")
+	return is_instance_valid(mode_manager) and mode_manager.has_method("is_online_ready") and mode_manager.is_online_ready()
