@@ -66,6 +66,45 @@ func _building(parent: Node3D, id: String, title: String, at: Vector3, footprint
 	sign.modulate = Color(1.0, 0.9, 0.64)
 	sign.outline_size = 8
 	root.add_child(sign)
+	_add_building_lod_proxy(root, footprint, height, accent)
+
+
+func _add_building_lod_proxy(root: Node3D, footprint: Vector2, height: float, accent: Color) -> void:
+	# Keep the detailed facade nearby; replace its six decorative draw calls with two
+	# simple meshes at distance. The proxy remains visible through the fog/camera range.
+	for child in root.get_children():
+		if child is GeometryInstance3D:
+			child.visibility_range_end = 140.0
+
+	var proxy := Node3D.new()
+	proxy.name = "BuildingLODProxy"
+	root.add_child(proxy)
+
+	var body := MeshInstance3D.new()
+	body.name = "LowDetailBuildingBody"
+	var body_mesh := BoxMesh.new()
+	body_mesh.size = Vector3(footprint.x * 0.92, height * 0.82, footprint.y * 0.92)
+	body.mesh = body_mesh
+	body.position.y = height * 0.41
+	body.material_override = _mat(IVORY)
+	body.visibility_range_begin = 140.0
+	body.visibility_range_end = 480.0
+	body.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	body.add_to_group("city_world_geometry")
+	proxy.add_child(body)
+
+	var roof := MeshInstance3D.new()
+	roof.name = "LowDetailRoofTrim"
+	var roof_mesh := BoxMesh.new()
+	roof_mesh.size = Vector3(footprint.x, 0.4, footprint.y)
+	roof.mesh = roof_mesh
+	roof.position.y = height * 0.83
+	roof.material_override = _mat(accent, 0.08 if accent == GOLD else 0.0)
+	roof.visibility_range_begin = 140.0
+	roof.visibility_range_end = 480.0
+	roof.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	roof.add_to_group("city_world_geometry")
+	proxy.add_child(roof)
 
 func _build_districts() -> void:
 	# Each position is kept within the current prototype city bounds.
