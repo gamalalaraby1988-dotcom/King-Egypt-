@@ -29,7 +29,7 @@ on conflict (proof_id) do nothing;
 set local role authenticated;
 select pg_catalog.set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000039',true);
 
-select extensions.throws_ok($select * from private.player_activity_reward_catalog$,'42501',null,'clients cannot read or alter the server reward catalog');
+select extensions.throws_ok($sql$select * from private.player_activity_reward_catalog$sql$,'42501',null,'clients cannot read or alter the server reward catalog');
 select extensions.ok(
     not (select prosecdef from pg_catalog.pg_proc where oid='public.claim_verified_activity_reward(uuid)'::pg_catalog.regprocedure),
     'public reward RPC is SECURITY INVOKER'
@@ -38,8 +38,8 @@ select extensions.ok(
     (select prosecdef from pg_catalog.pg_proc where oid='private.claim_verified_activity_reward(uuid)'::pg_catalog.regprocedure),
     'privileged settlement remains inside the non-exposed private schema'
 );
-select extensions.throws_ok($$insert into private.player_activity_proofs (user_id,activity_kind,activity_id,server_event_id,evidence_digest,expires_at) values ('00000000-0000-4000-8000-000000000039','mission','mission.proof_test','40000000-0000-4000-8000-000000000099',decode(repeat('11',32),'hex'),now()+interval '1 hour')$$,'42501',null,'clients cannot mint their own validation proofs');
-select extensions.throws_ok($$update private.player_activity_reward_catalog set reward_cash=999999 where activity_id='mission.proof_test'$$,'42501',null,'clients cannot change reward amounts');
+select extensions.throws_ok($sql$insert into private.player_activity_proofs (user_id,activity_kind,activity_id,server_event_id,evidence_digest,expires_at) values ('00000000-0000-4000-8000-000000000039','mission','mission.proof_test','40000000-0000-4000-8000-000000000099',decode(repeat('11',32),'hex'),now()+interval '1 hour')$sql$,'42501',null,'clients cannot mint their own validation proofs');
+select extensions.throws_ok($sql$update private.player_activity_reward_catalog set reward_cash=999999 where activity_id='mission.proof_test'$sql$,'42501',null,'clients cannot change reward amounts');
 
 select extensions.is((public.claim_verified_activity_reward('30000000-0000-4000-8000-000000000001')->>'claimed')::boolean,true,'redeems a valid server proof');
 select extensions.is((select cash from public.player_wallets where user_id='00000000-0000-4000-8000-000000000039'),100::bigint,'credits only the catalog cash reward');
@@ -48,13 +48,13 @@ select extensions.is((select cash from public.player_wallets where user_id='0000
 select extensions.is((public.claim_verified_activity_reward('30000000-0000-4000-8000-000000000002')->>'duplicate')::boolean,true,'a second proof for the same one-time activity cannot pay twice');
 
 select pg_catalog.set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000040',true);
-select extensions.throws_ok($$select public.claim_verified_activity_reward('30000000-0000-4000-8000-000000000001')$$,'P0002','verified_proof_not_found','another player cannot redeem this proof');
+select extensions.throws_ok($sql$select public.claim_verified_activity_reward('30000000-0000-4000-8000-000000000001')$sql$,'P0002','verified_proof_not_found','another player cannot redeem this proof');
 
 select pg_catalog.set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000039',true);
-select extensions.throws_ok($$select public.claim_verified_activity_reward('30000000-0000-4000-8000-000000000003')$$,'22023','verified_proof_expired','expired server proofs are rejected');
+select extensions.throws_ok($sql$select public.claim_verified_activity_reward('30000000-0000-4000-8000-000000000003')$sql$,'22023','verified_proof_expired','expired server proofs are rejected');
 
 select pg_catalog.set_config('request.jwt.claim.sub','',true);
-select extensions.throws_ok($$select public.claim_verified_activity_reward('30000000-0000-4000-8000-000000000001')$$,'28000','authentication_required','unauthenticated reward claims are rejected');
+select extensions.throws_ok($sql$select public.claim_verified_activity_reward('30000000-0000-4000-8000-000000000001')$sql$,'28000','authentication_required','unauthenticated reward claims are rejected');
 
 reset role;
 select * from extensions.finish();
