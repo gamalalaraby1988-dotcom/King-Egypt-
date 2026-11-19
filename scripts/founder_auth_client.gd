@@ -25,6 +25,7 @@ var _session_refresh_token := ""
 var _session_expires_at := 0
 var _session_refresh_timer: Timer
 var _restoring_session := false
+var _restore_retry_pending := false
 
 func _ready() -> void:
 	_http = HTTPRequest.new()
@@ -245,7 +246,7 @@ func _schedule_session_refresh() -> void:
 	_session_refresh_timer.start(maxf(1.0, delay))
 
 func _refresh_auth_session() -> void:
-	_request_session_refresh(false)
+	_request_session_refresh(_restore_retry_pending)
 
 func _request_session_refresh(restoring: bool) -> void:
 	if _session_refresh_token.is_empty():
@@ -274,6 +275,7 @@ func _request_session_refresh(restoring: bool) -> void:
 
 func _handle_refresh_success(response: Dictionary) -> void:
 	_restoring_session = false
+	_restore_retry_pending = false
 	var access_token := str(response.get("access_token", ""))
 	var refresh_token := str(response.get("refresh_token", ""))
 	var expires_in := int(response.get("expires_in", 3600))
@@ -308,9 +310,12 @@ func _retry_restore_or_clear() -> void:
 	if _session_refresh_token.is_empty():
 		return
 	# الشبكة غير متاحة؛ احتفظ بالرمز الآمن وحاول مجددًا عند توفر الاتصال.
+	_restore_retry_pending = true
 	_session_refresh_timer.start(15.0)
 
 func _expire_auth_session() -> void:
+	_restore_retry_pending = false
+	_restoring_session = false
 	_delete_persisted_refresh_token()
 	if is_instance_valid(_session_refresh_timer):
 		_session_refresh_timer.stop()
