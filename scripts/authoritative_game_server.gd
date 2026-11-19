@@ -421,7 +421,8 @@ func _notify_proof_issue_failed(peer_id: int, activity_kind: String, activity_id
 
 
 func _new_server_event_uuid() -> String:
-	var bytes := Crypto.generate_random_bytes(16)
+	var crypto := Crypto.new()
+	var bytes := crypto.generate_random_bytes(16)
 	if bytes.size() != 16:
 		return ""
 	bytes[6] = (bytes[6] & 0x0f) | 0x40
