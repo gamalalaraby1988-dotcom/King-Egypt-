@@ -17,6 +17,7 @@ var _last_camera_pos := Vector2.ZERO
 var _joystick_draw_radius := 72.0
 var _sit_draw_radius := 39.0
 var _camera_drag_scale := 1.0
+const MOBILE_SPRINT_FORWARD_THRESHOLD := 0.92
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -32,7 +33,9 @@ func _process(_delta: float) -> void:
 		player.set_mobile_sprint(false)
 		return
 	player.set_mobile_move(joystick_vector)
-	player.set_mobile_sprint(false)
+	# دفع عصا الاتجاه للأمام حتى قرب أقصى امتدادها يشغّل الجري دون زر مستقل.
+	var forward_sprint := joystick_vector.y <= -MOBILE_SPRINT_FORWARD_THRESHOLD and joystick_vector.length() >= MOBILE_SPRINT_FORWARD_THRESHOLD
+	player.set_mobile_sprint(forward_sprint)
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_RESIZED:
