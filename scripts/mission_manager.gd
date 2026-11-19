@@ -183,6 +183,9 @@ func record_achievement_event_once(event_id: String, stat_key: String) -> bool:
 	achievement_totals = next_totals
 	achievement_events = next_events
 	achievement_stats_initialized = true
+	if is_instance_valid(PlayerSyncClient):
+		var progress_key := "achievement." + stat_key
+		PlayerSyncClient.enqueue_progress_observation("achievement_progress_observed", progress_key, int(next_totals.get(stat_key, 0)))
 	return true
 
 func initialize_achievement_totals_if_missing(legacy_totals: Dictionary) -> bool:
@@ -300,6 +303,16 @@ func complete_activity_once(activity_id: String, activity_kind: String, money_am
 	achievement_stats_initialized = true
 	daily_task_progress = next_daily_progress
 	daily_task_events = next_daily_events
+
+	# Queue daily counters only after the profile and wallet receipt are saved.
+	# These observations never carry or authorize rewards, balances, or ownership.
+	if is_instance_valid(PlayerSyncClient):
+		var daily_key := "job" if activity_kind == "job" else "mission"
+		PlayerSyncClient.enqueue_progress_observation(
+			"activity_progress_observed",
+			"activity.daily_" + daily_key,
+			int(next_daily_progress.get(today_key, {}).get(daily_key, 0))
+		)
 
 	# Queue non-authoritative progress observations only after the local completion
 	# and wallet receipt have been saved successfully. These events never grant rewards.
