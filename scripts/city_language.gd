@@ -180,4 +180,6 @@ func set_language(mode: String) -> void:
 		push_warning("تعذر حفظ إعداد اللغة: %s" % save_error)
 		return
 	language_mode = mode
+	if is_instance_valid(PlayerSyncClient):
+		PlayerSyncClient.enqueue_setting_change("locale", mode)
 	language_changed.emit()
