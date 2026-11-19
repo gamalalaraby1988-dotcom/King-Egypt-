@@ -810,6 +810,13 @@ var founder_email_gate: VBoxContainer
 var founder_email_input: LineEdit
 var founder_email_code_input: LineEdit
 var founder_email_verified := false
+var player_account_window: Window
+var player_account_email_input: LineEdit
+var player_account_code_input: LineEdit
+var player_account_status_label: Label
+var player_account_button: Button
+var player_account_profile_label: Label
+
 
 func _create_mode_selection_ui() -> void:
 	var player := get_node_or_null("Player")
@@ -830,6 +837,14 @@ func _create_mode_selection_ui() -> void:
 	FounderAuthClient.auth_session_expired.connect(_on_founder_auth_session_expired)
 	FounderAuthClient.founder_entitlement_received.connect(_on_founder_entitlement_received)
 	FounderAuthClient.founder_entitlement_failed.connect(_on_founder_entitlement_failed)
+	PlayerAccountAuthClient.request_finished.connect(_on_player_account_request_finished)
+	PlayerAccountAuthClient.account_authenticated.connect(_on_player_account_authenticated)
+	PlayerAccountAuthClient.session_access_token_changed.connect(_on_player_account_access_token_changed)
+	PlayerAccountAuthClient.session_expired.connect(_on_player_account_session_expired)
+	PlayerAccountAuthClient.player_profile_ready.connect(_on_player_profile_ready)
+	PlayerAccountAuthClient.player_profile_failed.connect(_on_player_profile_failed)
+	if PlayerAccountAuthClient.has_active_session():
+		PlayerSyncClient.set_session_access_token(PlayerAccountAuthClient.get_access_token())
 	var backdrop := ColorRect.new()
 	backdrop.color = Color(0.025, 0.035, 0.05, 0.94)
 	backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -851,6 +866,13 @@ func _create_mode_selection_ui() -> void:
 	heading.add_theme_font_size_override("font_size", 22)
 	heading.add_theme_color_override("font_color", Color(0.94, 0.79, 0.43))
 	content.add_child(heading)
+
+	player_account_button = Button.new()
+	player_account_button.text = "حساب اللاعب - تسجيل الدخول وحفظ التقدم"
+	player_account_button.custom_minimum_size.y = 40
+	player_account_button.pressed.connect(_open_player_account_window)
+	content.add_child(player_account_button)
+	_create_player_account_window()
 
 	founder_pin_gate = VBoxContainer.new()
 	founder_pin_gate.add_theme_constant_override("separation", 8)
@@ -941,6 +963,121 @@ func _create_mode_selection_ui() -> void:
 	game_mode_controls.add_child(online_button)
 	game_mode_controls.visible = not is_verified_founder
 
+ 
+func _create_player_account_window() -> void:
+	player_account_window = Window.new()
+	player_account_window.title = "حساب اللاعب"
+	player_account_window.size = Vector2i(380, 360)
+	player_account_window.min_size = Vector2i(340, 320)
+	player_account_window.unresizable = false
+	player_account_window.exclusive = true
+	mode_selection_layer.add_child(player_account_window)
+
+	var panel := PanelContainer.new()
+	panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	player_account_window.add_child(panel)
+	var content := VBoxContainer.new()
+	content.add_theme_constant_override("separation", 9)
+	panel.add_child(content)
+
+	var heading := Label.new()
+	heading.text = "حساب اللاعب"
+	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	content.add_child(heading)
+
+	player_account_status_label = Label.new()
+	player_account_status_label.text = "سجّل ببريدك لحفظ هوية اللاعب والتقدم بين الأجهزة."
+	player_account_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	player_account_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	content.add_child(player_account_status_label)
+
+	player_account_email_input = LineEdit.new()
+	player_account_email_input.placeholder_text = "البريد الإلكتروني"
+	player_account_email_input.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_EMAIL_ADDRESS
+	content.add_child(player_account_email_input)
+
+	var send_button := Button.new()
+	send_button.text = "إنشاء حساب / إرسال رمز الدخول"
+	send_button.custom_minimum_size.y = 42
+	send_button.pressed.connect(_on_player_account_send_code)
+	content.add_child(send_button)
+
+	player_account_code_input = LineEdit.new()
+	player_account_code_input.placeholder_text = "رمز التحقق المكوّن من 6 أرقام"
+	player_account_code_input.max_length = 6
+	player_account_code_input.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_NUMBER
+	content.add_child(player_account_code_input)
+
+	var verify_button := Button.new()
+	verify_button.text = "تأكيد الرمز وتسجيل الدخول"
+	verify_button.custom_minimum_size.y = 42
+	verify_button.pressed.connect(_on_player_account_verify_code)
+	content.add_child(verify_button)
+
+	player_account_profile_label = Label.new()
+	player_account_profile_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	player_account_profile_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	content.add_child(player_account_profile_label)
+
+	if PlayerAccountAuthClient.has_active_session():
+		player_account_email_input.text = PlayerAccountAuthClient.get_email()
+		player_account_status_label.text = "الحساب متصل. رمز اللاعب مرتبط بهوية الحساب الثابتة."
+		player_account_button.text = "حساب اللاعب - متصل"
+		if not PlayerAccountAuthClient.get_user_id().is_empty():
+			player_account_profile_label.text = "معرّف الحساب: " + PlayerAccountAuthClient.get_user_id()
+
+func _open_player_account_window() -> void:
+	if not is_instance_valid(player_account_window):
+		return
+	if PlayerAccountAuthClient.has_active_session():
+		player_account_email_input.text = PlayerAccountAuthClient.get_email()
+		player_account_status_label.text = "الحساب متصل. يمكنك استخدامه على أجهزتك الأخرى."
+	player_account_window.popup_centered()
+
+func _on_player_account_send_code() -> void:
+	if not is_instance_valid(player_account_email_input):
+		return
+	player_account_status_label.text = "جارٍ إرسال رمز الدخول..."
+	if not PlayerAccountAuthClient.request_email_code(player_account_email_input.text):
+		player_account_status_label.text = "تعذر بدء طلب الرمز. راجع البريد والإعدادات."
+
+func _on_player_account_verify_code() -> void:
+	if not is_instance_valid(player_account_email_input) or not is_instance_valid(player_account_code_input):
+		return
+	player_account_status_label.text = "جارٍ التحقق من الرمز..."
+	if not PlayerAccountAuthClient.verify_email_code(player_account_email_input.text, player_account_code_input.text):
+		player_account_status_label.text = "تعذر بدء التحقق. راجع البريد والرمز."
+
+func _on_player_account_request_finished(success: bool, message: String) -> void:
+	if is_instance_valid(player_account_status_label):
+		player_account_status_label.text = message
+
+func _on_player_account_authenticated(user_id: String, email: String) -> void:
+	if is_instance_valid(player_account_button):
+		player_account_button.text = "حساب اللاعب - متصل"
+	if is_instance_valid(player_account_status_label):
+		player_account_status_label.text = "تم ربط الحساب %s بهوية لاعب ثابتة." % email
+	if is_instance_valid(player_account_profile_label):
+		player_account_profile_label.text = "معرّف الحساب: " + user_id
+
+func _on_player_account_access_token_changed(access_token: String) -> void:
+	PlayerSyncClient.set_session_access_token(access_token)
+
+func _on_player_account_session_expired() -> void:
+	PlayerSyncClient.clear_session_access_token()
+	if is_instance_valid(player_account_button):
+		player_account_button.text = "حساب اللاعب - تسجيل الدخول وحفظ التقدم"
+	if is_instance_valid(player_account_status_label):
+		player_account_status_label.text = "انتهت جلسة الحساب. سجّل الدخول مجددًا لاستعادة المزامنة."
+
+func _on_player_profile_ready(_user_id: String, player_code: String, display_name: String) -> void:
+	if is_instance_valid(player_account_profile_label):
+		player_account_profile_label.text = "اسم اللاعب: %s\nرمز اللاعب: %s" % [display_name, player_code]
+
+func _on_player_profile_failed(message: String) -> void:
+	if is_instance_valid(player_account_profile_label):
+		player_account_profile_label.text = message
+
 func _on_founder_send_code() -> void:
 	if not is_instance_valid(founder_email_input):
 		return
@@ -972,16 +1109,15 @@ func _on_founder_auth_session_expired() -> void:
 
 
 func _on_founder_auth_session_received(access_token: String, _refresh_token: String) -> void:
-	# Refresh token stays in FounderAuthClient / Android Keystore; sync client receives access token only.
-	PlayerSyncClient.set_session_access_token(access_token)
+	# Founder session remains isolated; player sync uses PlayerAccountAuthClient only.
+	pass
 
 
-func _on_founder_auth_session_refreshed(access_token: String) -> void:
-	PlayerSyncClient.set_session_access_token(access_token)
+func _on_founder_auth_session_refreshed(_access_token: String) -> void:
+	pass
 
 
-func _on_founder_auth_session_restored(access_token: String) -> void:
-	PlayerSyncClient.set_session_access_token(access_token)
+func _on_founder_auth_session_restored(_access_token: String) -> void:
 	# Revalidate the founder entitlement after a persisted Auth session is recovered.
 	FounderAuthClient.request_founder_entitlement_for_active_session()
 
