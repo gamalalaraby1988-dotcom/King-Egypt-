@@ -25,7 +25,9 @@ create index if not exists player_sync_events_created_at_idx on private.player_s
 alter table private.player_sync_events enable row level security;
 revoke all on table private.player_sync_events from public, anon, authenticated;
 grant usage on schema private to authenticated;
-grant insert on table private.player_sync_events to authenticated;
+grant insert, select on table private.player_sync_events to authenticated;
+drop policy if exists player_sync_events_select_own on private.player_sync_events;
+create policy player_sync_events_select_own on private.player_sync_events for select to authenticated using (user_id = (select auth.uid()));
 drop policy if exists player_sync_events_insert_own on private.player_sync_events;
 create policy player_sync_events_insert_own on private.player_sync_events for insert to authenticated with check (user_id = (select auth.uid()));
 
