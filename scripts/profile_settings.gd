@@ -201,7 +201,7 @@ func _update_name_change_status(config: ConfigFile) -> void:
 	var last_change_value: Variant = config.get_value("profile", "player_name_change_date", "")
 	var last_change_date := str(last_change_value) if last_change_value is String else ""
 	var already_changed_today := last_change_date == Time.get_date_string_from_system()
-	name_input.editable = not already_changed_today
+	name_input.editable = not already_changed_today and not FounderIdentityManager.is_founder
 	if already_changed_today:
 		name_change_status.text = "تم استخدام تغيير الاسم اليوم؛ سيُفتح التغيير مجددًا غدًا."
 	else:
