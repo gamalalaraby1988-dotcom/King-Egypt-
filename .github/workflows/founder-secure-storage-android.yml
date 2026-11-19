@@ -49,8 +49,8 @@ jobs:
         run: |
           set -euo pipefail
           gradle --no-daemon :plugin:copyDebugAARToAddon :plugin:copyReleaseAARToAddon
-          test -s ../../../../addons/founder_secure_storage/bin/debug/FounderSecureStorage-debug.aar
-          test -s ../../../../addons/founder_secure_storage/bin/release/FounderSecureStorage-release.aar
+          test -s ../../../addons/founder_secure_storage/bin/debug/FounderSecureStorage-debug.aar
+          test -s ../../../addons/founder_secure_storage/bin/release/FounderSecureStorage-release.aar
 
       - name: Upload Android plugin AARs
         uses: actions/upload-artifact@v4
