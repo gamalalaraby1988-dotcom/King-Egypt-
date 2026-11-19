@@ -133,7 +133,6 @@ func _build_districts() -> void:
 		["courthouse","المحكمة",Vector3(75,0,-5),Vector2(11,9),8.0],
 		["fire_rescue","مركز الإطفاء والإنقاذ",Vector3(-75,0,15),Vector2(11,9),7.0],
 		["train_station","محطة القطار",Vector3(75,0,15),Vector2(13,9),7.0],
-		["fuel_station","محطة الوقود",Vector3(-75,0,38),Vector2(10,8),5.0],
 		["marina_terminal","محطة المارينا البحرية",Vector3(75,0,38),Vector2(13,9),7.0],
 		["royal_yacht_club","نادي اليخوت الملكي",Vector3(75,0,58),Vector2(13,9),7.0],
 		["adventure_center","مركز المغامرات",Vector3(-75,0,58),Vector2(11,9),7.0],
@@ -144,6 +143,50 @@ func _build_districts() -> void:
 		var e: Array = entries[i]
 		var accent := GOLD if i < 3 or i == 0 else (TEAL if i % 3 == 0 else SAND)
 		_building(self, str(e[0]), str(e[1]), e[2], e[3], float(e[4]), accent)
+	_build_open_fuel_station()
+
+func _build_open_fuel_station() -> void:
+	# Open, drive-through forecourt on the approved west service edge.
+	# No enclosed building, door, interaction prompt, or entry trigger is created.
+	var station := Node3D.new()
+	station.name = "OpenFuelStation"
+	station.position = Vector3(-75.0, 0.0, 38.0)
+	station.add_to_group("city_world_geometry")
+	add_child(station)
+
+	# A broad, continuous paved surface remains open on the east side for vehicles
+	# and pedestrians. Its footprint stays clear of the west parking court and
+	# the neighbouring adventure-centre building.
+	_box(station, "FuelStationForecourt", Vector3(16.0, 0.16, 24.0), Vector3(0.0, -0.08, 0.0), Color(0.34, 0.35, 0.34))
+	_add_static_box_collision(station, "FuelStationWalkableSurface", Vector3(16.0, 0.16, 24.0), Vector3(0.0, -0.08, 0.0))
+	_box(station, "FuelStationDrivewayConnector", Vector3(8.0, 0.12, 5.0), Vector3(5.5, -0.02, 4.0), Color(0.34, 0.35, 0.34))
+	_add_static_box_collision(station, "FuelStationDrivewayWalkable", Vector3(8.0, 0.12, 5.0), Vector3(5.5, -0.02, 4.0))
+
+	# Canopy supported by slim columns; all sides stay completely open.
+	_box(station, "FuelCanopyRoof", Vector3(12.0, 0.42, 8.0), Vector3(-0.5, 5.0, -0.5), IVORY)
+	_box(station, "FuelCanopyGoldTrim", Vector3(12.2, 0.16, 8.2), Vector3(-0.5, 4.76, -0.5), GOLD)
+	for x in [-5.6, 4.6]:
+		for z in [-3.6, 2.6]:
+			_box(station, "FuelCanopyColumn", Vector3(0.28, 4.7, 0.28), Vector3(x, 2.35, z), GOLD)
+
+	# Three low-profile pump islands with visible dispensers and hoses.
+	for pump_index in range(3):
+		var pump_x := -4.0 + float(pump_index) * 3.5
+		_box(station, "FuelPumpIsland", Vector3(2.2, 0.16, 1.6), Vector3(pump_x, 0.08, -0.4), SAND)
+		_box(station, "FuelPumpBase", Vector3(0.9, 1.15, 0.72), Vector3(pump_x, 0.72, -0.4), DARK)
+		_box(station, "FuelPumpDisplay", Vector3(0.68, 0.36, 0.06), Vector3(pump_x, 1.05, -0.03), IVORY)
+		_box(station, "FuelPumpHose", Vector3(0.08, 0.72, 0.08), Vector3(pump_x + 0.52, 0.62, -0.72), DARK)
+
+	var sign := Label3D.new()
+	sign.name = "FuelStationSign"
+	sign.text = "FUEL"
+	sign.position = Vector3(-0.5, 6.0, -4.4)
+	sign.font_size = 44
+	sign.pixel_size = 0.012
+	sign.modulate = Color(1.0, 0.9, 0.64)
+	sign.outline_size = 8
+	station.add_child(sign)
+
 
 func _build_nile_waterfront() -> void:
 	# A real open basin: the matching ground section is omitted in main.gd, so
