@@ -30,7 +30,6 @@ var _input_sequence := 0
 var _snapshot_elapsed := 0.0
 var _client_authenticated := false
 var _objective_zones: Dictionary = {}
-var _proof_http_requests: Dictionary = {}
 var _proof_hmac_secret := PackedByteArray()
 var _proof_secret_warning_shown := false
 
@@ -444,7 +443,7 @@ func _issue_activity_proof(peer_id: int, user_id: String, activity_kind: String,
 	var request := HTTPRequest.new()
 	request.timeout = 10.0
 	add_child(request)
-	request.request_completed.connect(_on_proof_issue_completed.bind(peer_id, user_id, activity_kind, activity_id, event_id))
+	request.request_completed.connect(_on_proof_issue_completed.bind(request, peer_id, user_id, activity_kind, activity_id, event_id))
 	var payload := {
 		"user_id": user_id,
 		"activity_kind": activity_kind,
@@ -466,21 +465,22 @@ func _issue_activity_proof(peer_id: int, user_id: String, activity_kind: String,
 		push_warning("Could not start secure activity proof request.")
 
 
-func _on_proof_issue_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray, peer_id: int, user_id: String, activity_kind: String, activity_id: String, event_id: String) -> void:
-	var request := get_signal_connection_list("tree_exiting")
+func _on_proof_issue_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray, request: HTTPRequest, peer_id: int, user_id: String, activity_kind: String, activity_id: String, event_id: String) -> void:
+	if is_instance_valid(request):
+		request.queue_free()
 	if result != HTTPRequest.RESULT_SUCCESS or response_code != 200:
 		push_warning("Trusted proof issuer rejected or failed activity %s/%s (event %s)." % [activity_kind, activity_id, event_id])
-		for child in get_children():
-			if child is HTTPRequest and child.request_completed.is_connected(_on_proof_issue_completed):
-				child.queue_free()
 		return
 	var parsed: Variant = JSON.parse_string(body.get_string_from_utf8())
-	if not (parsed is Dictionary) or not str(parsed.get("proof_id", "")).is_valid_uuid():
+	var proof_id := str(parsed.get("proof_id", "")) if parsed is Dictionary else ""
+	var uuid_pattern := RegEx.new()
+	uuid_pattern.compile("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$")
+	if uuid_pattern.search(proof_id) == null:
 		push_warning("Trusted proof issuer returned an invalid proof response.")
 		return
 	if not _sessions.has(peer_id) or str(_sessions[peer_id].get("user_id", "")) != user_id:
 		return
-	rpc_id(peer_id, "receive_server_activity_proof", activity_kind, activity_id, str(parsed["proof_id"]))
+	rpc_id(peer_id, "receive_server_activity_proof", activity_kind, activity_id, proof_id)
 
 
 func register_server_objective_zone(activity_kind: String, activity_id: String, center: Vector3, radius: float) -> bool:
