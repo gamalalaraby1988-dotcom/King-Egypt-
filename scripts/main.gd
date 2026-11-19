@@ -38,6 +38,7 @@ func _ready() -> void:
 	_create_mode_selection_ui()
 	GameModeManager.status_changed.connect(_on_mode_status_changed)
 	GameModeManager.online_connected.connect(_on_mode_connected)
+	GameModeManager.online_disconnected.connect(_on_mode_disconnected)
 
 
 func _create_approved_city_layout() -> void:
@@ -1044,7 +1045,7 @@ func _select_online_mode() -> void:
 
 func _enter_selected_game_mode() -> void:
 	if is_instance_valid(mode_selection_layer):
-		mode_selection_layer.queue_free()
+		mode_selection_layer.visible = false
 	var player := get_node_or_null("Player")
 	if is_instance_valid(player):
 		player.set_process(true)
@@ -1056,3 +1057,12 @@ func _on_mode_status_changed(message: String) -> void:
 
 func _on_mode_connected() -> void:
 	_enter_selected_game_mode()
+
+func _on_mode_disconnected() -> void:
+	# أعد نافذة اختيار الوضع بعد فقد الخادم، ولا تحوّل الجلسة تلقائيًا إلى Offline.
+	var player := get_node_or_null("Player")
+	if is_instance_valid(player):
+		player.set_process(false)
+		player.set_physics_process(false)
+	if is_instance_valid(mode_selection_layer):
+		mode_selection_layer.visible = true
