@@ -46,14 +46,17 @@ func get_pending_count() -> int:
 
 
 func enqueue_event(event_type: String, payload: Dictionary) -> bool:
-	if not ALLOWED_EVENT_TYPES.has(event_type):
+	if not _is_valid_event_payload(event_type, payload):
 		return false
 	if _events.size() >= MAX_PENDING_EVENTS:
 		push_warning("Player sync outbox is full; the event was not discarded or overwritten.")
 		return false
 
+	var event_id := _create_event_uuid()
+	if event_id.is_empty():
+		return false
 	var event := {
-		"event_id": _create_event_uuid(),
+		"event_id": event_id,
 		"event_type": event_type,
 		"payload": payload.duplicate(true)
 	}
@@ -65,6 +68,32 @@ func enqueue_event(event_type: String, payload: Dictionary) -> bool:
 	if not _access_token.is_empty():
 		call_deferred("flush_pending")
 	return true
+
+
+func _is_valid_event_payload(event_type: String, payload: Dictionary) -> bool:
+	if not ALLOWED_EVENT_TYPES.has(event_type) or JSON.stringify(payload).to_utf8_buffer().size() > 8192:
+		return false
+	if event_type == "setting_changed":
+		if payload.size() != 2 or not payload.has("key") or not payload.has("value"):
+			return false
+		var key := str(payload.get("key", ""))
+		var value: Variant = payload.get("value")
+		match key:
+			"locale":
+				return typeof(value) == TYPE_STRING and str(value).length() <= 16
+			"camera_sensitivity":
+				return typeof(value) in [TYPE_FLOAT, TYPE_INT] and float(value) >= 0.1 and float(value) <= 3.0
+			"music_enabled", "sfx_enabled":
+				return typeof(value) == TYPE_BOOL
+			"control_layout":
+				return typeof(value) == TYPE_STRING and str(value) in ["classic", "left_handed"]
+			_:
+				return false
+	if payload.size() != 2 or not payload.has("progress_key") or not payload.has("progress_value"):
+		return false
+	var progress_key: Variant = payload.get("progress_key")
+	var progress_value: Variant = payload.get("progress_value")
+	return typeof(progress_key) == TYPE_STRING and str(progress_key).length() >= 1 and str(progress_key).length() <= 80 and typeof(progress_value) == TYPE_INT and int(progress_value) >= 0 and int(progress_value) <= 1000000
 
 
 func enqueue_setting_change(setting_key: String, value: Variant) -> bool:
