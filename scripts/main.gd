@@ -551,7 +551,13 @@ func _create_box(parent: Node3D, name: String, size: Vector3, pos: Vector3, colo
 		parent.add_child(body)
 
 func _create_ground() -> void:
-	_create_box(self, "Ground", Vector3(320, 1, 520), Vector3(0, -0.55, -80), Color(0.34, 0.42, 0.31), true)
+	# Split the terrain around a dedicated marina basin. The outer land strips retain
+	# the original world bounds; only the protected ship-water footprint is removed.
+	var ground_color := Color(0.34, 0.42, 0.31)
+	_create_box(self, "Ground_West", Vector3(148, 1, 520), Vector3(-86, -0.55, -80), ground_color, true)
+	_create_box(self, "Ground_East", Vector3(148, 1, 520), Vector3(86, -0.55, -80), ground_color, true)
+	_create_box(self, "Ground_Center_North", Vector3(24, 1, 418), Vector3(0, -0.55, -131), ground_color, true)
+	_create_box(self, "Ground_Center_South", Vector3(24, 1, 78), Vector3(0, -0.55, 141), ground_color, true)
 
 func _create_city() -> void:
 	# المباني المرئية تُنشأ من قائمة المدينة المعتمدة في ApprovedCityLayout.
@@ -561,7 +567,9 @@ func _create_city() -> void:
 	var side_road_color := Color(0.15, 0.16, 0.17)
 	# طريق محيطي مستطيل يحيط بالمدينة مع خلوّ مسافة عن مباني الأطراف.
 	_create_box(self, "MainRoad_North", Vector3(190, 0.08, 6), Vector3(0, 0.0, -95), road_color)
-	_create_box(self, "MainRoad_South", Vector3(190, 0.08, 6), Vector3(0, 0.0, 95), road_color)
+	# Keep the southern perimeter road continuous around the new central marina opening.
+	_create_box(self, "MainRoad_South_West", Vector3(83, 0.08, 6), Vector3(-53.5, 0.0, 95), road_color)
+	_create_box(self, "MainRoad_South_East", Vector3(83, 0.08, 6), Vector3(53.5, 0.0, 95), road_color)
 	_create_box(self, "MainRoad_West", Vector3(6, 0.08, 190), Vector3(-95, 0.0, 0), road_color)
 	_create_box(self, "MainRoad_East", Vector3(6, 0.08, 190), Vector3(95, 0.0, 0), road_color)
 	# الشارع العرضي الشمالي يلتف حول الميدان الملكي ويترك ساحته مفتوحة للتجمع.
