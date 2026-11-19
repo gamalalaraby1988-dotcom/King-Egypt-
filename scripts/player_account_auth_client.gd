@@ -12,7 +12,6 @@ const PUBLISHABLE_KEY_SETTING := "founder/auth/publishable_key"
 const OTP_PATH := "/auth/v1/otp"
 const VERIFY_PATH := "/auth/v1/verify"
 const REFRESH_PATH := "/auth/v1/token?grant_type=refresh_token"
-const USER_PATH := "/auth/v1/user"
 const PROFILE_PATH := "/rest/v1/player_profiles"
 const SECURE_STORAGE_SINGLETON := "FounderSecureStorage"
 const REFRESH_TOKEN_ALIAS := "king_of_egypt_city.player.refresh_token.v1"
@@ -213,7 +212,11 @@ func _restore_session() -> void:
 	_request_refresh()
 
 func _request_refresh() -> void:
-	if _refresh_token.is_empty() or _pending_action != "":
+	if _refresh_token.is_empty():
+		return
+	if _pending_action != "":
+		if is_instance_valid(_refresh_timer):
+			_refresh_timer.start(5.0)
 		return
 	var headers := PackedStringArray([
 		"Content-Type: application/json",
