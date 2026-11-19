@@ -135,7 +135,8 @@ func _build_animal(animal: Node3D, kind: String, coat: Color) -> void:
 		_sphere(animal, "FalconHead", 0.25, Vector3(0,1.42,-0.24), coat.lightened(0.12))
 		_cylinder(animal, "FalconBeak", 0.02, 0.12, 0.24, Vector3(0,1.38,-0.52), GOLD, Vector3(-0.55,0,0))
 		for side in [-1.0,1.0]:
-			_box(animal, "FalconWing", Vector3(0.16,0.12,1.05), Vector3(side*0.38,0.98,0.05), coat.darkened(0.12)).rotation.x = -0.18
+			var wing := _box(animal, "FalconWing", Vector3(0.16,0.12,1.05), Vector3(side*0.38,0.98,0.05), coat.darkened(0.12))
+			wing.rotation.x = -0.18
 			_cylinder(animal, "FalconLeg", 0.045, 0.05, 0.48, Vector3(side*0.13,0.28,0), GOLD)
 		return
 
@@ -175,7 +176,6 @@ func _build_animal(animal: Node3D, kind: String, coat: Color) -> void:
 
 	if kind == "camel":
 		_sphere(animal, "CamelHump", 0.42, Vector3(0,1.68,0.02), coat.darkened(0.06), Vector3(1.0,1.25,0.95))
-		_sphere(animal, "CamelSecondHump", 0.31, Vector3(0,1.55,0.35), coat.darkened(0.02), Vector3(1.0,1.1,0.9))
 	elif kind == "horse":
 		_sphere(animal, "HorseMane", 0.22, Vector3(0,1.92,-0.48), DARK_WOOD, Vector3(0.7,1.5,1.2))
 		_sphere(animal, "HorseForelock", 0.18, Vector3(0,2.0,-0.78), DARK_WOOD)
