@@ -19,6 +19,9 @@ func _ready() -> void:
 	_build_ui()
 	_load_settings()
 	_apply_settings()
+	if is_instance_valid(PlayerSyncClient):
+		PlayerSyncClient.preference_snapshot_received.connect(_on_preference_snapshot_received)
+		PlayerSyncClient.preference_snapshot_finished.connect(_on_preference_snapshot_finished)
 
 func _build_ui() -> void:
 	var layer := CanvasLayer.new()
@@ -156,6 +159,61 @@ func _load_settings() -> void:
 	language_select.select({"auto": 0, "ar": 1, "en": 2}.get(saved_language, 0))
 	CityLanguage.set_language(saved_language)
 
+
+func _current_cloud_preferences() -> Dictionary:
+	var language_modes := ["auto", "ar", "en"]
+	var selected_language: String = language_modes[clampi(language_select.selected, 0, 2)]
+	return {
+		"locale": selected_language,
+		"volume": int(volume_slider.value),
+		"quality": quality_select.selected
+	}
+
+
+func _on_preference_snapshot_received(revision: int, remote_settings: Dictionary) -> void:
+	var config := ConfigFile.new()
+	var load_error := config.load(SAVE_PATH)
+	if load_error != OK and FileAccess.file_exists(SAVE_PATH):
+		info_label.text = "تعذر قراءة الملف المحلي؛ لم تُطبق إعدادات الحساب لحماية بيانات الجهاز."
+		return
+	if revision == 0 and remote_settings.is_empty():
+		config.set_value("settings", "cloud_revision", 0)
+		if config.save(SAVE_PATH) != OK:
+			info_label.text = "تعذر حفظ رقم مراجعة المزامنة محليًا."
+			return
+		PlayerSyncClient.save_preference_snapshot(_current_cloud_preferences())
+		return
+
+	# Keep a local backup before applying the authenticated account preferences.
+	var backup := {
+		"volume": int(volume_slider.value),
+		"quality": quality_select.selected,
+		"language": str(config.get_value("settings", "language", "auto"))
+	}
+	config.set_value("settings", "cloud_backup_before_apply", backup)
+	config.set_value("settings", "volume", int(remote_settings.get("volume", volume_slider.value)))
+	config.set_value("settings", "quality", int(remote_settings.get("quality", quality_select.selected)))
+	var locale := str(remote_settings.get("locale", "auto"))
+	if locale not in ["auto", "ar", "en"]:
+		locale = "auto"
+	config.set_value("settings", "language", locale)
+	config.set_value("settings", "cloud_revision", revision)
+	if config.save(SAVE_PATH) != OK:
+		info_label.text = "تعذر حفظ النسخة المحلية؛ لم تُطبق إعدادات الحساب."
+		return
+	volume_slider.value = int(remote_settings.get("volume", volume_slider.value))
+	quality_select.select(clampi(int(remote_settings.get("quality", quality_select.selected)), 0, 2))
+	language_select.select({"auto": 0, "ar": 1, "en": 2}.get(locale, 0))
+	CityLanguage.set_language(locale)
+	_apply_settings()
+	info_label.text = "تمت استعادة إعدادات الحساب بعد حفظ نسخة احتياطية محلية."
+
+
+func _on_preference_snapshot_finished(success: bool, message: String) -> void:
+	if is_instance_valid(info_label) and not message.is_empty():
+		info_label.text = message
+
+
 func _save_settings() -> void:
 	var config := ConfigFile.new()
 	var load_error := config.load(SAVE_PATH)
@@ -196,6 +254,8 @@ func _save_settings() -> void:
 	if is_instance_valid(PlayerSyncClient):
 		PlayerSyncClient.enqueue_setting_change("volume", int(volume_slider.value))
 		PlayerSyncClient.enqueue_setting_change("quality", quality_select.selected)
+		PlayerSyncClient.enqueue_setting_change("locale", selected_language)
+		PlayerSyncClient.save_preference_snapshot(_current_cloud_preferences())
 	_apply_settings()
 	_refresh_info()
 	if name_change_blocked:
