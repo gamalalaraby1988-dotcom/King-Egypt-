@@ -172,6 +172,7 @@ func _accept_session_response(response: Dictionary, was_restoring: bool) -> void
 	_refresh_token = refresh
 	_expires_at = int(Time.get_unix_time_from_system()) + expires
 	_restore_retry_pending = false
+	_restoring = false
 	_persist_refresh_token()
 	_schedule_refresh()
 	session_access_token_changed.emit(_access_token)
