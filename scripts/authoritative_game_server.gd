@@ -33,9 +33,55 @@ var _client_authenticated := false
 var _objective_zones: Dictionary = {}
 var _proof_hmac_secret := PackedByteArray()
 var _proof_secret_warning_shown := false
+var _daily_job_completions: Dictionary = {}
+const DAILY_JOB_SAVE_PATH := "user://king_city_daily_jobs.cfg"
+const EGYPT_UTC_OFFSET_SECONDS := 7200
+const WEEKLY_JOB_SCHEDULE := {
+	0: ["courier_delivery"],
+	1: ["city_guide"],
+	2: ["city_maintenance"],
+	3: ["courier_delivery"],
+	4: ["city_guide"],
+	5: ["courier_delivery", "city_guide", "city_maintenance"],
+	6: ["courier_delivery", "city_guide", "city_maintenance"]
+}
 
+
+func _egypt_datetime() -> Dictionary:
+	return Time.get_datetime_dict_from_unix_time(int(Time.get_unix_time_from_system()) + EGYPT_UTC_OFFSET_SECONDS)
+
+func _egypt_day_key() -> String:
+	var date := _egypt_datetime()
+	return "%04d-%02d-%02d" % [int(date.year), int(date.month), int(date.day)]
+
+func _daily_job_key(job_id: String) -> String:
+	return "%s:%s" % [_egypt_day_key(), job_id]
+
+func _job_available_today(job_id: String) -> bool:
+	var date := _egypt_datetime()
+	var jobs: Array = WEEKLY_JOB_SCHEDULE.get(int(date.weekday), [])
+	return jobs.has(job_id)
+
+func _load_daily_job_completions() -> void:
+	var config := ConfigFile.new()
+	if config.load(DAILY_JOB_SAVE_PATH) == OK:
+		var stored: Variant = config.get_value("jobs", "completed", {})
+		if stored is Dictionary:
+			_daily_job_completions = stored.duplicate(true)
+
+func _save_daily_job_completions() -> void:
+	var config := ConfigFile.new()
+	var load_error := config.load(DAILY_JOB_SAVE_PATH)
+	if load_error != OK and FileAccess.file_exists(DAILY_JOB_SAVE_PATH):
+		push_warning("تعذر قراءة سجل الوظائف اليومية على الخادم؛ لم يتم استبداله.")
+		return
+	config.set_value("jobs", "completed", _daily_job_completions)
+	var save_error := config.save(DAILY_JOB_SAVE_PATH)
+	if save_error != OK:
+		push_warning("تعذر حفظ سجل الوظائف اليومية على الخادم: %s" % save_error)
 
 func _ready() -> void:
+	_load_daily_job_completions()
 	_is_dedicated_server = OS.get_cmdline_user_args().has("--dedicated-server")
 	if _is_dedicated_server:
 		var secret_b64 := OS.get_environment("KING_CITY_PROOF_HMAC_SECRET_B64").strip_edges()
@@ -310,13 +356,20 @@ func request_start_job(job_id: String) -> void:
 	if definition.is_empty():
 		rpc_id(peer_id, "receive_job_start_result", false, safe_job_id, Vector3.ZERO, "هذه الوظيفة غير معتمدة على الخادم.")
 		return
+	if not _job_available_today(safe_job_id):
+		rpc_id(peer_id, "receive_job_start_result", false, safe_job_id, Vector3.ZERO, "هذه الوظيفة غير متاحة اليوم وفق جدول الأسبوع.")
+		return
+	var daily_completion_key := "%s:%s" % [str(session.get("user_id", "")), _daily_job_key(safe_job_id)]
+	if _daily_job_completions.has(daily_completion_key):
+		rpc_id(peer_id, "receive_job_start_result", false, safe_job_id, Vector3.ZERO, "أنجزت هذه الوظيفة اليوم. اختر وظيفة أخرى أو عد غدًا.")
+		return
 	var current_job: Dictionary = session.get("active_job", {})
 	if not current_job.is_empty():
 		rpc_id(peer_id, "receive_job_start_result", false, safe_job_id, Vector3.ZERO, "لديك وظيفة أخرى قيد التنفيذ.")
 		return
 	var completed_jobs: Dictionary = session.get("completed_jobs", {})
-	if completed_jobs.has(safe_job_id):
-		rpc_id(peer_id, "receive_job_start_result", false, safe_job_id, Vector3.ZERO, "أنجزت هذه الوظيفة بالفعل في جلسة اللعب.")
+	if completed_jobs.has(_daily_job_key(safe_job_id)):
+		rpc_id(peer_id, "receive_job_start_result", false, safe_job_id, Vector3.ZERO, "أنجزت هذه الوظيفة بالفعل اليوم.")
 		return
 	var body := session.get("body") as CharacterBody3D
 	if not is_instance_valid(body) or body.global_position.distance_to(definition["board"]) > 5.0:
@@ -617,8 +670,12 @@ func _physics_process(delta: float) -> void:
 			if planar_distance <= float(active_job.get("radius", 2.2)):
 				var completed_job_id := str(active_job.get("job_id", ""))
 				var completed: Dictionary = session.get("completed_jobs", {})
-				completed[completed_job_id] = true
+				completed[_daily_job_key(completed_job_id)] = true
 				session["completed_jobs"] = completed
+				var user_id := str(session.get("user_id", ""))
+				if not user_id.is_empty():
+					_daily_job_completions["%s:%s" % [user_id, _daily_job_key(completed_job_id)]] = Time.get_datetime_string_from_unix_time(int(Time.get_unix_time_from_system()) + EGYPT_UTC_OFFSET_SECONDS)
+					_save_daily_job_completions()
 				session["active_job"] = {}
 				server_objective_reached.emit(str(session.get("user_id", "")), "job", completed_job_id)
 				rpc_id(peer_id, "receive_server_job_completed", completed_job_id)
