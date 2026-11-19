@@ -766,10 +766,10 @@ func open_job(job_board: Node3D) -> void:
 	description_label.text = str(data.get("description", "نفّذ العمل المحدد في المدينة."))
 	reward_label.text = "أجر الوظيفة: %d جنيه | %d رقائق | %d خبرة" % [int(data.get("money", 0)), int(data.get("chips", 0)), int(data.get("xp", 0))]
 	var key := str(data.get("job_id", job_board.name))
-	if completed_jobs.has(key):
+	if completed_jobs.has(key) and not GameModeManager.is_online_ready():
 		status_label.text = "أنجزت هذه الوظيفة بالفعل."
 		accept_button.disabled = true
-	elif player_level < int(data.get("level", 1)):
+	elif player_level < int(data.get("level", 1)) and not GameModeManager.is_online_ready():
 		status_label.text = "المستوى المطلوب لهذه الوظيفة: %d" % int(data.get("level", 1))
 		accept_button.disabled = true
 	else:
@@ -807,10 +807,10 @@ func open_building(building: Node3D) -> void:
 		description_label.text += "\nالأنشطة: " + str(data["activities"])
 	reward_label.text = "المكافأة: %d جنيه | %d رقائق | %d خبرة" % [data["money"], data["chips"], data["xp"]]
 	var key: String = str(building.get("building_id"))
-	if completed_missions.has(key):
+	if completed_missions.has(key) and not GameModeManager.is_online_ready():
 		status_label.text = "أنجزت هذه المهمة بالفعل في هذه الجلسة."
 		accept_button.disabled = true
-	elif player_level < int(data["level"]):
+	elif player_level < int(data["level"]) and not GameModeManager.is_online_ready():
 		status_label.text = "المستوى المطلوب: %d" % int(data["level"])
 		accept_button.disabled = true
 	else:
@@ -907,7 +907,7 @@ func _accept_job() -> void:
 	navigation_arrival_remaining = 0.0
 	var data: Dictionary = active_job.get_job_data()
 	var key := str(data.get("job_id", active_job.name))
-	if completed_jobs.has(key) or player_level < int(data.get("level", 1)):
+	if not GameModeManager.is_online_ready() and (completed_jobs.has(key) or player_level < int(data.get("level", 1))):
 		return
 	if GameModeManager.is_online_ready():
 		accept_button.disabled = true
@@ -994,6 +994,7 @@ func _on_verified_reward_claim_finished(success: bool, result: Dictionary, messa
 	if success:
 		description_label.text = "اعتمد الخادم المكافأة وسجلها في محفظتك المركزية."
 		reward_label.text = "أرصدتك الخادمية: %d جنيه | %d رقائق | %d خبرة" % [int(result.get("cash", 0)), int(result.get("chips", 0)), int(result.get("xp", 0))]
+		stats_label.text = "الرصيد الخادمي: %d جنيه | %d رقائق | %d خبرة" % [int(result.get("cash", 0)), int(result.get("chips", 0)), int(result.get("xp", 0))]
 	else:
 		description_label.text = "لم يتم إضافة أي رصيد محلي. سيظل الاعتماد متوقفًا حتى اكتمال إعداد الخدمة."
 		reward_label.text = "لا توجد مكافأة محلية بديلة في وضع Online."
@@ -1069,7 +1070,7 @@ func _accept_mission() -> void:
 	navigation_arrival_remaining = 0.0
 	var data: Dictionary = active_mission.get_mission_data()
 	var key: String = str(active_mission.get("building_id"))
-	if completed_missions.has(key) or (not GameModeManager.is_online_ready() and player_level < int(data["level"])):
+	if not GameModeManager.is_online_ready() and (completed_missions.has(key) or player_level < int(data["level"])):
 		return
 	if GameModeManager.is_online_ready():
 		accept_button.disabled = true
