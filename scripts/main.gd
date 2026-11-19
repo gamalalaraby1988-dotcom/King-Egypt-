@@ -804,6 +804,10 @@ var founder_pin_input: LineEdit
 var founder_pin_confirm_input: LineEdit
 var founder_pin_gate: VBoxContainer
 var game_mode_controls: VBoxContainer
+var founder_email_gate: VBoxContainer
+var founder_email_input: LineEdit
+var founder_email_code_input: LineEdit
+var founder_email_verified := false
 
 func _create_mode_selection_ui() -> void:
 	var player := get_node_or_null("Player")
@@ -821,9 +825,9 @@ func _create_mode_selection_ui() -> void:
 	mode_selection_layer.add_child(backdrop)
 
 	mode_selection_panel = PanelContainer.new()
-	mode_selection_panel.custom_minimum_size = Vector2(340, 440)
+	mode_selection_panel.custom_minimum_size = Vector2(360, 590)
 	mode_selection_panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-	mode_selection_panel.position = Vector2(-170, -220)
+	mode_selection_panel.position = Vector2(-180, -295)
 	mode_selection_panel.add_theme_stylebox_override("panel", _make_mode_panel_style())
 	backdrop.add_child(mode_selection_panel)
 	var content := VBoxContainer.new()
@@ -879,6 +883,37 @@ func _create_mode_selection_ui() -> void:
 	mode_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	content.add_child(mode_status_label)
 
+	if not is_verified_founder:
+		founder_email_gate = VBoxContainer.new()
+		founder_email_gate.add_theme_constant_override("separation", 7)
+		content.add_child(founder_email_gate)
+		var email_heading := Label.new()
+		email_heading.text = "التحقق من بريد حساب المؤسس"
+		email_heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		founder_email_gate.add_child(email_heading)
+		founder_email_input = LineEdit.new()
+		founder_email_input.placeholder_text = "البريد الإلكتروني"
+		founder_email_input.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_EMAIL_ADDRESS
+		founder_email_gate.add_child(founder_email_input)
+		var send_code_button := Button.new()
+		send_code_button.text = "إرسال رمز التحقق"
+		send_code_button.custom_minimum_size.y = 40
+		send_code_button.pressed.connect(_on_founder_send_code)
+		founder_email_gate.add_child(send_code_button)
+		founder_email_code_input = LineEdit.new()
+		founder_email_code_input.placeholder_text = "رمز البريد المكوّن من 6 أرقام"
+		founder_email_code_input.max_length = 6
+		founder_email_code_input.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_NUMBER
+		founder_email_gate.add_child(founder_email_code_input)
+		var verify_code_button := Button.new()
+		verify_code_button.text = "تأكيد البريد"
+		verify_code_button.custom_minimum_size.y = 40
+		verify_code_button.pressed.connect(_on_founder_verify_code)
+		founder_email_gate.add_child(verify_code_button)
+		FounderAuthClient.request_finished.connect(_on_founder_auth_request_finished)
+		FounderAuthClient.email_verified.connect(_on_founder_email_verified)
+		FounderAuthClient.auth_session_received.connect(_on_founder_auth_session_received)
+
 	game_mode_controls = VBoxContainer.new()
 	game_mode_controls.add_theme_constant_override("separation", 8)
 	content.add_child(game_mode_controls)
@@ -897,6 +932,36 @@ func _create_mode_selection_ui() -> void:
 	online_button.pressed.connect(_select_online_mode)
 	game_mode_controls.add_child(online_button)
 	game_mode_controls.visible = not is_verified_founder
+
+func _on_founder_send_code() -> void:
+	if not is_instance_valid(founder_email_input):
+		return
+	mode_status_label.text = "جارٍ طلب رمز التحقق..."
+	if not FounderAuthClient.request_email_code(founder_email_input.text):
+		mode_status_label.text = "تعذر بدء طلب الرمز. راجع البريد والإعدادات."
+
+func _on_founder_verify_code() -> void:
+	if not is_instance_valid(founder_email_input) or not is_instance_valid(founder_email_code_input):
+		return
+	mode_status_label.text = "جارٍ التحقق من الرمز..."
+	if not FounderAuthClient.verify_email_code(founder_email_input.text, founder_email_code_input.text):
+		mode_status_label.text = "تعذر بدء التحقق. راجع البريد والرمز."
+
+func _on_founder_auth_request_finished(success: bool, message: String) -> void:
+	if is_instance_valid(mode_status_label):
+		mode_status_label.text = message
+	if success and message.contains("تم التحقق"):
+		if is_instance_valid(founder_email_gate):
+			founder_email_gate.visible = false
+
+func _on_founder_email_verified(_user_id: String, verified_email: String) -> void:
+	founder_email_verified = true
+	if is_instance_valid(mode_status_label):
+		mode_status_label.text = "تم تأكيد ملكية البريد %s. تفعيل حساب المؤسس ينتظر اعتماد التذكرة الخادمية." % verified_email
+
+func _on_founder_auth_session_received(_access_token: String, _refresh_token: String) -> void:
+	# لا نخزن الجلسة محليًا حتى تكتمل آلية إدارة الجلسات وتجديدها الآمنة.
+	pass
 
 func _on_founder_pin_submit() -> void:
 	if not FounderIdentityManager.is_founder:
