@@ -463,12 +463,34 @@ func _build_access_roads_and_parking() -> void:
 	for side in [-1.0, 1.0]:
 		# Keep each court in the narrow clear strip between the outer service buildings and perimeter road.
 		# The 10 m width ends at the road edge and starts beyond the 81.5 m building footprint.
-		var parking := _box(self, "ServiceParkingCourt", Vector3(10.0, 0.06, 18.0), Vector3(side * 87.0, 0.015, 34.0), Color(0.20, 0.22, 0.23))
+		var parking_z := -35.0 if side < 0.0 else 34.0
+		var parking := _box(self, "ServiceParkingCourt", Vector3(10.0, 0.06, 18.0), Vector3(side * 87.0, 0.015, parking_z), Color(0.20, 0.22, 0.23))
 		for slot in range(3):
 			_box(parking, "ParkingBayLine", Vector3(0.12, 0.025, 4.8), Vector3(-3.6 + float(slot) * 3.6, 0.06, 0), IVORY)
+	# Dedicated access spurs connect the perimeter roads to service destinations.
+	# Fuel station: the west spur opens directly into the outdoor forecourt.
+	_path_segment(self, "FuelStationAccessSpur", Vector3(-95.0, 0.12, 38.0), Vector3(-85.5, 0.12, 38.0), 4.2, DARK)
+	# Move the west parking court away from the fuel forecourt; preserve the east parking court.
+	# Desert lodge and adventure district pedestrian access.
+	_path_segment(self, "WestAdventureAccess_01", Vector3(-95.0, 0.12, 58.0), Vector3(-84.0, 0.12, 58.0), 3.6, SAND)
+	_path_segment(self, "WestAdventureAccess_02", Vector3(-84.0, 0.12, 58.0), Vector3(-84.0, 0.12, 75.0), 3.6, SAND)
+	_path_segment(self, "AdventureCenterEntranceWalk", Vector3(-84.0, 0.12, 62.5), Vector3(-75.0, 0.12, 62.6), 3.0, SAND)
+	_path_segment(self, "DesertLodgeEntranceWalk", Vector3(-84.0, 0.12, 75.0), Vector3(-75.0, 0.12, 80.7), 3.0, SAND)
+	# Marina terminal and yacht club: a clear pedestrian spine runs beside the building fronts.
+	_path_segment(self, "MarinaTerminalAccess_01", Vector3(95.0, 0.12, 38.0), Vector3(84.0, 0.12, 38.0), 3.6, SAND)
+	_path_segment(self, "MarinaPromenadeSpine", Vector3(84.0, 0.12, 38.0), Vector3(84.0, 0.12, 62.0), 3.6, SAND)
+	_path_segment(self, "MarinaTerminalEntranceWalk", Vector3(84.0, 0.12, 42.5), Vector3(75.0, 0.12, 42.6), 3.0, SAND)
+	_path_segment(self, "YachtClubEntranceWalk", Vector3(84.0, 0.12, 62.0), Vector3(75.0, 0.12, 62.6), 3.0, SAND)
+	# Beach handball court access joins the waterfront promenade to the open sand apron.
+	_path_segment(self, "BeachHandballPromenadeConnector", Vector3(32.0, 0.12, 76.0), Vector3(32.0, 0.12, 106.0), 3.6, SAND)
+	_path_segment(self, "BeachHandballApronEntry", Vector3(32.0, 0.12, 106.0), Vector3(40.0, 0.12, 107.0), 3.6, SAND)
+	# Temple approach branches from the mountain trail without moving the temple or summit.
+	_path_segment(self, "MountainTempleEntranceWalk", Vector3(83.0, 0.12, 68.0), Vector3(75.0, 0.12, 80.7), 3.2, SAND)
 	# Green buffers line the outer edges while keeping sidewalks, parking courts, and entrances clear.
 	for side in [-1.0, 1.0]:
 		for z in [-65.0, -35.0, -5.0, 55.0]:
+			if side < 0.0 and z == -35.0:
+				continue
 			_tree(self, "OuterBoulevardPalm", Vector3(side * 87.0, 0, z), 0.85)
 
 
@@ -500,8 +522,23 @@ func _build_public_gardens() -> void:
 
 func _path_segment(parent: Node3D, label: String, start: Vector3, finish: Vector3, width: float, color: Color) -> void:
 	var delta := finish - start
-	var segment := _box(parent, label, Vector3(width, 0.12, delta.length()), (start + finish) * 0.5, color)
-	segment.rotation.y = atan2(delta.x, delta.z)
+	var segment_size := Vector3(width, 0.12, delta.length())
+	var segment_position := (start + finish) * 0.5
+	var segment := _box(parent, label, segment_size, segment_position, color)
+	var segment_rotation := atan2(delta.x, delta.z)
+	segment.rotation.y = segment_rotation
+	# Every access path is physically walkable, not only a visible strip.
+	var body := StaticBody3D.new()
+	body.name = label + "WalkCollision"
+	body.position = segment_position
+	body.rotation.y = segment_rotation
+	body.add_to_group("city_world_geometry")
+	var collision := CollisionShape3D.new()
+	var shape := BoxShape3D.new()
+	shape.size = Vector3(width, 0.22, delta.length())
+	collision.shape = shape
+	body.add_child(collision)
+	parent.add_child(body)
 
 func _build_mountain_route() -> void:
 	# The mountain zone is placed at the far eastern edge, beyond the service-building row.
