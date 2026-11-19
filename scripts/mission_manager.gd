@@ -73,6 +73,8 @@ var selected_animal_staff: Node3D = null
 var active_rental_transaction_id: String = ""
 
 var _key_was_down := false
+var _pending_verified_proofs: Array[Dictionary] = []
+var _reward_claim_inflight := false
 
 const SAVE_PATH := "user://kings_city_profile.cfg"
 const MAX_CURRENCY_BALANCE := 2000000000
@@ -957,11 +959,20 @@ func _on_server_mission_completed(mission_id: String) -> void:
 func _on_server_activity_proof_received(activity_kind: String, activity_id: String, proof_id: String) -> void:
 	if not GameModeManager.is_online_ready() or not ["mission", "job"].has(activity_kind):
 		return
-	var expected_id := str(active_mission.get("building_id", "")) if activity_kind == "mission" and is_instance_valid(active_mission) else str(active_job.get("job_id", "")) if activity_kind == "job" and is_instance_valid(active_job) else ""
-	if expected_id != activity_id:
+	var allowed_ids := ["mission_shop", "mission_restaurant", "mission_employment"] if activity_kind == "mission" else ["courier_delivery", "city_guide", "city_maintenance"]
+	if not allowed_ids.has(activity_id):
 		return
-	status_label.text = "وصل إثبات الإكمال من خادم اللعب. جارٍ اعتماد المكافأة."
-	PlayerSyncClient.claim_verified_activity_reward(proof_id)
+	_pending_verified_proofs.append({"activity_kind": activity_kind, "activity_id": activity_id, "proof_id": proof_id})
+	_process_next_server_reward_proof()
+
+
+func _process_next_server_reward_proof() -> void:
+	if _reward_claim_inflight or _pending_verified_proofs.is_empty() or not GameModeManager.is_online_ready():
+		return
+	var proof: Dictionary = _pending_verified_proofs.pop_front()
+	_reward_claim_inflight = true
+	status_label.text = "وصل إثبات إتمام %s. جارٍ اعتماد المكافأة." % str(proof.get("activity_id", ""))
+	PlayerSyncClient.claim_verified_activity_reward(str(proof.get("proof_id", "")))
 
 
 func _on_server_activity_proof_failed(activity_kind: String, activity_id: String, message: String) -> void:
@@ -976,6 +987,7 @@ func _on_server_activity_proof_failed(activity_kind: String, activity_id: String
 
 
 func _on_verified_reward_claim_finished(success: bool, result: Dictionary, message: String) -> void:
+	_reward_claim_inflight = false
 	if not GameModeManager.is_online_ready():
 		return
 	status_label.text = message
