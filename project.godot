@@ -14,6 +14,9 @@ GameModeManager="*res://scripts/game_mode_manager.gd"
 FounderIdentityManager="*res://scripts/founder_identity_manager.gd"
 VehicleStoreManager="*res://scripts/vehicle_store_manager.gd"
 
+[founder]
+security/public_key_pem=""
+
 [display]
 window/size/viewport_width=1280
 window/size/viewport_height=720
