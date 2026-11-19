@@ -22,6 +22,7 @@ var _auth_requests: Dictionary = {}
 var _is_dedicated_server := false
 var _input_sequence := 0
 var _snapshot_elapsed := 0.0
+var _client_authenticated := false
 
 
 func _ready() -> void:
@@ -37,7 +38,7 @@ func is_dedicated_server_requested() -> bool:
 func is_authenticated() -> bool:
 	if _is_dedicated_server:
 		return true
-	return bool(_sessions.get(multiplayer.get_unique_id(), {}).get("authenticated", false))
+	return _client_authenticated
 
 
 func start_dedicated_server() -> void:
@@ -67,6 +68,10 @@ func start_dedicated_server() -> void:
 	multiplayer.peer_connected.connect(_on_peer_connected)
 	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
 	print("KING OF EGYPT CITY authoritative WSS server listening on UDP/TCP-independent WebSocket TCP port %d." % port)
+
+
+func clear_client_session() -> void:
+	_client_authenticated = false
 
 
 func _on_peer_connected(peer_id: int) -> void:
@@ -185,8 +190,10 @@ func receive_authentication_result(success: bool, message: String) -> void:
 	if multiplayer.is_server():
 		return
 	if success:
+		_client_authenticated = true
 		authentication_completed.emit(true, message)
 	else:
+		_client_authenticated = false
 		authentication_completed.emit(false, message)
 
 
