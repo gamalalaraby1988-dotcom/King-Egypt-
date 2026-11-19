@@ -553,8 +553,8 @@ func _build_pedestrian_green_pockets() -> void:
 		# pedestrian links; these links stay inside the open block gap.
 		var upper_road_z := centre.y - 12.0
 		var lower_road_z := centre.y + 12.0
-		_path_segment(self, "PocketNorthWalk_%02d" % (index + 1), Vector3(centre.x, 0.12, upper_road_z + 3.0), Vector3(centre.x, 0.12, centre.y - 5.0), 2.4, SAND)
-		_path_segment(self, "PocketSouthWalk_%02d" % (index + 1), Vector3(centre.x, 0.12, centre.y + 5.0), Vector3(centre.x, 0.12, lower_road_z - 3.0), 2.4, SAND)
+		_path_segment(self, "PocketNorthWalk_%02d" % (index + 1), Vector3(centre.x, 0.12, upper_road_z), Vector3(centre.x, 0.12, centre.y - 5.0), 2.4, SAND)
+		_path_segment(self, "PocketSouthWalk_%02d" % (index + 1), Vector3(centre.x, 0.12, centre.y + 5.0), Vector3(centre.x, 0.12, lower_road_z), 2.4, SAND)
 
 func _path_segment(parent: Node3D, label: String, start: Vector3, finish: Vector3, width: float, color: Color) -> void:
 	var delta := finish - start
