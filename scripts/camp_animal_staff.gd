@@ -1,5 +1,5 @@
 extends Node3D
-## موظف المخيم المسؤول عن تأجير الحيوانات الثمانية لجميع اللاعبين.
+## موظف المخيم المسؤول عن تأجير أنواع الحيوانات الموجودة في المخيم.
 
 @export var ride_price: int = 25
 @export var interaction_radius: float = 4.5
@@ -32,12 +32,18 @@ func _build_visual() -> void:
 	add_child(head)
 
 func get_animal_rental_data() -> Dictionary:
-	var animals: Array[String] = []
-	for i in range(1, 9):
-		animals.append("الحيوان رقم %d" % i)
 	return {
 		"title": "موظف حيوانات المخيم",
-		"description": "مرحبًا بك في المخيم! اختر واحدًا من الحيوانات الثمانية وادفع أجرة الركوب.",
-		"animals": animals,
+		"description": "اختر الحيوان الذي ترغب في ركوبه من حيوانات المخيم الثمانية، ثم ادفع أجرة الركوب.",
+		"animals": [
+			"الجمل العربي",
+			"الحصان العربي",
+			"المها العربي",
+			"الغزال",
+			"الثعلب الصحراوي",
+			"الأغنام",
+			"الماعز",
+			"الصقر"
+		],
 		"price": ride_price
 	}
