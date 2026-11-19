@@ -96,6 +96,27 @@ func _process(_delta: float) -> void:
 		mission_manager = main_scene.get_node_or_null("MissionManager")
 	_refresh_wallet()
 
+
+func _unhandled_input(event: InputEvent) -> void:
+	var pressed := false
+	var pointer_position := Vector2.ZERO
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+		pressed = event.pressed
+		pointer_position = event.position
+	elif event is InputEventScreenTouch:
+		pressed = event.pressed
+		pointer_position = event.position
+	if not pressed:
+		return
+	var open_popups: Array = [popup, phone_popup, player_popup, group_popup, group_chat_popup]
+	for panel in open_popups:
+		if is_instance_valid(panel) and panel.visible and panel.get_global_rect().has_point(pointer_position):
+			return
+	for panel in open_popups:
+		if is_instance_valid(panel):
+			panel.visible = false
+
+
 func _build() -> void:
 	root = Control.new()
 	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -162,18 +183,22 @@ func _build() -> void:
 	var content := VBoxContainer.new()
 	content.add_theme_constant_override("separation", 12)
 	popup.add_child(content)
+	var header := HBoxContainer.new()
+	content.add_child(header)
 	popup_title = Label.new()
+	popup_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	popup_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	popup_title.add_theme_font_size_override("font_size", 22)
-	content.add_child(popup_title)
+	header.add_child(popup_title)
+	var close := Button.new()
+	close.text = "✕"
+	close.custom_minimum_size = Vector2(38, 34)
+	close.pressed.connect(func(): popup.visible = false)
+	header.add_child(close)
 	popup_body = Label.new()
 	popup_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	popup_body.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	content.add_child(popup_body)
-	var close := Button.new()
-	close.text = "إغلاق"
-	close.pressed.connect(func(): popup.visible = false)
-	content.add_child(close)
 
 
 func _make_hud_panel_style() -> StyleBoxFlat:
@@ -264,11 +289,19 @@ func _build_vehicle_store_phone() -> void:
 	var content := VBoxContainer.new()
 	content.add_theme_constant_override("separation", 8)
 	phone_popup.add_child(content)
+	var header := HBoxContainer.new()
+	content.add_child(header)
 	var heading := Label.new()
 	heading.text = "هاتف اللاعب — متجر المركبات"
+	heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	heading.add_theme_font_size_override("font_size", 20)
-	content.add_child(heading)
+	header.add_child(heading)
+	var close_phone := Button.new()
+	close_phone.text = "✕"
+	close_phone.custom_minimum_size = Vector2(38, 34)
+	close_phone.pressed.connect(func(): phone_popup.visible = false)
+	header.add_child(close_phone)
 	var wallet_line := Label.new()
 	wallet_line.name = "VehicleStoreWalletLine"
 	wallet_line.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -579,7 +612,8 @@ func _build_group_popup() -> void:
 	group_move_button.pressed.connect(_start_group_move_to_meeting_point)
 	box.add_child(group_move_button)
 	var close := Button.new()
-	close.text = "إغلاق"
+	close.text = "✕"
+	close.custom_minimum_size = Vector2(38, 34)
 	close.pressed.connect(func(): group_popup.visible = false)
 	box.add_child(close)
 	_refresh_group_popup()
@@ -885,11 +919,19 @@ func _build_group_chat_popup() -> void:
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 8)
 	group_chat_popup.add_child(box)
+	var header := HBoxContainer.new()
+	box.add_child(header)
 	var heading := Label.new()
 	heading.text = "💬 محادثة المجموعة"
+	heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	heading.add_theme_font_size_override("font_size", 22)
-	box.add_child(heading)	
+	header.add_child(heading)
+	var close_top := Button.new()
+	close_top.text = "✕"
+	close_top.custom_minimum_size = Vector2(38, 34)
+	close_top.pressed.connect(func(): group_chat_popup.visible = false)
+	header.add_child(close_top)
 	group_chat_log = RichTextLabel.new()
 	group_chat_log.bbcode_enabled = true
 	group_chat_log.scroll_following = true
