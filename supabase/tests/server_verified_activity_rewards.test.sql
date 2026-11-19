@@ -1,5 +1,5 @@
 begin;
-select extensions.plan(11);
+select extensions.plan(13);
 
 insert into auth.users (id,aud,role,email,encrypted_password,email_confirmed_at)
 values
@@ -29,7 +29,15 @@ on conflict (proof_id) do nothing;
 set local role authenticated;
 select pg_catalog.set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000039',true);
 
-select extensions.throws_ok($$select * from private.player_activity_reward_catalog$$,'42501',null,'clients cannot read or alter the server reward catalog');
+select extensions.throws_ok($select * from private.player_activity_reward_catalog$,'42501',null,'clients cannot read or alter the server reward catalog');
+select extensions.ok(
+    not (select prosecdef from pg_catalog.pg_proc where oid='public.claim_verified_activity_reward(uuid)'::pg_catalog.regprocedure),
+    'public reward RPC is SECURITY INVOKER'
+);
+select extensions.ok(
+    (select prosecdef from pg_catalog.pg_proc where oid='private.claim_verified_activity_reward(uuid)'::pg_catalog.regprocedure),
+    'privileged settlement remains inside the non-exposed private schema'
+);
 select extensions.throws_ok($$insert into private.player_activity_proofs (user_id,activity_kind,activity_id,server_event_id,evidence_digest,expires_at) values ('00000000-0000-4000-8000-000000000039','mission','mission.proof_test','40000000-0000-4000-8000-000000000099',decode(repeat('11',32),'hex'),now()+interval '1 hour')$$,'42501',null,'clients cannot mint their own validation proofs');
 select extensions.throws_ok($$update private.player_activity_reward_catalog set reward_cash=999999 where activity_id='mission.proof_test'$$,'42501',null,'clients cannot change reward amounts');
 
