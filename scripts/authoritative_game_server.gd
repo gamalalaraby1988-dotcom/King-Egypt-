@@ -465,11 +465,6 @@ func _issue_activity_proof(peer_id: int, user_id: String, activity_kind: String,
 	if hmac_context.start(HashingContext.HASH_SHA256, _proof_hmac_secret) != OK or hmac_context.update(canonical.to_utf8_buffer()) != OK:
 		_notify_proof_issue_failed(peer_id, activity_kind, activity_id, "تعذر توقيع إثبات المكافأة.")
 		return
-	var signature := hmac_context.finish().hex_encode()
-	var request := HTTPRequest.new()
-	request.timeout = 10.0
-	add_child(request)
-	request.request_completed.connect(_on_proof_issue_completed.bind(request, peer_id, user_id, activity_kind, activity_id, event_id))
 	var payload := {
 		"user_id": user_id,
 		"activity_kind": activity_kind,
@@ -478,8 +473,18 @@ func _issue_activity_proof(peer_id: int, user_id: String, activity_kind: String,
 		"issued_at": issued_at,
 		"expires_at": expires_at,
 		"evidence_digest_hex": evidence_digest.hex_encode(),
-		"signature_hex": signature
+		"signature_hex": hmac_context.finish().hex_encode()
 	}
+	_send_activity_proof_request(peer_id, payload, 0, base_url, publishable_key)
+
+
+func _send_activity_proof_request(peer_id: int, payload: Dictionary, attempt: int, base_url: String, publishable_key: String) -> void:
+	if not _sessions.has(peer_id) or not multiplayer.get_peers().has(peer_id):
+		return
+	var request := HTTPRequest.new()
+	request.timeout = 10.0
+	add_child(request)
+	request.request_completed.connect(_on_proof_issue_completed.bind(request, peer_id, payload, attempt, base_url, publishable_key))
 	var error := request.request(
 		base_url + "/functions/v1/game-proof-issuer",
 		PackedStringArray(["Content-Type: application/json", "apikey: " + publishable_key]),
@@ -488,15 +493,32 @@ func _issue_activity_proof(peer_id: int, user_id: String, activity_kind: String,
 	)
 	if error != OK:
 		request.queue_free()
-		push_warning("Could not start secure activity proof request.")
-		_notify_proof_issue_failed(peer_id, activity_kind, activity_id, "تعذر الاتصال بخدمة إصدار إثبات المكافأة.")
+		_schedule_activity_proof_retry(peer_id, payload, attempt, base_url, publishable_key)
 
 
-func _on_proof_issue_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray, request: HTTPRequest, peer_id: int, user_id: String, activity_kind: String, activity_id: String, event_id: String) -> void:
+func _schedule_activity_proof_retry(peer_id: int, payload: Dictionary, attempt: int, base_url: String, publishable_key: String) -> void:
+	if attempt >= 3:
+		_notify_proof_issue_failed(peer_id, str(payload.get("activity_kind", "")), str(payload.get("activity_id", "")), "تعذر إصدار إثبات المكافأة بعد عدة محاولات؛ لم تُمنح مكافأة.")
+		return
+	var delays := [2.0, 5.0, 15.0]
+	_retry_activity_proof_after(peer_id, payload, attempt + 1, delays[attempt], base_url, publishable_key)
+
+
+func _retry_activity_proof_after(peer_id: int, payload: Dictionary, attempt: int, delay_seconds: float, base_url: String, publishable_key: String) -> void:
+	await get_tree().create_timer(delay_seconds).timeout
+	_send_activity_proof_request(peer_id, payload, attempt, base_url, publishable_key)
+
+
+func _on_proof_issue_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray, request: HTTPRequest, peer_id: int, payload: Dictionary, attempt: int, base_url: String, publishable_key: String) -> void:
 	if is_instance_valid(request):
 		request.queue_free()
-	if result != HTTPRequest.RESULT_SUCCESS or response_code != 200:
-		push_warning("Trusted proof issuer rejected or failed activity %s/%s (event %s)." % [activity_kind, activity_id, event_id])
+	var activity_kind := str(payload.get("activity_kind", ""))
+	var activity_id := str(payload.get("activity_id", ""))
+	if result != HTTPRequest.RESULT_SUCCESS or response_code == 429 or response_code >= 500:
+		_schedule_activity_proof_retry(peer_id, payload, attempt, base_url, publishable_key)
+		return
+	if response_code != 200:
+		push_warning("Trusted proof issuer rejected activity %s/%s with HTTP %d." % [activity_kind, activity_id, response_code])
 		_notify_proof_issue_failed(peer_id, activity_kind, activity_id, "لم تصدر خدمة المكافآت إثباتًا صالحًا؛ لم تُمنح مكافأة.")
 		return
 	var parsed: Variant = JSON.parse_string(body.get_string_from_utf8())
@@ -507,6 +529,7 @@ func _on_proof_issue_completed(result: int, response_code: int, _headers: Packed
 		push_warning("Trusted proof issuer returned an invalid proof response.")
 		_notify_proof_issue_failed(peer_id, activity_kind, activity_id, "استجابة إثبات المكافأة غير صالحة.")
 		return
+	var user_id := str(payload.get("user_id", ""))
 	if not _sessions.has(peer_id) or str(_sessions[peer_id].get("user_id", "")) != user_id:
 		return
 	rpc_id(peer_id, "receive_server_activity_proof", activity_kind, activity_id, proof_id)
