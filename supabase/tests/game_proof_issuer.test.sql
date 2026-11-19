@@ -1,5 +1,5 @@
 begin;
-select extensions.plan(5);
+select extensions.plan(6);
 
 insert into auth.users (id,aud,role,email,encrypted_password,email_confirmed_at)
 values ('00000000-0000-4000-8000-000000000051','authenticated','authenticated','game-proof-issuer-test@example.invalid','',pg_catalog.now())
@@ -23,6 +23,14 @@ select extensions.ok(
         'EXECUTE'
     ),
     'authenticated players cannot call the proof insertion RPC'
+);
+select extensions.ok(
+    not (
+        select p.prosecdef
+        from pg_catalog.pg_proc p
+        where p.oid = 'public.issue_server_activity_proof(uuid,text,text,uuid,text,timestamp with time zone,timestamp with time zone)'::pg_catalog.regprocedure
+    ),
+    'proof insertion RPC runs as invoker, not definer'
 );
 select extensions.ok(
     pg_catalog.has_function_privilege(
