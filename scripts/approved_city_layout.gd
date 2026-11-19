@@ -16,6 +16,8 @@ func _ready() -> void:
 	_build_nile_waterfront()
 	_build_pyramids()
 	_build_royal_gate_and_square()
+	_build_royal_square_landscaping()
+	_build_waterfront_landscaping()
 
 func _mat(color: Color, metallic: float = 0.0) -> StandardMaterial3D:
 	var m := StandardMaterial3D.new()
@@ -129,8 +131,53 @@ func _build_pyramids() -> void:
 	add_child(sphinx)
 
 func _build_royal_gate_and_square() -> void:
-	_box(self, "RoyalSquare", Vector3(24, 0.18, 18), Vector3(0, 0.03, -42), SAND)
+	_box(self, "RoyalSquare", Vector3(46, 0.22, 30), Vector3(0, 0.03, -42), SAND)
 	for x in [-10.0,10.0]:
 		_box(self, "RoyalGatePillar", Vector3(2.0, 8.0, 2.0), Vector3(x, 4.0, -42), IVORY)
 		_box(self, "RoyalGateCap", Vector3(3.0, 0.55, 3.0), Vector3(x, 8.1, -42), GOLD)
 	_box(self, "RoyalGateBeam", Vector3(22, 1.2, 2.0), Vector3(0, 8.0, -42), GOLD)
+
+
+func _tree(parent: Node3D, label: String, at: Vector3, scale_factor: float = 1.0) -> void:
+	var root := Node3D.new()
+	root.name = label
+	root.position = at
+	parent.add_child(root)
+	var trunk := MeshInstance3D.new()
+	trunk.name = "Trunk"
+	var trunk_mesh := CylinderMesh.new()
+	trunk_mesh.top_radius = 0.18 * scale_factor
+	trunk_mesh.bottom_radius = 0.28 * scale_factor
+	trunk_mesh.height = 3.2 * scale_factor
+	trunk.mesh = trunk_mesh
+	trunk.position.y = 1.6 * scale_factor
+	trunk.material_override = _mat(Color(0.38, 0.24, 0.13))
+	trunk.add_to_group("city_world_geometry")
+	root.add_child(trunk)
+	for i in range(5):
+		var leaf := MeshInstance3D.new()
+		leaf.name = "PalmFrond_%d" % i
+		var leaf_mesh := BoxMesh.new()
+		leaf_mesh.size = Vector3(0.42 * scale_factor, 0.16 * scale_factor, 2.6 * scale_factor)
+		leaf.mesh = leaf_mesh
+		leaf.position = Vector3(0, 3.15 * scale_factor, 0)
+		leaf.rotation.y = TAU * float(i) / 5.0
+		leaf.rotation.x = -0.24
+		leaf.material_override = _mat(Color(0.16, 0.34, 0.20))
+		leaf.add_to_group("city_world_geometry")
+		root.add_child(leaf)
+
+func _build_royal_square_landscaping() -> void:
+	# Keep the center of the plaza open for large player gatherings.
+	for x in [-25.0, 25.0]:
+		for z in [-58.0, -26.0]:
+			_tree(self, "RoyalSquarePalm", Vector3(x, 0, z), 1.15)
+	for x in [-19.0, 19.0]:
+		_box(self, "RoyalSquarePlanter", Vector3(2.2, 0.45, 2.2), Vector3(x, 0.23, -42), SAND)
+	# Low golden edge markers frame the gathering space without blocking entrances.
+	for x in [-20.0, -10.0, 10.0, 20.0]:
+		_box(self, "RoyalSquareEdgeMarker", Vector3(0.35, 0.65, 0.35), Vector3(x, 0.34, -27.5), GOLD)
+
+func _build_waterfront_landscaping() -> void:
+	for x in range(-80, 81, 20):
+		_tree(self, "WaterfrontPalm", Vector3(float(x), 0, 72.0), 0.9)
