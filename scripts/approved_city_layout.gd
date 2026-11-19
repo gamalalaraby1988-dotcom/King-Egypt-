@@ -475,7 +475,7 @@ func _build_access_roads_and_parking() -> void:
 	_path_segment(self, "WestAdventureAccess_01", Vector3(-95.0, 0.12, 58.0), Vector3(-84.0, 0.12, 58.0), 3.6, SAND)
 	_path_segment(self, "WestAdventureAccess_02", Vector3(-84.0, 0.12, 58.0), Vector3(-84.0, 0.12, 75.0), 3.6, SAND)
 	_path_segment(self, "AdventureCenterEntranceWalk", Vector3(-84.0, 0.12, 62.5), Vector3(-75.0, 0.12, 62.6), 3.0, SAND)
-	_path_segment(self, "DesertLodgeEntranceWalk", Vector3(-84.0, 0.12, 75.0), Vector3(-75.0, 0.12, 84.0), 3.0, SAND)
+	_path_segment(self, "DesertLodgeEntranceWalk", Vector3(-84.0, 0.12, 75.0), Vector3(-75.0, 0.12, 80.7), 3.0, SAND)
 	# Marina terminal and yacht club: a clear pedestrian spine runs beside the building fronts.
 	_path_segment(self, "MarinaTerminalAccess_01", Vector3(95.0, 0.12, 38.0), Vector3(84.0, 0.12, 38.0), 3.6, SAND)
 	_path_segment(self, "MarinaPromenadeSpine", Vector3(84.0, 0.12, 38.0), Vector3(84.0, 0.12, 62.0), 3.6, SAND)
@@ -485,7 +485,7 @@ func _build_access_roads_and_parking() -> void:
 	_path_segment(self, "BeachHandballPromenadeConnector", Vector3(32.0, 0.12, 76.0), Vector3(32.0, 0.12, 106.0), 3.6, SAND)
 	_path_segment(self, "BeachHandballApronEntry", Vector3(32.0, 0.12, 106.0), Vector3(40.0, 0.12, 107.0), 3.6, SAND)
 	# Temple approach branches from the mountain trail without moving the temple or summit.
-	_path_segment(self, "MountainTempleEntranceWalk", Vector3(83.0, 0.12, 68.0), Vector3(75.0, 0.12, 84.0), 3.2, SAND)
+	_path_segment(self, "MountainTempleEntranceWalk", Vector3(83.0, 0.12, 68.0), Vector3(75.0, 0.12, 80.7), 3.2, SAND)
 	# Green buffers line the outer edges while keeping sidewalks, parking courts, and entrances clear.
 	for side in [-1.0, 1.0]:
 		for z in [-65.0, -35.0, -5.0, 55.0]:
