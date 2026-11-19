@@ -18,6 +18,7 @@ func _ready() -> void:
 	_build_royal_gate_and_square()
 	_build_royal_square_landscaping()
 	_build_waterfront_landscaping()
+	_build_beach_handball_court()
 	_build_royal_ship()
 	_build_access_roads_and_parking()
 	_build_public_gardens()
@@ -298,6 +299,62 @@ func _build_waterfront_landscaping() -> void:
 		# Keep the ship approach and pier centerline free of palms.
 		if x != 0:
 			_tree(self, "WaterfrontPalm", Vector3(float(x), 0, 72.0), 0.9)
+
+
+func _build_beach_handball_court() -> void:
+	# Open sandy beach-handball area beside the marina's south-east shoreline.
+	# It is a walkable outdoor court, not an enclosed building or interaction point.
+	var beach := Node3D.new()
+	beach.name = "BeachHandballCourt"
+	beach.position = Vector3(40.0, 0.0, 125.0)
+	beach.add_to_group("city_world_geometry")
+	add_child(beach)
+
+	# Broad sand apron gives players room to enter, move around and leave the court.
+	_box(beach, "BeachSandApron", Vector3(42.0, 0.16, 36.0), Vector3(0.0, -0.08, 0.0), Color(0.78, 0.67, 0.48))
+	_add_static_box_collision(beach, "BeachSandWalkable", Vector3(42.0, 0.16, 36.0), Vector3(0.0, -0.08, 0.0))
+
+	# Official-style beach handball playing rectangle: 27 x 12 metres.
+	var court_half_length := 13.5
+	var court_half_width := 6.0
+	var line_y := 0.025
+	var line_color := IVORY
+	_box(beach, "HandballSideline_North", Vector3(27.0, 0.045, 0.12), Vector3(0.0, line_y, -court_half_width), line_color)
+	_box(beach, "HandballSideline_South", Vector3(27.0, 0.045, 0.12), Vector3(0.0, line_y, court_half_width), line_color)
+	_box(beach, "HandballGoalLine_West", Vector3(0.12, 0.045, 12.0), Vector3(-court_half_length, line_y, 0.0), line_color)
+	_box(beach, "HandballGoalLine_East", Vector3(0.12, 0.045, 12.0), Vector3(court_half_length, line_y, 0.0), line_color)
+	_box(beach, "HandballCenterLine", Vector3(0.10, 0.045, 12.0), Vector3(0.0, line_y, 0.0), line_color)
+
+	# Two open goals with visible posts, crossbars and lightweight net mesh lines.
+	for side in [-1.0, 1.0]:
+		var goal := Node3D.new()
+		goal.name = "BeachHandballGoal_West" if side < 0.0 else "BeachHandballGoal_East"
+		goal.position = Vector3(side * court_half_length, 0.0, 0.0)
+		beach.add_child(goal)
+		for post_side in [-1.0, 1.0]:
+			_box(goal, "GoalPost", Vector3(0.18, 2.0, 0.18), Vector3(0.0, 1.0, post_side * 1.5), IVORY)
+		_box(goal, "GoalCrossbar", Vector3(0.18, 0.18, 3.18), Vector3(0.0, 2.0, 0.0), GOLD)
+		var net_color := Color(0.92, 0.94, 0.88, 0.28)
+		var net_backing := _box(goal, "GoalNetBacking", Vector3(0.05, 1.78, 3.0), Vector3(side * 0.55, 0.95, 0.0), net_color)
+		var net_material := _mat(net_color)
+		net_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		net_backing.material_override = net_material
+		for net_index in range(1, 5):
+			var net_z := -1.5 + float(net_index) * 0.6
+			_box(goal, "GoalNetVerticalCord", Vector3(0.07, 1.75, 0.035), Vector3(side * 0.58, 0.95, net_z), IVORY)
+		for net_index in range(1, 4):
+			var net_y := 0.45 + float(net_index) * 0.42
+			_box(goal, "GoalNetHorizontalCord", Vector3(0.07, 0.035, 3.0), Vector3(side * 0.58, net_y, 0.0), IVORY)
+
+	var sign := Label3D.new()
+	sign.name = "BeachHandballSign"
+	sign.text = "BEACH HANDBALL"
+	sign.position = Vector3(0.0, 2.4, -16.0)
+	sign.font_size = 34
+	sign.pixel_size = 0.012
+	sign.modulate = Color(1.0, 0.92, 0.72)
+	sign.outline_size = 6
+	beach.add_child(sign)
 
 
 func _build_royal_ship() -> void:
