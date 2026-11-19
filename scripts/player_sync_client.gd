@@ -8,6 +8,7 @@ signal preference_snapshot_received(revision: int, settings: Dictionary)
 signal preference_snapshot_finished(success: bool, message: String)
 signal progress_observations_received(observations: Array, trust_label: String)
 signal progress_observations_finished(success: bool, message: String)
+signal verified_reward_claim_finished(success: bool, result: Dictionary, message: String)
 
 const OUTBOX_PATH := "user://player_sync_outbox.cfg"
 const PROGRESS_REVIEW_PATH := "user://player_sync_progress_review.cfg"
@@ -26,6 +27,9 @@ var _snapshot_http: HTTPRequest
 var _progress_http: HTTPRequest
 var _progress_request_active := false
 var _progress_request_token := ""
+var _reward_claim_http: HTTPRequest
+var _reward_claim_active := false
+var _reward_claim_token := ""
 var _snapshot_action := ""
 var _snapshot_revision := 0
 var _snapshot_request_active := false
@@ -54,6 +58,11 @@ func _ready() -> void:
 	_progress_http.timeout = 25.0
 	add_child(_progress_http)
 	_progress_http.request_completed.connect(_on_progress_recovery_completed)
+	_reward_claim_http = HTTPRequest.new()
+	_reward_claim_http.name = "VerifiedRewardClaimHTTPRequest"
+	_reward_claim_http.timeout = 25.0
+	add_child(_reward_claim_http)
+	_reward_claim_http.request_completed.connect(_on_verified_reward_claim_completed)
 	_retry_timer = Timer.new()
 	_retry_timer.one_shot = true
 	_retry_timer.timeout.connect(flush_pending)
@@ -75,6 +84,8 @@ func clear_session_access_token() -> void:
 	_snapshot_request_active = false
 	_progress_request_active = false
 	_progress_request_token = ""
+	_reward_claim_active = false
+	_reward_claim_token = ""
 	if is_instance_valid(_retry_timer):
 		_retry_timer.stop()
 
@@ -270,6 +281,65 @@ func _on_progress_recovery_completed(result: int, response_code: int, _headers: 
 		return
 	progress_observations_received.emit(clean_observations.duplicate(true), "غير معتمد — يحتاج تحققًا خادميًا")
 	progress_observations_finished.emit(true, "تم حفظ سجل التقدم للمراجعة فقط؛ لم يُعتمد داخل اللعب ولم تُمنح مكافآت.")
+
+
+func claim_verified_activity_reward(proof_id: String) -> void:
+	if not bool(ProjectSettings.get_setting(SYNC_ENABLED_SETTING, false)):
+		verified_reward_claim_finished.emit(false, {}, "مزامنة الحساب مغلقة.")
+		return
+	if _access_token.is_empty() or _reward_claim_active:
+		verified_reward_claim_finished.emit(false, {}, "سجّل الدخول أولًا أو انتظر انتهاء طلب المكافأة الحالي.")
+		return
+	var uuid_pattern := RegEx.new()
+	uuid_pattern.compile("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$")
+	if uuid_pattern.search(proof_id.strip_edges()) == null:
+		verified_reward_claim_finished.emit(false, {}, "معرّف إثبات المكافأة غير صالح.")
+		return
+	var base_url := str(ProjectSettings.get_setting("founder/auth/api_base_url", "")).strip_edges().trim_suffix("/")
+	var publishable_key := str(ProjectSettings.get_setting("founder/auth/publishable_key", "")).strip_edges()
+	if not base_url.begins_with("https://") or publishable_key.is_empty():
+		verified_reward_claim_finished.emit(false, {}, "إعدادات الحساب غير مكتملة.")
+		return
+	var headers := PackedStringArray([
+		"Content-Type: application/json",
+		"Accept: application/json",
+		"apikey: " + publishable_key,
+		"Authorization: Bearer " + _access_token
+	])
+	var error := _reward_claim_http.request(
+		base_url + "/rest/v1/rpc/claim_verified_activity_reward",
+		headers,
+		HTTPClient.METHOD_POST,
+		JSON.stringify({"p_proof_id": proof_id.strip_edges().to_lower()})
+	)
+	if error != OK:
+		verified_reward_claim_finished.emit(false, {}, "تعذر بدء طلب اعتماد المكافأة.")
+		return
+	_reward_claim_active = true
+	_reward_claim_token = _access_token
+
+
+func _on_verified_reward_claim_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+	_reward_claim_active = false
+	var request_token := _reward_claim_token
+	_reward_claim_token = ""
+	if request_token.is_empty() or request_token != _access_token:
+		return
+	if result != HTTPRequest.RESULT_SUCCESS or response_code < 200 or response_code >= 300:
+		verified_reward_claim_finished.emit(false, {}, "لم يعتمد الخادم المكافأة؛ لم تُجرَ أي إضافة محلية.")
+		return
+	var parsed: Variant = JSON.parse_string(body.get_string_from_utf8())
+	if parsed is Array and parsed.size() == 1:
+		parsed = parsed[0]
+	if not (parsed is Dictionary):
+		verified_reward_claim_finished.emit(false, {}, "استجابة اعتماد المكافأة غير صالحة.")
+		return
+	var duplicate := bool(parsed.get("duplicate", false))
+	var claimed := bool(parsed.get("claimed", false))
+	if not claimed and not duplicate:
+		verified_reward_claim_finished.emit(false, parsed.duplicate(true), "لم يؤكد الخادم اعتماد المكافأة.")
+		return
+	verified_reward_claim_finished.emit(true, parsed.duplicate(true), "المكافأة معتمدة خادميًا." if claimed else "هذه المكافأة سبق اعتمادها؛ لم يتكرر الصرف.")
 
 
 func get_unverified_progress_observations() -> Array[Dictionary]:
