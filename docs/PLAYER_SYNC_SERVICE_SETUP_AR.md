@@ -1,12 +1,12 @@
 # خدمة استقبال مزامنة اللاعب — إعداد ومراجعة
 
-**الحالة:** ملفات مصدر مقترحة ضمن PR #38. لم تُطبّق migration على الإنتاج ولم تُنشر Edge Function.
+**الحالة:** ملفات مصدر ضمن PR #38. Migration `player_account_provisioning` مطبّقة على قاعدة الإنتاج بالإصدار `20261119154243`. Migration صندوق أحداث المزامنة `player_sync_inbox` لم تُطبّق بعد، وEdge Function لم تُنشر.
 
 ## المكونات
 
 - تسجيل/دخول عام للاعبين عبر بريد OTP من Supabase Auth، مع إنشاء المستخدم الجديد تلقائيًا عند عدم وجوده.
 - عميل `scripts/player_account_auth_client.gd` مستقل عن `FounderAuthClient`، ويحفظ Refresh Token للاعب في Android Keystore باستخدام alias مختلف عن Alias المؤسس.
-- Migration `20261119170000_player_account_provisioning.sql` تنشئ ملف لاعب برمز فريد من 10 خانات ومحفظة بأرصدة صفرية عند إنشاء حساب Auth، وتستكمل الملفات/المحافظ الناقصة للحسابات الحالية بشكل idempotent.
+- Migration `20261119154243_player_account_provisioning.sql` تنشئ ملف لاعب برمز فريد من 10 خانات ومحفظة بأرصدة صفرية عند إنشاء حساب Auth، وتستكمل الملفات/المحافظ الناقصة للحسابات الحالية بشكل idempotent.
 - واجهة تسجيل الدخول العامة تعرض البريد ومعرّف الحساب ورمز اللاعب، ولا تمنح أي صلاحية مؤسس.
 
 - عميل Godot: `scripts/player_sync_client.gd` مع قائمة انتظار محلية `user://player_sync_outbox.cfg`، ومعرّفات UUID ثابتة، ودفعات حتى 50 حدثًا، وحذف الحدث من القائمة فقط بعد تأكيد الخادم. عند فشل الحفظ بعد القبول يمكن إعادة الإرسال بأمان بفضل مفتاح idempotency.
@@ -45,7 +45,7 @@
 
 ## نشر آمن — غير منفذ
 
-1. مراجعة SQL وEdge Function في PR.
+1. مراجعة SQL وEdge Function في PR، مع اعتبار ترحيل إنشاء الحسابات مطبقًا بالفعل على الإنتاج.
 2. تطبيق migration في بيئة تطوير أولًا.
 3. التحقق من أن schema `public` تسمح باستدعاء RPC عبر Data API، وأن الدالة `player-sync` تستخدم JWT.
 4. نشر Edge Function بعد موافقة مستقلة.
