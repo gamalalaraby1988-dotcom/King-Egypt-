@@ -966,7 +966,7 @@ func _create_mode_selection_ui() -> void:
 	offline_button.pressed.connect(_select_offline_mode)
 	game_mode_controls.add_child(offline_button)
 	online_address_input = LineEdit.new()
-	online_address_input.placeholder_text = "عنوان خادم اللعب الجماعي"
+	online_address_input.placeholder_text = "اسم نطاق خادم WSS الآمن"
 	online_address_input.text = str(ProjectSettings.get_setting("network/online/server_address", ""))
 	game_mode_controls.add_child(online_address_input)
 	var online_button := Button.new()
@@ -1194,7 +1194,7 @@ func _select_offline_mode() -> void:
 func _select_online_mode() -> void:
 	var address := online_address_input.text.strip_edges()
 	if address.is_empty():
-		mode_status_label.text = "لم يتم إعداد عنوان خادم Online بعد. أدخل عنوان الخادم عند توفره."
+		mode_status_label.text = "أدخل اسم نطاق خادم WSS الآمن بعد تجهيز شهادة TLS."
 		return
 	mode_status_label.text = "جارٍ إنشاء اتصال آمن والتحقق من حساب اللاعب..."
 	GameModeManager.connect_online(address, 2456)
