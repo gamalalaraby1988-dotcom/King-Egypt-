@@ -24,6 +24,7 @@ var _session_access_token := ""
 var _session_refresh_token := ""
 var _session_expires_at := 0
 var _session_refresh_timer: Timer
+var _restoring_session := false
 
 func _ready() -> void:
 	_http = HTTPRequest.new()
@@ -101,7 +102,10 @@ func _on_request_completed(result: int, response_code: int, _headers: PackedStri
 	var parsed := JSON.new()
 	if result != HTTPRequest.RESULT_SUCCESS:
 		if action == "refresh_session":
-			_retry_or_expire_session()
+			if _restoring_session:
+				_retry_restore_or_clear()
+			else:
+				_retry_or_expire_session()
 		else:
 			request_finished.emit(false, "فشل الاتصال بخدمة التحقق. حاول لاحقًا.")
 		return
@@ -203,6 +207,8 @@ func _persist_refresh_token_securely(refresh_token: String) -> void:
 	if not storage.has_method("save_secret"):
 		return
 	if not bool(storage.call("save_secret", REFRESH_TOKEN_ALIAS, refresh_token)):
+		if storage.has_method("delete_secret"):
+			storage.call("delete_secret", REFRESH_TOKEN_ALIAS)
 		push_warning("تعذر حفظ جلسة المؤسس في مخزن Android الآمن؛ ستظل الجلسة الحالية مؤقتة.")
 
 func _restore_persisted_session() -> void:
@@ -263,9 +269,11 @@ func _request_session_refresh(restoring: bool) -> void:
 		else:
 			_retry_or_expire_session()
 		return
+	_restoring_session = restoring
 	_pending_action = "refresh_session"
 
 func _handle_refresh_success(response: Dictionary) -> void:
+	_restoring_session = false
 	var access_token := str(response.get("access_token", ""))
 	var refresh_token := str(response.get("refresh_token", ""))
 	var expires_in := int(response.get("expires_in", 3600))
@@ -276,11 +284,16 @@ func _handle_refresh_success(response: Dictionary) -> void:
 	auth_session_refreshed.emit(access_token)
 
 func _handle_refresh_failure(response_code: int, response: Dictionary) -> void:
+	var was_restoring := _restoring_session
+	_restoring_session = false
 	var error_code := str(response.get("code", response.get("error", ""))).to_lower()
 	if response_code == 400 and error_code in ["invalid_grant", "refresh_token_not_found", "refresh_token_already_used", "invalid_refresh_token"]:
 		_expire_auth_session()
 		return
-	_retry_or_expire_session()
+	if was_restoring:
+		_retry_restore_or_clear()
+	else:
+		_retry_or_expire_session()
 
 func _retry_or_expire_session() -> void:
 	if _session_refresh_token.is_empty():
