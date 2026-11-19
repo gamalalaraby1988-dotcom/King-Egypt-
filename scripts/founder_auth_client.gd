@@ -4,6 +4,7 @@ signal request_finished(success: bool, message: String)
 signal email_verified(user_id: String, email: String)
 signal auth_session_received(access_token: String, refresh_token: String)
 signal auth_session_refreshed(access_token: String)
+signal auth_session_restored(access_token: String)
 signal auth_session_expired
 signal founder_entitlement_received(payload: String, signature_base64: String)
 signal founder_entitlement_failed(message: String)
@@ -188,6 +189,18 @@ func get_current_access_token() -> String:
 		return ""
 	return _session_access_token
 
+func clear_auth_session() -> void:
+	_expire_auth_session()
+
+func request_founder_entitlement_for_active_session() -> bool:
+	if not has_active_auth_session():
+		founder_entitlement_failed.emit("لا توجد جلسة مصادقة نشطة لاعتماد المؤسس.")
+		return false
+	if _pending_action != "":
+		return false
+	_request_founder_entitlement(_session_access_token)
+	return _pending_action == "founder_entitlement"
+
 func _store_auth_session(access_token: String, refresh_token: String, expires_in: int) -> void:
 	_session_access_token = access_token
 	_session_refresh_token = refresh_token
@@ -274,6 +287,7 @@ func _request_session_refresh(restoring: bool) -> void:
 	_pending_action = "refresh_session"
 
 func _handle_refresh_success(response: Dictionary) -> void:
+	var was_restoring := _restoring_session
 	_restoring_session = false
 	_restore_retry_pending = false
 	var access_token := str(response.get("access_token", ""))
@@ -284,6 +298,8 @@ func _handle_refresh_success(response: Dictionary) -> void:
 		return
 	_store_auth_session(access_token, refresh_token, expires_in)
 	auth_session_refreshed.emit(access_token)
+	if was_restoring:
+		auth_session_restored.emit(access_token)
 
 func _handle_refresh_failure(response_code: int, response: Dictionary) -> void:
 	var was_restoring := _restoring_session
