@@ -40,6 +40,8 @@ func reconcile_reward_receipt() -> void:
 			achievement_manager.record_daily_claimed(day_key)
 
 func _process(_delta: float) -> void:
+	if GameModeManager.is_online_ready():
+		return
 	_check_new_day()
 	if not is_instance_valid(player):
 		return
@@ -110,6 +112,8 @@ func _daily_reward_id() -> String:
 	return "daily_reward_%s" % day_key
 
 func _claim_reward() -> void:
+	if GameModeManager.is_online_ready():
+		return
 	if claimed or not _all_complete() or not is_instance_valid(mission_manager):
 		return
 	if not mission_manager.has_method("grant_reward_once"):
