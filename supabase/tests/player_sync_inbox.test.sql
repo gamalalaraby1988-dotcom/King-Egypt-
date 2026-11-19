@@ -53,7 +53,7 @@ select extensions.is(
 
 -- 4. Arbitrary setting keys are rejected.
 select extensions.throws_ok(
-    $$ select public.submit_player_sync_events(
+    $$$ select public.submit_player_sync_events(
         '[{"event_id":"10000000-0000-4000-8000-000000000003","event_type":"setting_changed","payload":{"key":"wallet_balance","value":999999}}]'::jsonb
     ) $$,
     '22023',
@@ -75,7 +75,7 @@ select extensions.throws_ok(
 select extensions.throws_ok(
     $ select public.submit_player_sync_events(
         '[{"event_id":"10000000-0000-4000-8000-000000000008","event_type":"achievement_progress_observed","payload":{"progress_key":"mission.fake","progress_value":1}}]'::jsonb
-    ) $,
+    ) $$,
     '22023',
     'progress_key_not_allowed',
     'enforces event-specific progress key namespaces'
