@@ -9,7 +9,7 @@
 - `gradle :plugin:copyDebugAARToAddon`
 - `gradle :plugin:copyReleaseAARToAddon`
 
-ينبغي استخدام JDK 17 وAndroid SDK مع platform/build tools الملائمة لـ compileSdk 36، ومطابقة إصدار مكتبة Godot Android مع نسخة محرر المشروع. الإعداد الحالي مثبت على Godot `4.7.0.stable` ويجب تعديله إذا اختلفت نسخة التصدير الفعلية.
+ينبغي استخدام JDK 17 وAndroid SDK مع platform/build tools الملائمة لـ compileSdk 36، ومطابقة إصدار مكتبة Godot Android مع نسخة محرر المشروع. الإعداد الحالي مثبت على Godot `4.7.2.stable` ويجب تعديله إذا اختلفت نسخة التصدير الفعلية.
 
 ## تفعيل الإضافة
 
