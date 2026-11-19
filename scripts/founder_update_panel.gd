@@ -14,6 +14,7 @@ var schedule_input: LineEdit
 var status_label: Label
 var publish_button: Button
 var supervisor_id_input: LineEdit
+var supervisor_player_option: OptionButton
 var supervisor_role_option: OptionButton
 var supervisors_list: VBoxContainer
 var supervisor_status: Label
@@ -101,8 +102,18 @@ func _build_ui() -> void:
 	supervisor_hint.text = "اختر لاعبين تثق بهم كمشرفين. الصلاحيات الفعلية لا تُفعّل إلا بعد اعتمادها والتحقق منها على الخادم."
 	supervisor_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	content.add_child(supervisor_hint)
+	_add_field_label(content, "الاختيار من اللاعبين")
+	supervisor_player_option = OptionButton.new()
+	supervisor_player_option.add_item("قائمة اللاعبين ستظهر بعد ربط خدمة اللاعبين المتصلين")
+	supervisor_player_option.disabled = true
+	content.add_child(supervisor_player_option)
+	var roster_hint := Label.new()
+	roster_hint.text = "اختيار اللاعب من القائمة سيتاح بعد تجهيز واجهة آمنة لجلب اللاعبين المسجلين والمتصلين من الخادم."
+	roster_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	content.add_child(roster_hint)
+	_add_field_label(content, "أو الإضافة مباشرةً باستخدام رمز اللاعب")
 	supervisor_id_input = LineEdit.new()
-	supervisor_id_input.placeholder_text = "رمز اللاعب أو Player ID"
+	supervisor_id_input.placeholder_text = "أدخل رمز اللاعب أو Player ID"
 	content.add_child(supervisor_id_input)
 	supervisor_role_option = OptionButton.new()
 	supervisor_role_option.add_item("مشرف محادثة — إدارة البلاغات والمحادثة", 0)
@@ -217,7 +228,7 @@ func _add_supervisor_draft() -> void:
 	supervisor_drafts.append({"player_id": player_id, "role": role})
 	supervisor_id_input.clear()
 	_refresh_supervisors_list()
-	supervisor_status.text = "أُضيف اللاعب إلى قائمة المشرفين المقترحين. احفظ المسودة للاحتفاظ بالقائمة على هذا الجهاز."
+	supervisor_status.text = "أُضيف اللاعب باستخدام الرمز إلى قائمة المشرفين المقترحين. احفظ المسودة للاحتفاظ بالقائمة على هذا الجهاز."
 
 func _refresh_supervisors_list() -> void:
 	if not is_instance_valid(supervisors_list):
