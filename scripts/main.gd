@@ -707,7 +707,7 @@ func _add_functional_building(manager: Node, title: String, mission: String, des
 	var building := Node3D.new()
 	building.name = "Functional_" + title
 	building.set_script(load("res://scripts/building_interaction.gd"))
-	building.building_id = "mission_" + str(title.hash())
+	building.building_id = "mission_shop" if title == "المتجر" else ("mission_restaurant" if title == "المطعم" else "mission_employment")
 	building.position = pos
 	building.building_title = title
 	building.mission_title = mission
