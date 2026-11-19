@@ -3,11 +3,13 @@ name: Founder secure storage Android AAR
 on:
   push:
     branches:
+      - main
       - feature/founder-auth-session-refresh
     paths:
       - "android/plugins/founder_secure_storage/**"
       - "addons/founder_secure_storage/**"
       - ".github/workflows/founder-secure-storage-android.yml"
+  workflow_dispatch:
 
 permissions:
   contents: read
