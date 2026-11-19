@@ -368,8 +368,8 @@ func request_start_job(job_id: String) -> void:
 		rpc_id(peer_id, "receive_job_start_result", false, safe_job_id, Vector3.ZERO, "لديك وظيفة أخرى قيد التنفيذ.")
 		return
 	var completed_jobs: Dictionary = session.get("completed_jobs", {})
-	if completed_jobs.has(safe_job_id):
-		rpc_id(peer_id, "receive_job_start_result", false, safe_job_id, Vector3.ZERO, "أنجزت هذه الوظيفة بالفعل في جلسة اللعب.")
+	if completed_jobs.has(_daily_job_key(safe_job_id)):
+		rpc_id(peer_id, "receive_job_start_result", false, safe_job_id, Vector3.ZERO, "أنجزت هذه الوظيفة بالفعل اليوم.")
 		return
 	var body := session.get("body") as CharacterBody3D
 	if not is_instance_valid(body) or body.global_position.distance_to(definition["board"]) > 5.0:
@@ -670,7 +670,7 @@ func _physics_process(delta: float) -> void:
 			if planar_distance <= float(active_job.get("radius", 2.2)):
 				var completed_job_id := str(active_job.get("job_id", ""))
 				var completed: Dictionary = session.get("completed_jobs", {})
-				completed[completed_job_id] = true
+				completed[_daily_job_key(completed_job_id)] = true
 				session["completed_jobs"] = completed
 				var user_id := str(session.get("user_id", ""))
 				if not user_id.is_empty():
