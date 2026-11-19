@@ -4,7 +4,7 @@ extends Node
 signal language_changed
 
 const SAVE_PATH := "user://kings_city_profile.cfg"
-var language_mode: String = "auto"
+var language_mode: String = "en"
 
 const TEXTS := {
 	"ar": {
@@ -150,9 +150,9 @@ const TEXTS := {
 func _ready() -> void:
 	var config := ConfigFile.new()
 	if config.load(SAVE_PATH) == OK:
-		language_mode = str(config.get_value("settings", "language", "auto"))
+		language_mode = str(config.get_value("settings", "language", "en"))
 	if not ["auto", "ar", "en"].has(language_mode):
-		language_mode = "auto"
+		language_mode = "en"
 
 func get_language() -> String:
 	if language_mode == "ar" or language_mode == "en":
