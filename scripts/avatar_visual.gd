@@ -253,3 +253,64 @@ func _add_mesh(part_name: String, mesh: Mesh, pos: Vector3, mat: Material) -> vo
 	instance.material_override = mat
 	add_child(instance)
 	parts[part_name] = instance
+
+
+## Founder appearance: black and gold, with no separate wardrobe system.
+func apply_founder_style() -> void:
+	if get_node_or_null("FounderVisual") != null:
+		return
+	apply_outfit("default")
+	_set_part_color("TorsoBase", Color("#171717"))
+	_set_part_color("LeftLeg", Color("#171717"))
+	_set_part_color("RightLeg", Color("#171717"))
+
+	var gold := StandardMaterial3D.new()
+	gold.albedo_color = Color("#d6ad55")
+	gold.metallic = 0.72
+	gold.roughness = 0.28
+
+	var royal := Node3D.new()
+	royal.name = "FounderVisual"
+	add_child(royal)
+
+	var crown_band := MeshInstance3D.new()
+	crown_band.name = "CrownBand"
+	var band_mesh := CylinderMesh.new()
+	band_mesh.top_radius = 0.235
+	band_mesh.bottom_radius = 0.235
+	band_mesh.height = 0.075
+	crown_band.mesh = band_mesh
+	crown_band.position = Vector3(0, 1.91, 0)
+	crown_band.material_override = gold
+	royal.add_child(crown_band)
+
+	for i in range(5):
+		var angle := TAU * float(i) / 5.0
+		var point := MeshInstance3D.new()
+		point.name = "CrownPoint_%d" % i
+		var point_mesh := ConeMesh.new()
+		point_mesh.bottom_radius = 0.045
+		point_mesh.height = 0.16
+		point.mesh = point_mesh
+		point.position = Vector3(cos(angle) * 0.19, 2.015, sin(angle) * 0.19)
+		point.material_override = gold
+		royal.add_child(point)
+
+	var chest_emblem := MeshInstance3D.new()
+	chest_emblem.name = "FounderChestEmblem"
+	var emblem_mesh := SphereMesh.new()
+	emblem_mesh.radius = 0.075
+	emblem_mesh.height = 0.12
+	chest_emblem.mesh = emblem_mesh
+	chest_emblem.position = Vector3(0, 1.24, -0.255)
+	chest_emblem.material_override = gold
+	royal.add_child(chest_emblem)
+
+	var belt := MeshInstance3D.new()
+	belt.name = "FounderGoldBelt"
+	var belt_mesh := BoxMesh.new()
+	belt_mesh.size = Vector3(0.43, 0.055, 0.045)
+	belt.mesh = belt_mesh
+	belt.position = Vector3(0, 0.83, -0.255)
+	belt.material_override = gold
+	royal.add_child(belt)
