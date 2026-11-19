@@ -795,11 +795,15 @@ func _create_camp() -> void:
 	add_child(camp)
 
 
-# اختيار يدوي بين اللعب المحلي واللعب الجماعي.
+# اختيار وضع اللعب وبوابة PIN محلية لحساب المؤسس الموثق.
 var mode_selection_layer: CanvasLayer
 var mode_selection_panel: PanelContainer
 var mode_status_label: Label
 var online_address_input: LineEdit
+var founder_pin_input: LineEdit
+var founder_pin_confirm_input: LineEdit
+var founder_pin_gate: VBoxContainer
+var game_mode_controls: VBoxContainer
 
 func _create_mode_selection_ui() -> void:
 	var player := get_node_or_null("Player")
@@ -811,21 +815,19 @@ func _create_mode_selection_ui() -> void:
 	mode_selection_layer.name = "GameModeSelection"
 	mode_selection_layer.layer = 100
 	add_child(mode_selection_layer)
-
 	var backdrop := ColorRect.new()
 	backdrop.color = Color(0.025, 0.035, 0.05, 0.94)
 	backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mode_selection_layer.add_child(backdrop)
 
 	mode_selection_panel = PanelContainer.new()
-	mode_selection_panel.custom_minimum_size = Vector2(320, 300)
+	mode_selection_panel.custom_minimum_size = Vector2(340, 440)
 	mode_selection_panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-	mode_selection_panel.position = Vector2(-160, -150)
+	mode_selection_panel.position = Vector2(-170, -220)
 	mode_selection_panel.add_theme_stylebox_override("panel", _make_mode_panel_style())
 	backdrop.add_child(mode_selection_panel)
-
 	var content := VBoxContainer.new()
-	content.add_theme_constant_override("separation", 12)
+	content.add_theme_constant_override("separation", 10)
 	mode_selection_panel.add_child(content)
 
 	var heading := Label.new()
@@ -835,33 +837,88 @@ func _create_mode_selection_ui() -> void:
 	heading.add_theme_color_override("font_color", Color(0.94, 0.79, 0.43))
 	content.add_child(heading)
 
-	var subtitle := Label.new()
-	subtitle.text = "اختر طريقة اللعب"
-	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	content.add_child(subtitle)
-
-	var offline_button := Button.new()
-	offline_button.text = "اللعب دون إنترنت"
-	offline_button.custom_minimum_size.y = 48
-	offline_button.pressed.connect(_select_offline_mode)
-	content.add_child(offline_button)
-
-	online_address_input = LineEdit.new()
-	online_address_input.placeholder_text = "عنوان خادم اللعب الجماعي"
-	online_address_input.text = str(ProjectSettings.get_setting("network/online/server_address", ""))
-	content.add_child(online_address_input)
-
-	var online_button := Button.new()
-	online_button.text = "اللعب عبر الإنترنت"
-	online_button.custom_minimum_size.y = 48
-	online_button.pressed.connect(_select_online_mode)
-	content.add_child(online_button)
-
-	mode_status_label = Label.new()
-	mode_status_label.text = "اللعب دون إنترنت يحفظ تقدمك على هذا الجهاز."
+	founder_pin_gate = VBoxContainer.new()
+	founder_pin_gate.add_theme_constant_override("separation", 8)
+	content.add_child(founder_pin_gate)
+	var founder_heading := Label.new()
+	founder_heading.text = "حماية حساب المؤسس"
+	founder_heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	founder_pin_gate.add_child(founder_heading)
+	founder_pin_input = LineEdit.new()
+	founder_pin_input.placeholder_text = "رمز PIN من 6 أرقام"
+	founder_pin_input.secret = true
+	founder_pin_input.max_length = 6
+	founder_pin_input.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_NUMBER
+	founder_pin_gate.add_child(founder_pin_input)
+	founder_pin_confirm_input = LineEdit.new()
+	founder_pin_confirm_input.placeholder_text = "تأكيد رمز PIN"
+	founder_pin_confirm_input.secret = true
+	founder_pin_confirm_input.max_length = 6
+	founder_pin_confirm_input.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_NUMBER
+	founder_pin_gate.add_child(founder_pin_confirm_input)
+	var pin_button := Button.new()
+	pin_button.custom_minimum_size.y = 44
+	pin_button.pressed.connect(_on_founder_pin_submit)
+	founder_pin_gate.add_child(pin_button)
+	var is_verified_founder := FounderIdentityManager.is_founder
+	founder_pin_gate.visible = is_verified_founder
+	if is_verified_founder:
+		if FounderPinManager.is_pin_configured():
+			founder_pin_confirm_input.visible = false
+			pin_button.text = "فتح حساب المؤسس"
+			mode_status_label = Label.new()
+			mode_status_label.text = "أدخل رمزك المحلي لفتح الحساب."
+		else:
+			pin_button.text = "حفظ رمز المؤسس"
+			mode_status_label = Label.new()
+			mode_status_label.text = "أنشئ رمزًا خاصًا من 6 أرقام لهذا الجهاز."
+	else:
+		mode_status_label = Label.new()
+		mode_status_label.text = "اختر طريقة اللعب."
 	mode_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	mode_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	content.add_child(mode_status_label)
+
+	game_mode_controls = VBoxContainer.new()
+	game_mode_controls.add_theme_constant_override("separation", 8)
+	content.add_child(game_mode_controls)
+	var offline_button := Button.new()
+	offline_button.text = "اللعب دون إنترنت"
+	offline_button.custom_minimum_size.y = 44
+	offline_button.pressed.connect(_select_offline_mode)
+	game_mode_controls.add_child(offline_button)
+	online_address_input = LineEdit.new()
+	online_address_input.placeholder_text = "عنوان خادم اللعب الجماعي"
+	online_address_input.text = str(ProjectSettings.get_setting("network/online/server_address", ""))
+	game_mode_controls.add_child(online_address_input)
+	var online_button := Button.new()
+	online_button.text = "اللعب عبر الإنترنت"
+	online_button.custom_minimum_size.y = 44
+	online_button.pressed.connect(_select_online_mode)
+	game_mode_controls.add_child(online_button)
+	game_mode_controls.visible = not is_verified_founder
+
+func _on_founder_pin_submit() -> void:
+	if not FounderIdentityManager.is_founder:
+		mode_status_label.text = "لا توجد تذكرة مؤسس موثقة على هذا الجهاز."
+		return
+	var pin := founder_pin_input.text.strip_edges()
+	if FounderPinManager.is_pin_configured():
+		if FounderPinManager.is_locked():
+			mode_status_label.text = "محاولات كثيرة. انتظر %d ثانية." % FounderPinManager.lock_seconds_remaining()
+			return
+		if not FounderPinManager.verify_pin(pin):
+			mode_status_label.text = "الرمز غير صحيح أو غير صالح. المحاولات محدودة."
+			return
+	else:
+		if not FounderPinManager.setup_pin(pin, founder_pin_confirm_input.text.strip_edges()):
+			mode_status_label.text = "تعذر حفظ الرمز. أدخل 6 أرقام متطابقة."
+			return
+	founder_pin_gate.visible = false
+	game_mode_controls.visible = true
+	mode_status_label.text = "تم فتح حساب المؤسس على هذا الجهاز. اختر طريقة اللعب."
+	founder_pin_input.clear()
+	founder_pin_confirm_input.clear()
 
 func _make_mode_panel_style() -> StyleBox:
 	var style := StyleBoxFlat.new()
