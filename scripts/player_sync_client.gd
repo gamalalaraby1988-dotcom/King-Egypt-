@@ -6,6 +6,7 @@ signal sync_finished(success: bool, accepted: int, duplicates: int, message: Str
 signal outbox_changed(pending_count: int)
 
 const OUTBOX_PATH := "user://player_sync_outbox.cfg"
+const SYNC_ENABLED_SETTING := "player_sync/enabled"
 const MAX_PENDING_EVENTS := 500
 const MAX_BATCH_SIZE := 50
 const ALLOWED_EVENT_TYPES := [
@@ -108,6 +109,8 @@ func enqueue_progress_observation(event_type: String, progress_key: String, prog
 
 
 func flush_pending() -> void:
+	if not bool(ProjectSettings.get_setting(SYNC_ENABLED_SETTING, false)):
+		return
 	if _request_active or _access_token.is_empty() or _events.is_empty():
 		return
 
