@@ -64,9 +64,7 @@ func _build_districts() -> void:
 	# Each position is kept within the current prototype city bounds.
 	var entries := [
 		["royal_palace","القصر الملكي",Vector3(0,0,-60),Vector2(22,16),12.0],
-		["royal_hotel","الفندق الملكي",Vector3(-42,0,-60),Vector2(13,12),10.0],
 		["royal_bank","البنك الملكي",Vector3(42,0,-60),Vector2(12,11),8.0],
-		["shopping_mall","المول التجاري",Vector3(-60,0,-30),Vector2(15,12),8.0],
 		["supermarket","السوبر ماركت",Vector3(-30,0,-30),Vector2(10,10),6.0],
 		["market","السوق التجاري",Vector3(0,0,-30),Vector2(12,10),6.0],
 		["employment_center","مركز التوظيف",Vector3(30,0,-30),Vector2(11,10),7.0],
