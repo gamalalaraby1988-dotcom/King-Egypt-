@@ -70,6 +70,24 @@ func _building(parent: Node3D, id: String, title: String, at: Vector3, footprint
 	sign.modulate = Color(1.0, 0.9, 0.64)
 	sign.outline_size = 8
 	root.add_child(sign)
+	if id == "royal_palace":
+		var interaction_script := load("res://scripts/building_interaction.gd") as Script
+		if interaction_script != null:
+			var entrance := Node3D.new()
+			entrance.name = "RoyalPalaceEntranceInteraction"
+			entrance.position = Vector3(0, 0, d * 0.5 + 1.4)
+			entrance.set_script(interaction_script)
+			entrance.set("building_id", "royal_palace")
+			entrance.set("building_title", "القصر الملكي")
+			entrance.set("mission_title", "استكشف القصر الملكي")
+			entrance.set("mission_description", "ادخل القصر واستكشف قاعاته وأجنحته الملكية الخمسة.")
+			entrance.set("activity_list", "قاعة العرش الملكية، قاعة الاحتفالات، الكازينو الأوروبي، صالة VIP، الحديقة الملكية الداخلية")
+			entrance.set("requires_interior", true)
+			entrance.set("reward_money", 0)
+			entrance.set("reward_chips", 0)
+			entrance.set("reward_xp", 0)
+			entrance.set("interaction_radius", 4.8)
+			root.add_child(entrance)
 	_add_building_lod_proxy(root, footprint, height, accent)
 
 
