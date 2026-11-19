@@ -3,7 +3,7 @@ class_name CityMasterPlan
 ## المرجع الرسمي الوحيد لتوزيع مباني KING OF EGYPT CITY.
 ## لا تُضاف مبانٍ مرئية خارج BUILDINGS؛ المعالم الطبيعية والطرق والساحات مدرجة منفصلة.
 ## الكازينو وVIP جناحان داخل القصر الملكي وليسا مبنيين مستقلين.
-## المباني المستقلة الأربعة الملغاة لا تعود إلى BUILDINGS؛ نقاط الوصول للشقة محفوظة كبوابات انتقال فقط.
+## المباني المستقلة الأربعة الملغاة لا تعود إلى BUILDINGS؛ دخول الشقة يتم من قائمة النقل السريع المعتمدة.
 
 const BUILDINGS := [
 	{"id":"royal_palace","name":"القصر الملكي","district":"المنطقة الملكية","role":"قاعة العرش والاحتفالات والكازينو الأوروبي وصالة VIP والحديقة الداخلية"},
@@ -42,12 +42,6 @@ const BUILDINGS := [
 	{"id":"mountain_temple","name":"المعبد الملكي أعلى الجبل","district":"منطقة المغامرات والجبل","role":"معلم وموقع استكشاف"}
 ]
 
-const APARTMENT_ACCESS_PORTALS := [
-	{"id":"royal_hotel_gate","name":"بوابة الفندق الملكي","destination":"player_private_apartment"},
-	{"id":"pharaonic_museum_gate","name":"بوابة المتحف الفرعوني","destination":"player_private_apartment"},
-	{"id":"royal_restaurant_gate","name":"بوابة المطعم الملكي","destination":"player_private_apartment"},
-	{"id":"shopping_center_gate","name":"بوابة مركز التسوق","destination":"player_private_apartment"}
-]
 
 const PALACE_INTERIORS := [
 	{"id":"throne_hall","name":"قاعة العرش الملكية"},
