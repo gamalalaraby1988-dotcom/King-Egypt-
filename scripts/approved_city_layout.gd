@@ -238,12 +238,14 @@ func _build_access_roads_and_parking() -> void:
 	_box(self, "RoyalSquareSouthConnector", Vector3(5.0, 0.08, 12.0), Vector3(0, 0.01, -21.0), DARK)
 	# Small parking courts sit beside the service edge, outside building footprints and the main carriageways.
 	for side in [-1.0, 1.0]:
-		var parking := _box(self, "ServiceParkingCourt", Vector3(12.0, 0.06, 18.0), Vector3(side * 86.0, 0.015, 34.0), Color(0.20, 0.22, 0.23))
+		# Keep each court in the narrow clear strip between the outer service buildings and perimeter road.
+		# The 10 m width ends at the road edge and starts beyond the 81.5 m building footprint.
+		var parking := _box(self, "ServiceParkingCourt", Vector3(10.0, 0.06, 18.0), Vector3(side * 87.0, 0.015, 34.0), Color(0.20, 0.22, 0.23))
 		for slot in range(3):
 			_box(parking, "ParkingBayLine", Vector3(0.12, 0.025, 4.8), Vector3(-3.6 + float(slot) * 3.6, 0.06, 0), IVORY)
-	# Green buffers line the outer edges while keeping sidewalks and building entrances clear.
+	# Green buffers line the outer edges while keeping sidewalks, parking courts, and entrances clear.
 	for side in [-1.0, 1.0]:
-		for z in [-65.0, -35.0, -5.0, 25.0, 55.0]:
+		for z in [-65.0, -35.0, -5.0, 55.0]:
 			_tree(self, "OuterBoulevardPalm", Vector3(side * 87.0, 0, z), 0.85)
 
 
