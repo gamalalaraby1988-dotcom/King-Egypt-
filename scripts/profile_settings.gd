@@ -193,6 +193,9 @@ func _save_settings() -> void:
 		info_label.text = "تعذر حفظ الإعدادات؛ لم يتم اعتماد تغيير اللغة. رمز الخطأ: %s" % error
 		return
 	CityLanguage.set_language(selected_language)
+	if is_instance_valid(PlayerSyncClient):
+		PlayerSyncClient.enqueue_setting_change("volume", int(volume_slider.value))
+		PlayerSyncClient.enqueue_setting_change("quality", quality_select.selected)
 	_apply_settings()
 	_refresh_info()
 	if name_change_blocked:
