@@ -647,7 +647,81 @@ func _build_mountain_route() -> void:
 	summit.name = "KingsSummit"
 	summit.position = Vector3(0, 21.0, -1.0)
 	mountain.add_child(summit)
-	_box(summit, "SummitPlatform", Vector3(8.0, 0.4, 7.0), Vector3(0, 0, 0), IVORY)
+
+	# A generous 30 x 30 m royal panorama terrace, organized around the
+	# existing obelisk and crown. The original trail, rest stops and view decks
+	# remain in place; a new collision-backed switchback ramp reaches the plaza.
+	_box(summit, "SummitPlatform", Vector3(30.0, 0.5, 30.0), Vector3(0.0, 0.0, 0.0), IVORY)
+	var plaza_collision := StaticBody3D.new()
+	plaza_collision.name = "SummitPlazaWalkableCollision"
+	plaza_collision.position = Vector3(0.0, -0.02, 0.0)
+	plaza_collision.add_to_group("city_world_geometry")
+	var plaza_shape := CollisionShape3D.new()
+	var plaza_box := BoxShape3D.new()
+	plaza_box.size = Vector3(30.0, 0.5, 30.0)
+	plaza_shape.shape = plaza_box
+	plaza_collision.add_child(plaza_shape)
+	summit.add_child(plaza_collision)
+
+	# Low perimeter balustrades leave a broad entrance opening toward the ramp.
+	for side in [-1.0, 1.0]:
+		for offset in [-10.5, -5.5, 5.5, 10.5]:
+			_box(summit, "SummitBalustradePost", Vector3(0.32, 1.15, 0.32), Vector3(side * 14.35, 0.82, offset), GOLD)
+			_box(summit, "SummitBalustradePost", Vector3(0.32, 1.15, 0.32), Vector3(offset, 0.82, side * 14.35), GOLD)
+		_box(summit, "SummitBalustradeSide", Vector3(0.22, 0.18, 30.0), Vector3(side * 14.35, 1.22, 0.0), GOLD)
+		_box(summit, "SummitBalustradeBack", Vector3(30.0, 0.18, 0.22), Vector3(0.0, 1.22, side * 14.35), GOLD)
+	# Four restrained stone seating bays sit inside the corners, keeping the
+	# central panorama and circulation route open.
+	for side in [-1.0, 1.0]:
+		for depth in [-1.0, 1.0]:
+			var seat_at := Vector3(side * 10.5, 0.0, depth * 10.5)
+			_box(summit, "SummitBenchSeat", Vector3(3.2, 0.24, 0.72), seat_at + Vector3(0.0, 0.62, 0.0), SAND)
+			_box(summit, "SummitBenchBack", Vector3(3.2, 0.82, 0.18), seat_at + Vector3(0.0, 1.08, -0.28), GOLD)
+	# Four low-glare royal lanterns mark the corners without obstructing views.
+	for side in [-1.0, 1.0]:
+		for depth in [-1.0, 1.0]:
+			var lantern := Node3D.new()
+			lantern.name = "SummitLantern"
+			lantern.position = Vector3(side * 12.2, 0.0, depth * 12.2)
+			summit.add_child(lantern)
+			_box(lantern, "LanternBase", Vector3(0.55, 0.35, 0.55), Vector3(0.0, 0.18, 0.0), GOLD)
+			_box(lantern, "LanternBody", Vector3(0.32, 0.72, 0.32), Vector3(0.0, 0.72, 0.0), IVORY)
+			_box(lantern, "LanternCap", Vector3(0.62, 0.16, 0.62), Vector3(0.0, 1.18, 0.0), GOLD)
+
+	# New four-flight switchback ramp joins the existing trail end to the plaza.
+	# Each flight has a walkable sloped mesh and a matching StaticBody collider.
+	var ramp_points: Array[Vector3] = [
+		Vector3(-2.0, 0.18, -3.0),
+		Vector3(-11.0, 5.4, -3.0),
+		Vector3(-11.0, 10.6, -12.0),
+		Vector3(10.0, 15.8, -12.0),
+		Vector3(10.0, 21.0, -3.0)
+	]
+	for ramp_index in range(ramp_points.size() - 1):
+		var ramp_start: Vector3 = ramp_points[ramp_index]
+		var ramp_end: Vector3 = ramp_points[ramp_index + 1]
+		var ramp_delta := ramp_end - ramp_start
+		var ramp_length := ramp_delta.length()
+		var ramp_midpoint := (ramp_start + ramp_end) * 0.5
+		var ramp := _box(mountain, "SummitAccessRamp_%02d" % (ramp_index + 1), Vector3(3.8, 0.28, ramp_length), ramp_midpoint, SAND)
+		ramp.look_at(mountain.to_global(ramp_end), Vector3.UP)
+		var ramp_body := StaticBody3D.new()
+		ramp_body.name = "SummitAccessRampCollision_%02d" % (ramp_index + 1)
+		ramp_body.position = ramp_midpoint
+		ramp_body.look_at(mountain.to_global(ramp_end), Vector3.UP)
+		ramp_body.add_to_group("city_world_geometry")
+		var ramp_collision := CollisionShape3D.new()
+		var ramp_shape := BoxShape3D.new()
+		ramp_shape.size = Vector3(3.8, 0.32, ramp_length)
+		ramp_collision.shape = ramp_shape
+		ramp_body.add_child(ramp_collision)
+		mountain.add_child(ramp_body)
+		# Narrow gold edge markers make each ramp flight legible at a glance.
+		var ramp_side := Vector3(-ramp_delta.z, 0.0, ramp_delta.x).normalized()
+		for edge in [-1.0, 1.0]:
+			var edge_marker := _box(mountain, "SummitRampEdge", Vector3(0.12, 0.22, ramp_length), ramp_midpoint + ramp_side * edge * 1.92 + Vector3(0.0, 0.18, 0.0), GOLD)
+			edge_marker.rotation = ramp.rotation
+
 	_box(summit, "SummitObelisk", Vector3(1.2, 4.5, 1.2), Vector3(0, 2.4, 0), GOLD)
 	_box(summit, "SummitCrown", Vector3(2.4, 0.35, 2.4), Vector3(0, 4.8, 0), GOLD)
 
