@@ -1,6 +1,6 @@
 extends Node
 ## دورة موحدة لاختيار اللعب المحلي والاتصال الجماعي.
-## اتصال ENet وحده لا يمنح صلاحية اقتصادية أو إدارية خادمية.
+## جلسات Online تستخدم WSS/TLS؛ لا يُقبل اتصال نقل غير مشفر.
 
 signal status_changed(message: String)
 signal mode_changed(mode: int)
@@ -11,7 +11,7 @@ enum Mode { UNSELECTED, OFFLINE, ONLINE }
 
 var current_mode: Mode = Mode.UNSELECTED
 var connection_state := "disconnected"
-var peer: ENetMultiplayerPeer
+var peer: WebSocketMultiplayerPeer
 
 
 func is_online_ready() -> bool:
@@ -28,23 +28,30 @@ func select_offline() -> void:
 
 
 func connect_online(address: String, port: int = 2456) -> void:
-	var host := address.strip_edges()
-	if host.is_empty() or port < 1 or port > 65535:
+	var endpoint := address.strip_edges()
+	if endpoint.is_empty() or port < 1 or port > 65535:
 		status_changed.emit("عنوان الخادم أو المنفذ غير صالح.")
+		return
+	if not endpoint.begins_with("wss://"):
+		if endpoint.contains("://") or endpoint.contains("/") or endpoint.contains(" "):
+			status_changed.emit("يجب إدخال اسم نطاق الخادم فقط أو عنوان wss:// كامل.")
+			return
+		endpoint = "wss://%s:%d" % [endpoint, port]
+
 		return
 	if connection_state == "connecting" or is_online_ready():
 		status_changed.emit("يوجد اتصال Online قائم أو جارٍ بالفعل.")
 		return
 
 	_close_active_peer()
-	peer = ENetMultiplayerPeer.new()
-	var error := peer.create_client(host, port)
+	peer = WebSocketMultiplayerPeer.new()
+	var error := peer.create_client(endpoint)
 	if error != OK:
 		peer = null
 		multiplayer.multiplayer_peer = OfflineMultiplayerPeer.new()
 		current_mode = Mode.UNSELECTED
 		connection_state = "connection_failed"
-		status_changed.emit("تعذر بدء الاتصال: %s" % error_string(error))
+		status_changed.emit("تعذر بدء اتصال WSS الآمن: %s" % error_string(error))
 		return
 
 	multiplayer.multiplayer_peer = peer
@@ -87,7 +94,7 @@ func _on_connected_to_server() -> void:
 	connection_state = "connected"
 	current_mode = Mode.ONLINE
 	mode_changed.emit(current_mode)
-	status_changed.emit("تم الاتصال بخادم اللعب الجماعي.")
+	status_changed.emit("تم إنشاء اتصال WSS مشفر. جارٍ التحقق من حساب اللاعب.")
 	online_connected.emit()
 
 
