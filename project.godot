@@ -18,7 +18,8 @@ VehicleStoreManager="*res://scripts/vehicle_store_manager.gd"
 
 [founder]
 security/public_key_pem=""
-auth/api_base_url=""
+auth/api_base_url="https://lupmaktbymuaymhqsxxu.supabase.co"
+auth/publishable_key="sb_publishable_KMNgd88WnXikozVVI9TeLA_PxV5ap9P"
 
 [display]
 window/size/viewport_width=1280
