@@ -13,10 +13,12 @@ WalletManager="*res://scripts/wallet_manager.gd"
 GameModeManager="*res://scripts/game_mode_manager.gd"
 FounderIdentityManager="*res://scripts/founder_identity_manager.gd"
 FounderPinManager="*res://scripts/founder_pin_manager.gd"
+FounderAuthClient="*res://scripts/founder_auth_client.gd"
 VehicleStoreManager="*res://scripts/vehicle_store_manager.gd"
 
 [founder]
 security/public_key_pem=""
+auth/api_base_url=""
 
 [display]
 window/size/viewport_width=1280
