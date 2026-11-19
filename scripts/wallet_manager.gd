@@ -30,7 +30,7 @@ func initialize_wallet() -> bool:
 	var stored_receipts: Variant = config.get_value("wallet", "receipts", {}) if err == OK else {}
 	var stored_ledger: Variant = config.get_value("wallet", "ledger", []) if err == OK else []
 
-	if stored_version == SCHEMA_VERSION and stored_balances is Dictionary:
+	if stored_version >= 1 and stored_version <= SCHEMA_VERSION and stored_balances is Dictionary:
 		for currency in CURRENCIES:
 			var value: Variant = stored_balances.get(currency, 0)
 			if not _valid_amount(value):
@@ -229,6 +229,7 @@ func _transact(transaction_id: String, currency: String, amount: int, kind: Stri
 	config.set_value("wallet", "balances", next_balances)
 	config.set_value("wallet", "receipts", next_receipts)
 	config.set_value("wallet", "ledger", next_ledger)
+	config.set_value("wallet", "integrity_seal", _compute_integrity_seal(next_balances, next_receipts, next_ledger))
 	if not _atomic_save(config):
 		return false
 	balances = next_balances
