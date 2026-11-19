@@ -44,7 +44,8 @@ begin
         raise exception 'authentication_required' using errcode = '28000';
     end if;
 
-    if pg_catalog.jsonb_typeof(p_events) <> 'array'
+    if p_events is null
+       or pg_catalog.jsonb_typeof(p_events) <> 'array'
        or pg_catalog.jsonb_array_length(p_events) < 1
        or pg_catalog.jsonb_array_length(p_events) > 50 then
         raise exception 'invalid_event_batch' using errcode = '22023';
@@ -69,7 +70,8 @@ begin
         v_event_type := v_event ->> 'event_type';
         v_payload := v_event -> 'payload';
 
-        if pg_catalog.jsonb_typeof(v_payload) <> 'object'
+        if v_payload is null
+           or pg_catalog.jsonb_typeof(v_payload) <> 'object'
            or pg_catalog.pg_column_size(v_payload) > 8192 then
             raise exception 'invalid_event_payload' using errcode = '22023';
         end if;
