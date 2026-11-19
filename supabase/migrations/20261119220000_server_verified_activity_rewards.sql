@@ -73,7 +73,7 @@ create policy player_reward_claims_select_own
     on private.player_reward_claims for select to authenticated
     using ((select auth.uid()) = user_id);
 
-create or replace function public.claim_verified_activity_reward(p_proof_id uuid)
+create or replace function private.claim_verified_activity_reward(p_proof_id uuid)
 returns jsonb
 language plpgsql
 security definer
@@ -196,8 +196,25 @@ begin
 end;
 $function$;
 
+revoke all on function private.claim_verified_activity_reward(uuid) from public, anon;
+grant execute on function private.claim_verified_activity_reward(uuid) to authenticated;
+
+create or replace function public.claim_verified_activity_reward(p_proof_id uuid)
+returns jsonb
+language sql
+security invoker
+set search_path = ''
+as $wrapper$
+    select private.claim_verified_activity_reward(p_proof_id);
+$wrapper$;
+
 revoke all on function public.claim_verified_activity_reward(uuid) from public, anon;
 grant execute on function public.claim_verified_activity_reward(uuid) to authenticated;
+
+comment on function private.claim_verified_activity_reward(uuid) is
+'Private atomic reward settlement. SECURITY DEFINER is limited to this non-exposed schema function, validates auth.uid(), locks the player wallet, and writes the private claim ledger.';
+comment on function public.claim_verified_activity_reward(uuid) is
+'Public Data API wrapper using SECURITY INVOKER; delegates to the private, auth.uid()-scoped atomic reward settlement function.';
 
 comment on table private.player_activity_reward_catalog is
 'Server-managed allowlist of activity identifiers and reward amounts. No client write access.';
