@@ -45,11 +45,18 @@ func _process(_delta: float) -> void:
 		return
 	var current := player.global_position
 	var step := Vector2(current.x - last_position.x, current.z - last_position.z).length()
+	var progress_changed := false
 	if step > 0.0 and step < 2.5:
 		walked_meters += step
-		_set_progress("walk", int(walked_meters / 25.0))
+		progress_changed = _set_progress("walk", int(walked_meters / 25.0))
 	last_position = current
-	_refresh_ui()
+	if progress_changed:
+		_refresh_ui()
+
+
+func _exit_tree() -> void:
+	# احفظ المسافة الجزئية عند مغادرة المشهد دون الكتابة على القرص كل إطار.
+	_save_state()
 
 func record_job_completed(_job_id: String = "") -> void:
 	_sync_completed_daily_tasks_from_profile()
@@ -70,9 +77,13 @@ func _sync_completed_daily_tasks_from_profile() -> void:
 func record_city_visit() -> void:
 	_set_progress("visit", int(progress.get("visit", 0)) + 1)
 
-func _set_progress(task_id: String, value: int) -> void:
+func _set_progress(task_id: String, value: int) -> bool:
+	# لا تحفظ الملف ولا تحدّث الواجهة ما دامت قيمة المهمة لم تتغير.
+	if int(progress.get(task_id, -1)) == value:
+		return false
 	progress[task_id] = value
 	_save_state()
+	return true
 
 func _build_tasks_if_needed() -> void:
 	if tasks.is_empty():
