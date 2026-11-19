@@ -978,8 +978,8 @@ func _process_next_server_reward_proof() -> void:
 func _on_server_activity_proof_failed(activity_kind: String, activity_id: String, message: String) -> void:
 	if not GameModeManager.is_online_ready():
 		return
-	var expected_id := str(active_mission.get("building_id", "")) if activity_kind == "mission" and is_instance_valid(active_mission) else str(active_job.get("job_id", "")) if activity_kind == "job" and is_instance_valid(active_job) else ""
-	if expected_id != activity_id:
+	var allowed_ids := ["mission_shop", "mission_restaurant", "mission_employment"] if activity_kind == "mission" else ["courier_delivery", "city_guide", "city_maintenance"] if activity_kind == "job" else []
+	if not allowed_ids.has(activity_id):
 		return
 	status_label.text = message
 	description_label.text = "اكتمل التحقق من الوصول، لكن خدمة إصدار الإثبات غير جاهزة."
@@ -997,6 +997,7 @@ func _on_verified_reward_claim_finished(success: bool, result: Dictionary, messa
 	else:
 		description_label.text = "لم يتم إضافة أي رصيد محلي. سيظل الاعتماد متوقفًا حتى اكتمال إعداد الخدمة."
 		reward_label.text = "لا توجد مكافأة محلية بديلة في وضع Online."
+	call_deferred("_process_next_server_reward_proof")
 
 
 func _on_server_job_start_result(success: bool, job_id: String, server_target: Vector3, message: String) -> void:
