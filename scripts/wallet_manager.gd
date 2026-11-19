@@ -4,7 +4,7 @@ extends Node
 const PROFILE_PATH := "user://kings_city_profile.cfg"
 const TEMP_PATH := "user://kings_city_profile.wallet.tmp"
 const BACKUP_PATH := "user://kings_city_profile.pre_wallet_backup.cfg"
-const SCHEMA_VERSION := 1
+const SCHEMA_VERSION := 2
 const MAX_BALANCE := 2000000000
 const CURRENCIES := ["money", "chips", "gems"]
 
@@ -12,6 +12,8 @@ var balances: Dictionary = {"money": 0, "chips": 0, "gems": 0}
 var receipts: Dictionary = {}
 var ledger: Array = []
 var initialized := false
+var integrity_seal := ""
+var integrity_warning := false
 
 func _ready() -> void:
 	initialize_wallet()
@@ -35,8 +37,26 @@ func initialize_wallet() -> bool:
 				push_error("Wallet: invalid saved balance; wallet initialization stopped.")
 				return false
 			balances[currency] = int(value)
-		receipts = stored_receipts if stored_receipts is Dictionary else {}
-		ledger = stored_ledger if stored_ledger is Array else []
+		if not (stored_receipts is Dictionary) or not (stored_ledger is Array):
+			push_error("Wallet: invalid receipt or ledger data; wallet locked.")
+			return false
+		receipts = stored_receipts
+		ledger = stored_ledger
+		var profile_money: Variant = config.get_value("profile", "money", balances["money"])
+		var profile_chips: Variant = config.get_value("profile", "chips", balances["chips"])
+		if not _valid_amount(profile_money) or not _valid_amount(profile_chips) or int(profile_money) != int(balances["money"]) or int(profile_chips) != int(balances["chips"]):
+			integrity_warning = true
+			push_error("Wallet: profile and wallet balances differ; currency operations locked.")
+			return false
+		var saved_seal := str(config.get_value("wallet", "integrity_seal", ""))
+		var expected_seal := _compute_integrity_seal(balances, receipts, ledger)
+		if not saved_seal.is_empty() and saved_seal != expected_seal:
+			integrity_warning = true
+			push_error("Wallet: integrity check failed; currency operations locked.")
+			return false
+		integrity_seal = expected_seal
+		if saved_seal.is_empty():
+			return _persist_wallet(config)
 		initialized = true
 		return true
 
@@ -70,14 +90,8 @@ func get_balances() -> Dictionary:
 	return balances.duplicate(true)
 
 func _refresh_legacy_balances() -> void:
-	# المال والرقائق ما زالا يُحدّثان عبر أنظمة اللعبة القديمة؛ اقرأ آخر قيمهما المحفوظة.
-	var config := ConfigFile.new()
-	if config.load(PROFILE_PATH) != OK:
-		return
-	for currency in ["money", "chips"]:
-		var value: Variant = config.get_value("profile", currency, balances[currency])
-		if _valid_amount(value):
-			balances[currency] = int(value)
+	# المحفظة الموثقة هي المرجع؛ لا تقبل تغييرات ملف الملف الشخصي كأرصدة جديدة.
+	return
 
 func save_profile_update(config: ConfigFile, money_value: int, chips_value: int) -> bool:
 	# حفظ بيانات اللاعب وتغيير أرصدته وسجل المحفظة في الملف الذري نفسه.
@@ -108,6 +122,7 @@ func save_profile_update(config: ConfigFile, money_value: int, chips_value: int)
 	config.set_value("wallet", "balances", next_balances)
 	config.set_value("wallet", "receipts", receipts)
 	config.set_value("wallet", "ledger", next_ledger)
+	config.set_value("wallet", "integrity_seal", _compute_integrity_seal(next_balances, receipts, next_ledger))
 	if not _atomic_save(config):
 		return false
 	balances = next_balances
@@ -162,6 +177,7 @@ func purchase_once(transaction_id: String, currency: String, amount: int, reason
 	config.set_value("wallet", "balances", next_balances)
 	config.set_value("wallet", "receipts", next_receipts)
 	config.set_value("wallet", "ledger", next_ledger)
+	config.set_value("wallet", "integrity_seal", _compute_integrity_seal(next_balances, next_receipts, next_ledger))
 	if not _atomic_save(config):
 		return false
 	balances = next_balances
@@ -222,6 +238,8 @@ func _transact(transaction_id: String, currency: String, amount: int, kind: Stri
 
 func _persist_wallet(config: ConfigFile) -> bool:
 	config.set_value("wallet", "schema_version", SCHEMA_VERSION)
+	integrity_seal = _compute_integrity_seal(balances, receipts, ledger)
+	config.set_value("wallet", "integrity_seal", integrity_seal)
 	config.set_value("wallet", "balances", balances)
 	config.set_value("wallet", "receipts", receipts)
 	config.set_value("wallet", "ledger", ledger)
@@ -259,3 +277,14 @@ func _atomic_save(config: ConfigFile) -> bool:
 
 func _valid_amount(value: Variant) -> bool:
 	return (value is int or value is float) and is_finite(float(value)) and float(value) >= 0.0 and float(value) <= float(MAX_BALANCE) and floorf(float(value)) == float(value)
+
+
+func _compute_integrity_seal(balance_data: Dictionary, receipt_data: Dictionary, ledger_data: Array) -> String:
+	# كشف العبث البسيط بالملفات؛ ليس توقيعًا خادميًا ولا يمنع تعديل التطبيق نفسه.
+	var payload := {"balances": balance_data, "receipts": receipt_data, "ledger": ledger_data}
+	var canonical := JSON.stringify(payload, "", true, true)
+	var context := HashingContext.new()
+	if context.start(HashingContext.HASH_SHA256) != OK:
+		return ""
+	context.update(canonical.to_utf8_buffer())
+	return context.finish().hex_encode()
