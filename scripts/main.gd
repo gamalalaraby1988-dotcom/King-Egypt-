@@ -567,9 +567,13 @@ func _create_city() -> void:
 	var side_road_color := Color(0.15, 0.16, 0.17)
 	# طريق محيطي مستطيل يحيط بالمدينة مع خلوّ مسافة عن مباني الأطراف.
 	_create_box(self, "MainRoad_North", Vector3(190, 0.08, 6), Vector3(0, 0.0, -95), road_color)
-	# Keep the southern perimeter road continuous around the new central marina opening.
-	_create_box(self, "MainRoad_South_West", Vector3(83, 0.08, 6), Vector3(-53.5, 0.0, 95), road_color)
-	_create_box(self, "MainRoad_South_East", Vector3(83, 0.08, 6), Vector3(53.5, 0.0, 95), road_color)
+	# Route the southern perimeter road around the outside of the marina basin.
+	# Keep a clear buffer from the basin's side and south quay edges.
+	_create_box(self, "MainRoad_South_West", Vector3(79, 0.08, 6), Vector3(-55.5, 0.0, 95), road_color)
+	_create_box(self, "MainRoad_South_East", Vector3(79, 0.08, 6), Vector3(55.5, 0.0, 95), road_color)
+	_create_box(self, "MainRoad_Southwest_Detour", Vector3(6, 0.08, 13), Vector3(-16, 0.0, 101.5), road_color)
+	_create_box(self, "MainRoad_Southeast_Detour", Vector3(6, 0.08, 13), Vector3(16, 0.0, 101.5), road_color)
+	_create_box(self, "MainRoad_South_Basin_Bypass", Vector3(32, 0.08, 6), Vector3(0, 0.0, 108), road_color)
 	_create_box(self, "MainRoad_West", Vector3(6, 0.08, 190), Vector3(-95, 0.0, 0), road_color)
 	_create_box(self, "MainRoad_East", Vector3(6, 0.08, 190), Vector3(95, 0.0, 0), road_color)
 	# الشارع العرضي الشمالي يلتف حول الميدان الملكي ويترك ساحته مفتوحة للتجمع.
