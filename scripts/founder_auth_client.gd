@@ -13,6 +13,8 @@ const PUBLISHABLE_KEY_SETTING := "founder/auth/publishable_key"
 const OTP_PATH := "/auth/v1/otp"
 const VERIFY_PATH := "/auth/v1/verify"
 const REFRESH_PATH := "/auth/v1/token?grant_type=refresh_token"
+const SECURE_STORAGE_SINGLETON := "FounderSecureStorage"
+const REFRESH_TOKEN_ALIAS := "king_of_egypt_city.founder.refresh_token.v1"
 const ENTITLEMENT_PATH := "/functions/v1/founder-entitlement"
 
 var _http: HTTPRequest
@@ -34,6 +36,7 @@ func _ready() -> void:
 	_session_refresh_timer.one_shot = true
 	add_child(_session_refresh_timer)
 	_session_refresh_timer.timeout.connect(_refresh_auth_session)
+	call_deferred("_restore_persisted_session")
 
 func is_configured() -> bool:
 	var base := _api_base_url()
@@ -184,7 +187,42 @@ func _store_auth_session(access_token: String, refresh_token: String, expires_in
 	_session_access_token = access_token
 	_session_refresh_token = refresh_token
 	_session_expires_at = int(Time.get_unix_time_from_system()) + expires_in
+	_persist_refresh_token_securely(refresh_token)
 	_schedule_session_refresh()
+
+func _secure_storage_available() -> bool:
+	if not Engine.has_singleton(SECURE_STORAGE_SINGLETON):
+		return false
+	var storage: Object = Engine.get_singleton(SECURE_STORAGE_SINGLETON)
+	return storage.has_method("is_available") and bool(storage.call("is_available"))
+
+func _persist_refresh_token_securely(refresh_token: String) -> void:
+	if not _secure_storage_available():
+		return
+	var storage: Object = Engine.get_singleton(SECURE_STORAGE_SINGLETON)
+	if not storage.has_method("save_secret"):
+		return
+	if not bool(storage.call("save_secret", REFRESH_TOKEN_ALIAS, refresh_token)):
+		push_warning("تعذر حفظ جلسة المؤسس في مخزن Android الآمن؛ ستظل الجلسة الحالية مؤقتة.")
+
+func _restore_persisted_session() -> void:
+	if not _secure_storage_available():
+		return
+	var storage: Object = Engine.get_singleton(SECURE_STORAGE_SINGLETON)
+	if not storage.has_method("load_secret"):
+		return
+	var saved_token := str(storage.call("load_secret", REFRESH_TOKEN_ALIAS))
+	if saved_token.is_empty():
+		return
+	_session_refresh_token = saved_token
+	_request_session_refresh(true)
+
+func _delete_persisted_refresh_token() -> void:
+	if not _secure_storage_available():
+		return
+	var storage: Object = Engine.get_singleton(SECURE_STORAGE_SINGLETON)
+	if storage.has_method("delete_secret"):
+		storage.call("delete_secret", REFRESH_TOKEN_ALIAS)
 
 func _schedule_session_refresh() -> void:
 	if not is_instance_valid(_session_refresh_timer) or _session_refresh_token.is_empty():
@@ -201,9 +239,12 @@ func _schedule_session_refresh() -> void:
 	_session_refresh_timer.start(maxf(1.0, delay))
 
 func _refresh_auth_session() -> void:
+	_request_session_refresh(false)
+
+func _request_session_refresh(restoring: bool) -> void:
 	if _session_refresh_token.is_empty():
 		return
-	if Time.get_unix_time_from_system() >= _session_expires_at:
+	if not restoring and Time.get_unix_time_from_system() >= _session_expires_at:
 		_expire_auth_session()
 		return
 	if _pending_action != "":
@@ -217,7 +258,10 @@ func _refresh_auth_session() -> void:
 	var payload := {"refresh_token": _session_refresh_token}
 	var error := _http.request(_api_base_url() + REFRESH_PATH, headers, HTTPClient.METHOD_POST, JSON.stringify(payload))
 	if error != OK:
-		_retry_or_expire_session()
+		if restoring:
+			_retry_restore_or_clear()
+		else:
+			_retry_or_expire_session()
 		return
 	_pending_action = "refresh_session"
 
@@ -247,7 +291,14 @@ func _retry_or_expire_session() -> void:
 	else:
 		_session_refresh_timer.start(minf(15.0, remaining - 2.0))
 
+func _retry_restore_or_clear() -> void:
+	if _session_refresh_token.is_empty():
+		return
+	# الشبكة غير متاحة؛ احتفظ بالرمز الآمن وحاول مجددًا عند توفر الاتصال.
+	_session_refresh_timer.start(15.0)
+
 func _expire_auth_session() -> void:
+	_delete_persisted_refresh_token()
 	if is_instance_valid(_session_refresh_timer):
 		_session_refresh_timer.stop()
 	_session_access_token = ""
