@@ -29,8 +29,8 @@
 
 ## الحماية
 
-- Edge Function تبقي `verify_jwt = true`؛ بوابة Supabase تتحقق من JWT قبل تشغيل الدالة.
-- المفتاح `sb_publishable` يرسل في `apikey` فقط، ورمز المستخدم في `Authorization: Bearer`.
+- Edge Function تستخدم `verify_jwt = false` لأن المفتاح العام من النوع `sb_publishable`؛ لذلك تتحقق الدالة بنفسها من access token عبر `GET /auth/v1/user` قبل أي وصول للبيانات.
+- المفتاح `sb_publishable` يُقرأ من كائن `SUPABASE_PUBLISHABLE_KEYS` تحت الاسم `default` ويُرسل في `apikey` فقط، ورمز المستخدم في `Authorization: Bearer`.
 - RPC تستخرج هوية الحساب من `auth.uid()` ولا تستقبل user_id من العميل.
 - جدول التخزين في schema خاصة غير مكشوفة عبر Data API، ولا توجد صلاحيات مباشرة للأدوار العامة.
 - RPC بصلاحية `SECURITY INVOKER` و`search_path = ''`، وتعتمد على RLS وسياسة إدخال تقصر `user_id` على `auth.uid()`؛ لا تستخدم صلاحيات مالك الجدول لتجاوز RLS.
