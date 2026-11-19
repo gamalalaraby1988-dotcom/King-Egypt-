@@ -9,6 +9,16 @@ background_color = Color(0.48, 0.68, 0.82, 1)
 ambient_light_source = 3
 ambient_light_color = Color(0.82, 0.86, 0.92, 1)
 ambient_light_energy = 0.7
+fog_enabled = true
+fog_light_color = Color(0.78, 0.68, 0.56, 1)
+fog_light_energy = 0.85
+fog_sun_scatter = 0.18
+fog_density = 0.0012
+fog_aerial_perspective = 0.35
+fog_sky_affect = 0.08
+fog_depth_begin = 100.0
+fog_depth_end = 430.0
+fog_depth_curve = 1.15
 
 [node name="Main" type="Node3D"]
 script = ExtResource("1_main")
