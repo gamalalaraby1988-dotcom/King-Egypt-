@@ -51,6 +51,7 @@ func _ready() -> void:
 	GameModeManager.status_changed.connect(_on_mode_status_changed)
 	GameModeManager.online_connected.connect(_on_mode_connected)
 	AuthoritativeGameServer.authentication_completed.connect(_on_player_server_authenticated)
+	PlayerAccountAuthClient.session_access_token_changed.connect(_on_player_access_token_changed)
 	GameModeManager.online_disconnected.connect(_on_mode_disconnected)
 
 
@@ -1227,6 +1228,11 @@ func _on_mode_connected() -> void:
 		GameModeManager.disconnect_online()
 		return
 	AuthoritativeGameServer.authenticate_player.rpc_id(1, access_token)
+
+
+func _on_player_access_token_changed(access_token: String) -> void:
+	if GameModeManager.is_online_ready() and not access_token.is_empty():
+		AuthoritativeGameServer.authenticate_player.rpc_id(1, access_token)
 
 
 func _on_player_server_authenticated(success: bool, message: String) -> void:
