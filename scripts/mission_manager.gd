@@ -872,7 +872,7 @@ func open_building_activities(building: Node3D) -> void:
 	accept_button.visible = true
 	title_label.text = "%s | %s" % [building.building_title, data["title"]]
 	description_label.text = str(data.get("description", "")) + "\n" + str(data.get("activities", ""))
-	reward_label.text = "المكافأة: %d جنيه | %d رقائق | %d خبرة" % [data["money"], data["chips"], data["xp"]]
+	reward_label.text = "المكافأة: %d جنيه | %d رقائق" % [data["money"], data["chips"]]
 	status_label.text = CityLanguage.translate("interior_activity_status")
 	accept_button.disabled = completed_missions.has(str(building.building_id)) or player_level < int(data.get("level", 1))
 	accept_button.text = "بدء المهمة"
@@ -1032,8 +1032,8 @@ func _on_verified_reward_claim_finished(success: bool, result: Dictionary, messa
 	status_label.text = message
 	if success:
 		description_label.text = "اعتمد الخادم المكافأة وسجلها في محفظتك المركزية."
-		reward_label.text = "أرصدتك الخادمية: %d جنيه | %d رقائق | %d خبرة" % [int(result.get("cash", 0)), int(result.get("chips", 0)), int(result.get("xp", 0))]
-		stats_label.text = "الرصيد الخادمي: %d جنيه | %d رقائق | %d خبرة" % [int(result.get("cash", 0)), int(result.get("chips", 0)), int(result.get("xp", 0))]
+		reward_label.text = "أرصدتك الخادمية: %d جنيه | %d رقائق" % [int(result.get("cash", 0)), int(result.get("chips", 0))]
+		stats_label.text = "الرصيد الخادمي: %d جنيه | %d رقائق" % [int(result.get("cash", 0)), int(result.get("chips", 0))]
 	else:
 		description_label.text = "لم يتم إضافة أي رصيد محلي. سيظل الاعتماد متوقفًا حتى اكتمال إعداد الخدمة."
 		reward_label.text = "لا توجد مكافأة محلية بديلة في وضع Online."
@@ -1130,7 +1130,7 @@ func _accept_mission() -> void:
 	accept_button.disabled = true
 	status_label.text = "بدأت المهمة! اتبع علامة الهدف الصفراء."
 	description_label.text = "تحرك إلى نقطة الهدف المحددة في المدينة لإكمال المهمة."
-	reward_label.text = "المكافأة عند الوصول: %d جنيه | %d رقائق | %d خبرة" % [data["money"], data["chips"], data["xp"]]
+	reward_label.text = "المكافأة عند الوصول: %d جنيه | %d رقائق" % [data["money"], data["chips"]]
 
 func _complete_active_mission() -> void:
 	if not mission_running or not is_instance_valid(active_mission):
