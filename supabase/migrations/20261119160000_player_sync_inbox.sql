@@ -1,4 +1,5 @@
 -- Offline progress sync inbox. Client events are observations, never grants.
+create extension if not exists pg_cron with schema pg_catalog;
 create schema if not exists private;
 revoke all on schema private from public, anon, authenticated;
 
@@ -19,13 +20,19 @@ create table if not exists private.player_sync_events (
     check (pg_catalog.pg_column_size(payload) <= 8192)
 );
 
+create index if not exists player_sync_events_created_at_idx on private.player_sync_events (created_at);
+
 alter table private.player_sync_events enable row level security;
 revoke all on table private.player_sync_events from public, anon, authenticated;
+grant usage on schema private to authenticated;
+grant insert on table private.player_sync_events to authenticated;
+drop policy if exists player_sync_events_insert_own on private.player_sync_events;
+create policy player_sync_events_insert_own on private.player_sync_events for insert to authenticated with check (user_id = (select auth.uid()));
 
 create or replace function public.submit_player_sync_events(p_events jsonb)
 returns jsonb
 language plpgsql
-security definer
+security invoker
 set search_path = ''
 as $function$
 declare
@@ -52,6 +59,11 @@ begin
     v_event_count := pg_catalog.jsonb_array_length(p_events);
     if v_event_count < 1 or v_event_count > 50 then
         raise exception 'invalid_event_batch' using errcode = '22023';
+    end if;
+
+    perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(v_user_id::text, 0));
+    if (select pg_catalog.count(*) from private.player_sync_events where user_id = v_user_id and created_at >= pg_catalog.now() - interval '5 minutes') + v_event_count > 200 then
+        raise exception 'sync_rate_limited' using errcode = 'P0001';
     end if;
 
     for v_event in select value from pg_catalog.jsonb_array_elements(p_events)
@@ -151,6 +163,141 @@ begin
             if pg_catalog.length(v_payload ->> 'progress_key') < 1
                or pg_catalog.length(v_payload ->> 'progress_key') > 80 then
                 raise exception 'invalid_progress_value' using errcode = '22023';
+            end if;
+            if ((v_event_type = 'mission_progress_observed' and (v_payload ->> 'progress_key') !~ '^mission[.][a-z0-9][a-z0-9_.-]{0,70}
+                raise exception 'invalid_progress_value' using errcode = '22023';
+            end if;
+            if (v_payload ->> 'progress_value') !~ '^[0-9]{1,7}$' then
+                raise exception 'invalid_progress_value' using errcode = '22023';
+            end if;
+            if (v_payload ->> 'progress_value')::integer > 1000000 then
+                raise exception 'invalid_progress_value' using errcode = '22023';
+            end if;
+        else
+            raise exception 'event_type_not_allowed' using errcode = '22023';
+        end if;
+
+        insert into private.player_sync_events (
+            user_id, event_id, event_type, payload
+        ) values (
+            v_user_id, v_event_id, v_event_type, v_payload
+        )
+        on conflict (user_id, event_id) do nothing;
+
+        get diagnostics v_rows = row_count;
+        if v_rows = 1 then
+            v_inserted := v_inserted + 1;
+        else
+            v_duplicates := v_duplicates + 1;
+        end if;
+    end loop;
+
+    return pg_catalog.jsonb_build_object(
+        'accepted', v_inserted,
+        'duplicates', v_duplicates,
+        'authoritative', false
+    );
+end;
+$function$;
+
+revoke all on function public.submit_player_sync_events(jsonb) from public, anon;
+grant execute on function public.submit_player_sync_events(jsonb) to authenticated;
+
+comment on table private.player_sync_events is
+'Untrusted player-originated sync observations. Never use these rows to grant currency, items, ownership, rewards, or founder privileges.';
+comment on function public.submit_player_sync_events(jsonb) is
+'Idempotently records bounded, allowlisted player observations as SECURITY INVOKER under caller RLS. Does not grant rewards or alter authoritative game state.';
+
+select cron.unschedule(jobid) from cron.job where jobname = 'player-sync-events-retention';
+select cron.schedule('player-sync-events-retention', '17 3 * * *', $cleanup$ delete from private.player_sync_events where created_at < pg_catalog.now() - interval '30 days'; $cleanup$);
+) or (v_event_type = 'achievement_progress_observed' and (v_payload ->> 'progress_key') !~ '^achievement[.][a-z0-9][a-z0-9_.-]{0,67}
+                raise exception 'invalid_progress_value' using errcode = '22023';
+            end if;
+            if (v_payload ->> 'progress_value') !~ '^[0-9]{1,7}$' then
+                raise exception 'invalid_progress_value' using errcode = '22023';
+            end if;
+            if (v_payload ->> 'progress_value')::integer > 1000000 then
+                raise exception 'invalid_progress_value' using errcode = '22023';
+            end if;
+        else
+            raise exception 'event_type_not_allowed' using errcode = '22023';
+        end if;
+
+        insert into private.player_sync_events (
+            user_id, event_id, event_type, payload
+        ) values (
+            v_user_id, v_event_id, v_event_type, v_payload
+        )
+        on conflict (user_id, event_id) do nothing;
+
+        get diagnostics v_rows = row_count;
+        if v_rows = 1 then
+            v_inserted := v_inserted + 1;
+        else
+            v_duplicates := v_duplicates + 1;
+        end if;
+    end loop;
+
+    return pg_catalog.jsonb_build_object(
+        'accepted', v_inserted,
+        'duplicates', v_duplicates,
+        'authoritative', false
+    );
+end;
+$function$;
+
+revoke all on function public.submit_player_sync_events(jsonb) from public, anon;
+grant execute on function public.submit_player_sync_events(jsonb) to authenticated;
+
+comment on table private.player_sync_events is
+'Untrusted player-originated sync observations. Never use these rows to grant currency, items, ownership, rewards, or founder privileges.';
+comment on function public.submit_player_sync_events(jsonb) is
+'Idempotently records bounded, allowlisted player observations for the authenticated user. Does not grant rewards or alter authoritative game state.';
+) or (v_event_type = 'activity_progress_observed' and (v_payload ->> 'progress_key') !~ '^activity[.][a-z0-9][a-z0-9_.-]{0,70}
+                raise exception 'invalid_progress_value' using errcode = '22023';
+            end if;
+            if (v_payload ->> 'progress_value') !~ '^[0-9]{1,7}$' then
+                raise exception 'invalid_progress_value' using errcode = '22023';
+            end if;
+            if (v_payload ->> 'progress_value')::integer > 1000000 then
+                raise exception 'invalid_progress_value' using errcode = '22023';
+            end if;
+        else
+            raise exception 'event_type_not_allowed' using errcode = '22023';
+        end if;
+
+        insert into private.player_sync_events (
+            user_id, event_id, event_type, payload
+        ) values (
+            v_user_id, v_event_id, v_event_type, v_payload
+        )
+        on conflict (user_id, event_id) do nothing;
+
+        get diagnostics v_rows = row_count;
+        if v_rows = 1 then
+            v_inserted := v_inserted + 1;
+        else
+            v_duplicates := v_duplicates + 1;
+        end if;
+    end loop;
+
+    return pg_catalog.jsonb_build_object(
+        'accepted', v_inserted,
+        'duplicates', v_duplicates,
+        'authoritative', false
+    );
+end;
+$function$;
+
+revoke all on function public.submit_player_sync_events(jsonb) from public, anon;
+grant execute on function public.submit_player_sync_events(jsonb) to authenticated;
+
+comment on table private.player_sync_events is
+'Untrusted player-originated sync observations. Never use these rows to grant currency, items, ownership, rewards, or founder privileges.';
+comment on function public.submit_player_sync_events(jsonb) is
+'Idempotently records bounded, allowlisted player observations for the authenticated user. Does not grant rewards or alter authoritative game state.';
+)) then
+                raise exception 'progress_key_not_allowed' using errcode = '22023';
             end if;
             if pg_catalog.jsonb_typeof(v_payload -> 'progress_value') <> 'number' then
                 raise exception 'invalid_progress_value' using errcode = '22023';
