@@ -1,5 +1,5 @@
 begin;
-select extensions.plan(11);
+select extensions.plan(14);
 insert into auth.users (id,aud,role,email,encrypted_password,email_confirmed_at)
 values ('00000000-0000-4000-8000-000000000038','authenticated','authenticated','player-sync-inbox-test@example.invalid','',pg_catalog.now())
 on conflict (id) do nothing;
@@ -9,6 +9,9 @@ select pg_catalog.set_config('request.jwt.claim.sub','00000000-0000-4000-8000-00
 select extensions.is((public.submit_player_sync_events('[{"event_id":"10000000-0000-4000-8000-000000000001","event_type":"setting_changed","payload":{"key":"locale","value":"ar"}}]'::jsonb)->>'accepted')::integer,1,'accepts valid settings with invoker privileges');
 select extensions.is((public.submit_player_sync_events('[{"event_id":"10000000-0000-4000-8000-000000000001","event_type":"setting_changed","payload":{"key":"locale","value":"ar"}}]'::jsonb)->>'duplicates')::integer,1,'deduplicates replayed event IDs');
 select extensions.is(public.submit_player_sync_events('[{"event_id":"10000000-0000-4000-8000-000000000002","event_type":"setting_changed","payload":{"key":"music_enabled","value":true}}]'::jsonb)->>'authoritative','false','client observations are never authoritative');
+select extensions.is((public.submit_player_sync_events('[{"event_id":"10000000-0000-4000-8000-000000000009","event_type":"setting_changed","payload":{"key":"volume","value":65}}]'::jsonb)->>'accepted')::integer,1,'accepts bounded volume preference');
+select extensions.is((public.submit_player_sync_events('[{"event_id":"10000000-0000-4000-8000-000000000010","event_type":"setting_changed","payload":{"key":"quality","value":2}}]'::jsonb)->>'accepted')::integer,1,'accepts supported graphics quality preference');
+select extensions.throws_ok($select public.submit_player_sync_events('[{"event_id":"10000000-0000-4000-8000-000000000011","event_type":"setting_changed","payload":{"key":"quality","value":3}}]'::jsonb)$,'22023','invalid_setting_value','rejects graphics quality outside supported choices');
 select extensions.throws_ok($$select public.submit_player_sync_events('[{"event_id":"10000000-0000-4000-8000-000000000003","event_type":"setting_changed","payload":{"key":"wallet_balance","value":999999}}]'::jsonb)$$,'22023','setting_key_not_allowed','rejects unapproved setting keys');
 select extensions.throws_ok($$select public.submit_player_sync_events('[{"event_id":"10000000-0000-4000-8000-000000000004","event_type":"mission_progress_observed","payload":{"progress_key":"mission.test","progress_value":1000001}}]'::jsonb)$$,'22023','invalid_progress_value','rejects progress values above the cap');
 select extensions.throws_ok($$select public.submit_player_sync_events('[{"event_id":"10000000-0000-4000-8000-000000000008","event_type":"achievement_progress_observed","payload":{"progress_key":"mission.fake","progress_value":1}}]'::jsonb)$$,'22023','progress_key_not_allowed','enforces event-specific progress namespaces');
@@ -31,7 +34,7 @@ begin
             'payload',pg_catalog.jsonb_build_object('key','locale','value','ar')
         ))
         into batch_events
-        from pg_catalog.generate_series(batch_no * 50 + 1, least(batch_no * 50 + 50, 198)) gs;
+        from pg_catalog.generate_series(batch_no * 50 + 1, least(batch_no * 50 + 50, 196)) gs;
         perform public.submit_player_sync_events(batch_events);
     end loop;
 end;
