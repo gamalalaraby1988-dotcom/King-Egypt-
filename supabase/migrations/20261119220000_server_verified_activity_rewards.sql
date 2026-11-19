@@ -32,6 +32,8 @@ create table if not exists private.player_activity_proofs (
 
 create index if not exists player_activity_proofs_user_expiry_idx
     on private.player_activity_proofs(user_id, expires_at desc);
+create index if not exists player_activity_proofs_catalog_fk_idx
+    on private.player_activity_proofs(activity_kind, activity_id);
 
 create table if not exists private.player_reward_claims (
     claim_id uuid primary key default gen_random_uuid(),
@@ -52,6 +54,11 @@ alter table private.player_activity_proofs enable row level security;
 alter table private.player_activity_proofs force row level security;
 alter table private.player_reward_claims enable row level security;
 alter table private.player_reward_claims force row level security;
+
+drop policy if exists player_activity_reward_catalog_service_role_all on private.player_activity_reward_catalog;
+create policy player_activity_reward_catalog_service_role_all
+    on private.player_activity_reward_catalog for all to service_role
+    using (true) with check (true);
 
 revoke all on table private.player_activity_reward_catalog from public, anon, authenticated;
 revoke all on table private.player_activity_proofs from public, anon, authenticated;
