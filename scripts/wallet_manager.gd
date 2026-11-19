@@ -245,6 +245,57 @@ func _transact(transaction_id: String, currency: String, amount: int, kind: Stri
 	ledger = next_ledger
 	return true
 
+
+func credit_bundle_once(transaction_id: String, money_amount: int, chips_amount: int, reason: String = "") -> bool:
+	# إيداع مكافأتي الكاش والرقائق معًا في معاملة محفظة ذرية واحدة.
+	if _online_economy_locked():
+		return false
+	if not initialized or transaction_id.strip_edges().is_empty() or receipts.has(transaction_id):
+		return false
+	if money_amount < 0 or chips_amount < 0 or money_amount > MAX_BALANCE or chips_amount > MAX_BALANCE:
+		return false
+	if money_amount == 0 and chips_amount == 0:
+		return true
+	var config := ConfigFile.new()
+	if config.load(PROFILE_PATH) != OK:
+		return false
+	var next_balances := balances.duplicate(true)
+	var next_receipts := receipts.duplicate(true)
+	var next_ledger := ledger.duplicate(true)
+	var timestamp := Time.get_datetime_string_from_system(true)
+	for currency in ["money", "chips"]:
+		var amount := money_amount if currency == "money" else chips_amount
+		if amount == 0:
+			continue
+		var previous := int(next_balances[currency])
+		if previous + amount > MAX_BALANCE:
+			return false
+		next_balances[currency] = previous + amount
+		next_ledger.append({
+			"transaction_id": transaction_id,
+			"kind": "milestone_reward",
+			"currency": currency,
+			"amount": amount,
+			"balance_before": previous,
+			"balance_after": previous + amount,
+			"reason": reason.substr(0, 120),
+			"timestamp": timestamp
+		})
+	next_receipts[transaction_id] = timestamp
+	config.set_value("profile", "money", int(next_balances["money"]))
+	config.set_value("profile", "chips", int(next_balances["chips"]))
+	config.set_value("wallet", "schema_version", SCHEMA_VERSION)
+	config.set_value("wallet", "balances", next_balances)
+	config.set_value("wallet", "receipts", next_receipts)
+	config.set_value("wallet", "ledger", next_ledger)
+	config.set_value("wallet", "integrity_seal", _compute_integrity_seal(next_balances, next_receipts, next_ledger))
+	if not _atomic_save(config):
+		return false
+	balances = next_balances
+	receipts = next_receipts
+	ledger = next_ledger
+	return true
+
 func _persist_wallet(config: ConfigFile) -> bool:
 	config.set_value("wallet", "schema_version", SCHEMA_VERSION)
 	integrity_seal = _compute_integrity_seal(balances, receipts, ledger)
