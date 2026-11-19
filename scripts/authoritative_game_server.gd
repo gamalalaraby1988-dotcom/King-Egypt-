@@ -6,6 +6,8 @@ extends Node
 signal authentication_completed(success: bool, message: String)
 signal authoritative_state_received(position: Vector3, rotation_y: float, velocity: Vector3)
 signal server_objective_reached(user_id: String, activity_kind: String, activity_id: String)
+signal job_start_result(success: bool, job_id: String, target: Vector3, message: String)
+signal job_completed(job_id: String)
 
 const DEFAULT_PORT := 2456
 const MAX_PLAYERS := 64
@@ -106,7 +108,9 @@ func _on_peer_connected(peer_id: int) -> void:
 		"input_count": 0,
 		"reached_objectives": {},
 		"connected_at_usec": Time.get_ticks_usec(),
-		"last_auth_usec": 0
+		"last_auth_usec": 0,
+		"active_job": {},
+		"completed_jobs": {}
 	}
 
 
@@ -267,6 +271,63 @@ func submit_movement_input(sequence: int, direction: Vector3, sprint: bool) -> v
 	_sessions[peer_id] = session
 
 
+func _get_server_job_definition(job_id: String) -> Dictionary:
+	match job_id:
+		"courier_delivery":
+			return {"board": Vector3(24.0, 0.0, 4.5), "target": Vector3(24.0, 0.15, 14.0)}
+		"city_guide":
+			return {"board": Vector3(-24.0, 0.0, 4.5), "target": Vector3(-24.0, 0.15, -14.0)}
+		"city_maintenance":
+			return {"board": Vector3(4.5, 0.0, 24.0), "target": Vector3(14.0, 0.15, 24.0)}
+	return {}
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func request_start_job(job_id: String) -> void:
+	if not multiplayer.is_server():
+		return
+	var peer_id := multiplayer.get_remote_sender_id()
+	if not _sessions.has(peer_id) or not bool(_sessions[peer_id].get("authenticated", false)):
+		return
+	var session: Dictionary = _sessions[peer_id]
+	var safe_job_id := job_id.strip_edges().to_lower()
+	var definition := _get_server_job_definition(safe_job_id)
+	if definition.is_empty():
+		rpc_id(peer_id, "receive_job_start_result", false, safe_job_id, Vector3.ZERO, "هذه الوظيفة غير معتمدة على الخادم.")
+		return
+	if not (session.get("active_job", {}) as Dictionary).is_empty():
+		rpc_id(peer_id, "receive_job_start_result", false, safe_job_id, Vector3.ZERO, "لديك وظيفة أخرى قيد التنفيذ.")
+		return
+	if (session.get("completed_jobs", {}) as Dictionary).has(safe_job_id):
+		rpc_id(peer_id, "receive_job_start_result", false, safe_job_id, Vector3.ZERO, "أنجزت هذه الوظيفة بالفعل في جلسة اللعب.")
+		return
+	var body := session.get("body") as CharacterBody3D
+	if not is_instance_valid(body) or body.global_position.distance_to(definition["board"]) > 5.0:
+		rpc_id(peer_id, "receive_job_start_result", false, safe_job_id, Vector3.ZERO, "اقترب من لوحة الوظائف أولًا.")
+		return
+	session["active_job"] = {
+		"job_id": safe_job_id,
+		"target": definition["target"],
+		"radius": 2.2
+	}
+	_sessions[peer_id] = session
+	rpc_id(peer_id, "receive_job_start_result", true, safe_job_id, definition["target"], "بدأت الوظيفة على الخادم. اتبع علامة الهدف.")
+
+
+@rpc("authority", "call_remote", "reliable")
+func receive_job_start_result(success: bool, job_id: String, target: Vector3, message: String) -> void:
+	if multiplayer.is_server():
+		return
+	job_start_result.emit(success, job_id, target, message)
+
+
+@rpc("authority", "call_remote", "reliable")
+func receive_server_job_completed(job_id: String) -> void:
+	if multiplayer.is_server() or not is_authenticated():
+		return
+	job_completed.emit(job_id)
+
+
 func register_server_objective_zone(activity_kind: String, activity_id: String, center: Vector3, radius: float) -> bool:
 	if not multiplayer.is_server() or not ["mission", "job", "achievement", "daily_claim"].has(activity_kind):
 		return false
@@ -342,6 +403,18 @@ func _physics_process(delta: float) -> void:
 			body.rotation.y = atan2(direction.x, direction.z)
 		session["velocity"] = body.velocity
 		session = _evaluate_server_objective_zones(peer_id, session, body)
+		var active_job: Dictionary = session.get("active_job", {})
+		if not active_job.is_empty():
+			var job_target: Vector3 = active_job.get("target", Vector3.ZERO)
+			var planar_distance := Vector2(body.global_position.x, body.global_position.z).distance_to(Vector2(job_target.x, job_target.z))
+			if planar_distance <= float(active_job.get("radius", 2.2)):
+				var completed_job_id := str(active_job.get("job_id", ""))
+				var completed: Dictionary = session.get("completed_jobs", {})
+				completed[completed_job_id] = true
+				session["completed_jobs"] = completed
+				session["active_job"] = {}
+				server_objective_reached.emit(str(session.get("user_id", "")), "job", completed_job_id)
+				rpc_id(peer_id, "receive_server_job_completed", completed_job_id)
 		_sessions[peer_id] = session
 	_snapshot_elapsed += safe_delta
 	if _snapshot_elapsed >= SNAPSHOT_INTERVAL:
