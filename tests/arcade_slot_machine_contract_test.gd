@@ -33,7 +33,7 @@ func _run_arcade_machine_tests() -> void:
 			return
 
 	var controls := machine.get_node("SlotMachineTouchLayer/SlotMachineControls")
-	for required_control in ["BalanceValue", "BetValue", "WinValue", "DecreaseBetButton", "IncreaseBetButton", "MaxBetButton", "MinimumBetNote"]:
+	for required_control in ["KingOfEgyptBrand", "BalanceValue", "BetValue", "WinValue", "DecreaseBetButton", "IncreaseBetButton", "MaxBetButton", "SpinButton", "AutoButton", "LeaveSeatButton", "MinimumBetNote"]:
 		if controls.find_child(required_control, true, false) == null:
 			push_error("Missing chip/bet display control: " + required_control)
 			machine.queue_free()
@@ -57,6 +57,25 @@ func _run_arcade_machine_tests() -> void:
 	var blue_style := blue_button.get_theme_stylebox("normal") as StyleBoxFlat
 	if blue_style == null or blue_style.border_color.b < blue_style.border_color.r:
 		push_error("Bet adjustment controls must use blue styling.")
+		machine.queue_free()
+		quit(1)
+		return
+
+	var auto_button := controls.find_child("AutoButton", true, false) as Button
+	if auto_button == null or not auto_button.disabled:
+		push_error("AUTO must remain disabled until the trusted server controller is connected.")
+		machine.queue_free()
+		quit(1)
+		return
+	var leave_button := controls.find_child("LeaveSeatButton", true, false) as Button
+	if leave_button == null or leave_button.text != "🚪 مغادرة المقعد":
+		push_error("The approved dark-blue leave-seat control is missing.")
+		machine.queue_free()
+		quit(1)
+		return
+	var auto_style := auto_button.get_theme_stylebox("normal") as StyleBoxFlat
+	if auto_style == null or auto_style.border_color.r < auto_style.border_color.g:
+		push_error("AUTO must use red styling.")
 		machine.queue_free()
 		quit(1)
 		return
