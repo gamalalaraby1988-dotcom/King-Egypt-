@@ -25,6 +25,9 @@ VehicleStoreManager="*res://scripts/vehicle_store_manager.gd"
 [player_sync]
 enabled=false
 
+[player_friends]
+enabled=false
+
 [game_rewards]
 enabled=false
 
