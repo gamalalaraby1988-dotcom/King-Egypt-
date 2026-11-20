@@ -1,8 +1,6 @@
 extends Node
 const ProfileConfigStore = preload("res://scripts/profile_config_store.gd")
 
-func _save_path() -> String:
-	return ProfileConfigStore.get_active_profile_path()
 ## تقدم اللاعب عبر مباني التطوير الـ28 المعتمدة فقط.
 ## كل مبنى يضم خمس مراحل؛ إكمال المرحلة يفتح نطاق المستوى التالي.
 ## ترقية المستوى تتم بالمال، ولا تمنح الوظائف أو الأنشطة XP.
@@ -72,6 +70,9 @@ var _progress_label: Label
 var _cost_label: Label
 var _status_label: Label
 var _upgrade_button: Button
+
+func _save_path() -> String:
+	return ProfileConfigStore.get_active_profile_path()
 
 func _ready() -> void:
 	_load_progress()
