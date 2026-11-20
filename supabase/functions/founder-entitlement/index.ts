@@ -1,7 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
 const FOUNDER_ID = "king_of_egypt_city:founder:primary";
-const FOUNDER_EMAIL = "gamalalaraby1988@gmail.com";
 const ENTITLEMENT_TTL_SECONDS = 30 * 24 * 60 * 60;
 
 const CORS_HEADERS = {
@@ -62,9 +61,10 @@ Deno.serve(async (req: Request) => {
   const projectUrl = Deno.env.get("SUPABASE_URL");
   const publishableKeysRaw = Deno.env.get("SUPABASE_PUBLISHABLE_KEYS");
   const expectedUserId = Deno.env.get("FOUNDER_AUTH_USER_ID")?.trim().toLowerCase();
+  const expectedEmail = Deno.env.get("FOUNDER_AUTH_EMAIL")?.trim().toLowerCase();
   const privateKeyPem = Deno.env.get("FOUNDER_SIGNING_PRIVATE_KEY");
 
-  if (!projectUrl || !publishableKeysRaw || !expectedUserId || !privateKeyPem) {
+  if (!projectUrl || !publishableKeysRaw || !expectedUserId || !expectedEmail || !privateKeyPem) {
     return json({ error: "founder_entitlement_not_configured" }, 503);
   }
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(expectedUserId)) {
@@ -112,7 +112,7 @@ Deno.serve(async (req: Request) => {
   const verifiedEmail = String(user.email ?? "").trim().toLowerCase();
   if (
     String(user.id ?? "").toLowerCase() !== expectedUserId ||
-    verifiedEmail !== FOUNDER_EMAIL ||
+    verifiedEmail !== expectedEmail ||
     !user.email_confirmed_at
   ) {
     return json({ error: "founder_identity_not_authorized" }, 403);
