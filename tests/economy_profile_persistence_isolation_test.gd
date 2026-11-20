@@ -149,6 +149,23 @@ func _run() -> void:
 	if int(after_snapshot.get_value("wallet", "balances", {}).get("money", -1)) != 925 or not after_snapshot.get_value("wallet", "receipts", {}).has("purchase_vehicle_elantra"):
 		_fail("Shared atomic snapshot writer lost wallet balances or receipts.")
 		return
+
+	# Vehicle selection is mutable profile state, while ownership remains protected.
+	after_snapshot.set_value("profile", "selected_vehicle_id", "hyundai_elantra")
+	after_snapshot.set_value("profile", "selected_horus_color", "royal_gold")
+	if not Store.save_config_snapshot(after_snapshot, TEST_PATH, TEMP_PATH, BACKUP_PATH):
+		_fail("Could not persist selected vehicle/color through the shared writer.")
+		return
+	var after_vehicle_selection := ConfigFile.new()
+	if after_vehicle_selection.load(TEST_PATH) != OK:
+		_fail("Could not reload selected vehicle/color state.")
+		return
+	if str(after_vehicle_selection.get_value("profile", "selected_vehicle_id", "")) != "hyundai_elantra" or str(after_vehicle_selection.get_value("profile", "selected_horus_color", "")) != "royal_gold":
+		_fail("Selected vehicle or Horus color was not persisted.")
+		return
+	if after_vehicle_selection.get_value("profile", "owned_vehicles", []) != ["toyota_corolla", "hyundai_elantra"]:
+		_fail("Vehicle selection update changed the owned vehicle list.")
+		return
 	_cleanup()
 	print("Economy profile persistence isolation tests passed.")
 	quit(0)
