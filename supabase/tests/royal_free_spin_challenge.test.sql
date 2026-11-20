@@ -1,5 +1,5 @@
 begin;
-select extensions.plan(16);
+select extensions.plan(24);
 
 insert into auth.users (id,aud,role,email,encrypted_password,email_confirmed_at)
 values ('00000000-0000-4000-8000-000000000087','authenticated','authenticated','royal-free-spin-test@example.invalid','',pg_catalog.now())
@@ -135,5 +135,71 @@ select extensions.ok(
     'only service_role can execute spin settlement'
 );
 
+
+insert into auth.users (id,aud,role,email,encrypted_password,email_confirmed_at)
+values ('00000000-0000-4000-8000-000000000088','authenticated','authenticated','royal-auto-spin-test@example.invalid','',pg_catalog.now())
+on conflict (id) do nothing;
+insert into public.player_wallets (user_id,cash,gems,chips,xp)
+values ('00000000-0000-4000-8000-000000000088',0,0,100,0)
+on conflict (user_id) do update set chips=100;
+insert into private.arcade_slot_challenge_state (user_id,machine_id,challenge_progress,free_spins)
+values ('00000000-0000-4000-8000-000000000088','vip_royal_classic',0,1)
+on conflict (user_id,machine_id) do update set challenge_progress=0,free_spins=1;
+
+set local role service_role;
+select extensions.is(
+    (public.settle_arcade_slot_spin_auto(
+        '00000000-0000-4000-8000-000000000088',
+        '10000000-0000-4000-8000-000000000088',
+        '20000000-0000-4000-8000-000000000090',
+        'vip_royal_classic',10,array[0,1,2],array[1,2,3,4,1,2,3,4,1]
+    )->>'spin_type'),
+    'free',
+    'automatic mode consumes a free spin before any paid spin'
+);
+reset role;
+select extensions.is(
+    (select free_spins from private.arcade_slot_challenge_state
+     where user_id='00000000-0000-4000-8000-000000000088' and machine_id='vip_royal_classic'),
+    0::bigint,
+    'automatic free spin is consumed by the authoritative transaction'
+);
+select extensions.is(
+    (select chips from public.player_wallets where user_id='00000000-0000-4000-8000-000000000088'),
+    100::bigint,
+    'automatic free spin does not debit the chip wallet'
+);
+
+set local role service_role;
+select extensions.is(
+    (public.settle_arcade_slot_spin_auto(
+        '00000000-0000-4000-8000-000000000088',
+        '10000000-0000-4000-8000-000000000088',
+        '20000000-0000-4000-8000-000000000091',
+        'vip_royal_classic',10,array[0,1,2],array[1,2,3,4,1,2,3,4,1]
+    )->>'spin_type'),
+    'paid',
+    'automatic mode falls back to a paid spin only after free spins are exhausted'
+);
+reset role;
+select extensions.is(
+    (select chips from public.player_wallets where user_id='00000000-0000-4000-8000-000000000088'),
+    90::bigint,
+    'automatic paid fallback debits the approved wager'
+);
+select extensions.ok(
+    not pg_catalog.has_function_privilege('anon','public.settle_arcade_slot_spin_auto(uuid,uuid,uuid,text,bigint,integer[],integer[])','EXECUTE'),
+    'anon cannot execute automatic spin settlement'
+);
+select extensions.ok(
+    not pg_catalog.has_function_privilege('authenticated','public.settle_arcade_slot_spin_auto(uuid,uuid,uuid,text,bigint,integer[],integer[])','EXECUTE'),
+    'authenticated clients cannot execute automatic spin settlement'
+);
+select extensions.ok(
+    pg_catalog.has_function_privilege('service_role','public.settle_arcade_slot_spin_auto(uuid,uuid,uuid,text,bigint,integer[],integer[])','EXECUTE'),
+    'only service_role can execute automatic spin settlement'
+);
+
 select * from extensions.finish();
+
 rollback;
