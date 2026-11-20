@@ -76,12 +76,7 @@ func _pbkdf2(password: PackedByteArray, salt: PackedByteArray, iterations: int) 
 	return output
 
 func _hmac_sha256(key: PackedByteArray, data: PackedByteArray) -> PackedByteArray:
-	var context := HashingContext.new()
-	if context.start(HashingContext.HASH_SHA256, key) != OK:
-		return PackedByteArray()
-	if context.update(data) != OK:
-		return PackedByteArray()
-	return context.finish()
+	return Crypto.new().hmac_digest(HashingContext.HASH_SHA256, key, data)
 
 func _load_store() -> void:
 	var config := ConfigFile.new()
