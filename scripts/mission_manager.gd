@@ -1622,6 +1622,10 @@ func _complete_active_mission() -> void:
 	if not saved:
 		mission_running = false
 		survival_time_remaining = 0.0
+		if is_instance_valid(survival_progress_label):
+			survival_progress_label.visible = false
+		if is_instance_valid(survival_progress_bar):
+			survival_progress_bar.visible = false
 		target_marker.visible = false
 		status_label.text = "لم يتم حفظ إكمال المهمة؛ لم تُصرف المكافأة. ابدأ المهمة مجددًا للمحاولة."
 		accept_button.disabled = false
@@ -1633,6 +1637,10 @@ func _complete_active_mission() -> void:
 		achievement_manager.record_mission_completed(key)
 	mission_running = false
 	survival_time_remaining = 0.0
+	if is_instance_valid(survival_progress_label):
+		survival_progress_label.visible = false
+	if is_instance_valid(survival_progress_bar):
+		survival_progress_bar.visible = false
 	_set_message_puzzle_visible(false)
 	_hide_adventure_treasure()
 	target_marker.visible = false
