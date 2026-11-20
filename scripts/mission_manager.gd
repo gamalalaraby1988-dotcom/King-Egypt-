@@ -92,11 +92,10 @@ const WEEKLY_JOB_SCHEDULE := {
 }
 
 func _egypt_datetime() -> Dictionary:
-	return Time.get_datetime_dict_from_unix_time(int(Time.get_unix_time_from_system()) + EGYPT_UTC_OFFSET_SECONDS)
+	return GameCalendar.get_egypt_datetime()
 
 func _egypt_day_key() -> String:
-	var date := _egypt_datetime()
-	return "%04d-%02d-%02d" % [int(date.year), int(date.month), int(date.day)]
+	return GameCalendar.get_egypt_day_key()
 
 func _daily_job_key(job_id: String) -> String:
 	return "%s:%s" % [_egypt_day_key(), job_id]
