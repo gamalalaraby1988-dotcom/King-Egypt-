@@ -633,10 +633,25 @@ func _process(_delta: float) -> void:
 
 
 func _update_interaction_target() -> void:
-	# لا تفحص تفاعلات المدينة أثناء الانتقال أو أثناء وجود اللاعب داخل مبنى.
 	var city_root := get_tree().current_scene
-	if is_instance_valid(city_root) and (bool(city_root.get("interior_transition_busy")) or is_instance_valid(city_root.get("interior_root"))):
+	if is_instance_valid(city_root) and bool(city_root.get("interior_transition_busy")):
 		nearest_interactable = null
+		nearest_building = null
+		return
+	# داخل القصر نفحص بواباته فقط؛ لا نعيد تفاعلات المدينة المخفية.
+	if is_instance_valid(city_root) and is_instance_valid(city_root.get("interior_root")):
+		var palace_best: Node3D = null
+		var palace_distance := INF
+		for candidate in get_tree().get_nodes_in_group("city_interactables"):
+			if not is_instance_valid(candidate) or candidate.is_queued_for_deletion() or not candidate is Node3D or not candidate.has_meta("palace_portal_target"):
+				continue
+			var radius_value: Variant = candidate.get("interaction_radius")
+			var allowed_distance := float(radius_value) if radius_value != null else 3.6
+			var distance := player.global_position.distance_to(candidate.global_position)
+			if distance <= allowed_distance and distance < palace_distance:
+				palace_distance = distance
+				palace_best = candidate
+		nearest_interactable = palace_best
 		nearest_building = null
 		return
 	var previous_target := nearest_interactable
@@ -650,7 +665,6 @@ func _update_interaction_target() -> void:
 		var radius_value: Variant = candidate.get("interaction_radius")
 		var allowed_distance := float(radius_value) if radius_value != null else 4.5
 		allowed_distance = clampf(allowed_distance, 0.5, 4.8)
-		# هامش خروج صغير للهدف الحالي يمنع وميض زر التفاعل عند حافة النطاق.
 		if candidate == previous_target:
 			allowed_distance += 0.65
 		var distance := player.global_position.distance_to(candidate.global_position)
@@ -661,6 +675,8 @@ func _update_interaction_target() -> void:
 	nearest_building = best if is_instance_valid(best) and best.has_method("get_mission_data") else null
 
 func _interaction_action_key(target: Node3D) -> String:
+	if target.has_meta("palace_portal_target"):
+		return "interaction_enter"
 	if target.has_method("sit_player"):
 		return "interaction_talk"
 	if target.has_method("get_development_data"):
@@ -690,6 +706,15 @@ func _update_interaction_hud() -> void:
 	interact_button.tooltip_text = CityLanguage.translate(_interaction_action_key(nearest_interactable)) if has_interaction else CityLanguage.translate("interaction_approach")
 	if has_interaction:
 		var display_name := CityLanguage.translate("interaction_place")
+		if nearest_interactable.has_meta("palace_portal_label"):
+			display_name = str(nearest_interactable.get_meta("palace_portal_label"))
+			if nearest_interactable.has_meta("palace_room_center"):
+				var portal_position := nearest_interactable.global_position
+				var actor_position := player.global_position
+				var door_side := str(nearest_interactable.get_meta("palace_door_side", "south"))
+				var inside_room := actor_position.z < portal_position.z if door_side == "south" else actor_position.z > portal_position.z
+				if inside_room:
+					display_name = "الخروج إلى الردهة"
 		elif nearest_interactable.has_method("get_development_data"):
 			display_name = str(nearest_interactable.get_development_data().get("title", "مبنى التطوير"))
 		elif nearest_interactable.has_method("get_job_data"):
@@ -730,6 +755,11 @@ func open_interactable(target: Node3D) -> void:
 	var allowed_distance := float(radius_value) if radius_value != null else 4.5
 	if player.global_position.distance_to(target.global_position) > clampf(allowed_distance, 0.5, 4.8) + 0.65:
 		_update_interaction_target()
+		return
+	if target.has_meta("palace_portal_target"):
+		var city_root := get_tree().current_scene
+		if is_instance_valid(city_root) and city_root.has_method("use_palace_portal"):
+			city_root.use_palace_portal(target, player)
 		return
 	if target.has_method("sit_player"):
 		var seated := bool(target.call("sit_player", player))

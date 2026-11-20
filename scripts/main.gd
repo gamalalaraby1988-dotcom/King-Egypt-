@@ -8,7 +8,12 @@ var interior_player: CharacterBody3D = null
 var interior_return_transform: Transform3D
 var interior_loading_layer: CanvasLayer
 var interior_loading_label: Label
+var interior_loading_progress: ProgressBar
+var interior_loading_tween: Tween
 var interior_exit_button: Button
+var palace_navigation_layer: CanvasLayer
+var palace_navigation_button: Button
+var palace_navigation_popup: PopupMenu
 var interior_transition_busy := false
 var interior_loading_message_key := "interior_loading"
 var interior_hidden_world_states: Dictionary = {}
@@ -50,6 +55,7 @@ func _ready() -> void:
 	_create_pyramids_area()
 	_create_navigation_destinations()
 	_create_interior_transition_ui()
+	_create_palace_navigation_ui()
 	_create_player_vehicle()
 	_create_mode_selection_ui()
 	_create_founder_update_panel()
@@ -361,29 +367,84 @@ func _create_interior_transition_ui() -> void:
 	add_child(interior_loading_layer)
 	var backdrop := ColorRect.new()
 	backdrop.name = "LoadingBackdrop"
-	backdrop.color = Color(0.035, 0.045, 0.055, 0.96)
+	backdrop.color = Color(0.035, 0.025, 0.018, 0.98)
 	backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	backdrop.visible = false
 	interior_loading_layer.add_child(backdrop)
+	# إطار فرعوني ذهبي وزخارف هندسية خفيفة بدل خلفية فارغة.
+	var frame := Panel.new()
+	frame.name = "PharaonicFrame"
+	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	frame.offset_left = 22
+	frame.offset_top = 22
+	frame.offset_right = -22
+	frame.offset_bottom = -22
+	var frame_style := StyleBoxFlat.new()
+	frame_style.bg_color = Color(0.07, 0.045, 0.025, 0.0)
+	frame_style.border_color = Color(0.78, 0.57, 0.23, 0.95)
+	frame_style.set_border_width_all(3)
+	frame_style.set_corner_radius_all(12)
+	frame.add_theme_stylebox_override("panel", frame_style)
+	backdrop.add_child(frame)
+	for side in [-1, 1]:
+		var hieroglyphs := Label.new()
+		hieroglyphs.name = "HieroglyphColumn_%d" % side
+		hieroglyphs.text = "𓂀\n𓆣\n𓋹\n𓊖\n𓇳"
+		hieroglyphs.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		hieroglyphs.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		hieroglyphs.size = Vector2(86, 390)
+		hieroglyphs.set_anchors_and_offsets_preset(Control.PRESET_CENTER_LEFT if side < 0 else Control.PRESET_CENTER_RIGHT)
+		hieroglyphs.position = Vector2(34 if side < 0 else -120, -195)
+		hieroglyphs.add_theme_font_size_override("font_size", 38)
+		hieroglyphs.add_theme_color_override("font_color", Color(0.78, 0.58, 0.27, 0.22))
+		backdrop.add_child(hieroglyphs)
+	var ornament := Label.new()
+	ornament.name = "PharaonicOrnament"
+	ornament.text = "𓂀     𓆣     𓋹     𓂀"
+	ornament.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	ornament.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
+	ornament.position = Vector2(-190, 95)
+	ornament.size = Vector2(380, 60)
+	ornament.add_theme_font_size_override("font_size", 38)
+	ornament.add_theme_color_override("font_color", Color(0.88, 0.68, 0.31))
+	backdrop.add_child(ornament)
 	var content := VBoxContainer.new()
 	content.name = "LoadingContent"
 	content.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-	content.position = Vector2(-210, -85)
-	content.size = Vector2(420, 170)
+	content.position = Vector2(-230, -55)
+	content.size = Vector2(460, 190)
 	content.alignment = BoxContainer.ALIGNMENT_CENTER
 	content.add_theme_constant_override("separation", 18)
 	backdrop.add_child(content)
 	interior_loading_label = Label.new()
 	interior_loading_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	interior_loading_label.add_theme_font_size_override("font_size", 26)
-	interior_loading_label.add_theme_color_override("font_color", Color(0.94, 0.79, 0.43))
+	interior_loading_label.add_theme_font_size_override("font_size", 27)
+	interior_loading_label.add_theme_color_override("font_color", Color(0.98, 0.82, 0.48))
 	content.add_child(interior_loading_label)
 	var hint := Label.new()
 	hint.text = "𓂀   KING OF EGYPT CITY   𓂀"
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	hint.add_theme_font_size_override("font_size", 16)
-	hint.add_theme_color_override("font_color", Color(0.88, 0.86, 0.78))
+	hint.add_theme_font_size_override("font_size", 17)
+	hint.add_theme_color_override("font_color", Color(0.91, 0.84, 0.68))
 	content.add_child(hint)
+	interior_loading_progress = ProgressBar.new()
+	interior_loading_progress.name = "LoadingProgress"
+	interior_loading_progress.custom_minimum_size = Vector2(420, 20)
+	interior_loading_progress.min_value = 0.0
+	interior_loading_progress.max_value = 100.0
+	interior_loading_progress.value = 0.0
+	interior_loading_progress.show_percentage = true
+	var progress_style := StyleBoxFlat.new()
+	progress_style.bg_color = Color(0.12, 0.09, 0.06)
+	progress_style.border_color = Color(0.78, 0.57, 0.23)
+	progress_style.set_border_width_all(2)
+	progress_style.set_corner_radius_all(8)
+	interior_loading_progress.add_theme_stylebox_override("background", progress_style)
+	var fill_style := StyleBoxFlat.new()
+	fill_style.bg_color = Color(0.86, 0.65, 0.27)
+	fill_style.set_corner_radius_all(6)
+	interior_loading_progress.add_theme_stylebox_override("fill", fill_style)
+	content.add_child(interior_loading_progress)
 	interior_exit_button = Button.new()
 	interior_exit_button.text = CityLanguage.translate("interior_exit")
 	interior_exit_button.visible = false
@@ -406,10 +467,20 @@ func _show_interior_loading(show_exit: bool = false, message_key: String = "inte
 	if not is_instance_valid(interior_loading_layer):
 		return
 	interior_loading_message_key = message_key
+	if is_instance_valid(palace_navigation_layer):
+		palace_navigation_layer.visible = false
+		if is_instance_valid(palace_navigation_popup):
+			palace_navigation_popup.hide()
 	var backdrop := interior_loading_layer.get_node_or_null("LoadingBackdrop") as ColorRect
 	if is_instance_valid(backdrop):
 		backdrop.visible = not show_exit
 	interior_exit_button.visible = show_exit
+	if not show_exit and is_instance_valid(interior_loading_progress):
+		if is_instance_valid(interior_loading_tween):
+			interior_loading_tween.kill()
+		interior_loading_progress.value = 0.0
+		interior_loading_tween = create_tween()
+		interior_loading_tween.tween_property(interior_loading_progress, "value", 100.0, 0.65)
 	_refresh_interior_ui_language()
 
 func _hide_interior_loading() -> void:
@@ -419,6 +490,10 @@ func _hide_interior_loading() -> void:
 	if is_instance_valid(backdrop):
 		backdrop.visible = false
 	interior_exit_button.visible = false
+	if is_instance_valid(interior_loading_tween):
+		interior_loading_tween.kill()
+	if is_instance_valid(interior_root) and bool(interior_root.get_meta("royal_palace", false)):
+		_set_palace_navigation_visible(true)
 
 func enter_building_interior(building: Node3D, actor: Node3D) -> void:
 	var body := actor as CharacterBody3D
@@ -460,7 +535,9 @@ func enter_building_interior(building: Node3D, actor: Node3D) -> void:
 	body.rotation.y = PI
 	body.set_physics_process(true)
 	interior_transition_busy = false
-	_show_interior_loading(true)
+	_set_palace_navigation_visible(str(building.get("building_title")) == "القصر الملكي")
+	await get_tree().create_timer(0.15).timeout
+	_hide_interior_loading()
 
 func _set_city_world_hidden(hidden: bool) -> void:
 	if hidden:
@@ -495,6 +572,7 @@ func _create_building_interior(building_title: String) -> void:
 	interior_root = Node3D.new()
 	interior_root.name = "GeneratedBuildingInterior"
 	interior_root.position = INTERIOR_WORLD_POSITION
+	interior_root.set_meta("royal_palace", building_title == "القصر الملكي")
 	add_child(interior_root)
 	if building_title == "القصر الملكي":
 		_create_royal_palace_interior(interior_root)
@@ -526,72 +604,254 @@ func _create_building_interior(building_title: String) -> void:
 	light.light_energy = 1.2
 	light.omni_range = 18.0
 	interior_root.add_child(light)
+	_create_palace_portal(interior_root, "BuildingCityExitGate", "الخروج إلى المدينة", Vector3(0,0,6.8), "city_exit")
 
 func _create_royal_palace_interior(root: Node3D) -> void:
-	# جناح داخلي واحد متصل؛ المناطق الخمس أجنحة داخل القصر وليست مباني مستقلة.
-	_create_box(root, "PalaceMarbleFloor", Vector3(30, 0.35, 24), Vector3(0, 0, 0), Color(0.72, 0.66, 0.54), true)
-	_create_box(root, "PalaceBackWall", Vector3(30, 6.5, 0.4), Vector3(0, 3.25, -12), Color(0.78, 0.70, 0.56), true)
-	_create_box(root, "PalaceLeftWall", Vector3(0.4, 6.5, 24), Vector3(-15, 3.25, 0), Color(0.70, 0.61, 0.47), true)
-	_create_box(root, "PalaceRightWall", Vector3(0.4, 6.5, 24), Vector3(15, 3.25, 0), Color(0.70, 0.61, 0.47), true)
-	_create_box(root, "PalaceFrontLeft", Vector3(9, 6.5, 0.4), Vector3(-10.5, 3.25, 12), Color(0.78, 0.70, 0.56), true)
-	_create_box(root, "PalaceFrontRight", Vector3(9, 6.5, 0.4), Vector3(10.5, 3.25, 12), Color(0.78, 0.70, 0.56), true)
-	_create_box(root, "PalaceEntranceLintel", Vector3(12, 1.0, 0.45), Vector3(0, 5.9, 12), Color(0.86, 0.67, 0.30), true)
-	_create_box(root, "PalaceCeilingBand", Vector3(29.2, 0.22, 0.25), Vector3(0, 5.2, -11.72), Color(0.88, 0.69, 0.32))
-	var zones := [
-		{"id":"ThroneHall","name":"قاعة العرش الملكية","position":Vector3(-9, 0, -6),"color":Color(0.52, 0.34, 0.22)},
-		{"id":"CelebrationHall","name":"قاعة الاحتفالات","position":Vector3(0, 0, -6),"color":Color(0.48, 0.25, 0.22)},
-		{"id":"EuropeanCasino","name":"الكازينو الأوروبي","position":Vector3(9, 0, -6),"color":Color(0.12, 0.30, 0.29)},
-		{"id":"VIPLounge","name":"صالة VIP","position":Vector3(-7, 0, 6),"color":Color(0.16, 0.22, 0.30)},
-		{"id":"IndoorGarden","name":"الحديقة الملكية الداخلية","position":Vector3(7, 0, 6),"color":Color(0.19, 0.34, 0.23)}
+	# ردهة مركزية وخمسة أجنحة مغلقة بجدران وتصادمات مستقلة.
+	_create_box(root, "PalaceMarbleFloor", Vector3(34, 0.35, 30), Vector3(0, 0, 0), Color(0.72, 0.66, 0.54), true)
+	_create_box(root, "PalaceBackWall", Vector3(34, 6.5, 0.4), Vector3(0, 3.25, -15), Color(0.78, 0.70, 0.56), true)
+	_create_box(root, "PalaceLeftWall", Vector3(0.4, 6.5, 30), Vector3(-17, 3.25, 0), Color(0.70, 0.61, 0.47), true)
+	_create_box(root, "PalaceRightWall", Vector3(0.4, 6.5, 30), Vector3(17, 3.25, 0), Color(0.70, 0.61, 0.47), true)
+	_create_box(root, "PalaceFrontLeft", Vector3(12, 6.5, 0.4), Vector3(-11, 3.25, 15), Color(0.78, 0.70, 0.56), true)
+	_create_box(root, "PalaceFrontRight", Vector3(12, 6.5, 0.4), Vector3(11, 3.25, 15), Color(0.78, 0.70, 0.56), true)
+	_create_box(root, "PalaceEntranceLintel", Vector3(10, 1.0, 0.45), Vector3(0, 5.9, 15), Color(0.86, 0.67, 0.30), true)
+	_create_box(root, "PalaceLobbyFloor", Vector3(13, 0.18, 9), Vector3(0, 0.22, 0), Color(0.83, 0.75, 0.61), true)
+	_create_box(root, "PalaceLobbyGoldInlay", Vector3(9, 0.07, 6), Vector3(0, 0.35, 0), Color(0.86, 0.67, 0.30))
+	var lobby_title := Label3D.new()
+	lobby_title.name = "PalaceLobbyTitle"
+	lobby_title.text = "الردهة الملكية"
+	lobby_title.position = Vector3(0, 3.7, -3.9)
+	lobby_title.font_size = 42
+	lobby_title.pixel_size = 0.012
+	lobby_title.modulate = Color(1.0, 0.88, 0.58)
+	lobby_title.outline_size = 7
+	root.add_child(lobby_title)
+
+	var rooms := [
+		{"id":"ThroneHall","label":"قاعة العرش الملكية","center":Vector3(-10,0,-9),"door":"south","color":Color(0.52,0.34,0.22),"target":"throne"},
+		{"id":"CelebrationHall","label":"قاعة الاحتفالات","center":Vector3(0,0,-9),"door":"south","color":Color(0.48,0.25,0.22),"target":"celebration"},
+		{"id":"EuropeanCasino","label":"الكازينو الأوروبي","center":Vector3(10,0,-9),"door":"south","color":Color(0.12,0.30,0.29),"target":"casino"},
+		{"id":"VIPLounge","label":"صالة VIP","center":Vector3(-7,0,9),"door":"north","color":Color(0.16,0.22,0.30),"target":"vip"},
+		{"id":"IndoorGarden","label":"الحديقة الملكية الداخلية","center":Vector3(7,0,9),"door":"north","color":Color(0.19,0.34,0.23),"target":"garden"}
 	]
-	for zone in zones:
-		var zone_id := str(zone["id"])
-		var zone_position: Vector3 = zone["position"]
-		var zone_color: Color = zone["color"]
-		_create_box(root, zone_id + "FloorAccent", Vector3(7.4, 0.08, 5.4), zone_position + Vector3(0, 0.22, 0), zone_color)
-		_create_box(root, zone_id + "GoldBorderFront", Vector3(7.5, 0.12, 0.16), zone_position + Vector3(0, 0.29, 2.7), Color(0.86, 0.67, 0.30))
-		_create_box(root, zone_id + "GoldBorderBack", Vector3(7.5, 0.12, 0.16), zone_position + Vector3(0, 0.29, -2.7), Color(0.86, 0.67, 0.30))
+	for room in rooms:
+		var center: Vector3 = room["center"]
+		var room_id := str(room["id"])
+		var label := str(room["label"])
+		var door_side := str(room["door"])
+		var room_color: Color = room["color"]
+		_create_palace_room_shell(root, room_id, center, door_side, room_color)
+		var portal_z := center.z + (4.35 if door_side == "south" else -4.35)
+		_create_palace_portal(root, room_id + "Door", "دخول " + label, Vector3(center.x,0,portal_z), str(room["target"]))
 		var plaque := Label3D.new()
-		plaque.name = zone_id + "Plaque"
-		plaque.text = str(zone["name"])
-		plaque.position = zone_position + Vector3(0, 2.7, -2.45)
-		plaque.font_size = 30
+		plaque.name = room_id + "Plaque"
+		plaque.text = label
+		plaque.position = center + Vector3(0,3.2,-3.55)
+		plaque.font_size = 25
 		plaque.pixel_size = 0.012
-		plaque.modulate = Color(1.0, 0.88, 0.58)
+		plaque.modulate = Color(1.0,0.88,0.58)
 		plaque.outline_size = 7
 		root.add_child(plaque)
-		_create_box(root, zone_id + "Feature", Vector3(2.8, 1.0, 1.0), zone_position + Vector3(0, 0.85, 0.3), zone_color, true)
-		for side in [-1.0, 1.0]:
-			_create_box(root, zone_id + "Column_" + str(side), Vector3(0.28, 3.0, 0.28), zone_position + Vector3(side * 3.35, 1.7, -2.2), Color(0.84, 0.68, 0.39))
-	# عرش مرتفع، طاولات احتفال، منصات ماكينات شكلية، مقاعد VIP وأحواض نباتية.
-	_create_box(root, "ThroneDais", Vector3(3.8, 0.45, 2.6), Vector3(-9, 0.48, -8.0), Color(0.58, 0.43, 0.24), true)
-	_create_box(root, "ThroneSeat", Vector3(1.8, 1.8, 1.0), Vector3(-9, 1.6, -8.0), Color(0.42, 0.12, 0.12), true)
+		_create_box(root, room_id + "Feature", Vector3(2.2,0.9,0.9), center + Vector3(0,0.75,0.7), room_color, true)
+
+	# ديكور مستقل لكل جناح، مع الحفاظ على أن الماكينات هنا مجسمات شكلية فقط.
+	_create_box(root, "ThroneDais", Vector3(3.8,0.45,2.6), Vector3(-10,0.48,-10.5), Color(0.58,0.43,0.24), true)
+	_create_box(root, "ThroneSeat", Vector3(1.8,1.8,1.0), Vector3(-10,1.6,-10.5), Color(0.42,0.12,0.12), true)
 	for i in range(3):
 		var x := -2.0 + float(i) * 2.0
-		_create_box(root, "CelebrationTable_%d" % i, Vector3(1.3, 0.18, 1.3), Vector3(x, 0.85, -6.2), Color(0.48, 0.27, 0.14), true)
+		_create_box(root, "CelebrationTable_%d" % i, Vector3(1.3,0.18,1.3), Vector3(x,0.85,-9.2), Color(0.48,0.27,0.14), true)
 	for i in range(3):
-		var x := 6.5 + float(i) * 2.2
-		_create_box(root, "CasinoMachinePedestal_%d" % i, Vector3(1.0, 1.8, 0.8), Vector3(x, 1.0, -6.2), Color(0.12, 0.19, 0.20), true)
-		_create_box(root, "CasinoMachineScreen_%d" % i, Vector3(0.82, 0.75, 0.12), Vector3(x, 2.0, -6.62), Color(0.75, 0.53, 0.20))
+		var x := 8.0 + float(i) * 1.8
+		_create_box(root, "CasinoMachinePedestal_%d" % i, Vector3(0.9,1.7,0.75), Vector3(x,0.9,-9.2), Color(0.12,0.19,0.20), true)
+		_create_box(root, "CasinoMachineScreen_%d" % i, Vector3(0.72,0.65,0.12), Vector3(x,1.85,-9.55), Color(0.75,0.53,0.20))
 	for i in range(2):
-		_create_box(root, "VIPSofa_%d" % i, Vector3(2.8, 0.75, 1.0), Vector3(-8.5 + float(i) * 3.0, 0.45, 7.1), Color(0.12, 0.20, 0.28), true)
+		_create_box(root, "VIPSofa_%d" % i, Vector3(2.5,0.7,0.9), Vector3(-8.5 + float(i)*3.0,0.42,10.0), Color(0.12,0.20,0.28), true)
 	for i in range(3):
-		_create_box(root, "GardenPlanter_%d" % i, Vector3(1.5, 0.65, 1.5), Vector3(5.0 + float(i) * 2.0, 0.45, 7.0), Color(0.20, 0.36, 0.22), true)
-		_create_box(root, "GardenPlant_%d" % i, Vector3(0.65, 1.8, 0.65), Vector3(5.0 + float(i) * 2.0, 1.55, 7.0), Color(0.15, 0.42, 0.20))
+		_create_box(root, "GardenPlanter_%d" % i, Vector3(1.3,0.6,1.3), Vector3(5.0 + float(i)*1.8,0.42,10.0), Color(0.20,0.36,0.22), true)
+		_create_box(root, "GardenPlant_%d" % i, Vector3(0.55,1.6,0.55), Vector3(5.0 + float(i)*1.8,1.45,10.0), Color(0.15,0.42,0.20))
+	_create_palace_portal(root, "PalaceCityExitGate", "الخروج إلى المدينة", Vector3(0,0,13.0), "city_exit")
 	var title := Label3D.new()
 	title.name = "RoyalPalaceInteriorTitle"
 	title.text = "القصر الملكي"
-	title.position = Vector3(0, 4.4, -11.72)
-	title.font_size = 56
+	title.position = Vector3(0,5.1,-14.6)
+	title.font_size = 54
 	title.pixel_size = 0.012
-	title.modulate = Color(1.0, 0.88, 0.58)
+	title.modulate = Color(1.0,0.88,0.58)
 	root.add_child(title)
 	var light := OmniLight3D.new()
-	light.position = Vector3(0, 5.2, 0)
-	light.light_color = Color(1.0, 0.82, 0.57)
+	light.position = Vector3(0,5.2,0)
+	light.light_color = Color(1.0,0.82,0.57)
 	light.light_energy = 1.6
-	light.omni_range = 32.0
+	light.omni_range = 42.0
 	root.add_child(light)
+
+
+func _create_palace_room_shell(root: Node3D, room_id: String, center: Vector3, door_side: String, room_color: Color) -> void:
+	var width := 9.5
+	var depth := 8.0
+	var height := 5.2
+	var wall_color := Color(0.76,0.68,0.54)
+	_create_box(root, room_id + "Floor", Vector3(width,0.3,depth), center, room_color.lightened(0.32), true)
+	_create_box(root, room_id + "LeftWall", Vector3(0.3,height,depth), center + Vector3(-width*0.5,height*0.5,0), wall_color, true)
+	_create_box(root, room_id + "RightWall", Vector3(0.3,height,depth), center + Vector3(width*0.5,height*0.5,0), wall_color, true)
+	var door_width := 2.8
+	if door_side == "south":
+		_create_box(root, room_id + "BackWall", Vector3(width,height,0.3), center + Vector3(0,height*0.5,-depth*0.5), wall_color, true)
+		_create_box(root, room_id + "FrontWallLeft", Vector3((width-door_width)*0.5,height,0.3), center + Vector3(-(width+door_width)*0.25,height*0.5,depth*0.5), wall_color, true)
+		_create_box(root, room_id + "FrontWallRight", Vector3((width-door_width)*0.5,height,0.3), center + Vector3((width+door_width)*0.25,height*0.5,depth*0.5), wall_color, true)
+		_create_box(root, room_id + "DoorLintel", Vector3(door_width,0.7,0.34), center + Vector3(0,height-0.35,depth*0.5), Color(0.86,0.67,0.30), true)
+	else:
+		_create_box(root, room_id + "FrontWall", Vector3(width,height,0.3), center + Vector3(0,height*0.5,depth*0.5), wall_color, true)
+		_create_box(root, room_id + "BackWallLeft", Vector3((width-door_width)*0.5,height,0.3), center + Vector3(-(width+door_width)*0.25,height*0.5,-depth*0.5), wall_color, true)
+		_create_box(root, room_id + "BackWallRight", Vector3((width-door_width)*0.5,height,0.3), center + Vector3((width+door_width)*0.25,height*0.5,-depth*0.5), wall_color, true)
+		_create_box(root, room_id + "DoorLintel", Vector3(door_width,0.7,0.34), center + Vector3(0,height-0.35,-depth*0.5), Color(0.86,0.67,0.30), true)
+
+
+func _create_palace_portal(root: Node3D, portal_name: String, label: String, position: Vector3, destination: String) -> void:
+	var portal := Node3D.new()
+	portal.name = portal_name
+	portal.set_script(load("res://scripts/palace_portal_interaction.gd"))
+	portal.position = position
+	portal.set_meta("palace_portal_target", destination)
+	portal.set_meta("palace_portal_label", label)
+	if destination != "city_exit":
+		var room_centers := {"throne":Vector3(-10,0,-9),"celebration":Vector3(0,0,-9),"casino":Vector3(10,0,-9),"vip":Vector3(-7,0,9),"garden":Vector3(7,0,9)}
+		portal.set_meta("palace_room_center", room_centers.get(destination, Vector3.ZERO))
+		portal.set_meta("palace_door_side", "south" if destination in ["throne","celebration","casino"] else "north")
+	root.add_child(portal)
+	_create_box(portal, "PortalMarker", Vector3(1.7,2.5,0.14), Vector3(0,1.25,0), Color(0.86,0.67,0.30))
+	var sign := Label3D.new()
+	sign.text = label
+	sign.position = Vector3(0,3.0,0)
+	sign.font_size = 21
+	sign.pixel_size = 0.012
+	sign.modulate = Color(1.0,0.9,0.66)
+	sign.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	portal.add_child(sign)
+
+
+func _create_palace_navigation_ui() -> void:
+	palace_navigation_layer = CanvasLayer.new()
+	palace_navigation_layer.name = "PalaceQuickNavigation"
+	palace_navigation_layer.layer = 32
+	palace_navigation_layer.visible = false
+	add_child(palace_navigation_layer)
+	palace_navigation_button = Button.new()
+	palace_navigation_button.name = "PalaceNavigationButton"
+	palace_navigation_button.text = "𓉐 الأماكن"
+	palace_navigation_button.position = Vector2(18,110)
+	palace_navigation_button.size = Vector2(148,42)
+	palace_navigation_button.pressed.connect(_toggle_palace_navigation)
+	palace_navigation_layer.add_child(palace_navigation_button)
+	palace_navigation_popup = PopupMenu.new()
+	palace_navigation_popup.name = "PalaceNavigationPopup"
+	palace_navigation_popup.add_item("الردهة المركزية",0)
+	palace_navigation_popup.add_item("قاعة العرش الملكية",1)
+	palace_navigation_popup.add_item("قاعة الاحتفالات",2)
+	palace_navigation_popup.add_item("الكازينو الأوروبي",3)
+	palace_navigation_popup.add_item("صالة VIP",4)
+	palace_navigation_popup.add_item("الحديقة الملكية الداخلية",5)
+	palace_navigation_popup.add_item("الاقتراب من بوابة الخروج",6)
+	palace_navigation_popup.id_pressed.connect(_on_palace_navigation_selected)
+	palace_navigation_layer.add_child(palace_navigation_popup)
+
+
+func _set_palace_navigation_visible(show: bool) -> void:
+	if is_instance_valid(palace_navigation_layer):
+		palace_navigation_layer.visible = show
+		if not show and is_instance_valid(palace_navigation_popup):
+			palace_navigation_popup.hide()
+
+
+func _toggle_palace_navigation() -> void:
+	if not is_instance_valid(palace_navigation_popup) or not is_instance_valid(palace_navigation_button):
+		return
+	palace_navigation_popup.position = Vector2i(int(palace_navigation_button.global_position.x), int(palace_navigation_button.global_position.y + palace_navigation_button.size.y))
+	palace_navigation_popup.popup()
+
+
+func _on_palace_navigation_selected(id: int) -> void:
+	var destinations := ["lobby","throne","celebration","casino","vip","garden","exit_gate"]
+	if id >= 0 and id < destinations.size():
+		_navigate_palace_quick(destinations[id])
+
+
+func _navigate_palace_quick(destination: String) -> void:
+	if interior_transition_busy or not is_instance_valid(interior_root) or not is_instance_valid(interior_player):
+		return
+	var positions := {
+		"lobby":Vector3(0,1.05,0),
+		"throne":Vector3(-10,1.05,-9),
+		"celebration":Vector3(0,1.05,-9),
+		"casino":Vector3(10,1.05,-9),
+		"vip":Vector3(-7,1.05,9),
+		"garden":Vector3(7,1.05,9),
+		"exit_gate":Vector3(0,1.05,11.2)
+	}
+	if not positions.has(destination):
+		return
+	interior_transition_busy = true
+	interior_player.set_physics_process(false)
+	_show_interior_loading(false, "interior_loading")
+	await get_tree().create_timer(0.65).timeout
+	if not is_inside_tree() or not is_instance_valid(interior_root) or not is_instance_valid(interior_player):
+		if is_instance_valid(interior_player):
+			interior_player.set_physics_process(true)
+		interior_transition_busy = false
+		_hide_interior_loading()
+		return
+	interior_player.global_position = INTERIOR_WORLD_POSITION + positions[destination]
+	interior_player.velocity = Vector3.ZERO
+	interior_player.set_physics_process(true)
+	interior_transition_busy = false
+	if is_instance_valid(palace_navigation_popup):
+		palace_navigation_popup.hide()
+	_hide_interior_loading()
+	var manager := get_node_or_null("MissionManager")
+	if is_instance_valid(manager):
+		manager.call_deferred("_update_interaction_target")
+		manager.call_deferred("_update_interaction_hud")
+
+
+func use_palace_portal(portal: Node3D, actor: Node3D) -> void:
+	if interior_transition_busy or not is_instance_valid(interior_root) or not is_instance_valid(portal) or not is_instance_valid(actor):
+		return
+	var destination := str(portal.get_meta("palace_portal_target",""))
+	if destination == "city_exit":
+		return_from_building_interior()
+		return
+	if not portal.has_meta("palace_room_center"):
+		return
+	var center: Vector3 = portal.get_meta("palace_room_center")
+	var door_side := str(portal.get_meta("palace_door_side","south"))
+	var portal_local := portal.global_position - INTERIOR_WORLD_POSITION
+	var actor_local := actor.global_position - INTERIOR_WORLD_POSITION
+	var is_inside_room := actor_local.z < portal_local.z if door_side == "south" else actor_local.z > portal_local.z
+	var destination_position := Vector3(0,1.05,0)
+	if is_inside_room:
+		destination_position = Vector3(center.x,1.05,portal_local.z + (1.8 if door_side == "south" else -1.8))
+	else:
+		destination_position = Vector3(center.x,1.05,center.z)
+	interior_transition_busy = true
+	actor.set_physics_process(false)
+	_show_interior_loading(false, "interior_loading")
+	await get_tree().create_timer(0.65).timeout
+	if not is_inside_tree() or not is_instance_valid(interior_root) or not is_instance_valid(actor):
+		if is_instance_valid(actor):
+			actor.set_physics_process(true)
+		interior_transition_busy = false
+		_hide_interior_loading()
+		return
+	actor.global_position = INTERIOR_WORLD_POSITION + destination_position
+	actor.velocity = Vector3.ZERO
+	actor.set_physics_process(true)
+	interior_transition_busy = false
+	_hide_interior_loading()
+	var manager := get_node_or_null("MissionManager")
+	if is_instance_valid(manager):
+		manager.call_deferred("_update_interaction_target")
+		manager.call_deferred("_update_interaction_hud")
+
 
 func _create_interior_furnishings(root: Node3D, building_title: String) -> void:
 	# أثاث هندسي خفيف ومختلف لكل مبنى، دون صور أو خامات أو مكتبات إضافية.
@@ -644,7 +904,7 @@ func return_from_building_interior() -> void:
 	if is_instance_valid(body) and not body.is_queued_for_deletion():
 		body.set_physics_process(false)
 	_show_interior_loading(false, "interior_return_loading")
-	await get_tree().create_timer(0.45).timeout
+	await get_tree().create_timer(0.65).timeout
 	if not is_inside_tree():
 		return
 	# استعد المدينة حتى لو تعذر استعادة اللاعب؛ لا تترك العالم مخفيًا أو الانتقال مقفولًا.
@@ -658,11 +918,13 @@ func return_from_building_interior() -> void:
 	interior_root = null
 	interior_player = null
 	interior_transition_busy = false
+	_set_palace_navigation_visible(false)
 	_hide_interior_loading()
 	var manager := get_node_or_null("MissionManager")
 	if is_instance_valid(manager) and manager.has_method("_update_interaction_target"):
 		manager._update_interaction_target()
 		manager._update_interaction_hud()
+
 
 func _material(color: Color) -> StandardMaterial3D:
 	var material := StandardMaterial3D.new()
