@@ -638,7 +638,6 @@ func _on_social_operation_finished(operation: String, success: bool, result_code
 		"accepted": "تم قبول طلب الصداقة.",
 		"declined": "تم رفض طلب الصداقة.",
 		"removed": "تمت إزالة الصديق.",
-		"blocked": "تم حظر اللاعب.",
 		"invalid_player_code": "رمز اللاعب غير صحيح.",
 		"player_not_found": "لم يتم العثور على لاعب بهذا الرمز.",
 		"already_friends": "هذا اللاعب ضمن قائمة أصدقائك بالفعل.",
@@ -649,7 +648,10 @@ func _on_social_operation_finished(operation: String, success: bool, result_code
 		"server_error": "تعذر تنفيذ العملية على الخادم. حاول لاحقًا."
 	}
 	if is_instance_valid(social_status_label):
-		social_status_label.text = str(messages.get(result_code, "تعذر إكمال العملية." if not success else "تم تنفيذ العملية."))
+		if result_code == "blocked" and operation == "block":
+			social_status_label.text = "تم حظر اللاعب."
+		else:
+			social_status_label.text = str(messages.get(result_code, "تعذر إكمال العملية." if not success else "تم تنفيذ العملية."))
 	if success and operation == "send" and is_instance_valid(social_add_code_input):
 		social_add_code_input.clear()
 
