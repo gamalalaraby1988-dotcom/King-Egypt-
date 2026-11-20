@@ -1,7 +1,36 @@
 extends RefCounted
-## Shared atomic writer for the player's single local profile file.
-## Section updates always reload the latest snapshot; full snapshots are reserved for WalletManager.
+## Shared atomic writer for local player profiles.
+## Authenticated accounts use separate files; the legacy file remains the guest/offline profile.
 static var _write_in_progress := false
+static var _active_account_id := ""
+static var _active_profile_path := "user://kings_city_profile.cfg"
+
+static func set_active_account(user_id: String) -> bool:
+	var normalized := user_id.strip_edges()
+	if normalized.is_empty():
+		_active_account_id = ""
+		_active_profile_path = "user://kings_city_profile.cfg"
+		return true
+	if normalized.length() > 128:
+		return false
+	var context := HashingContext.new()
+	if context.start(HashingContext.HASH_SHA256) != OK:
+		return false
+	context.update(normalized.to_utf8_buffer())
+	var account_key := context.finish().hex_encode()
+	var directory := ProjectSettings.globalize_path("user://accounts")
+	if DirAccess.make_dir_recursive_absolute(directory) != OK and not DirAccess.dir_exists_absolute(directory):
+		return false
+	_active_account_id = normalized
+	_active_profile_path = "user://accounts/player_%s.cfg" % account_key
+	return true
+
+static func get_active_account_id() -> String:
+	return _active_account_id
+
+static func get_active_profile_path() -> String:
+	return _active_profile_path
+
 
 static func save_sections(file_path: String, section_updates: Dictionary, temp_path: String = "", backup_path: String = "") -> bool:
 	if file_path.strip_edges().is_empty() or section_updates.is_empty():
