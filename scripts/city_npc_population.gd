@@ -8,6 +8,10 @@ const MAX_ACTIVE_VISUALS_OFFLINE := 18
 const ONLINE_PLAYERS_PER_NPC_REDUCTION := 2
 const ACTIVE_RADIUS := 125.0
 const REFRESH_INTERVAL := 1.25
+const SOCIAL_POLL_INTERVAL := 1.0
+const SOCIAL_RANGE := 2.8
+const SOCIAL_DURATION := 3.0
+const SOCIAL_COOLDOWN := 7.0
 
 const BASE_SPAWNS: Array[Vector3] = [
 	# 6 — المنطقة الملكية والميدان
@@ -68,6 +72,9 @@ var _active_visuals: Dictionary = {}
 var _player: Node3D
 var _refresh_clock := 0.0
 var _motion_clock := 0.0
+var _social_poll_elapsed := 0.0
+var _social_pair_cooldowns: Dictionary = {}
+var _social_actor_states: Dictionary = {}
 
 func _ready() -> void:
 	name = "CityNPCPopulation"
@@ -108,6 +115,7 @@ func _process(delta: float) -> void:
 		if not is_instance_valid(_player):
 			_player = get_parent().get_node_or_null("Player") as Node3D
 		_refresh_population()
+	_update_social_interactions(delta)
 	_update_active_motion()
 
 func _refresh_population() -> void:
@@ -143,6 +151,7 @@ func _refresh_population() -> void:
 			if is_instance_valid(actor):
 				actor.queue_free()
 			_active_visuals.erase(actor_id)
+			_clear_social_actor(str(actor_id))
 
 func _create_active_visual(record: Dictionary) -> void:
 	var source_index := int(record["source"])
@@ -191,6 +200,62 @@ func _disable_npc_collisions(node: Node) -> void:
 	for child in node.get_children():
 		_disable_npc_collisions(child)
 
+func _update_social_interactions(delta: float) -> void:
+	for actor_id in _social_actor_states.keys():
+		var state: Dictionary = _social_actor_states[actor_id]
+		state["remaining"] = maxf(0.0, float(state.get("remaining", 0.0)) - delta)
+		if float(state["remaining"]) <= 0.0:
+			_social_actor_states.erase(actor_id)
+	for pair_key in _social_pair_cooldowns.keys():
+		var cooldown_remaining := maxf(0.0, float(_social_pair_cooldowns[pair_key]) - delta)
+		if cooldown_remaining <= 0.0:
+			_social_pair_cooldowns.erase(pair_key)
+		else:
+			_social_pair_cooldowns[pair_key] = cooldown_remaining
+	_social_poll_elapsed += delta
+	if _social_poll_elapsed < SOCIAL_POLL_INTERVAL:
+		return
+	_social_poll_elapsed = 0.0
+	var actor_ids: Array[String] = []
+	for actor_id in _active_visuals.keys():
+		actor_ids.append(str(actor_id))
+	for i in range(actor_ids.size()):
+		var first_id := actor_ids[i]
+		if _social_actor_states.has(first_id):
+			continue
+		var first_data: Dictionary = _active_visuals.get(first_id, {})
+		var first_actor := first_data.get("root") as Node3D
+		if not is_instance_valid(first_actor):
+			continue
+		for j in range(i + 1, actor_ids.size()):
+			var second_id := actor_ids[j]
+			if _social_actor_states.has(second_id):
+				continue
+			var pair_key := _make_social_pair_key(first_id, second_id)
+			if float(_social_pair_cooldowns.get(pair_key, 0.0)) > 0.0:
+				continue
+			var second_data: Dictionary = _active_visuals.get(second_id, {})
+			var second_actor := second_data.get("root") as Node3D
+			if not is_instance_valid(second_actor):
+				continue
+			if first_actor.global_position.distance_to(second_actor.global_position) > SOCIAL_RANGE:
+				continue
+			# Both residents receive the same social timer and pair cooldown.
+			_social_actor_states[first_id] = {"partner_id": second_id, "remaining": SOCIAL_DURATION}
+			_social_actor_states[second_id] = {"partner_id": first_id, "remaining": SOCIAL_DURATION}
+			_social_pair_cooldowns[pair_key] = SOCIAL_COOLDOWN
+			break
+
+func _make_social_pair_key(first_id: String, second_id: String) -> String:
+	return first_id + "|" + second_id if first_id < second_id else second_id + "|" + first_id
+
+func _clear_social_actor(actor_id: String) -> void:
+	_social_actor_states.erase(actor_id)
+	for partner_id in _social_actor_states.keys():
+		var state: Dictionary = _social_actor_states[partner_id]
+		if str(state.get("partner_id", "")) == actor_id:
+			_social_actor_states.erase(partner_id)
+
 func _update_active_motion() -> void:
 	for actor_id in _active_visuals:
 		var data: Dictionary = _active_visuals[actor_id]
@@ -198,6 +263,19 @@ func _update_active_motion() -> void:
 		var avatar: Node3D = data["avatar"]
 		if not is_instance_valid(actor) or not is_instance_valid(avatar):
 			continue
+		if _social_actor_states.has(actor_id):
+			var social_state: Dictionary = _social_actor_states[actor_id]
+			var partner_id := str(social_state.get("partner_id", ""))
+			var partner_data: Dictionary = _active_visuals.get(partner_id, {})
+			var partner := partner_data.get("root") as Node3D
+			if is_instance_valid(partner):
+				var facing := partner.global_position - actor.global_position
+				facing.y = 0.0
+				if facing.length_squared() > 0.0001:
+					actor.rotation.y = atan2(facing.x, facing.z)
+				avatar.call("set_motion_state", "talk", 0.0)
+				continue
+			_social_actor_states.erase(actor_id)
 		var radius := float(data["wander"])
 		if radius <= 0.01:
 			avatar.call("set_motion_state", "idle", 0.0)
