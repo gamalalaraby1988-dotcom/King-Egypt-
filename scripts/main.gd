@@ -694,6 +694,10 @@ func _create_palace_portal(root: Node3D, portal_name: String, label: String, pos
 	portal.position = position
 	portal.set_meta("palace_portal_target", destination)
 	portal.set_meta("palace_portal_label", label)
+	if destination != "city_exit":
+		var room_centers := {"throne":Vector3(-10,0,-9),"celebration":Vector3(0,0,-9),"casino":Vector3(10,0,-9),"vip":Vector3(-7,0,9),"garden":Vector3(7,0,9)}
+		portal.set_meta("palace_room_center", room_centers.get(destination, Vector3.ZERO))
+		portal.set_meta("palace_door_side", "south" if destination in ["throne","celebration","casino"] else "north")
 	root.add_child(portal)
 	_create_box(portal, "PortalMarker", Vector3(1.7,2.5,0.14), Vector3(0,1.25,0), Color(0.86,0.67,0.30))
 	var sign := Label3D.new()
@@ -794,15 +798,18 @@ func use_palace_portal(portal: Node3D, actor: Node3D) -> void:
 	if destination == "city_exit":
 		return_from_building_interior()
 		return
-	var positions := {
-		"throne":Vector3(-10,1.05,-9),
-		"celebration":Vector3(0,1.05,-9),
-		"casino":Vector3(10,1.05,-9),
-		"vip":Vector3(-7,1.05,9),
-		"garden":Vector3(7,1.05,9)
-	}
-	if not positions.has(destination):
+	if not portal.has_meta("palace_room_center"):
 		return
+	var center: Vector3 = portal.get_meta("palace_room_center")
+	var door_side := str(portal.get_meta("palace_door_side","south"))
+	var portal_local := portal.global_position - INTERIOR_WORLD_POSITION
+	var actor_local := actor.global_position - INTERIOR_WORLD_POSITION
+	var is_inside_room := actor_local.z < portal_local.z if door_side == "south" else actor_local.z > portal_local.z
+	var destination_position := Vector3(0,1.05,0)
+	if is_inside_room:
+		destination_position = Vector3(center.x,1.05,portal_local.z + (1.8 if door_side == "south" else -1.8))
+	else:
+		destination_position = Vector3(center.x,1.05,center.z)
 	interior_transition_busy = true
 	actor.set_physics_process(false)
 	_show_interior_loading(false, "interior_loading")
@@ -811,7 +818,7 @@ func use_palace_portal(portal: Node3D, actor: Node3D) -> void:
 		interior_transition_busy = false
 		_hide_interior_loading()
 		return
-	actor.global_position = INTERIOR_WORLD_POSITION + positions[destination]
+	actor.global_position = INTERIOR_WORLD_POSITION + destination_position
 	actor.velocity = Vector3.ZERO
 	actor.set_physics_process(true)
 	interior_transition_busy = false
