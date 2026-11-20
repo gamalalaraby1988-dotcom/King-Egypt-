@@ -159,6 +159,7 @@ func _on_peer_connected(peer_id: int) -> void:
 		"velocity": Vector3.ZERO,
 		"last_sequence": -1,
 		"last_input_usec": 0,
+		"last_safe_position": SPAWN_POSITION,
 		"input_window_usec": Time.get_ticks_usec(),
 		"input_count": 0,
 		"reached_objectives": {},
@@ -639,9 +640,19 @@ func _physics_process(delta: float) -> void:
 		var body := session.get("body") as CharacterBody3D
 		if not is_instance_valid(body):
 			continue
-		if body.global_position.y < -15.0:
-			body.global_position = SPAWN_POSITION
+		var current_position := body.global_position
+		var outside_city := absf(current_position.x) > 155.0 or current_position.z < -340.0 or current_position.z > 180.0
+		if current_position.y < -3.0 or outside_city:
+			var safe_position: Vector3 = session.get("last_safe_position", SPAWN_POSITION)
+			if safe_position.y < -3.0 or absf(safe_position.x) > 155.0 or safe_position.z < -340.0 or safe_position.z > 180.0:
+				safe_position = SPAWN_POSITION
+			body.global_position = safe_position + Vector3.UP * 0.15
 			body.velocity = Vector3.ZERO
+			session["velocity"] = Vector3.ZERO
+			session["direction"] = Vector3.ZERO
+			session["sprint"] = false
+		elif body.is_on_floor() and current_position.y > -0.25:
+			session["last_safe_position"] = current_position
 		var direction: Vector3 = session.get("direction", Vector3.ZERO)
 		var last_input_usec := int(session.get("last_input_usec", 0))
 		if Time.get_ticks_usec() - last_input_usec > 250000:
