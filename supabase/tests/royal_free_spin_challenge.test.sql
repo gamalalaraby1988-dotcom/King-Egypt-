@@ -47,6 +47,7 @@ select extensions.is(
     'paid spin debits stake and credits the approved gross return atomically'
 );
 
+set local role service_role;
 select extensions.throws_ok(
     $sql$select public.settle_arcade_slot_spin(
         '00000000-0000-4000-8000-000000000087',
@@ -65,7 +66,6 @@ set challenge_progress=14, free_spins=1
 where user_id='00000000-0000-4000-8000-000000000087'
   and machine_id='vip_royal_classic';
 
-set local role service_role;
 set local role service_role;
 select extensions.is(
     (public.settle_arcade_slot_spin(
