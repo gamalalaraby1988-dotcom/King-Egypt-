@@ -61,6 +61,7 @@ func _ready() -> void:
 	_create_camp()
 	_create_desert_camp()
 	_create_pyramids_area()
+	_create_city_npc_population()
 	_create_navigation_destinations()
 	_create_interior_transition_ui()
 	_create_palace_navigation_ui()
@@ -73,6 +74,18 @@ func _ready() -> void:
 	PlayerAccountAuthClient.session_access_token_changed.connect(_on_player_access_token_changed)
 	PlayerAccountAuthClient.session_expired.connect(_on_player_account_session_expired)
 	GameModeManager.online_disconnected.connect(_on_mode_disconnected)
+
+
+func _create_city_npc_population() -> void:
+	# NPC citizens are client-side ambience; dedicated servers do not simulate them.
+	var population_script := load("res://scripts/city_npc_population.gd") as Script
+	if population_script == null:
+		push_warning("تعذر تحميل نظام الشخصيات الافتراضية للمدينة.")
+		return
+	var population := Node3D.new()
+	population.name = "CityNPCPopulation"
+	population.set_script(population_script)
+	add_child(population)
 
 
 func _create_approved_city_layout() -> void:
