@@ -16,6 +16,13 @@ var _enter_button: Button
 var _spin_button: Button
 var _exit_button: Button
 var _status_label: Label
+var _balance_label: Label
+var _bet_label: Label
+var _win_label: Label
+var _decrease_bet_button: Button
+var _increase_bet_button: Button
+var _max_bet_button: Button
+const MIN_BET_CHIPS: int = 10
 var _transition_tween: Tween
 var _result_tween: Tween
 
@@ -131,9 +138,9 @@ func _build_touch_controls() -> void:
 	panel.anchor_right = 1.0
 	panel.anchor_top = 1.0
 	panel.anchor_bottom = 1.0
-	panel.offset_left = -224
+	panel.offset_left = -304
 	panel.offset_right = -10
-	panel.offset_top = -176
+	panel.offset_top = -286
 	panel.offset_bottom = -10
 	panel.visible = false
 	var style := StyleBoxFlat.new()
@@ -151,6 +158,30 @@ func _build_touch_controls() -> void:
 	_status_label.text = machine_title
 	_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	content.add_child(_status_label)
+	_balance_label = _make_account_line(content, "BALANCE", "غير متصل")
+	_bet_label = _make_account_line(content, "BET", str(MIN_BET_CHIPS) + " رقائق")
+	_win_label = _make_account_line(content, "WIN", "—")
+	var bet_controls := HBoxContainer.new()
+	bet_controls.add_theme_constant_override("separation", 5)
+	content.add_child(bet_controls)
+	_decrease_bet_button = _make_blue_button("−")
+	_decrease_bet_button.name = "DecreaseBetButton"
+	_decrease_bet_button.disabled = true
+	bet_controls.add_child(_decrease_bet_button)
+	_increase_bet_button = _make_blue_button("+")
+	_increase_bet_button.name = "IncreaseBetButton"
+	_increase_bet_button.disabled = true
+	bet_controls.add_child(_increase_bet_button)
+	_max_bet_button = _make_blue_button("MAX")
+	_max_bet_button.name = "MaxBetButton"
+	_max_bet_button.disabled = true
+	bet_controls.add_child(_max_bet_button)
+	var minimum_note := Label.new()
+	minimum_note.name = "MinimumBetNote"
+	minimum_note.text = "أقل رهان: 10 رقائق"
+	minimum_note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	minimum_note.add_theme_color_override("font_color", Color(0.55, 0.78, 1.0))
+	content.add_child(minimum_note)
 	_enter_button = _make_button("✋ اجلس أمام الماكينة", _on_enter_pressed)
 	_enter_button.modulate = Color(0.55, 0.78, 1.0)
 	content.add_child(_enter_button)
@@ -164,6 +195,30 @@ func _build_touch_controls() -> void:
 	content.add_child(_exit_button)
 	panel.set_meta("controls_content", content)
 	_set_nearby_controls(false)
+
+func _make_account_line(parent: VBoxContainer, caption: String, initial_value: String) -> Label:
+	var line := Label.new()
+	line.name = caption.capitalize() + "Value"
+	line.text = caption + " : " + initial_value
+	line.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	line.add_theme_font_size_override("font_size", 13)
+	parent.add_child(line)
+	return line
+
+func _make_blue_button(label: String) -> Button:
+	var button := Button.new()
+	button.text = label
+	button.custom_minimum_size = Vector2(76, 38)
+	button.add_theme_font_size_override("font_size", 15)
+	var blue := Color(0.12, 0.48, 0.88)
+	var dark_blue := Color(0.025, 0.12, 0.27)
+	button.add_theme_stylebox_override("normal", _make_spin_style(dark_blue, blue))
+	button.add_theme_stylebox_override("hover", _make_spin_style(dark_blue.lightened(0.12), blue.lightened(0.12)))
+	button.add_theme_stylebox_override("pressed", _make_spin_style(dark_blue.darkened(0.1), blue))
+	button.add_theme_stylebox_override("disabled", _make_spin_style(dark_blue, blue.darkened(0.35)))
+	button.add_theme_color_override("font_color", Color(0.78, 0.9, 1.0))
+	button.add_theme_color_override("font_disabled_color", Color(0.42, 0.55, 0.68))
+	return button
 
 func _make_button(label: String, callback: Callable) -> Button:
 	var button := Button.new()
