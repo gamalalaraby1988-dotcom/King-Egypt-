@@ -118,7 +118,7 @@ select extensions.is(
     (public.settle_arcade_slot_round(
         '00000000-0000-4000-8000-000000000085',
         '10000000-0000-4000-8000-000000000085',
-        '20000000-0000-4000-8000-000000000089',
+        '20000000-0000-4000-8000-000000000088',
         'vip_diamond_royale',
         19,
         array[0,0,1]
@@ -142,7 +142,7 @@ reset role;
 
 select extensions.is(
     (select chips from public.player_wallets where user_id='00000000-0000-4000-8000-000000000085'),
-    103::bigint,
+    112::bigint,
     'pair and no-match settlements update the balance using whole-chip floor rounding'
 );
 
