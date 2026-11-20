@@ -124,6 +124,31 @@ func _run() -> void:
 	if after_rejected_write.load(TEST_PATH) != OK or int(after_rejected_write.get_value("profile", "money", -1)) != 925:
 		_fail("Rejected section update changed the saved wallet profile.")
 		return
+
+	# Language-only updates use the same section merge and cannot replace wallet data.
+	if not Store.save_sections(TEST_PATH, {"settings": {"language": "en"}}, TEMP_PATH, BACKUP_PATH):
+		_fail("Language preference could not be saved through the shared store.")
+		return
+	var after_language := ConfigFile.new()
+	if after_language.load(TEST_PATH) != OK or str(after_language.get_value("settings", "language", "")) != "en":
+		_fail("Language preference was not persisted.")
+		return
+	if int(after_language.get_value("profile", "money", -1)) != 925 or after_language.get_value("profile", "owned_vehicles", []) != ["toyota_corolla", "hyundai_elantra"]:
+		_fail("Language preference update changed wallet or vehicle data.")
+		return
+
+	# WalletManager's full-snapshot path also uses the shared atomic writer.
+	after_language.set_value("profile", "mission_progress_test", 3)
+	if not Store.save_config_snapshot(after_language, TEST_PATH, TEMP_PATH, BACKUP_PATH):
+		_fail("Shared atomic snapshot writer rejected a valid wallet/progression snapshot.")
+		return
+	var after_snapshot := ConfigFile.new()
+	if after_snapshot.load(TEST_PATH) != OK or int(after_snapshot.get_value("profile", "mission_progress_test", -1)) != 3:
+		_fail("Shared atomic snapshot writer did not persist progression data.")
+		return
+	if int(after_snapshot.get_value("wallet", "balances", {}).get("money", -1)) != 925 or not after_snapshot.get_value("wallet", "receipts", {}).has("purchase_vehicle_elantra"):
+		_fail("Shared atomic snapshot writer lost wallet balances or receipts.")
+		return
 	_cleanup()
 	print("Economy profile persistence isolation tests passed.")
 	quit(0)
