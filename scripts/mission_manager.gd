@@ -319,7 +319,7 @@ func complete_activity_once(activity_id: String, activity_kind: String, money_am
 		next_achievement_events[achievement_event_id] = Time.get_datetime_string_from_system()
 	var next_daily_progress := daily_task_progress.duplicate(true)
 	var next_daily_events := daily_task_events.duplicate(true)
-	var today_key := Time.get_date_string_from_system()
+	var today_key := GameCalendar.get_egypt_day_key()
 	var daily_event_id := "%s:%s:%s" % [today_key, activity_kind, activity_id]
 	if not next_daily_events.has(daily_event_id):
 		var today_progress: Dictionary = next_daily_progress.get(today_key, {}).duplicate(true)
