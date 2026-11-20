@@ -11,6 +11,8 @@ static func save_sections(
 	if file_path.strip_edges().is_empty() or section_updates.is_empty():
 		return false
 	for section_name in section_updates:
+		if str(section_name) not in ["profile", "settings"]:
+			return false
 		if not (section_updates[section_name] is Dictionary):
 			return false
 
