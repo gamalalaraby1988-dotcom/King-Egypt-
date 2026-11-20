@@ -14,6 +14,8 @@ func _run_city_npc_social_contract() -> void:
 		"_social_actor_states[first_id]",
 		"_social_actor_states[second_id]",
 		"_social_pair_cooldowns[pair_key] = SOCIAL_COOLDOWN",
+		"if cooldown_remaining <= 0.0:",
+		"_social_pair_cooldowns.erase(pair_key)",
 		"func _clear_social_actor(actor_id: String)",
 		"avatar.call(\"set_motion_state\", \"talk\", 0.0)"
 	]:
