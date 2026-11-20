@@ -743,6 +743,6 @@ func _try_player_step_up(body: CharacterBody3D, delta: float) -> void:
 	var landing := KinematicCollision3D.new()
 	if not body.test_move(raised, horizontal_motion + Vector3.DOWN * 0.5, landing):
 		return
-	if landing.get_angle(0) > deg_to_rad(50.0):
+	if landing.get_normal(0).angle_to(Vector3.UP) > deg_to_rad(50.0):
 		return
 	body.global_position.y += 0.38
