@@ -1344,6 +1344,13 @@ func _on_server_mission_start_result(success: bool, mission_id: String, server_t
 		return
 	status_label.text = message
 	if not success:
+		if mission_id == "city_adventure_survival":
+			survival_prep_remaining = 0.0
+			survival_time_remaining = 0.0
+			if is_instance_valid(survival_progress_label):
+				survival_progress_label.visible = false
+			if is_instance_valid(survival_progress_bar):
+				survival_progress_bar.visible = false
 		accept_button.disabled = false
 		return
 	if not is_instance_valid(active_mission) or str(active_mission.get("server_activity_id")) != mission_id:
@@ -1367,6 +1374,11 @@ func _on_server_mission_failed(mission_id: String, message: String) -> void:
 		return
 	mission_running = false
 	survival_time_remaining = 0.0
+	survival_prep_remaining = 0.0
+	if is_instance_valid(survival_progress_label):
+		survival_progress_label.visible = false
+	if is_instance_valid(survival_progress_bar):
+		survival_progress_bar.visible = false
 	_set_message_puzzle_visible(false)
 	_clear_rescue_citizen()
 	target_marker.visible = false
