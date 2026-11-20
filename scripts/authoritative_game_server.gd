@@ -512,6 +512,8 @@ func register_arcade_machine(machine_id: String, zone_id: String, anchor: Node3D
 		return false
 	if not ARCADE_ZONE_IDS.has(zone_id) or not is_instance_valid(anchor) or not is_instance_valid(controller):
 		return false
+	if not anchor.is_inside_tree() or not controller.is_inside_tree() or _arcade_machines.has(machine_id):
+		return false
 	for method_name in ["can_start_arcade_session", "can_join_arcade_session", "start_arcade_session", "validate_arcade_session_result", "abort_arcade_session"]:
 		if not controller.has_method(method_name):
 			push_warning("Arcade machine %s is missing required server controller method %s." % [machine_id, method_name])
@@ -616,6 +618,9 @@ func request_join_arcade_session_rpc(session_id: String) -> void:
 		return
 	var user_id := str(_sessions[peer_id].get("user_id", ""))
 	var participants: Dictionary = session.get("participants", {})
+	if str(session.get("mode", "")) == "solo":
+		_reply_arcade_session(peer_id, session_id, "rejected", str(session.get("machine_id", "")), "الجلسة الفردية لا تقبل مشاركين إضافيين.")
+		return
 	for participant in participants.values():
 		if str(participant.get("user_id", "")) == user_id:
 			_reply_arcade_session(peer_id, session_id, "rejected", str(session.get("machine_id", "")), "هذا الحساب مشارك بالفعل في الجلسة.")
@@ -637,6 +642,8 @@ func request_launch_arcade_session_rpc(session_id: String) -> void:
 		return
 	var peer_id := multiplayer.get_remote_sender_id()
 	var session: Dictionary = _arcade_sessions.get(session_id, {})
+	if not _sessions.has(peer_id) or not bool(_sessions[peer_id].get("authenticated", false)):
+		return
 	if session.is_empty() or int(session.get("host_peer_id", -1)) != peer_id:
 		_reply_arcade_session(peer_id, session_id, "rejected", "", "بدء الجلسة متاح لمنشئها فقط.")
 		return
@@ -669,6 +676,8 @@ func request_leave_arcade_session_rpc(session_id: String) -> void:
 	if not multiplayer.is_server():
 		return
 	var peer_id := multiplayer.get_remote_sender_id()
+	if not _sessions.has(peer_id) or not bool(_sessions[peer_id].get("authenticated", false)):
+		return
 	if str(_peer_arcade_sessions.get(peer_id, "")) != session_id:
 		return
 	_abort_arcade_session(session_id, "غادر أحد المشاركين؛ أُغلقت الجلسة دون نتيجة أو مكافأة.")
