@@ -1,8 +1,10 @@
 extends Node
 ## واجهة الملف الشخصي وإعدادات اللعب الأساسية، تحفظ محليًا.
 
-const SAVE_PATH := "user://kings_city_profile.cfg"
 const ProfileConfigStore = preload("res://scripts/profile_config_store.gd")
+
+func _save_path() -> String:
+	return ProfileConfigStore.get_active_profile_path()
 var mission_manager: Node
 var player: Node3D
 var panel: PanelContainer
@@ -127,7 +129,7 @@ func _update_layout() -> void:
 
 func _load_settings() -> void:
 	var config := ConfigFile.new()
-	if config.load(SAVE_PATH) != OK:
+	if config.load(_save_path()) != OK:
 		name_input.text = "لاعب جديد"
 		language_select.select(0)
 		if FounderIdentityManager.is_founder:
@@ -135,7 +137,7 @@ func _load_settings() -> void:
 			name_input.editable = false
 			founder_identity_label.text = "♛ %s — هوية المؤسس موثقة" % FounderIdentityManager.get_founder_title()
 			founder_identity_label.visible = true
-		if FileAccess.file_exists(SAVE_PATH):
+		if FileAccess.file_exists(_save_path()):
 			name_input.editable = false
 			name_change_status.text = "تعذر قراءة بيانات الاسم؛ لا يمكن التحقق من حق التغيير اليومي بأمان."
 		else:
@@ -173,12 +175,12 @@ func _current_cloud_preferences() -> Dictionary:
 
 func _on_preference_snapshot_received(revision: int, remote_settings: Dictionary) -> void:
 	var config := ConfigFile.new()
-	var load_error := config.load(SAVE_PATH)
-	if load_error != OK and FileAccess.file_exists(SAVE_PATH):
+	var load_error := config.load(_save_path())
+	if load_error != OK and FileAccess.file_exists(_save_path()):
 		info_label.text = "تعذر قراءة الملف المحلي؛ لم تُطبق إعدادات الحساب لحماية بيانات الجهاز."
 		return
 	if revision == 0 and remote_settings.is_empty():
-		if not ProfileConfigStore.save_sections(SAVE_PATH, {"settings": {"cloud_revision": 0}}):
+		if not ProfileConfigStore.save_sections(_save_path(), {"settings": {"cloud_revision": 0}}):
 			info_label.text = "تعذر حفظ رقم مراجعة المزامنة محليًا."
 			return
 		PlayerSyncClient.save_preference_snapshot(_current_cloud_preferences())
@@ -200,7 +202,7 @@ func _on_preference_snapshot_received(revision: int, remote_settings: Dictionary
 		"quality": int(remote_settings.get("quality", quality_select.selected)),
 		"language": locale
 	}
-	if not ProfileConfigStore.save_sections(SAVE_PATH, {"settings": remote_settings_update}):
+	if not ProfileConfigStore.save_sections(_save_path(), {"settings": remote_settings_update}):
 		info_label.text = "تعذر حفظ النسخة المحلية؛ لم تُطبق إعدادات الحساب."
 		return
 	volume_slider.value = int(remote_settings.get("volume", volume_slider.value))
@@ -218,8 +220,8 @@ func _on_preference_snapshot_finished(success: bool, message: String) -> void:
 
 func _save_settings() -> void:
 	var config := ConfigFile.new()
-	var load_error := config.load(SAVE_PATH)
-	if load_error != OK and FileAccess.file_exists(SAVE_PATH):
+	var load_error := config.load(_save_path())
+	if load_error != OK and FileAccess.file_exists(_save_path()):
 		info_label.text = "ملف اللاعب موجود لكنه غير قابل للقراءة؛ أُوقفت كتابة الإعدادات لحماية الرصيد والبيانات."
 		return
 	var old_name_value: Variant = config.get_value("profile", "player_name", "لاعب جديد")
@@ -250,7 +252,7 @@ func _save_settings() -> void:
 		"quality": quality_select.selected,
 		"language": selected_language
 	}
-	if not ProfileConfigStore.save_sections(SAVE_PATH, {
+	if not ProfileConfigStore.save_sections(_save_path(), {
 		"profile": profile_updates,
 		"settings": settings_updates
 	}):
@@ -269,7 +271,7 @@ func _save_settings() -> void:
 		info_label.text += "\nيمكن تغيير اسم اللاعب مرة واحدة فقط في اليوم. حاول مرة أخرى غدًا؛ تم حفظ بقية الإعدادات دون تغيير الاسم."
 	info_label.text += "\nتم حفظ الإعدادات محليًا."
 	var latest_config := ConfigFile.new()
-	if latest_config.load(SAVE_PATH) == OK:
+	if latest_config.load(_save_path()) == OK:
 		_update_name_change_status(latest_config)
 
 func _update_name_change_status(config: ConfigFile) -> void:
