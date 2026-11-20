@@ -30,7 +30,7 @@
 - `validate_arcade_session_result(session_id, mode, participants, server_results, elapsed_usec)`
 - `abort_arcade_session(session_id, reason)`
 
-يجب أن تعيد دالتا `can_start_arcade_session` و`can_join_arcade_session` و`validate_arcade_session_result` قيمة منطقية صريحة. المتحكم وحده يحدد قواعد اللعبة الفعلية، شروط الجولة المكتملة، صلاحية النتيجة، وتوزيع الفرق إن وجد. لا توجد قواعد لعبة أو مدد أو حدود مشاركين إضافية مفترضة في هذا العقد؛ الحد الأعلى التقني لا يتجاوز سعة الخادم الحالية.
+يجب أن تعيد الدوال `can_start_arcade_session` و`can_join_arcade_session` و`start_arcade_session` و`validate_arcade_session_result` قيمة منطقية صريحة. المتحكم وحده يحدد قواعد اللعبة الفعلية، شروط الجولة المكتملة، صلاحية النتيجة، وتوزيع الفرق إن وجد. لا توجد قواعد لعبة أو مدد أو حدود مشاركين إضافية مفترضة في هذا العقد؛ الحد الأعلى التقني لا يتجاوز سعة الخادم الحالية.
 
 ## الأمان وحدود النسخة الحالية
 - كل انتقال حساس يتحقق منه الخادم، وكل معرف جلسة/حدث ينشأ عشوائيًا على الخادم.
