@@ -48,6 +48,8 @@ var group_follow_button: Button
 var group_meeting_point_button: Button
 var group_move_button: Button
 var group_member_markers: Dictionary = {}
+var season_popup: PanelContainer
+var season_fill_button: Button
 var social_popup: PanelContainer
 var social_friend_list: VBoxContainer
 var social_chat_log: RichTextLabel
@@ -64,7 +66,7 @@ const SECTIONS := {
 	"missions": ["المهام والإنجازات", "تابع مهام المدينة والوظائف والإنجازات اليومية. أكمل النشاط من موقعه داخل المدينة."],
 	"rewards": ["المكافآت اليومية", "راجع الأنشطة اليومية واستلم مكافآتك بعد إكمال شروطها."],
 	"events": ["مركز الفعاليات", "الفعاليات المخطط لها: مهرجان الحيوانات لمدة 7 أيام، حفلات اللاعبين، وتحديات المدينة. ستظهر مواعيد الفعاليات ومؤقتاتها ومكافآتها عند تفعيل نظام الفعاليات المتصل."],
-	"pass": ["تذكرة الموسم", "تذكرة شهرية بجوائز رئيسية متتابعة: شخصية، ثم زي، ثم مركبة، ثم حيوان أليف. تفاصيل الموسم ومكافآته تُعرض عند تفعيل نظام المواسم."],
+	"season": ["الموسم الشهري", "الموسم مدته 30 يومًا ويتكون من 10 مستويات، مع مهلة 72 ساعة للمستوى الجاري. أدوات الموسم تُكتسب من نشاط مؤهل وتُخزن في مخزن مستقل؛ لا تُستهلك إلا عند اختيار ملء المستوى. لا يوجد موسم نشط أو مكافآت قابلة للاستلام حتى يجهز الخادم بيانات الموسم ويربطها بالواجهة."],
 	"phone": ["هاتف اللاعب", "متجر المركبات وإدارة المركبة المختارة."],
 	"map": ["خريطة المدينة", "استكشف مناطق المدينة واتبع اللافتات الإرشادية للوصول إلى الأماكن والمباني."],
 	"social": ["الأصدقاء والتواصل", "ابحث عن صديق باستخدام رمز اللاعب الفريد، أو اضغط على شخصية لاعب لعرض قائمة التفاعل."],
@@ -116,7 +118,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		pointer_position = event.position
 	if not pressed:
 		return
-	var open_popups: Array = [popup, phone_popup, player_popup, group_popup, group_chat_popup, social_popup]
+	var open_popups: Array = [popup, phone_popup, player_popup, group_popup, group_chat_popup, social_popup, season_popup]
 	for panel in open_popups:
 		if is_instance_valid(panel) and panel.visible and panel.get_global_rect().has_point(pointer_position):
 			return
@@ -132,6 +134,7 @@ func _build() -> void:
 	add_child(root)
 
 	# أزرار المدينة على اليسار؛ نترك الجانب الأيمن لنافذة الأصدقاء والمحادثات.
+	_build_season_entry()
 	var dock := PanelContainer.new()
 	dock.name = "LeftCityDock"
 	dock.anchor_left = 0.012
@@ -164,7 +167,6 @@ func _build() -> void:
 	_make_button(actions, "🎁 المكافآت", "rewards")
 	_make_button(actions, "🏆 الإنجازات", "missions")
 	_make_button(actions, "👑 الفعاليات", "events")
-	_make_button(actions, "🎟 الموسم", "pass")
 	_make_button(actions, "📱 الهاتف", "phone")
 	_make_button(actions, "🗺 الخريطة", "map")
 	_make_button(actions, "🐈 الحيوانات", "pets")
@@ -208,6 +210,124 @@ func _build() -> void:
 	popup_body.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	content.add_child(popup_body)
 
+
+
+func _build_season_entry() -> void:
+	# أيقونة مستقلة أعلى يسار الشاشة؛ تترك مساحة المدينة وأزرار التحكم دون حجب.
+	var entry := Button.new()
+	entry.name = "MonthlySeasonEntry"
+	entry.text = "👑\nالموسم"
+	entry.tooltip_text = "الموسم الشهري"
+	entry.custom_minimum_size = Vector2(58, 58)
+	entry.anchor_left = 0.012
+	entry.anchor_right = 0.012
+	entry.anchor_top = 0.075
+	entry.anchor_bottom = 0.075
+	entry.offset_left = 0
+	entry.offset_right = 58
+	entry.offset_top = 0
+	entry.offset_bottom = 58
+	entry.add_theme_font_size_override("font_size", 14)
+	entry.add_theme_color_override("font_color", Color(1.0, 0.86, 0.48))
+	entry.add_theme_stylebox_override("normal", _make_hud_panel_style())
+	entry.pressed.connect(_open_season_window)
+	root.add_child(entry)
+	_build_season_window()
+
+
+func _build_season_window() -> void:
+	season_popup = PanelContainer.new()
+	season_popup.name = "MonthlySeasonWindow"
+	season_popup.anchor_left = 0.5
+	season_popup.anchor_right = 0.5
+	season_popup.anchor_top = 0.5
+	season_popup.anchor_bottom = 0.5
+	var viewport_size := get_viewport().get_visible_rect().size
+	var panel_width := clampf(viewport_size.x * 0.90, 280.0, 440.0)
+	var panel_height := clampf(viewport_size.y * 0.72, 400.0, 560.0)
+	season_popup.offset_left = -panel_width * 0.5
+	season_popup.offset_right = panel_width * 0.5
+	season_popup.offset_top = -panel_height * 0.5
+	season_popup.offset_bottom = panel_height * 0.5
+	season_popup.visible = false
+	season_popup.mouse_filter = Control.MOUSE_FILTER_STOP
+	season_popup.add_theme_stylebox_override("panel", _make_hud_panel_style())
+	root.add_child(season_popup)
+
+	var content := VBoxContainer.new()
+	content.add_theme_constant_override("separation", 9)
+	season_popup.add_child(content)
+
+	var header := HBoxContainer.new()
+	content.add_child(header)
+	var heading := Label.new()
+	heading.text = "👑 الموسم الشهري"
+	heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	heading.add_theme_font_size_override("font_size", 21)
+	header.add_child(heading)
+	var close := Button.new()
+	close.text = "✕"
+	close.custom_minimum_size = Vector2(38, 34)
+	close.pressed.connect(func(): season_popup.visible = false)
+	header.add_child(close)
+
+	var summary := Label.new()
+	summary.text = "مدة الموسم: 30 يومًا  •  10 مستويات"
+	summary.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	summary.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	content.add_child(summary)
+
+	var state := Label.new()
+	state.name = "SeasonServerState"
+	state.text = "لا يوجد موسم نشط متصل بالخادم حاليًا."
+	state.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	state.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	content.add_child(state)
+
+	var level := Label.new()
+	level.text = "المستوى الحالي: — من 10"
+	level.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	content.add_child(level)
+
+	var timer := Label.new()
+	timer.text = "مهلة المستوى: تبدأ عند تفعيل الموسم — 72 ساعة"
+	timer.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	timer.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	content.add_child(timer)
+
+	var inventory := Label.new()
+	inventory.text = "مخزون أدوات الموسم: غير متاح قبل ربط بيانات الخادم"
+	inventory.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	inventory.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	content.add_child(inventory)
+
+	var rewards := Label.new()
+	rewards.text = "المكافآت والمستويات تظهر بعد تجهيز أصول الموسم وربطها بالخادم."
+	rewards.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	rewards.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	content.add_child(rewards)
+
+	season_fill_button = Button.new()
+	season_fill_button.name = "SeasonFillLevelButton"
+	season_fill_button.text = "ملء المستوى"
+	season_fill_button.disabled = true
+	season_fill_button.tooltip_text = "يتاح بعد اتصال بيانات الموسم والتحقق الخادمي من المخزون."
+	season_fill_button.custom_minimum_size.y = 46
+	content.add_child(season_fill_button)
+
+	var note := Label.new()
+	note.text = "فتح هذه النافذة لا يستهلك أي أدوات. التعبئة لا تعمل إلا بعد تأكيد الخادم."
+	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	content.add_child(note)
+
+
+func _open_season_window() -> void:
+	if is_instance_valid(popup):
+		popup.visible = false
+	if is_instance_valid(season_popup):
+		season_popup.visible = true
 
 
 func _build_social_popup() -> void:
