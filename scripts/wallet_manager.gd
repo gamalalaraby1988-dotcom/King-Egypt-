@@ -101,6 +101,14 @@ func save_profile_update(config: ConfigFile, money_value: int, chips_value: int)
 	# حفظ بيانات اللاعب وتغيير أرصدته وسجل المحفظة في الملف الذري نفسه.
 	if not initialized or not _valid_amount(money_value) or not _valid_amount(chips_value):
 		return false
+	# Rebase progression changes onto the newest file so a stale MissionManager
+	# snapshot cannot replace newer settings, language, wallet receipts, or ownership.
+	var latest_config := ConfigFile.new()
+	var latest_error := latest_config.load(PROFILE_PATH)
+	if latest_error != OK:
+		return false
+	for key in config.get_section_keys("profile"):
+		latest_config.set_value("profile", str(key), config.get_value("profile", key))
 	var next_balances := balances.duplicate(true)
 	var next_ledger := ledger.duplicate(true)
 	var timestamp := Time.get_datetime_string_from_system(true)
@@ -120,14 +128,14 @@ func save_profile_update(config: ConfigFile, money_value: int, chips_value: int)
 			"timestamp": timestamp
 		})
 		next_balances[currency] = target
-	config.set_value("profile", "money", money_value)
-	config.set_value("profile", "chips", chips_value)
-	config.set_value("wallet", "schema_version", SCHEMA_VERSION)
+	latest_config.set_value("profile", "money", money_value)
+	latest_config.set_value("profile", "chips", chips_value)
+	latest_config.set_value("wallet", "schema_version", SCHEMA_VERSION)
 	config.set_value("wallet", "balances", next_balances)
 	config.set_value("wallet", "receipts", receipts)
 	config.set_value("wallet", "ledger", next_ledger)
 	config.set_value("wallet", "integrity_seal", _compute_integrity_seal(next_balances, receipts, next_ledger))
-	if not _atomic_save(config):
+	if not _atomic_save(latest_config):
 		return false
 	balances = next_balances
 	ledger = next_ledger
