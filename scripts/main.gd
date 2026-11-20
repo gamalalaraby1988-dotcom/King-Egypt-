@@ -1548,13 +1548,20 @@ func _on_player_account_authenticated(user_id: String, email: String) -> void:
 func _on_player_account_access_token_changed(access_token: String) -> void:
 	var account_id := PlayerAccountAuthClient.get_user_id()
 	var account_changed := ProfileConfigStore.get_active_account_id() != account_id
-	if not ProfileConfigStore.set_active_account(account_id):
-		push_error("Could not activate the isolated local profile for the authenticated account.")
-		return
+	if account_changed:
+		if not ProfileConfigStore.begin_account_switch(account_id):
+			push_error("Could not activate the isolated local profile for the authenticated account.")
+			return
+	else:
+		if not ProfileConfigStore.set_active_account(account_id):
+			push_error("Could not activate the isolated local profile for the authenticated account.")
+			return
 	WalletManager.initialize_wallet()
 	PlayerSyncClient.set_session_access_token(access_token, account_id)
 	if account_changed:
 		call_deferred("_reload_scene_for_account_profile")
+	else:
+		ProfileConfigStore.complete_account_switch()
 
 func _reload_scene_for_account_profile() -> void:
 	# Recreate scene managers so mission, achievement, daily, vehicle, and settings state
