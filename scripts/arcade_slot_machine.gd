@@ -154,6 +154,7 @@ func _build_touch_controls() -> void:
 	_enter_button = _make_button("اجلس أمام الماكينة", _on_enter_pressed)
 	content.add_child(_enter_button)
 	_spin_button = _make_button("SPIN — قريبًا", _on_spin_pressed)
+	_spin_button.name = "SpinButton"
 	_spin_button.disabled = true
 	_spin_button.tooltip_text = "يتاح بعد اكتمال لعبة السلوت والتحقق الخادمي من النتيجة."
 	content.add_child(_spin_button)
