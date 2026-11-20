@@ -646,9 +646,9 @@ func _process(_delta: float) -> void:
 
 	stats_label.text = "المستوى %d/5000  |  مراحل التطوير %d/140  |  المال %d  |  الرقائق %d  |  الجواهر %d" % [DevelopmentManager.player_level, DevelopmentManager.get_completed_stage_count(), money, chips, WalletManager.get_balance("gems")]
 	if job_running:
-		var city_root := get_tree().current_scene
-		var vehicle := city_root.get("city_vehicle") as Node3D if is_instance_valid(city_root) else null
-		var vehicle_occupied_now := bool(city_root.get("vehicle_occupied")) if is_instance_valid(city_root) else false
+		var job_city_root := get_tree().current_scene
+		var vehicle := job_city_root.get("city_vehicle") as Node3D if is_instance_valid(job_city_root) else null
+		var vehicle_occupied_now := bool(job_city_root.get("vehicle_occupied")) if is_instance_valid(job_city_root) else false
 		if returning_to_fuel:
 			job_delivery_button.visible = false
 			if vehicle_occupied_now and is_instance_valid(vehicle):
