@@ -98,7 +98,7 @@ declare
     v_activity_multiplier integer := 0;
 begin
     if p_user_id is null or p_session_id is null or p_server_event_id is null
-       or p_machine_id is null or p_spin_type not in ('paid','free')
+       or p_machine_id is null or p_spin_type is null or p_spin_type not in ('paid','free')
        or p_wager_chips is null or p_reel_symbols is null or p_collection_symbols is null then
         raise exception 'slot_spin_values_invalid' using errcode = '22023';
     end if;
@@ -188,6 +188,10 @@ begin
     where user_id = p_user_id for update;
     if not found then
         raise exception 'player_wallet_not_found' using errcode = 'P0002';
+    end if;
+
+    if p_spin_type = 'paid' and v_wallet.chips < p_wager_chips then
+        raise exception 'insufficient_game_chips' using errcode = '22003';
     end if;
 
     v_multiplier := private.calculate_slot_payout_tenths(p_machine_id, p_reel_symbols);
