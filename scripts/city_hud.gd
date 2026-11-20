@@ -167,7 +167,6 @@ func _build() -> void:
 	_make_button(actions, "🎁 المكافآت", "rewards")
 	_make_button(actions, "🏆 الإنجازات", "missions")
 	_make_button(actions, "👑 الفعاليات", "events")
-	_make_button(actions, "👑 الموسم الشهري", "season")
 	_make_button(actions, "📱 الهاتف", "phone")
 	_make_button(actions, "🗺 الخريطة", "map")
 	_make_button(actions, "🐈 الحيوانات", "pets")
@@ -243,10 +242,13 @@ func _build_season_window() -> void:
 	season_popup.anchor_right = 0.5
 	season_popup.anchor_top = 0.5
 	season_popup.anchor_bottom = 0.5
-	season_popup.offset_left = -180
-	season_popup.offset_right = 180
-	season_popup.offset_top = -230
-	season_popup.offset_bottom = 230
+	var viewport_size := get_viewport().get_visible_rect().size
+	var panel_width := clampf(viewport_size.x * 0.90, 280.0, 440.0)
+	var panel_height := clampf(viewport_size.y * 0.72, 400.0, 560.0)
+	season_popup.offset_left = -panel_width * 0.5
+	season_popup.offset_right = panel_width * 0.5
+	season_popup.offset_top = -panel_height * 0.5
+	season_popup.offset_bottom = panel_height * 0.5
 	season_popup.visible = false
 	season_popup.mouse_filter = Control.MOUSE_FILTER_STOP
 	season_popup.add_theme_stylebox_override("panel", _make_hud_panel_style())
