@@ -19,9 +19,13 @@ FounderPinManager="*res://scripts/founder_pin_manager.gd"
 FounderAuthClient="*res://scripts/founder_auth_client.gd"
 PlayerSyncClient="*res://scripts/player_sync_client.gd"
 PlayerAccountAuthClient="*res://scripts/player_account_auth_client.gd"
+PlayerFriendsClient="*res://scripts/player_friends_client.gd"
 VehicleStoreManager="*res://scripts/vehicle_store_manager.gd"
 
 [player_sync]
+enabled=false
+
+[player_friends]
 enabled=false
 
 [game_rewards]
