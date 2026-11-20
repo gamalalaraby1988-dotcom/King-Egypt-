@@ -7,9 +7,9 @@ func _initialize() -> void:
 
 func _run_calendar_tests() -> void:
 	# 21:59 UTC is 23:59 in the project's configured Egypt UTC+2 clock.
-	var before_midnight := Time.get_unix_time_from_datetime_string("2026-11-20T21:59:00")
+	var before_midnight := 1795211940 # 2026-11-20 21:59:00 UTC
 	# 22:00 UTC is 00:00 on the next Egypt game day.
-	var after_midnight := Time.get_unix_time_from_datetime_string("2026-11-20T22:00:00")
+	var after_midnight := 1795212000 # 2026-11-20 22:00:00 UTC
 	var before_key := GameCalendarScript.egypt_day_key_for_unix_time(before_midnight)
 	var after_key := GameCalendarScript.egypt_day_key_for_unix_time(after_midnight)
 	if before_key != "2026-11-20":
