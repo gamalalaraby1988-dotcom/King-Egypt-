@@ -54,6 +54,14 @@ func _run_city_adventure_contract() -> void:
 		push_error("Offline survival race must display and enforce its countdown.")
 		quit(1)
 		return
+	if not manager_source.contains("SurvivalRaceProgress") or not manager_source.contains("SurvivalRaceProgressBar") or not manager_source.contains("func _update_survival_race_hud("):
+		push_error("Survival race must show live five-checkpoint progress to the player.")
+		quit(1)
+		return
+	if not manager_source.contains("نقاط السباق: %d / 5") or not manager_source.contains("النقطة %d من 5"):
+		push_error("Survival race must report the current checkpoint count alongside the timer.")
+		quit(1)
+		return
 	if not server_source.contains("\"time_limit_seconds\": 60.0 if safe_mission_id == \"city_adventure_survival\" else 0.0") or not server_source.contains("receive_server_mission_failed"):
 		push_error("Online survival race timeout must be enforced by the authoritative server.")
 		quit(1)
