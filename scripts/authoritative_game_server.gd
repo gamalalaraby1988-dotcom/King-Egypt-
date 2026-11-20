@@ -507,6 +507,39 @@ func request_start_mission(mission_id: String) -> void:
 
 
 @rpc("any_peer", "call_remote", "reliable")
+func request_submit_message_puzzle_answer(answer: String) -> void:
+	if not multiplayer.is_server():
+		return
+	var peer_id := multiplayer.get_remote_sender_id()
+	if not _sessions.has(peer_id) or not bool(_sessions[peer_id].get("authenticated", false)):
+		return
+	var session: Dictionary = _sessions[peer_id]
+	var active_mission: Dictionary = session.get("active_mission", {})
+	if str(active_mission.get("mission_id", "")) != "city_adventure_message" or not bool(active_mission.get("puzzle_ready", false)):
+		return
+	var body := session.get("body") as CharacterBody3D
+	var stages: Array = active_mission.get("stages", [])
+	var final_target: Vector3 = active_mission.get("target", Vector3.ZERO)
+	if not is_instance_valid(body) or stages.is_empty() or int(active_mission.get("stage_index", -1)) != stages.size() - 1:
+		return
+	var distance := Vector2(body.global_position.x - final_target.x, body.global_position.z - final_target.z).length()
+	if distance > float(active_mission.get("radius", 2.2)) + 0.6:
+		rpc_id(peer_id, "receive_mission_stage_updated", "city_adventure_message", final_target, stages.size(), stages.size(), "ابقَ عند نقطة فك الشفرة لإرسال الإجابة.")
+		return
+	var normalized_answer := answer.strip_edges().replace(" ", "").replace("ـ", "")
+	if normalized_answer != "النيل":
+		rpc_id(peer_id, "receive_mission_stage_updated", "city_adventure_message", final_target, stages.size(), stages.size(), "الإجابة غير صحيحة. راجع الأدلة وحاول مرة أخرى.")
+		return
+	var completed_missions: Dictionary = session.get("completed_missions", {})
+	completed_missions["city_adventure_message"] = true
+	session["completed_missions"] = completed_missions
+	session["active_mission"] = {}
+	_sessions[peer_id] = session
+	server_objective_reached.emit(str(session.get("user_id", "")), "mission", "city_adventure_message")
+	rpc_id(peer_id, "receive_server_mission_completed", "city_adventure_message")
+
+
+@rpc("any_peer", "call_remote", "reliable")
 func request_rescue_citizen_interaction() -> void:
 	if not multiplayer.is_server():
 		return
@@ -1223,6 +1256,11 @@ func _physics_process(delta: float) -> void:
 						active_mission["target"] = next_target
 						session["active_mission"] = active_mission
 						rpc_id(peer_id, "receive_mission_stage_updated", completed_mission_id, next_target, stage_index + 1, mission_stages.size(), "تم اجتياز المرحلة. اتجه إلى النقطة التالية.")
+					elif completed_mission_id == "city_adventure_message":
+						if not bool(active_mission.get("puzzle_ready", false)):
+							active_mission["puzzle_ready"] = true
+							session["active_mission"] = active_mission
+							rpc_id(peer_id, "receive_mission_stage_updated", completed_mission_id, mission_target, mission_stages.size(), mission_stages.size(), "جمعت الأدلة الثلاثة. فك الشفرة وأرسل الإجابة.")
 					else:
 						var completed_missions: Dictionary = session.get("completed_missions", {})
 						completed_missions[completed_mission_id] = true
