@@ -52,6 +52,8 @@ func _process(_delta: float) -> void:
 	last_position = current
 
 func _notification(what: int) -> void:
+	if ProfileConfigStore.is_account_switch_in_progress():
+		return
 	if what == NOTIFICATION_WM_CLOSE_REQUEST or what == NOTIFICATION_PREDELETE:
 		_save_state()
 
