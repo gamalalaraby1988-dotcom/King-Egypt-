@@ -87,6 +87,25 @@ jobs:
             exit 1
           fi
 
+      - name: Run economy profile persistence isolation tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          GODOT="/tmp/godot/Godot_v4.7.2-stable_linux.x86_64"
+          LOG="/tmp/godot-economy-profile-isolation.log"
+          set +e
+          "$GODOT" --headless --path . --script res://tests/economy_profile_persistence_isolation_test.gd 2>&1 | tee "$LOG"
+          GODOT_STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$GODOT_STATUS" -ne 0 ]; then
+            echo "Economy profile persistence isolation tests exited with code $GODOT_STATUS."
+            exit "$GODOT_STATUS"
+          fi
+          if grep -E '(^|[[:space:]])(ERROR|SCRIPT ERROR):|Parse Error:|Economy profile persistence isolation test failed' "$LOG"; then
+            echo "Economy profile persistence isolation tests reported an error."
+            exit 1
+          fi
+
       - name: Run account-switch in-flight sync test
         shell: bash
         run: |
@@ -122,6 +141,25 @@ jobs:
           fi
           if grep -E '(^|[[:space:]])(ERROR|SCRIPT ERROR):|Parse Error:|Player profile account-switch test failed' "$LOG"; then
             echo "Player profile account-switch test reported an error."
+            exit 1
+          fi
+
+      - name: Run account-switch session-expiry guard test
+        shell: bash
+        run: |
+          set -euo pipefail
+          GODOT="/tmp/godot/Godot_v4.7.2-stable_linux.x86_64"
+          LOG="/tmp/godot-account-switch-expiry-guard.log"
+          set +e
+          "$GODOT" --headless --path . --script res://tests/account_switch_expiry_guard_test.gd 2>&1 | tee "$LOG"
+          GODOT_STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$GODOT_STATUS" -ne 0 ]; then
+            echo "Account-switch session-expiry guard test exited with code $GODOT_STATUS."
+            exit "$GODOT_STATUS"
+          fi
+          if grep -E '(^|[[:space:]])(ERROR|SCRIPT ERROR):|Parse Error:|Account-switch expiry guard test failed' "$LOG"; then
+            echo "Account-switch session-expiry guard test reported an error."
             exit 1
           fi
 
