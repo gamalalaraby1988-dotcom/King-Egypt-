@@ -66,5 +66,18 @@ func _run_city_adventure_contract() -> void:
 		push_error("Treasure visual must appear at the final checkpoint and be cleared on completion.")
 		quit(1)
 		return
+	var npc_source := FileAccess.get_file_as_string("res://scripts/city_npc_population.gd")
+	if not manager_source.contains("RescueCitizenInteractionButton") or not manager_source.contains("func _interact_with_rescue_citizen(") or not manager_source.contains("request_rescue_citizen_interaction.rpc_id(1)"):
+		push_error("Rescue adventure must provide a direct player interaction with the citizen.")
+		quit(1)
+		return
+	if not server_source.contains("func request_rescue_citizen_interaction()") or not server_source.contains("rescue_requires_interaction"):
+		push_error("Online rescue progression must require server-validated citizen interaction.")
+		quit(1)
+		return
+	if not npc_source.contains("func get_nearest_active_citizen(") or not npc_source.contains("func set_rescue_citizen(") or not npc_source.contains('"wave"'):
+		push_error("Rescue must reuse an existing city resident and its wave animation.")
+		quit(1)
+		return
 	print("City adventure activity contract checks passed.")
 	quit(0)
