@@ -37,7 +37,7 @@ func _ready() -> void:
 	_cache_animation_defaults()
 
 func set_motion_state(state: String, speed: float = 0.0) -> void:
-	motion_state = state if ["idle", "walk", "run", "sit", "celebrate", "disappointed"].has(state) else "idle"
+	motion_state = state if ["idle", "walk", "run", "sit", "talk", "wave", "celebrate", "disappointed"].has(state) else "idle"
 	motion_speed = maxf(speed, 0.0)
 
 func _process(delta: float) -> void:
@@ -47,6 +47,18 @@ func _process(delta: float) -> void:
 	var swing := sin(motion_time * cycle_speed) * 0.48 * intensity
 	var bob := absf(sin(motion_time * cycle_speed * 2.0)) * 0.045 * intensity
 	_restore_animation_defaults()
+	if motion_state == "talk":
+		if parts.has("TorsoBase"):
+			(parts["TorsoBase"] as MeshInstance3D).rotation.x = sin(motion_time * 3.2) * 0.035
+		if parts.has("Head"):
+			(parts["Head"] as MeshInstance3D).rotation.x = sin(motion_time * 4.1) * 0.065
+		return
+	if motion_state == "wave":
+		if parts.has("RightArm"):
+			var waving_arm := parts["RightArm"] as MeshInstance3D
+			waving_arm.rotation.z = 1.05
+			waving_arm.rotation.x = sin(motion_time * 8.0) * 0.42
+		return
 	if motion_state == "celebrate":
 		if parts.has("TorsoBase"):
 			(parts["TorsoBase"] as MeshInstance3D).position.y += absf(sin(motion_time * 8.0)) * 0.12
