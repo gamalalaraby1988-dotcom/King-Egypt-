@@ -75,64 +75,64 @@ func _run_slot_rules_tests() -> void:
 		quit(1)
 		return
 	# Collection bonuses count eligible machine-specific symbols anywhere in one 3x3 result.
-	var royal_three := rules_script.get_collection_result("vip_royal_classic", [0, 1, 2, 3, 0, 1, 2, 3, 4])
+	var royal_three: Dictionary = rules_script.get_collection_result("vip_royal_classic", [0, 1, 2, 3, 0, 1, 2, 3, 4])
 	if not bool(royal_three.valid) or int(royal_three.match_count) != 3 or int(royal_three.activity_multiplier) != 10:
 		push_error("Three Royal Classic scarabs in any positions must award 10x activity.")
 		quit(1)
 		return
-	var diamond_five := rules_script.get_collection_result("vip_diamond_royale", [3, 0, 1, 2, 4, 3, 0, 3, 4])
+	var diamond_five: Dictionary = rules_script.get_collection_result("vip_diamond_royale", [3, 0, 1, 2, 4, 3, 0, 3, 4])
 	if int(diamond_five.match_count) != 3 or int(diamond_five.activity_multiplier) != 10:
 		push_error("Diamond collection must count only its own collectible symbol identity.")
 		quit(1)
 		return
-	var golden_nine := rules_script.get_collection_result("vip_golden_crown", [4, 4, 4, 4, 4, 4, 4, 4, 4])
+	var golden_nine: Dictionary = rules_script.get_collection_result("vip_golden_crown", [4, 4, 4, 4, 4, 4, 4, 4, 4])
 	if int(golden_nine.match_count) != 9 or int(golden_nine.activity_multiplier) != 100:
 		push_error("Nine matching Golden Crown collectibles must award 100x activity.")
 		quit(1)
 		return
-	var four_matches := rules_script.get_collection_result("vip_royal_classic", [0, 0, 1, 2, 4, 3, 0, 1, 2])
+	var four_matches: Dictionary = rules_script.get_collection_result("vip_royal_classic", [0, 0, 1, 2, 4, 3, 0, 1, 2])
 	if int(four_matches.activity_multiplier) != 15:
 		push_error("Four matching collection symbols must award 15x activity.")
 		quit(1)
 		return
-	var five_matches := rules_script.get_collection_result("vip_royal_classic", [0, 0, 0, 0, 0, 1, 2, 3, 1])
+	var five_matches: Dictionary = rules_script.get_collection_result("vip_royal_classic", [0, 0, 0, 0, 0, 1, 2, 3, 1])
 	if int(five_matches.activity_multiplier) != 20:
 		push_error("Five matching collection symbols must award 20x activity.")
 		quit(1)
 		return
-	var six_matches := rules_script.get_collection_result("vip_royal_classic", [0, 0, 0, 0, 0, 0, 2, 3, 1])
-	var seven_matches := rules_script.get_collection_result("vip_royal_classic", [4, 4, 4, 4, 4, 4, 4, 0, 1])
-	var eight_matches := rules_script.get_collection_result("vip_royal_classic", [4, 4, 4, 4, 4, 4, 4, 4, 1])
+	var six_matches: Dictionary = rules_script.get_collection_result("vip_royal_classic", [0, 0, 0, 0, 0, 0, 2, 3, 1])
+	var seven_matches: Dictionary = rules_script.get_collection_result("vip_royal_classic", [4, 4, 4, 4, 4, 4, 4, 0, 1])
+	var eight_matches: Dictionary = rules_script.get_collection_result("vip_royal_classic", [4, 4, 4, 4, 4, 4, 4, 4, 1])
 	if int(six_matches.activity_multiplier) != 30 or int(seven_matches.activity_multiplier) != 40 or int(eight_matches.activity_multiplier) != 50:
 		push_error("Six, seven, and eight matches must award 30x, 40x, and 50x activity.")
 		quit(1)
 		return
-	var split_matches := rules_script.get_collection_result("vip_royal_classic", [0, 0, 0, 4, 4, 4, 1, 2, 3])
+	var split_matches: Dictionary = rules_script.get_collection_result("vip_royal_classic", [0, 0, 0, 4, 4, 4, 1, 2, 3])
 	if int(split_matches.activity_multiplier) != 10:
 		push_error("Separate collectible groups must not stack; only the highest single group applies.")
 		quit(1)
 		return
-	var no_collection := rules_script.get_collection_result("vip_royal_classic", [1, 1, 1, 2, 2, 2, 3, 3, 3])
+	var no_collection: Dictionary = rules_script.get_collection_result("vip_royal_classic", [1, 1, 1, 2, 2, 2, 3, 3, 3])
 	if int(no_collection.activity_multiplier) != 0:
 		push_error("Non-collectible symbols must not award a collection multiplier.")
 		quit(1)
 		return
-	var malformed_collection := rules_script.get_collection_result("vip_royal_classic", [0, 0, 0, 0, 0, 0, 0, 0, 5])
+	var malformed_collection: Dictionary = rules_script.get_collection_result("vip_royal_classic", [0, 0, 0, 0, 0, 0, 0, 0, 5])
 	if bool(malformed_collection.valid):
 		push_error("Out-of-range collection symbols must be rejected.")
 		quit(1)
 		return
-	var short_collection := rules_script.get_collection_result("vip_royal_classic", [0, 0, 0])
+	var short_collection: Dictionary = rules_script.get_collection_result("vip_royal_classic", [0, 0, 0])
 	if bool(short_collection.valid):
 		push_error("Collection results must contain exactly nine cells.")
 		quit(1)
 		return
-	var unknown_machine_collection := rules_script.get_collection_result("unknown_machine", [0, 0, 0, 0, 0, 0, 0, 0, 0])
+	var unknown_machine_collection: Dictionary = rules_script.get_collection_result("unknown_machine", [0, 0, 0, 0, 0, 0, 0, 0, 0])
 	if bool(unknown_machine_collection.valid):
 		push_error("Unknown machines must not receive collection rules.")
 		quit(1)
 		return
-	var expected_return := rules_script.get_theoretical_return_ratio()
+	var expected_return: float = rules_script.get_theoretical_return_ratio()
 	if absf(expected_return - 0.9240836) > 0.000001:
 		push_error("Theoretical return does not match the approved 92.40836% model.")
 		quit(1)
