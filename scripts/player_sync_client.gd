@@ -28,12 +28,16 @@ var _snapshot_http: HTTPRequest
 var _progress_http: HTTPRequest
 var _progress_request_active := false
 var _progress_request_token := ""
+var _progress_request_user_id := ""
 var _reward_claim_http: HTTPRequest
 var _reward_claim_active := false
 var _reward_claim_token := ""
+var _reward_claim_user_id := ""
 var _snapshot_action := ""
 var _snapshot_revision := 0
 var _snapshot_request_active := false
+var _snapshot_request_token := ""
+var _snapshot_request_user_id := ""
 var _access_token := ""
 var _session_user_id := ""
 var _events: Array[Dictionary] = []
@@ -93,10 +97,14 @@ func clear_session_access_token() -> void:
 	_session_user_id = ""
 	_snapshot_action = ""
 	_snapshot_request_active = false
+	_snapshot_request_token = ""
+	_snapshot_request_user_id = ""
 	_progress_request_active = false
 	_progress_request_token = ""
+	_progress_request_user_id = ""
 	_reward_claim_active = false
 	_reward_claim_token = ""
+	_reward_claim_user_id = ""
 	if is_instance_valid(_retry_timer):
 		_retry_timer.stop()
 
@@ -165,13 +173,23 @@ func _start_snapshot_request(rpc_name: String, payload: Dictionary, action: Stri
 		preference_snapshot_finished.emit(false, "تعذر بدء مزامنة إعدادات الحساب.")
 		return
 	_snapshot_action = action
+	_snapshot_request_token = _access_token
+	_snapshot_request_user_id = _session_user_id
 	_snapshot_request_active = true
 
 
 func _on_snapshot_request_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
 	var action := _snapshot_action
+	var request_token := _snapshot_request_token
+	var request_user_id := _snapshot_request_user_id
 	_snapshot_action = ""
+	_snapshot_request_token = ""
+	_snapshot_request_user_id = ""
 	_snapshot_request_active = false
+	if request_token.is_empty() or request_user_id.is_empty() or request_token != _access_token or request_user_id != _session_user_id:
+		if not _access_token.is_empty() and not _session_user_id.is_empty():
+			call_deferred("fetch_preference_snapshot")
+		return
 	if result != HTTPRequest.RESULT_SUCCESS or response_code < 200 or response_code >= 300:
 		preference_snapshot_finished.emit(false, "تعذر جلب أو حفظ إعدادات الحساب. بقيت الإعدادات المحلية دون تغيير.")
 		return
@@ -234,13 +252,16 @@ func fetch_progress_observations() -> void:
 		return
 	_progress_request_active = true
 	_progress_request_token = _access_token
+	_progress_request_user_id = _session_user_id
 
 
 func _on_progress_recovery_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
 	_progress_request_active = false
 	var request_token := _progress_request_token
+	var request_user_id := _progress_request_user_id
 	_progress_request_token = ""
-	if request_token.is_empty() or request_token != _access_token:
+	_progress_request_user_id = ""
+	if request_token.is_empty() or request_user_id.is_empty() or request_token != _access_token or request_user_id != _session_user_id:
 		if not _access_token.is_empty():
 			call_deferred("fetch_progress_observations")
 		return
@@ -328,13 +349,16 @@ func claim_verified_activity_reward(proof_id: String) -> void:
 		return
 	_reward_claim_active = true
 	_reward_claim_token = _access_token
+	_reward_claim_user_id = _session_user_id
 
 
 func _on_verified_reward_claim_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
 	_reward_claim_active = false
 	var request_token := _reward_claim_token
+	var request_user_id := _reward_claim_user_id
 	_reward_claim_token = ""
-	if request_token.is_empty() or request_token != _access_token:
+	_reward_claim_user_id = ""
+	if request_token.is_empty() or request_user_id.is_empty() or request_token != _access_token or request_user_id != _session_user_id:
 		return
 	if result != HTTPRequest.RESULT_SUCCESS or response_code < 200 or response_code >= 300:
 		verified_reward_claim_finished.emit(false, {}, "لم يعتمد الخادم المكافأة؛ لم تُجرَ أي إضافة محلية.")
