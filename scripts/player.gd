@@ -44,7 +44,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventScreenTouch:
 		var touch := event as InputEventScreenTouch
 		if touch.pressed:
-			if _arcade_touch_index == -1:
+			var right_side_start := touch.position.x > get_viewport().get_visible_rect().size.x * 0.38
+			if _arcade_touch_index == -1 and right_side_start:
 				_arcade_touch_index = touch.index
 		else:
 			if touch.index == _arcade_touch_index:
@@ -54,7 +55,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		if drag.index == _arcade_touch_index:
 			_apply_arcade_camera_drag(drag.relative)
 	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
-		_arcade_mouse_dragging = event.pressed
+		_arcade_mouse_dragging = event.pressed and event.position.x > get_viewport().get_visible_rect().size.x * 0.38
 	elif event is InputEventMouseMotion and _arcade_mouse_dragging:
 		_apply_arcade_camera_drag((event as InputEventMouseMotion).relative)
 
