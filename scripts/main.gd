@@ -1072,6 +1072,7 @@ func _set_mobile_hud_active(active: bool) -> void:
 
 
 func _create_interactive_buildings() -> void:
+	_create_adventure_hub_interaction()
 	if AuthoritativeGameServer.is_dedicated_server_requested():
 		_add_functional_building(null, "المتجر", "مهمة شراء احتياجات", "تعرّف على المتجر واستلم قائمة احتياجات تجريبية من البوابة.", Vector3(16, 0, 16), Color(0.20, 0.48, 0.30), 150, 0, 1)
 		_add_functional_building(null, "المطعم", "مهمة توصيل وجبة", "استلم طلب توصيل تجريبي من المطعم.", Vector3(-16, 0, 16), Color(0.65, 0.30, 0.18), 220, 2, 1)
@@ -1112,6 +1113,28 @@ func _create_interactive_buildings() -> void:
 	_create_service_staff("صاحب المتجر", "صاحب محل", "أهلًا بك! يمكنني مساعدتك في احتياجاتك ومشترياتك من المتجر.", Vector3(19.5, 0, 20.2))
 	_create_service_staff("موظف المطعم", "موظف", "مرحبًا! أستقبل طلبات المطعم وأساعدك في أنشطة التوصيل.", Vector3(-12.5, 0, 20.2))
 	_create_service_staff("موظف مركز التوظيف", "موظف", "أهلًا بك! يمكنك مراجعة الوظائف المتاحة وشروطها هنا.", Vector3(19.5, 0, -11))
+
+func _create_adventure_hub_interaction() -> void:
+	# Invisible interaction anchor at the entrance of the existing adventure_center building.
+	# No mesh, collision shell, building, map, or world area is added.
+	var hub := Node3D.new()
+	hub.name = "AdventureHubInteraction"
+	hub.set_script(load("res://scripts/building_interaction.gd"))
+	hub.building_id = "city_adventure_hub"
+	hub.server_activity_id = "city_adventure_rescue"
+	hub.building_title = "مركز المغامرات"
+	hub.mission_title = "مغامرات المدينة"
+	hub.mission_description = "اختر مغامرة من مغامرات المدينة. جميع الأهداف داخل المواقع الموجودة بالفعل."
+	hub.activity_list = "مهمة الإنقاذ، الكنز المفقود، الرسالة الغامضة، سباق النجاة"
+	hub.reward_money = 0
+	hub.reward_chips = 0
+	hub.reward_xp = 0
+	hub.required_level = 1
+	hub.requires_interior = false
+	hub.interaction_radius = 4.5
+	hub.position = Vector3(-75.0, 0.0, 63.9)
+	add_child(hub)
+
 
 func _add_functional_building(manager: Node, title: String, mission: String, description: String, pos: Vector3, color: Color, reward: int, chips_reward: int, level: int) -> void:
 	var building := Node3D.new()

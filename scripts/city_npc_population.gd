@@ -75,6 +75,7 @@ var _motion_clock := 0.0
 var _social_poll_elapsed := 0.0
 var _social_pair_cooldowns: Dictionary = {}
 var _social_actor_states: Dictionary = {}
+var _rescue_actor_ids: Dictionary = {}
 
 func _ready() -> void:
 	name = "CityNPCPopulation"
@@ -151,6 +152,7 @@ func _refresh_population() -> void:
 			if is_instance_valid(actor):
 				actor.queue_free()
 			_active_visuals.erase(actor_id)
+			_rescue_actor_ids.erase(str(actor_id))
 			_clear_social_actor(str(actor_id))
 
 func _create_active_visual(record: Dictionary) -> void:
@@ -256,12 +258,48 @@ func _clear_social_actor(actor_id: String) -> void:
 		if str(state.get("partner_id", "")) == actor_id:
 			_social_actor_states.erase(partner_id)
 
+func get_nearest_active_citizen(world_position: Vector3, max_distance: float = 12.0) -> Node3D:
+	var best_actor: Node3D = null
+	var best_distance := max_distance
+	for actor_id in _active_visuals:
+		var data: Dictionary = _active_visuals[actor_id]
+		var actor := data.get("root") as Node3D
+		if not is_instance_valid(actor):
+			continue
+		var distance := Vector2(actor.global_position.x - world_position.x, actor.global_position.z - world_position.z).length()
+		if distance <= best_distance:
+			best_distance = distance
+			best_actor = actor
+	return best_actor
+
+
+func set_rescue_citizen(actor: Node3D, active: bool) -> void:
+	if not is_instance_valid(actor):
+		return
+	var actor_id := str(actor.name)
+	if active:
+		_rescue_actor_ids[actor_id] = true
+		var data: Dictionary = _active_visuals.get(actor_id, {})
+		var avatar := data.get("avatar") as Node3D
+		if is_instance_valid(avatar):
+			avatar.call("set_motion_state", "wave", 0.0)
+	else:
+		_rescue_actor_ids.erase(actor_id)
+		var data: Dictionary = _active_visuals.get(actor_id, {})
+		var avatar := data.get("avatar") as Node3D
+		if is_instance_valid(avatar):
+			avatar.call("set_motion_state", "idle", 0.0)
+
+
 func _update_active_motion() -> void:
 	for actor_id in _active_visuals:
 		var data: Dictionary = _active_visuals[actor_id]
 		var actor: Node3D = data["root"]
 		var avatar: Node3D = data["avatar"]
 		if not is_instance_valid(actor) or not is_instance_valid(avatar):
+			continue
+		if _rescue_actor_ids.has(actor_id):
+			avatar.call("set_motion_state", "wave", 0.0)
 			continue
 		if _social_actor_states.has(actor_id):
 			var social_state: Dictionary = _social_actor_states[actor_id]
