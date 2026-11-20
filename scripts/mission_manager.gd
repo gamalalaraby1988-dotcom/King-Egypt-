@@ -88,6 +88,9 @@ var adventure_stage_index := 0
 var survival_prep_remaining := 0.0
 var survival_time_remaining := 0.0
 var adventure_treasure_visual: Node3D
+var rescue_interaction_button: Button
+var rescue_citizen_actor: Node3D
+var rescue_population: Node
 const SURVIVAL_PREPARATION_SECONDS := 10.0
 const SURVIVAL_DURATION_SECONDS := 60.0
 const CITY_ADVENTURES := {
@@ -129,6 +132,7 @@ func _ready() -> void:
 	AuthoritativeGameServer.job_completed.connect(_on_server_job_completed)
 	AuthoritativeGameServer.mission_start_result.connect(_on_server_mission_start_result)
 	AuthoritativeGameServer.mission_stage_updated.connect(_on_server_mission_stage_updated)
+	rescue_population = get_tree().current_scene.get_node_or_null("CityNPCPopulation") if is_instance_valid(get_tree().current_scene) else null
 	AuthoritativeGameServer.mission_failed.connect(_on_server_mission_failed)
 	AuthoritativeGameServer.mission_completed.connect(_on_server_mission_completed)
 	AuthoritativeGameServer.activity_proof_received.connect(_on_server_activity_proof_received)
@@ -144,6 +148,7 @@ func _exit_tree() -> void:
 		AuthoritativeGameServer.job_completed.disconnect(_on_server_job_completed)
 	if AuthoritativeGameServer.mission_start_result.is_connected(_on_server_mission_start_result):
 		AuthoritativeGameServer.mission_start_result.disconnect(_on_server_mission_start_result)
+	_clear_rescue_citizen()
 	if AuthoritativeGameServer.mission_stage_updated.is_connected(_on_server_mission_stage_updated):
 		AuthoritativeGameServer.mission_stage_updated.disconnect(_on_server_mission_stage_updated)
 	if AuthoritativeGameServer.mission_failed.is_connected(_on_server_mission_failed):
@@ -594,6 +599,7 @@ func _process(_delta: float) -> void:
 			return
 		_update_interaction_target()
 		_update_interaction_hud()
+		_update_rescue_interaction_prompt()
 		var online_interaction_down := Input.is_key_pressed(KEY_E)
 		if online_interaction_down and not _key_was_down and not job_running:
 			interact()
@@ -618,6 +624,7 @@ func _process(_delta: float) -> void:
 		return
 	_update_interaction_target()
 	_update_interaction_hud()
+	_update_rescue_interaction_prompt()
 	var interaction_key_down := Input.is_key_pressed(KEY_E)
 	var city_root := get_tree().current_scene
 	var vehicle_has_priority := false
@@ -1202,6 +1209,7 @@ func _advance_local_adventure_stage() -> void:
 		return
 	adventure_stage_index += 1
 	if adventure_stage_index >= stages.size():
+		_clear_rescue_citizen()
 		_hide_adventure_treasure()
 		_complete_active_mission()
 		return
@@ -1218,6 +1226,9 @@ func _on_server_mission_stage_updated(mission_id: String, server_target: Vector3
 	if not GameModeManager.is_online_ready() or not mission_running or selected_activity_kind != "adventure" or mission_id != selected_adventure_id:
 		return
 	active_target = server_target
+	adventure_stage_index = stage_number - 1
+	if mission_id == "city_adventure_rescue" and stage_number > 1:
+		_clear_rescue_citizen()
 	target_marker.global_position = active_target
 	if mission_id == "city_adventure_treasure" and stage_number == stage_count:
 		_show_adventure_treasure()
@@ -1295,6 +1306,7 @@ func _on_server_mission_failed(mission_id: String, message: String) -> void:
 		return
 	mission_running = false
 	survival_time_remaining = 0.0
+	_clear_rescue_citizen()
 	target_marker.visible = false
 	status_label.text = message
 	description_label.text = "انتهت مغامرة سباق النجاة. يمكنك المحاولة مرة أخرى."
@@ -1312,6 +1324,7 @@ func _on_server_mission_completed(mission_id: String) -> void:
 	mission_running = false
 	survival_time_remaining = 0.0
 	survival_prep_remaining = 0.0
+	_clear_rescue_citizen()
 	_hide_adventure_treasure()
 	target_marker.visible = false
 	status_label.text = "عثرت على الكنز وأكد الخادم إكمال المغامرة." if mission_id == "city_adventure_treasure" else ("اكتملت المغامرة بعد تحقق الخادم من جميع المراحل." if selected_activity_kind == "adventure" else "تحقق الخادم من وصولك إلى هدف المهمة.")
@@ -1829,6 +1842,56 @@ func _cancel_active_navigation() -> void:
 	panel.visible = true
 	_update_navigation_hud()
 
+func _clear_rescue_citizen() -> void:
+	if is_instance_valid(rescue_population) and is_instance_valid(rescue_citizen_actor) and rescue_population.has_method("set_rescue_citizen"):
+		rescue_population.call("set_rescue_citizen", rescue_citizen_actor, false)
+	rescue_citizen_actor = null
+	if is_instance_valid(rescue_interaction_button):
+		rescue_interaction_button.visible = false
+
+
+func _update_rescue_interaction_prompt() -> void:
+	if not is_instance_valid(rescue_interaction_button):
+		return
+	var rescue_stage_active := mission_running and selected_activity_kind == "adventure" and selected_adventure_id == "city_adventure_rescue" and adventure_stage_index == 0
+	if not rescue_stage_active or not is_instance_valid(player):
+		rescue_interaction_button.visible = false
+		return
+	if not is_instance_valid(rescue_population):
+		var city_root := get_tree().current_scene
+		rescue_population = city_root.get_node_or_null("CityNPCPopulation") if is_instance_valid(city_root) else null
+	if not is_instance_valid(rescue_population) or not rescue_population.has_method("get_nearest_active_citizen"):
+		rescue_interaction_button.visible = false
+		return
+	var citizen := rescue_population.call("get_nearest_active_citizen", active_target, 12.0) as Node3D
+	if not is_instance_valid(citizen):
+		rescue_interaction_button.visible = false
+		return
+	if rescue_citizen_actor != citizen:
+		_clear_rescue_citizen()
+		rescue_citizen_actor = citizen
+		rescue_population.call("set_rescue_citizen", rescue_citizen_actor, true)
+	var distance := Vector2(player.global_position.x - active_target.x, player.global_position.z - active_target.z).length()
+	rescue_interaction_button.visible = distance <= 3.0
+	status_label.text = "اقترب من المواطن لمساعدته." if distance > 3.0 else "المواطن يحتاج مساعدتك. اضغط «مساعدة المواطن»."
+
+
+func _interact_with_rescue_citizen() -> void:
+	if not mission_running or selected_adventure_id != "city_adventure_rescue" or adventure_stage_index != 0 or not is_instance_valid(player):
+		return
+	var distance := Vector2(player.global_position.x - active_target.x, player.global_position.z - active_target.z).length()
+	if distance > 3.0:
+		status_label.text = "اقترب من المواطن أولًا."
+		return
+	rescue_interaction_button.disabled = true
+	if GameModeManager.is_online_ready():
+		AuthoritativeGameServer.request_rescue_citizen_interaction.rpc_id(1)
+	else:
+		_clear_rescue_citizen()
+		_advance_local_adventure_stage()
+	rescue_interaction_button.disabled = false
+
+
 func _hide_adventure_treasure() -> void:
 	if is_instance_valid(adventure_treasure_visual):
 		adventure_treasure_visual.queue_free()
@@ -2039,6 +2102,12 @@ func _build_ui() -> void:
 	job_delivery_button.visible = false
 	job_delivery_button.pressed.connect(_deliver_current_job_package)
 	content.add_child(job_delivery_button)
+	rescue_interaction_button = Button.new()
+	rescue_interaction_button.name = "RescueCitizenInteractionButton"
+	rescue_interaction_button.text = "مساعدة المواطن"
+	rescue_interaction_button.visible = false
+	rescue_interaction_button.pressed.connect(_interact_with_rescue_citizen)
+	content.add_child(rescue_interaction_button)
 	accept_button = Button.new()
 	accept_button.text = "بدء المهمة"
 	accept_button.pressed.connect(_accept_selected_activity)
