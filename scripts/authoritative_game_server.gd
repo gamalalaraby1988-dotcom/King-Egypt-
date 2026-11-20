@@ -731,10 +731,12 @@ func request_arcade_slot_spin_rpc(spin_type: String, wager_chips: int) -> void:
 	if _proof_hmac_secret.size() < 32:
 		_notify_slot_spin_failed(peer_id, session_id, "إعداد توقيع خادم اللعبة غير مكتمل.")
 		return
-	var base_url := str(ProjectSettings.get_setting("founder/auth/api_base_url", "")).strip_edges().trim_suffix("/")
-	var publishable_key := str(ProjectSettings.get_setting("founder/auth/publishable_key", "")).strip_edges()
+	# Slot settlement is explicitly environment-configured for TEST first.
+	# Never fall back to the production project settings used by account authentication.
+	var base_url := OS.get_environment("KING_CITY_SLOT_API_BASE_URL").strip_edges().trim_suffix("/")
+	var publishable_key := OS.get_environment("KING_CITY_SLOT_PUBLISHABLE_KEY").strip_edges()
 	if not base_url.begins_with("https://") or publishable_key.is_empty():
-		_notify_slot_spin_failed(peer_id, session_id, "خدمة تسوية الماكينات غير مهيأة.")
+		_notify_slot_spin_failed(peer_id, session_id, "خدمة تسوية الماكينات غير مهيأة على بيئة الاختبار.")
 		return
 	var user_id := str(_sessions[peer_id].get("user_id", ""))
 	var event_id := _new_server_event_uuid()
