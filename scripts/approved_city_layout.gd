@@ -59,6 +59,7 @@ func _building(parent: Node3D, id: String, title: String, at: Vector3, footprint
 	_box(root, "GroundPlinth", Vector3(w + 0.8, 0.7, d + 0.8), Vector3(0, 0.35, 0), SAND)
 	_box(root, "RoofCornice", Vector3(w + 0.5, 0.35, d + 0.5), Vector3(0, height + 0.12, 0), accent)
 	_box(root, "Entrance", Vector3(maxf(1.5, w * 0.18), 2.8, 0.16), Vector3(0, 1.4, d * 0.5 + 0.09), DARK)
+	_add_pharaonic_door_band(root, maxf(1.5, w * 0.18), d * 0.5 + 0.205)
 	for side in [-1.0, 1.0]:
 		_box(root, "FrontColumn", Vector3(0.38, minf(height - 0.8, 5.0), 0.42), Vector3(side * w * 0.34, minf(height - 0.8, 5.0) * 0.5, d * 0.5 + 0.25), accent)
 	var sign := Label3D.new()
@@ -90,6 +91,55 @@ func _building(parent: Node3D, id: String, title: String, at: Vector3, footprint
 			root.add_child(entrance)
 	_add_building_lod_proxy(root, footprint, height, accent)
 
+
+
+func _add_pharaonic_door_band(root: Node3D, door_width: float, front_z: float) -> void:
+	# One slim, emissive black-and-gold identity strip shared by every city entrance.
+	var band := MeshInstance3D.new()
+	band.name = "PharaonicDoorLightBand"
+	var band_mesh := BoxMesh.new()
+	band_mesh.size = Vector3(door_width + 0.22, 0.42, 0.075)
+	band.mesh = band_mesh
+	band.position = Vector3(0.0, 1.48, front_z)
+	var black := StandardMaterial3D.new()
+	black.albedo_color = Color(0.012, 0.014, 0.016)
+	black.roughness = 0.34
+	black.metallic = 0.42
+	black.emission_enabled = true
+	black.emission = Color(0.12, 0.075, 0.025)
+	black.emission_energy_multiplier = 0.55
+	band.material_override = black
+	band.add_to_group("city_world_geometry")
+	root.add_child(band)
+
+	var trim := MeshInstance3D.new()
+	trim.name = "PharaonicDoorBandGoldTrim"
+	var trim_mesh := BoxMesh.new()
+	trim_mesh.size = Vector3(door_width + 0.28, 0.035, 0.09)
+	trim.mesh = trim_mesh
+	trim.position = Vector3(0.0, 1.48, front_z + 0.008)
+	var gold := StandardMaterial3D.new()
+	gold.albedo_color = Color(0.92, 0.66, 0.24)
+	gold.metallic = 0.72
+	gold.roughness = 0.28
+	gold.emission_enabled = true
+	gold.emission = Color(0.9, 0.48, 0.12)
+	gold.emission_energy_multiplier = 1.35
+	trim.material_override = gold
+	trim.add_to_group("city_world_geometry")
+	root.add_child(trim)
+
+	var glyphs := Label3D.new()
+	glyphs.name = "PharaonicDoorBandGlyphs"
+	glyphs.text = "𓂀  𓋹  𓆣  𓊹  𓋹  𓂀"
+	glyphs.position = Vector3(0.0, 1.48, front_z + 0.058)
+	glyphs.font_size = 30
+	glyphs.pixel_size = 0.0065
+	glyphs.modulate = Color(1.0, 0.78, 0.36)
+	glyphs.outline_size = 3
+	glyphs.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	glyphs.add_to_group("city_world_geometry")
+	root.add_child(glyphs)
 
 func _add_building_lod_proxy(root: Node3D, footprint: Vector2, height: float, accent: Color) -> void:
 	# Keep the detailed facade nearby; replace its six decorative draw calls with two
