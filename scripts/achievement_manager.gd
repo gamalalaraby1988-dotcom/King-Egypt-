@@ -3,8 +3,6 @@ extends Node
 
 const ProfileConfigStore = preload("res://scripts/profile_config_store.gd")
 
-func _save_path() -> String:
-	return ProfileConfigStore.get_active_scoped_path("user://kings_city_achievements.cfg")
 var player: Node3D
 var mission_manager: Node
 var walked_meters := 0.0
@@ -23,6 +21,9 @@ var panel: PanelContainer
 var list_label: Label
 var summary_label: Label
 var open_button: Button
+
+func _save_path() -> String:
+	return ProfileConfigStore.get_active_scoped_path("user://kings_city_achievements.cfg")
 
 func _ready() -> void:
 	_load_state()
