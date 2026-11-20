@@ -1,6 +1,9 @@
 extends Node
+const ProfileConfigStore = preload("res://scripts/profile_config_store.gd")
+
+func _save_path() -> String:
+	return ProfileConfigStore.get_active_profile_path()
 ## مرجع ملكية المركبات وعمليات شرائها. لا يمثل وجود هذا الكتالوج توافر مجسمات 3D لكل مركبة.
-const SAVE_PATH := "user://kings_city_profile.cfg"
 const DEFAULT_OWNED := ["pharaonic_scooter", "toyota_corolla", "hyundai_elantra", "byd_qin_plus"]
 const VEHICLES := {
 	"pharaonic_scooter": {"name": "السكوتر الفرعوني", "country": "مصر", "currency": "money", "price": 0},
@@ -34,7 +37,7 @@ func get_vehicle(vehicle_id: String) -> Dictionary:
 
 func get_owned_vehicles() -> Array:
 	var config := ConfigFile.new()
-	if config.load(SAVE_PATH) != OK:
+	if config.load(_save_path()) != OK:
 		return DEFAULT_OWNED.duplicate()
 	var stored: Variant = config.get_value("profile", "owned_vehicles", DEFAULT_OWNED)
 	var result: Array = DEFAULT_OWNED.duplicate()
@@ -49,7 +52,7 @@ func has_vehicle(vehicle_id: String) -> bool:
 
 func get_selected_vehicle_id() -> String:
 	var config := ConfigFile.new()
-	if config.load(SAVE_PATH) == OK:
+	if config.load(_save_path()) == OK:
 		var stored := str(config.get_value("profile", "selected_vehicle_id", "toyota_corolla"))
 		if has_vehicle(stored):
 			selected_vehicle_id = stored
@@ -59,8 +62,8 @@ func select_vehicle(vehicle_id: String) -> bool:
 	if not has_vehicle(vehicle_id):
 		return false
 	var config := ConfigFile.new()
-	var err := config.load(SAVE_PATH)
-	if err != OK and FileAccess.file_exists(SAVE_PATH):
+	var err := config.load(_save_path())
+	if err != OK and FileAccess.file_exists(_save_path()):
 		return false
 	config.set_value("profile", "selected_vehicle_id", vehicle_id)
 	if not WalletManager.save_profile_update(config, WalletManager.get_balance("money"), WalletManager.get_balance("chips")):
@@ -88,7 +91,7 @@ func get_horus_colors() -> Dictionary:
 
 func get_owned_horus_colors() -> Array:
 	var config := ConfigFile.new()
-	if config.load(SAVE_PATH) != OK:
+	if config.load(_save_path()) != OK:
 		return []
 	var stored: Variant = config.get_value("profile", "owned_horus_colors", [])
 	return stored.duplicate() if stored is Array else []
@@ -112,7 +115,7 @@ func select_horus_color(color_id: String) -> bool:
 	if not HORUS_COLORS.has(color_id) or not get_owned_horus_colors().has(color_id) or not has_vehicle("horus_2030"):
 		return false
 	var config := ConfigFile.new()
-	var err := config.load(SAVE_PATH)
+	var err := config.load(_save_path())
 	if err != OK:
 		return false
 	config.set_value("profile", "selected_horus_color", color_id)
