@@ -651,12 +651,15 @@ func _launch_arcade_session(session_id: String, peer_id: int) -> void:
 		return
 	var controller := session.get("controller") as Node
 	var participants: Dictionary = session.get("participants", {})
-	if not is_instance_valid(controller) or not bool(controller.call("start_arcade_session", session_id, str(session.get("mode", "")), participants.duplicate(true))):
-		_abort_arcade_session(session_id, "رفض نظام اللعبة بدء الجلسة؛ لم تبدأ الجولة.")
+	if not is_instance_valid(controller):
+		_abort_arcade_session(session_id, "متحكم اللعبة غير متاح؛ لم تبدأ الجولة.")
 		return
 	session["state"] = "running"
 	session["started_at_usec"] = Time.get_ticks_usec()
 	_arcade_sessions[session_id] = session
+	if not bool(controller.call("start_arcade_session", session_id, str(session.get("mode", "")), participants.duplicate(true))):
+		_abort_arcade_session(session_id, "رفض نظام اللعبة بدء الجلسة؛ لم تبدأ الجولة.")
+		return
 	for participant_peer_variant in participants.keys():
 		_reply_arcade_session(int(participant_peer_variant), session_id, "running", str(session.get("machine_id", "")), "بدأت جلسة اللعب على الخادم.")
 
