@@ -144,6 +144,67 @@ jobs:
             exit 1
           fi
 
+
+      - name: Run arcade slot machine contract tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          GODOT="/tmp/godot/Godot_v4.7.2-stable_linux.x86_64"
+          LOG="/tmp/godot-arcade-slot-contract.log"
+          set +e
+          "$GODOT" --headless --path . --script res://tests/arcade_slot_machine_contract_test.gd 2>&1 | tee "$LOG"
+          GODOT_STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$GODOT_STATUS" -ne 0 ] || grep -E '(^|[[:space:]])(ERROR|SCRIPT ERROR):|Parse Error:' "$LOG"; then
+            echo "Arcade slot machine contract tests failed."
+            exit 1
+          fi
+
+      - name: Run city adventure activity contract tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          GODOT="/tmp/godot/Godot_v4.7.2-stable_linux.x86_64"
+          LOG="/tmp/godot-city-adventure-contract.log"
+          set +e
+          "$GODOT" --headless --path . --script res://tests/city_adventure_activity_contract_test.gd 2>&1 | tee "$LOG"
+          GODOT_STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$GODOT_STATUS" -ne 0 ] || grep -E '(^|[[:space:]])(ERROR|SCRIPT ERROR):|Parse Error:' "$LOG"; then
+            echo "City adventure activity contract tests failed."
+            exit 1
+          fi
+
+      - name: Run city NPC social contract tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          GODOT="/tmp/godot/Godot_v4.7.2-stable_linux.x86_64"
+          LOG="/tmp/godot-city-npc-social-contract.log"
+          set +e
+          "$GODOT" --headless --path . --script res://tests/city_npc_social_contract_test.gd 2>&1 | tee "$LOG"
+          GODOT_STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$GODOT_STATUS" -ne 0 ] || grep -E '(^|[[:space:]])(ERROR|SCRIPT ERROR):|Parse Error:' "$LOG"; then
+            echo "City NPC social contract tests failed."
+            exit 1
+          fi
+
+      - name: Run slot machine payout rules tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          GODOT="/tmp/godot/Godot_v4.7.2-stable_linux.x86_64"
+          LOG="/tmp/godot-slot-machine-rules.log"
+          set +e
+          "$GODOT" --headless --path . --script res://tests/slot_machine_rules_test.gd 2>&1 | tee "$LOG"
+          GODOT_STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$GODOT_STATUS" -ne 0 ] || grep -E '(^|[[:space:]])(ERROR|SCRIPT ERROR):|Parse Error:' "$LOG"; then
+            echo "Slot machine payout rules tests failed."
+            exit 1
+          fi
+
       - name: Run arcade mobile camera ownership test
         shell: bash
         run: |
