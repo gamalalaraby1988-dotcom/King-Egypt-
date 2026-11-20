@@ -1159,11 +1159,7 @@ func _create_job_board(title: String, description: String, pos: Vector3, target_
 	add_child(board)
 	_create_box(board, "JobBoardBase", Vector3(2.4, 1.5, 0.45), Vector3(0, 0.75, 0), Color(0.16, 0.22, 0.28), false)
 	_create_box(board, "JobBoardSign", Vector3(2.8, 1.1, 0.16), Vector3(0, 2.05, 0), Color(0.10, 0.22, 0.25), false)
-	var board_key := "city_guide"
-	if job_id == "courier_delivery":
-		board_key = "delivery"
-	elif job_id == "city_maintenance":
-		board_key = "maintenance"
+	var board_key := "employment"
 	_add_sign_label(board, board_key, Vector3(0, 2.05, -0.12))
 
 
