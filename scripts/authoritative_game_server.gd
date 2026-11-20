@@ -506,6 +506,36 @@ func request_start_mission(mission_id: String) -> void:
 	rpc_id(peer_id, "receive_mission_start_result", true, safe_mission_id, first_target, "بدأت المهمة على الخادم. اتبع علامة الهدف.")
 
 
+@rpc("any_peer", "call_remote", "reliable")
+func request_rescue_citizen_interaction() -> void:
+	if not multiplayer.is_server():
+		return
+	var peer_id := multiplayer.get_remote_sender_id()
+	if not _sessions.has(peer_id) or not bool(_sessions[peer_id].get("authenticated", false)):
+		return
+	var session: Dictionary = _sessions[peer_id]
+	var active_mission: Dictionary = session.get("active_mission", {})
+	if str(active_mission.get("mission_id", "")) != "city_adventure_rescue" or int(active_mission.get("stage_index", -1)) != 0:
+		return
+	var body := session.get("body") as CharacterBody3D
+	var mission_target: Vector3 = active_mission.get("target", Vector3.ZERO)
+	if not is_instance_valid(body):
+		return
+	var distance := Vector2(body.global_position.x - mission_target.x, body.global_position.z - mission_target.z).length()
+	if distance > float(active_mission.get("radius", 2.2)) + 0.6:
+		rpc_id(peer_id, "receive_mission_stage_updated", "city_adventure_rescue", mission_target, 1, 2, "اقترب من المواطن أولًا ثم تفاعل معه.")
+		return
+	var mission_stages: Array = active_mission.get("stages", [])
+	if mission_stages.size() < 2:
+		return
+	var next_target: Vector3 = mission_stages[1]
+	active_mission["stage_index"] = 1
+	active_mission["target"] = next_target
+	session["active_mission"] = active_mission
+	_sessions[peer_id] = session
+	rpc_id(peer_id, "receive_mission_stage_updated", "city_adventure_rescue", next_target, 2, mission_stages.size(), "ساعدت المواطن! اتجه إلى مركز الشرطة لإكمال الإنقاذ.")
+
+
 @rpc("authority", "call_remote", "reliable")
 func receive_mission_start_result(success: bool, mission_id: String, target: Vector3, message: String) -> void:
 	if multiplayer.is_server():
@@ -1182,7 +1212,8 @@ func _physics_process(delta: float) -> void:
 			else:
 				var mission_target: Vector3 = active_mission.get("target", Vector3.ZERO)
 				var mission_distance := Vector2(body.global_position.x, body.global_position.z).distance_to(Vector2(mission_target.x, mission_target.z))
-				if mission_distance <= float(active_mission.get("radius", 2.2)):
+				var rescue_requires_interaction := completed_mission_id == "city_adventure_rescue" and int(active_mission.get("stage_index", 0)) == 0
+				if mission_distance <= float(active_mission.get("radius", 2.2)) and not rescue_requires_interaction:
 					var mission_stages: Array = active_mission.get("stages", [mission_target])
 					var stage_index := int(active_mission.get("stage_index", 0))
 					if stage_index + 1 < mission_stages.size():
