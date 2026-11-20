@@ -182,7 +182,7 @@ func _refresh_navigation_language() -> void:
 	_update_navigation_hud()
 
 func _notification(what: int) -> void:
-	if what == NOTIFICATION_WM_CLOSE_REQUEST and is_inside_tree():
+	if what == NOTIFICATION_WM_CLOSE_REQUEST or what == NOTIFICATION_PREDELETE:
 		_save_profile()
 
 func grant_reward_once(reward_id: String, money_amount: int = 0, xp_amount: int = 0, chips_amount: int = 0) -> bool:
