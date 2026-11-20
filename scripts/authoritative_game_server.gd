@@ -672,6 +672,7 @@ func _physics_process(delta: float) -> void:
 		else:
 			velocity.y = 0.0
 		body.velocity = velocity
+		_try_player_step_up(body, safe_delta)
 		body.move_and_slide()
 		if direction.length() > 0.1:
 			body.rotation.y = atan2(direction.x, direction.z)
@@ -726,3 +727,22 @@ func receive_authoritative_state(position: Vector3, rotation_y: float, velocity:
 	if multiplayer.is_server() or not is_authenticated():
 		return
 	authoritative_state_received.emit(position, rotation_y, velocity)
+
+
+func _try_player_step_up(body: CharacterBody3D, delta: float) -> void:
+	# Server-authoritative low-curb assist, shared by all online players.
+	if not body.is_on_floor() or Vector2(body.velocity.x, body.velocity.z).length() < 0.15:
+		return
+	var horizontal_motion := Vector3(body.velocity.x, 0.0, body.velocity.z) * maxf(delta, 0.001)
+	if not body.test_move(body.global_transform, horizontal_motion):
+		return
+	var raised := body.global_transform
+	raised.origin.y += 0.38
+	if body.test_move(raised, horizontal_motion):
+		return
+	var landing := KinematicCollision3D.new()
+	if not body.test_move(raised, horizontal_motion + Vector3.DOWN * 0.5, landing):
+		return
+	if landing.get_angle(0) > deg_to_rad(50.0):
+		return
+	body.global_position.y += 0.38
