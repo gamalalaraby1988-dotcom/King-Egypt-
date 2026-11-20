@@ -147,9 +147,9 @@ Deno.serve(async (req: Request) => {
 
   if (
     !UUID_RE.test(userId) || !UUID_RE.test(sessionId) || !UUID_RE.test(eventId) ||
-    !Object.hasOwn(MACHINE_WEIGHTS, machineId) || !["paid", "free"].includes(spinType) ||
+    !Object.hasOwn(MACHINE_WEIGHTS, machineId) || !["paid", "free", "auto"].includes(spinType) ||
     typeof wager !== "number" || !Number.isSafeInteger(wager) ||
-    (spinType === "paid" && (wager < 10 || wager > 2_000_000_000)) ||
+    (spinType !== "free" && (wager < 10 || wager > 2_000_000_000)) ||
     (spinType === "free" && wager !== 10) ||
     typeof issuedAt !== "number" || !Number.isSafeInteger(issuedAt) ||
     !/^[0-9a-f]{64}$/.test(signatureHex)
@@ -179,19 +179,22 @@ Deno.serve(async (req: Request) => {
 
   let rpcResponse: Response;
   try {
-    rpcResponse = await fetch(projectUrl + "/rest/v1/rpc/settle_arcade_slot_spin", {
+    const autoSpin = spinType === "auto";
+    const rpcName = autoSpin ? "settle_arcade_slot_spin_auto" : "settle_arcade_slot_spin";
+    const rpcPayload: Record<string, unknown> = {
+      p_user_id: userId,
+      p_session_id: sessionId,
+      p_server_event_id: eventId,
+      p_machine_id: machineId,
+      p_wager_chips: wager,
+      p_reel_symbols: outcome.reelSymbols,
+      p_collection_symbols: outcome.collectionSymbols,
+    };
+    if (!autoSpin) rpcPayload.p_spin_type = spinType;
+    rpcResponse = await fetch(projectUrl + "/rest/v1/rpc/" + rpcName, {
       method: "POST",
       headers: { "apikey": secretKey, "Content-Type": "application/json", "Accept": "application/json" },
-      body: JSON.stringify({
-        p_user_id: userId,
-        p_session_id: sessionId,
-        p_server_event_id: eventId,
-        p_machine_id: machineId,
-        p_spin_type: spinType,
-        p_wager_chips: wager,
-        p_reel_symbols: outcome.reelSymbols,
-        p_collection_symbols: outcome.collectionSymbols,
-      }),
+      body: JSON.stringify(rpcPayload),
     });
   } catch {
     return json({ error: "slot_spin_database_unavailable" }, 503);
