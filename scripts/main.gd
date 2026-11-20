@@ -1544,7 +1544,12 @@ func _on_player_account_authenticated(user_id: String, email: String) -> void:
 		player_account_profile_label.text = "معرّف الحساب: " + user_id
 
 func _on_player_account_access_token_changed(access_token: String) -> void:
-	PlayerSyncClient.set_session_access_token(access_token, PlayerAccountAuthClient.get_user_id())
+	var account_id := PlayerAccountAuthClient.get_user_id()
+	if not ProfileConfigStore.set_active_account(account_id):
+		push_error("Could not activate the isolated local profile for the authenticated account.")
+		return
+	WalletManager.initialize_wallet()
+	PlayerSyncClient.set_session_access_token(access_token, account_id)
 
 func _on_player_account_session_expired() -> void:
 	PlayerSyncClient.clear_session_access_token()
