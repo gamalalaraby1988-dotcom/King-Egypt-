@@ -648,7 +648,7 @@ func _build_pedestrian_green_pockets() -> void:
 			for z in [-4.0, 4.0]:
 				_tree(pocket, "PocketPalm", Vector3(x, 0.0, z), 0.62)
 		for side in [-1.0, 1.0]:
-			var bench_x := side * 2.9
+			var bench_x: float = side * 2.9
 			_box(pocket, "PocketBenchSeat", Vector3(2.2, 0.22, 0.62), Vector3(bench_x, 0.72, 0.0), SAND)
 			_box(pocket, "PocketBenchBack", Vector3(2.2, 0.82, 0.16), Vector3(bench_x, 1.12, -0.22), GOLD)
 			_add_static_box_collision(pocket, "PocketBenchCollision", Vector3(2.2, 1.0, 0.62), Vector3(bench_x, 0.62, 0.0))
