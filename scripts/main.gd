@@ -701,18 +701,17 @@ func _create_royal_palace_interior(root: Node3D) -> void:
 		plaque.modulate = Color(1.0,0.88,0.58)
 		plaque.outline_size = 7
 		root.add_child(plaque)
-		_create_box(root, room_id + "Feature", Vector3(2.2,0.9,0.9), center + Vector3(0,0.75,0.7), room_color, true)
+		if room_id == "EuropeanCasino":
+			_create_european_vip_slot_machines(root, center)
+		else:
+			_create_box(root, room_id + "Feature", Vector3(2.2,0.9,0.9), center + Vector3(0,0.75,0.7), room_color, true)
 
-	# ديكور مستقل لكل جناح، مع الحفاظ على أن الماكينات هنا مجسمات شكلية فقط.
+	# أثاث القصر غير المتعارض مع نظام الماكينات الجديد.
 	_create_box(root, "ThroneDais", Vector3(3.8,0.45,2.6), Vector3(-10,0.48,-10.5), Color(0.58,0.43,0.24), true)
 	_create_box(root, "ThroneSeat", Vector3(1.8,1.8,1.0), Vector3(-10,1.6,-10.5), Color(0.42,0.12,0.12), true)
 	for i in range(3):
 		var x := -2.0 + float(i) * 2.0
 		_create_box(root, "CelebrationTable_%d" % i, Vector3(1.3,0.18,1.3), Vector3(x,0.85,-9.2), Color(0.48,0.27,0.14), true)
-	for i in range(3):
-		var x := 8.0 + float(i) * 1.8
-		_create_box(root, "CasinoMachinePedestal_%d" % i, Vector3(0.9,1.7,0.75), Vector3(x,0.9,-9.2), Color(0.12,0.19,0.20), true)
-		_create_box(root, "CasinoMachineScreen_%d" % i, Vector3(0.72,0.65,0.12), Vector3(x,1.85,-9.55), Color(0.75,0.53,0.20))
 	for i in range(2):
 		_create_box(root, "VIPSofa_%d" % i, Vector3(2.5,0.7,0.9), Vector3(-8.5 + float(i)*3.0,0.42,10.0), Color(0.12,0.20,0.28), true)
 	for i in range(3):
@@ -1707,3 +1706,27 @@ func _create_founder_update_panel() -> void:
 	panel.name = "FounderUpdateManagement"
 	panel.set_script(panel_script)
 	add_child(panel)
+
+
+func _create_european_vip_slot_machines(root: Node3D, room_center: Vector3) -> void:
+	# استبدال مجسمات الـplaceholder الثلاثة بماكينات سلوت ذات مقاعد وتفاعل جلوس.
+	var slot_script := load("res://scripts/arcade_slot_machine.gd") as Script
+	if slot_script == null:
+		push_warning("تعذر تحميل مشهد ماكينة السلوت الملكية.")
+		return
+	var machines := [
+		{"id":"vip_royal_classic", "title":"Royal Classic", "subtitle":"ROYAL SLOT", "accent":Color(0.82,0.62,0.25), "body":Color(0.055,0.075,0.09), "offset":Vector3(-3.2,0,-1.35)},
+		{"id":"vip_diamond_royale", "title":"Diamond Royale", "subtitle":"DIAMOND VIP", "accent":Color(0.55,0.82,0.92), "body":Color(0.035,0.07,0.12), "offset":Vector3(0,0,-1.35)},
+		{"id":"vip_golden_crown", "title":"Golden Crown", "subtitle":"ROYAL JACKPOT", "accent":Color(0.92,0.72,0.28), "body":Color(0.12,0.055,0.035), "offset":Vector3(3.2,0,-1.35)}
+	]
+	for definition in machines:
+		var machine := Node3D.new()
+		machine.name = str(definition["id"])
+		machine.set_script(slot_script)
+		machine.set("machine_id", str(definition["id"]))
+		machine.set("machine_title", str(definition["title"]))
+		machine.set("machine_subtitle", str(definition["subtitle"]))
+		machine.set("accent_color", definition["accent"])
+		machine.set("body_color", definition["body"])
+		machine.position = room_center + definition["offset"]
+		root.add_child(machine)

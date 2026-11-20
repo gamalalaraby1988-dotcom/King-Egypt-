@@ -37,16 +37,34 @@ func _ready() -> void:
 	_cache_animation_defaults()
 
 func set_motion_state(state: String, speed: float = 0.0) -> void:
-	motion_state = state if ["idle", "walk", "run", "sit"].has(state) else "idle"
+	motion_state = state if ["idle", "walk", "run", "sit", "celebrate", "disappointed"].has(state) else "idle"
 	motion_speed = maxf(speed, 0.0)
 
 func _process(delta: float) -> void:
 	motion_time += delta
-	var intensity := 1.0 if motion_state == "walk" else (1.35 if motion_state == "run" else 0.0)
+	var intensity := 1.0 if motion_state == "walk" else (1.35 if motion_state == "run" else (0.55 if motion_state == "celebrate" else 0.0))
 	var cycle_speed := 7.0 if motion_state == "walk" else 11.0
 	var swing := sin(motion_time * cycle_speed) * 0.48 * intensity
 	var bob := absf(sin(motion_time * cycle_speed * 2.0)) * 0.045 * intensity
 	_restore_animation_defaults()
+	if motion_state == "celebrate":
+		if parts.has("TorsoBase"):
+			(parts["TorsoBase"] as MeshInstance3D).position.y += absf(sin(motion_time * 8.0)) * 0.12
+		if parts.has("LeftArm"):
+			(parts["LeftArm"] as MeshInstance3D).rotation.z = -1.15
+		if parts.has("RightArm"):
+			(parts["RightArm"] as MeshInstance3D).rotation.z = 1.15
+		return
+	if motion_state == "disappointed":
+		if parts.has("TorsoBase"):
+			(parts["TorsoBase"] as MeshInstance3D).rotation.x = 0.16
+		if parts.has("Head"):
+			(parts["Head"] as MeshInstance3D).rotation.x = 0.18
+		if parts.has("LeftArm"):
+			(parts["LeftArm"] as MeshInstance3D).rotation.z = -0.22
+		if parts.has("RightArm"):
+			(parts["RightArm"] as MeshInstance3D).rotation.z = 0.22
+		return
 	if motion_state == "sit":
 		if parts.has("TorsoBase"):
 			(parts["TorsoBase"] as MeshInstance3D).position.y = 0.91
@@ -73,7 +91,7 @@ func _process(delta: float) -> void:
 				limb.rotation.x = -swing * sign
 
 func _cache_animation_defaults() -> void:
-	for limb_name in ["TorsoBase", "LeftArm", "RightArm", "LeftLeg", "RightLeg"]:
+	for limb_name in ["TorsoBase", "Head", "LeftArm", "RightArm", "LeftLeg", "RightLeg"]:
 		if parts.has(limb_name):
 			var limb := parts[limb_name] as MeshInstance3D
 			animated_defaults[limb_name] = {"position": limb.position, "rotation": limb.rotation}

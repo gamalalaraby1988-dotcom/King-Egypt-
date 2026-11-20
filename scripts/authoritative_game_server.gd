@@ -12,6 +12,8 @@ signal mission_start_result(success: bool, mission_id: String, target: Vector3, 
 signal mission_completed(mission_id: String)
 signal activity_proof_received(activity_kind: String, activity_id: String, proof_id: String)
 signal activity_proof_failed(activity_kind: String, activity_id: String, message: String)
+signal arcade_session_state_changed(session_id: String, state: String, machine_id: String, message: String)
+signal arcade_session_verified(session_id: String, server_event_id: String, machine_id: String, zone_id: String, mode: String, participants: Dictionary, results: Dictionary)
 
 const DEFAULT_PORT := 2456
 const MAX_PLAYERS := 64
@@ -33,6 +35,21 @@ var _client_authenticated := false
 var _objective_zones: Dictionary = {}
 var _proof_hmac_secret := PackedByteArray()
 var _proof_secret_warning_shown := false
+var _arcade_machines: Dictionary = {}
+var _arcade_sessions: Dictionary = {}
+var _peer_arcade_sessions: Dictionary = {}
+var _closed_arcade_sessions: Dictionary = {}
+const ARCADE_ZONE_IDS := [
+	"european_vip_casino",
+	"civilization_ship",
+	"greek_wing",
+	"roman_wing",
+	"japanese_wing",
+	"chinese_wing",
+	"french_wing"
+]
+const ARCADE_SESSION_MODES := ["solo", "multiplayer", "tournament"]
+const ARCADE_MACHINE_INTERACTION_RADIUS := 3.5
 var _daily_job_completions: Dictionary = {}
 const DAILY_JOB_SAVE_PATH := "user://king_city_daily_jobs.cfg"
 const EGYPT_UTC_OFFSET_SECONDS := 7200
@@ -165,6 +182,7 @@ func _on_peer_connected(peer_id: int) -> void:
 
 
 func _on_peer_disconnected(peer_id: int) -> void:
+	_abort_peer_arcade_session(peer_id, "انقطع اتصال أحد المشاركين؛ أُغلقت الجلسة دون نتيجة أو مكافأة.")
 	var session: Dictionary = _sessions.get(peer_id, {})
 	var body := session.get("body") as CharacterBody3D
 	if is_instance_valid(body):
@@ -278,6 +296,30 @@ func receive_authentication_result(success: bool, message: String) -> void:
 	else:
 		_client_authenticated = false
 		authentication_completed.emit(false, message)
+
+
+func request_start_arcade_session(machine_id: String, mode: String) -> void:
+	if _is_dedicated_server or not is_authenticated():
+		return
+	request_start_arcade_session_rpc.rpc_id(1, machine_id, mode)
+
+
+func request_join_arcade_session(session_id: String) -> void:
+	if _is_dedicated_server or not is_authenticated():
+		return
+	request_join_arcade_session_rpc.rpc_id(1, session_id)
+
+
+func request_launch_arcade_session(session_id: String) -> void:
+	if _is_dedicated_server or not is_authenticated():
+		return
+	request_launch_arcade_session_rpc.rpc_id(1, session_id)
+
+
+func request_leave_arcade_session(session_id: String) -> void:
+	if _is_dedicated_server or not is_authenticated():
+		return
+	request_leave_arcade_session_rpc.rpc_id(1, session_id)
 
 
 func send_movement_input(world_direction: Vector3, sprint: bool) -> void:
@@ -458,6 +500,270 @@ func receive_server_activity_proof_failed(activity_kind: String, activity_id: St
 	if multiplayer.is_server() or not is_authenticated():
 		return
 	activity_proof_failed.emit(activity_kind, activity_id, message)
+
+
+
+
+# Arcade session authority foundation.
+# Machine controllers must be registered by trusted server scene code. Clients can
+# request lifecycle transitions, but can never submit or choose a result.
+func register_arcade_machine(machine_id: String, zone_id: String, anchor: Node3D, controller: Node) -> bool:
+	if not multiplayer.is_server() or not _is_valid_arcade_machine_id(machine_id):
+		return false
+	if not ARCADE_ZONE_IDS.has(zone_id) or not is_instance_valid(anchor) or not is_instance_valid(controller):
+		return false
+	if not anchor.is_inside_tree() or not controller.is_inside_tree() or _arcade_machines.has(machine_id):
+		return false
+	for method_name in ["can_start_arcade_session", "can_join_arcade_session", "start_arcade_session", "validate_arcade_session_result", "abort_arcade_session"]:
+		if not controller.has_method(method_name):
+			push_warning("Arcade machine %s is missing required server controller method %s." % [machine_id, method_name])
+			return false
+	_arcade_machines[machine_id] = {"zone_id": zone_id, "anchor": anchor, "controller": controller}
+	return true
+
+
+func unregister_arcade_machine(machine_id: String) -> void:
+	if not multiplayer.is_server():
+		return
+	for session_id_variant in _arcade_sessions.keys():
+		var session_id := str(session_id_variant)
+		if str(_arcade_sessions[session_id].get("machine_id", "")) == machine_id:
+			_abort_arcade_session(session_id, "تم إيقاف الماكينة على الخادم.")
+	_arcade_machines.erase(machine_id)
+
+
+func _user_has_active_arcade_session(user_id: String) -> bool:
+	if user_id.is_empty():
+		return true
+	for peer_id_variant in _peer_arcade_sessions.keys():
+		var peer_id := int(peer_id_variant)
+		if _sessions.has(peer_id) and str(_sessions[peer_id].get("user_id", "")) == user_id:
+			return true
+	return false
+
+
+func _is_valid_arcade_machine_id(machine_id: String) -> bool:
+	if machine_id.is_empty() or machine_id.length() > 80:
+		return false
+	var pattern := RegEx.new()
+	pattern.compile("^[a-z0-9][a-z0-9_.-]{0,79}$")
+	return pattern.search(machine_id) != null
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func request_start_arcade_session_rpc(machine_id: String, mode: String) -> void:
+	if not multiplayer.is_server():
+		return
+	var peer_id := multiplayer.get_remote_sender_id()
+	if not _sessions.has(peer_id) or not bool(_sessions[peer_id].get("authenticated", false)):
+		return
+	if not _is_valid_arcade_machine_id(machine_id) or not ARCADE_SESSION_MODES.has(mode):
+		_reply_arcade_session(peer_id, "", "rejected", machine_id, "طلب جلسة اللعب غير صالح.")
+		return
+	if _peer_arcade_sessions.has(peer_id) or _user_has_active_arcade_session(str(_sessions[peer_id].get("user_id", ""))):
+		_reply_arcade_session(peer_id, "", "rejected", machine_id, "لديك جلسة ماكينة أخرى قيد التنفيذ على هذا الحساب.")
+		return
+	var machine: Dictionary = _arcade_machines.get(machine_id, {})
+	var anchor := machine.get("anchor") as Node3D
+	var controller := machine.get("controller") as Node
+	if machine.is_empty() or not is_instance_valid(anchor) or not is_instance_valid(controller):
+		_reply_arcade_session(peer_id, "", "unavailable", machine_id, "هذه الماكينة غير مفعلة للعب الفعلي بعد.")
+		return
+	var body := _sessions[peer_id].get("body") as CharacterBody3D
+	if not is_instance_valid(body) or body.global_position.distance_to(anchor.global_position) > ARCADE_MACHINE_INTERACTION_RADIUS:
+		_reply_arcade_session(peer_id, "", "rejected", machine_id, "اقترب من الماكينة أولًا.")
+		return
+	var user_id := str(_sessions[peer_id].get("user_id", ""))
+	if not bool(controller.call("can_start_arcade_session", user_id, mode)):
+		_reply_arcade_session(peer_id, "", "rejected", machine_id, "لا يمكن بدء جلسة بهذه الإعدادات حاليًا.")
+		return
+	var session_id := _new_server_event_uuid()
+	if session_id.is_empty() or _closed_arcade_sessions.has(session_id) or _arcade_sessions.has(session_id):
+		_reply_arcade_session(peer_id, "", "rejected", machine_id, "تعذر إنشاء معرّف جلسة آمن.")
+		return
+	var participants := {peer_id: {"user_id": user_id, "team_id": ""}}
+	var session := {
+		"session_id": session_id,
+		"machine_id": machine_id,
+		"zone_id": str(machine.get("zone_id", "")),
+		"mode": mode,
+		"state": "waiting",
+		"host_peer_id": peer_id,
+		"participants": participants,
+		"created_at_usec": Time.get_ticks_usec(),
+		"started_at_usec": 0,
+		"controller": controller
+	}
+	_arcade_sessions[session_id] = session
+	_peer_arcade_sessions[peer_id] = session_id
+	if mode == "solo":
+		_launch_arcade_session(session_id, peer_id)
+	else:
+		_reply_arcade_session(peer_id, session_id, "waiting", machine_id, "تم إنشاء الجلسة؛ في انتظار المشاركين.")
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func request_join_arcade_session_rpc(session_id: String) -> void:
+	if not multiplayer.is_server():
+		return
+	var peer_id := multiplayer.get_remote_sender_id()
+	if not _sessions.has(peer_id) or not bool(_sessions[peer_id].get("authenticated", false)):
+		return
+	if _peer_arcade_sessions.has(peer_id) or _user_has_active_arcade_session(str(_sessions[peer_id].get("user_id", ""))):
+		_reply_arcade_session(peer_id, session_id, "rejected", "", "لديك جلسة ماكينة أخرى قيد التنفيذ على هذا الحساب.")
+		return
+	var session: Dictionary = _arcade_sessions.get(session_id, {})
+	if session.is_empty() or str(session.get("state", "")) != "waiting":
+		_reply_arcade_session(peer_id, session_id, "rejected", "", "هذه الجلسة لم تعد متاحة للانضمام.")
+		return
+	var machine: Dictionary = _arcade_machines.get(str(session.get("machine_id", "")), {})
+	var anchor := machine.get("anchor") as Node3D
+	var controller := session.get("controller") as Node
+	var body := _sessions[peer_id].get("body") as CharacterBody3D
+	if not is_instance_valid(anchor) or not is_instance_valid(controller) or not is_instance_valid(body):
+		_abort_arcade_session(session_id, "تعذر التحقق من الماكينة أو اللاعب.")
+		return
+	if body.global_position.distance_to(anchor.global_position) > ARCADE_MACHINE_INTERACTION_RADIUS:
+		_reply_arcade_session(peer_id, session_id, "rejected", str(session.get("machine_id", "")), "اقترب من الماكينة أولًا.")
+		return
+	var user_id := str(_sessions[peer_id].get("user_id", ""))
+	var participants: Dictionary = session.get("participants", {})
+	if str(session.get("mode", "")) == "solo":
+		_reply_arcade_session(peer_id, session_id, "rejected", str(session.get("machine_id", "")), "الجلسة الفردية لا تقبل مشاركين إضافيين.")
+		return
+	for participant in participants.values():
+		if str(participant.get("user_id", "")) == user_id:
+			_reply_arcade_session(peer_id, session_id, "rejected", str(session.get("machine_id", "")), "هذا الحساب مشارك بالفعل في الجلسة.")
+			return
+	if participants.size() >= MAX_PLAYERS or not bool(controller.call("can_join_arcade_session", user_id, str(session.get("mode", "")), participants.size())):
+		_reply_arcade_session(peer_id, session_id, "rejected", str(session.get("machine_id", "")), "لا يمكن الانضمام إلى هذه الجلسة.")
+		return
+	participants[peer_id] = {"user_id": user_id, "team_id": ""}
+	session["participants"] = participants
+	_arcade_sessions[session_id] = session
+	_peer_arcade_sessions[peer_id] = session_id
+	for participant_peer_variant in participants.keys():
+		_reply_arcade_session(int(participant_peer_variant), session_id, "waiting", str(session.get("machine_id", "")), "انضم مشارك جديد إلى الجلسة.")
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func request_launch_arcade_session_rpc(session_id: String) -> void:
+	if not multiplayer.is_server():
+		return
+	var peer_id := multiplayer.get_remote_sender_id()
+	var session: Dictionary = _arcade_sessions.get(session_id, {})
+	if not _sessions.has(peer_id) or not bool(_sessions[peer_id].get("authenticated", false)):
+		return
+	if session.is_empty() or int(session.get("host_peer_id", -1)) != peer_id:
+		_reply_arcade_session(peer_id, session_id, "rejected", "", "بدء الجلسة متاح لمنشئها فقط.")
+		return
+	_launch_arcade_session(session_id, peer_id)
+
+
+func _launch_arcade_session(session_id: String, peer_id: int) -> void:
+	var session: Dictionary = _arcade_sessions.get(session_id, {})
+	if session.is_empty() or str(session.get("state", "")) != "waiting":
+		return
+	if int(session.get("host_peer_id", -1)) != peer_id:
+		return
+	var controller := session.get("controller") as Node
+	var participants: Dictionary = session.get("participants", {})
+	if not is_instance_valid(controller):
+		_abort_arcade_session(session_id, "متحكم اللعبة غير متاح؛ لم تبدأ الجولة.")
+		return
+	session["state"] = "running"
+	session["started_at_usec"] = Time.get_ticks_usec()
+	_arcade_sessions[session_id] = session
+	if not bool(controller.call("start_arcade_session", session_id, str(session.get("mode", "")), participants.duplicate(true))):
+		_abort_arcade_session(session_id, "رفض نظام اللعبة بدء الجلسة؛ لم تبدأ الجولة.")
+		return
+	if not _arcade_sessions.has(session_id):
+		return
+	for participant_peer_variant in participants.keys():
+		_reply_arcade_session(int(participant_peer_variant), session_id, "running", str(session.get("machine_id", "")), "بدأت جلسة اللعب على الخادم.")
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func request_leave_arcade_session_rpc(session_id: String) -> void:
+	if not multiplayer.is_server():
+		return
+	var peer_id := multiplayer.get_remote_sender_id()
+	if not _sessions.has(peer_id) or not bool(_sessions[peer_id].get("authenticated", false)):
+		return
+	if str(_peer_arcade_sessions.get(peer_id, "")) != session_id:
+		return
+	_abort_arcade_session(session_id, "غادر أحد المشاركين؛ أُغلقت الجلسة دون نتيجة أو مكافأة.")
+
+
+func complete_arcade_session(session_id: String, server_results: Dictionary) -> bool:
+	if not multiplayer.is_server():
+		return false
+	var session: Dictionary = _arcade_sessions.get(session_id, {})
+	if session.is_empty() or str(session.get("state", "")) != "running":
+		return false
+	var controller := session.get("controller") as Node
+	if not is_instance_valid(controller):
+		_abort_arcade_session(session_id, "تعذر التحقق من نتيجة اللعبة.")
+		return false
+	var elapsed_usec := Time.get_ticks_usec() - int(session.get("started_at_usec", 0))
+	var participants: Dictionary = session.get("participants", {})
+	if elapsed_usec <= 0 or not bool(controller.call("validate_arcade_session_result", session_id, str(session.get("mode", "")), participants.duplicate(true), server_results.duplicate(true), elapsed_usec)):
+		_abort_arcade_session(session_id, "لم يجتز سجل الجولة تحقق الخادم؛ لم تُسجل نتيجة.")
+		return false
+	var event_id := _new_server_event_uuid()
+	if event_id.is_empty() or _closed_arcade_sessions.has(session_id):
+		_abort_arcade_session(session_id, "تعذر إنشاء معرّف حدث آمن.")
+		return false
+	_remember_closed_arcade_session(session_id, event_id)
+	session["state"] = "completed"
+	for participant_peer_variant in participants.keys():
+		_peer_arcade_sessions.erase(int(participant_peer_variant))
+	_arcade_sessions.erase(session_id)
+	arcade_session_verified.emit(session_id, event_id, str(session.get("machine_id", "")), str(session.get("zone_id", "")), str(session.get("mode", "")), participants.duplicate(true), server_results.duplicate(true))
+	for participant_peer_variant in participants.keys():
+		_reply_arcade_session(int(participant_peer_variant), session_id, "completed", str(session.get("machine_id", "")), "اكتملت الجولة واعتمد الخادم نتيجتها.")
+	return true
+
+
+func _abort_peer_arcade_session(peer_id: int, reason: String) -> void:
+	var session_id := str(_peer_arcade_sessions.get(peer_id, ""))
+	if not session_id.is_empty():
+		_abort_arcade_session(session_id, reason)
+
+
+func _abort_arcade_session(session_id: String, reason: String) -> void:
+	var session: Dictionary = _arcade_sessions.get(session_id, {})
+	if session.is_empty():
+		return
+	var controller := session.get("controller") as Node
+	if is_instance_valid(controller):
+		controller.call("abort_arcade_session", session_id, reason)
+	var participants: Dictionary = session.get("participants", {})
+	for participant_peer_variant in participants.keys():
+		var participant_peer := int(participant_peer_variant)
+		_peer_arcade_sessions.erase(participant_peer)
+		_reply_arcade_session(participant_peer, session_id, "aborted", str(session.get("machine_id", "")), reason)
+	_remember_closed_arcade_session(session_id, "aborted")
+	_arcade_sessions.erase(session_id)
+
+
+func _remember_closed_arcade_session(session_id: String, outcome: String) -> void:
+	_closed_arcade_sessions[session_id] = outcome
+	while _closed_arcade_sessions.size() > 1024:
+		_closed_arcade_sessions.erase(_closed_arcade_sessions.keys()[0])
+
+
+func _reply_arcade_session(peer_id: int, session_id: String, state: String, machine_id: String, message: String) -> void:
+	if multiplayer.is_server() and multiplayer.get_peers().has(peer_id):
+		rpc_id(peer_id, "receive_arcade_session_state", session_id, state, machine_id, message)
+
+
+@rpc("authority", "call_remote", "reliable")
+func receive_arcade_session_state(session_id: String, state: String, machine_id: String, message: String) -> void:
+	if multiplayer.is_server() or not is_authenticated():
+		return
+	arcade_session_state_changed.emit(session_id, state, machine_id, message)
+
 
 
 func _notify_proof_issue_failed(peer_id: int, activity_kind: String, activity_id: String, message: String) -> void:
