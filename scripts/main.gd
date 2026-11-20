@@ -701,9 +701,10 @@ func _create_royal_palace_interior(root: Node3D) -> void:
 		plaque.modulate = Color(1.0,0.88,0.58)
 		plaque.outline_size = 7
 		root.add_child(plaque)
-		_create_box(root, room_id + "Feature", Vector3(2.2,0.9,0.9), center + Vector3(0,0.75,0.7), room_color, true)
 		if room_id == "EuropeanCasino":
 			_create_european_vip_slot_machines(root, center)
+		else:
+			_create_box(root, room_id + "Feature", Vector3(2.2,0.9,0.9), center + Vector3(0,0.75,0.7), room_color, true)
 
 	# أثاث القصر غير المتعارض مع نظام الماكينات الجديد.
 	_create_box(root, "ThroneDais", Vector3(3.8,0.45,2.6), Vector3(-10,0.48,-10.5), Color(0.58,0.43,0.24), true)
