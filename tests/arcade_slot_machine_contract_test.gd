@@ -73,8 +73,8 @@ func _run_arcade_machine_tests() -> void:
 		machine.queue_free()
 		quit(1)
 		return
-	var auto_style := auto_button.get_theme_stylebox("normal") as StyleBoxFlat
-	if auto_style == null or auto_style.border_color.r < auto_style.border_color.g:
+	var auto_button_style := auto_button.get_theme_stylebox("normal") as StyleBoxFlat
+	if auto_button_style == null or auto_button_style.border_color.r < auto_button_style.border_color.g:
 		push_error("AUTO must use red styling.")
 		machine.queue_free()
 		quit(1)
@@ -99,9 +99,10 @@ func _run_arcade_machine_tests() -> void:
 		quit(1)
 		return
 	machine.call("set_auto_play_mode_visual", true)
-	var auto_style := spin_button.get_theme_stylebox("normal") as StyleBoxFlat
-	if spin_button.text != "AUTO" or auto_style == null or auto_style.border_color.r < auto_style.border_color.g:
-		push_error("AUTO mode must use red styling.")
+	var auto_mode_style := auto_button.get_theme_stylebox("normal") as StyleBoxFlat
+	var manual_mode_style := spin_button.get_theme_stylebox("normal") as StyleBoxFlat
+	if spin_button.text != "SPIN" or auto_button.text != "AUTO" or auto_mode_style == null or auto_mode_style.border_color.r < auto_mode_style.border_color.g or manual_mode_style == null or manual_mode_style.border_color.g < manual_mode_style.border_color.r:
+		push_error("Separate AUTO red and SPIN green controls must retain their approved colors.")
 		machine.queue_free()
 		quit(1)
 		return
