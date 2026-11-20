@@ -108,6 +108,24 @@ func _run_arcade_machine_tests() -> void:
 		return
 	machine.call("set_auto_play_mode_visual", false)
 
+	for required_method in ["can_start_arcade_session", "can_join_arcade_session", "start_arcade_session", "validate_arcade_session_result", "abort_arcade_session"]:
+		if not machine.has_method(required_method):
+			push_error("Slot machine authoritative controller method is missing: " + required_method)
+			machine.queue_free()
+			quit(1)
+			return
+	var machine_source := FileAccess.get_file_as_string("res://scripts/arcade_slot_machine.gd")
+	if not machine_source.contains("register_arcade_machine(machine_id, zone_id, self, self)") or not machine_source.contains("request_start_arcade_session(machine_id, \"solo\")") or not machine_source.contains("request_arcade_slot_spin(\"paid\", MIN_BET_CHIPS)"):
+		push_error("Slot machine must register as a trusted controller and request server sessions/spins.")
+		machine.queue_free()
+		quit(1)
+		return
+	var server_source := FileAccess.get_file_as_string("res://scripts/authoritative_game_server.gd")
+	if not server_source.contains("KING_CITY_SLOT_API_BASE_URL") or not server_source.contains("KING_CITY_SLOT_PUBLISHABLE_KEY"):
+		push_error("Slot settlement must use explicit environment configuration, not production account settings.")
+		machine.queue_free()
+		quit(1)
+		return
 	if not machine.has_method("play_server_result"):
 		push_error("Trusted result presentation entry point is missing.")
 		machine.queue_free()
