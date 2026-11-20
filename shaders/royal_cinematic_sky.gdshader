@@ -1,7 +1,5 @@
 shader_type sky;
 
-const float PI = 3.14159265359;
-
 float hash21(vec2 p) {
 	p = fract(p * vec2(123.34, 456.21));
 	p += dot(p, p + 45.32);
