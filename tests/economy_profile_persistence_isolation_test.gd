@@ -166,6 +166,54 @@ func _run() -> void:
 	if after_vehicle_selection.get_value("profile", "owned_vehicles", []) != ["toyota_corolla", "hyundai_elantra"]:
 		_fail("Vehicle selection update changed the owned vehicle list.")
 		return
+	# Authenticated player profiles must never share the guest file or one another.
+	var guest_path := Store.get_active_profile_path()
+	if not Store.set_active_account("synthetic-account-a"):
+		_fail("Could not select synthetic account A profile.")
+		return
+	var account_a_path := Store.get_active_profile_path()
+	if account_a_path == guest_path or account_a_path == "user://kings_city_profile.cfg":
+		_fail("Authenticated account A reused the legacy guest profile.")
+		return
+	var account_a_config := ConfigFile.new()
+	account_a_config.set_value("profile", "player_name", "Account A")
+	account_a_config.set_value("wallet", "balances", {"money": 111, "chips": 0, "gems": 0})
+	if account_a_config.save(account_a_path) != OK:
+		_fail("Could not create synthetic account A profile.")
+		return
+	if not Store.set_active_account("synthetic-account-b"):
+		_fail("Could not select synthetic account B profile.")
+		return
+	var account_b_path := Store.get_active_profile_path()
+	if account_b_path == account_a_path:
+		_fail("Two authenticated accounts resolved to the same local profile.")
+		return
+	var account_b_config := ConfigFile.new()
+	if account_b_config.load(account_b_path) != OK and FileAccess.file_exists(account_b_path):
+		_fail("Could not inspect synthetic account B profile.")
+		return
+	if str(account_b_config.get_value("profile", "player_name", "")) == "Account A":
+		_fail("Account B loaded Account A's local profile.")
+		return
+	account_b_config.set_value("profile", "player_name", "Account B")
+	account_b_config.set_value("wallet", "balances", {"money": 222, "chips": 0, "gems": 0})
+	if account_b_config.save(account_b_path) != OK:
+		_fail("Could not create synthetic account B profile.")
+		return
+	var verify_a := ConfigFile.new()
+	if verify_a.load(account_a_path) != OK or str(verify_a.get_value("profile", "player_name", "")) != "Account A" or int(verify_a.get_value("wallet", "balances", {}).get("money", -1)) != 111:
+		_fail("Account B profile writes changed Account A's saved data.")
+		return
+	if not Store.set_active_account("synthetic-account-a") or Store.get_active_profile_path() != account_a_path:
+		_fail("Account A did not resolve back to its stable isolated profile.")
+		return
+	if not Store.set_active_account("synthetic-account-b") or Store.get_active_profile_path() != account_b_path:
+		_fail("Account B did not resolve back to its stable isolated profile.")
+		return
+	# Restore guest mode for the remainder of the test and clean only synthetic fixtures.
+	Store.set_active_account("")
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(account_a_path))
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(account_b_path))
 	_cleanup()
 	print("Economy profile persistence isolation tests passed.")
 	quit(0)
