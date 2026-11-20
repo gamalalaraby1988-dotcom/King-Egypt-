@@ -1715,9 +1715,9 @@ func _create_european_vip_slot_machines(root: Node3D, room_center: Vector3) -> v
 		push_warning("تعذر تحميل مشهد ماكينة السلوت الملكية.")
 		return
 	var machines := [
-		{"id":"vip_royal_classic", "title":"Royal Classic", "subtitle":"ROYAL SLOT", "accent":Color(0.82,0.62,0.25), "body":Color(0.055,0.075,0.09), "offset":Vector3(-2.55,0,-1.35)},
+		{"id":"vip_royal_classic", "title":"Royal Classic", "subtitle":"ROYAL SLOT", "accent":Color(0.82,0.62,0.25), "body":Color(0.055,0.075,0.09), "offset":Vector3(-3.2,0,-1.35)},
 		{"id":"vip_diamond_royale", "title":"Diamond Royale", "subtitle":"DIAMOND VIP", "accent":Color(0.55,0.82,0.92), "body":Color(0.035,0.07,0.12), "offset":Vector3(0,0,-1.35)},
-		{"id":"vip_golden_crown", "title":"Golden Crown", "subtitle":"ROYAL JACKPOT", "accent":Color(0.92,0.72,0.28), "body":Color(0.12,0.055,0.035), "offset":Vector3(2.55,0,-1.35)}
+		{"id":"vip_golden_crown", "title":"Golden Crown", "subtitle":"ROYAL JACKPOT", "accent":Color(0.92,0.72,0.28), "body":Color(0.12,0.055,0.035), "offset":Vector3(3.2,0,-1.35)}
 	]
 	for definition in machines:
 		var machine := Node3D.new()
