@@ -27,6 +27,8 @@ func _run_arcade_machine_tests() -> void:
 		"SlotMachineTouchLayer/SlotMachineControls"
 	]:
 		if machine.get_node_or_null(required_path) == null:
+			print("Arcade machine tree at failed assertion:")
+			machine.print_tree_pretty()
 			push_error("Missing slot machine component: " + required_path)
 			machine.queue_free()
 			quit(1)
