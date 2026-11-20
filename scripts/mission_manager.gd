@@ -895,6 +895,7 @@ func open_job(job_board: Node3D) -> void:
 		job_selector.add_item(str(job_data.get("title", job_id)))
 		job_selector.set_item_metadata(job_selector.item_count - 1, job_id)
 	job_selector.visible = true
+	job_delivery_button.visible = false
 	if job_selector.item_count > 0:
 		job_selector.select(0)
 		_on_job_selected(0)
@@ -988,7 +989,7 @@ func open_building_activities(building: Node3D) -> void:
 
 func _close_interaction_panel() -> void:
 	job_selector.visible = false
-	job_delivery_button.visible = false if not job_running else job_delivery_button.visible
+	job_delivery_button.visible = false
 	accept_button.visible = true
 	interior_preview_active = false
 	interior_preview_building = null
@@ -1213,7 +1214,14 @@ func _attach_job_package() -> void:
 	player.add_child(job_package_visual)
 	var parcel := MeshInstance3D.new()
 	var box := BoxMesh.new()
+	var cargo_type := str(active_job_reward.get("cargo", "طرد"))
 	box.size = Vector3(0.42, 0.34, 0.34)
+	if cargo_type == "علبة بيتزا":
+		box.size = Vector3(0.56, 0.14, 0.56)
+	elif cargo_type == "حقيبة سفر":
+		box.size = Vector3(0.42, 0.52, 0.30)
+	elif cargo_type == "باقة أو هدية":
+		box.size = Vector3(0.34, 0.42, 0.34)
 	parcel.mesh = box
 	var material := StandardMaterial3D.new()
 	material.albedo_color = Color(0.58, 0.34, 0.16)
