@@ -690,7 +690,8 @@ func _process(_delta: float) -> void:
 			status_label.text = "سباق النجاة: %d ثانية متبقية | %.1f متر للهدف" % [ceili(survival_time_remaining), distance_to_target]
 		else:
 			status_label.text = "الهدف: اذهب إلى علامة المهمة. المسافة المتبقية: %.1f متر" % distance_to_target
-		if distance_to_target <= 2.2:
+		var rescue_requires_interaction := selected_activity_kind == "adventure" and selected_adventure_id == "city_adventure_rescue" and adventure_stage_index == 0
+		if distance_to_target <= 2.2 and not rescue_requires_interaction:
 			if selected_activity_kind == "adventure":
 				_advance_local_adventure_stage()
 			else:

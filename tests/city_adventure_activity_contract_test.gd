@@ -83,6 +83,17 @@ func _run_city_adventure_contract() -> void:
 		push_error("Online rescue progression must require server-validated citizen interaction.")
 		quit(1)
 		return
+	var local_process_start := manager_source.find("func _process(")
+	var local_process_end := manager_source.find("func _update_interaction_target(", local_process_start)
+	if local_process_start < 0 or local_process_end <= local_process_start:
+		push_error("Could not inspect local rescue progression guard.")
+		quit(1)
+		return
+	var local_process_source := manager_source.substr(local_process_start, local_process_end - local_process_start)
+	if not local_process_source.contains("var rescue_requires_interaction := selected_activity_kind == \"adventure\" and selected_adventure_id == \"city_adventure_rescue\" and adventure_stage_index == 0") or not local_process_source.contains("distance_to_target <= 2.2 and not rescue_requires_interaction"):
+		push_error("Offline rescue must not skip the required citizen interaction by reaching the checkpoint.")
+		quit(1)
+		return
 	if not npc_source.contains("func get_nearest_active_citizen(") or not npc_source.contains("func set_rescue_citizen(") or not npc_source.contains('"wave"'):
 		push_error("Rescue must reuse an existing city resident and its wave animation.")
 		quit(1)
