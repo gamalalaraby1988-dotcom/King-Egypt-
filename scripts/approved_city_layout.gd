@@ -63,6 +63,9 @@ func _building(parent: Node3D, id: String, title: String, at: Vector3, footprint
 	_add_building_collision_shell(root, footprint, height, maxf(1.5, w * 0.18))
 	for side in [-1.0, 1.0]:
 		_box(root, "FrontColumn", Vector3(0.38, minf(height - 0.8, 5.0), 0.42), Vector3(side * w * 0.34, minf(height - 0.8, 5.0) * 0.5, d * 0.5 + 0.25), accent)
+	_add_building_facade_details(root, footprint, height, accent)
+	_box(root, "EntranceStep", Vector3(maxf(3.0, w * 0.28), 0.22, 1.1), Vector3(0.0, 0.11, d * 0.5 + 0.68), SAND)
+	_box(root, "FrontRoyalFrieze", Vector3(w * 0.82, 0.22, 0.24), Vector3(0.0, maxf(3.2, height - 0.72), d * 0.5 + 0.12), accent)
 	var sign := Label3D.new()
 	sign.name = "BuildingName"
 	sign.text = title
@@ -92,6 +95,69 @@ func _building(parent: Node3D, id: String, title: String, at: Vector3, footprint
 			root.add_child(entrance)
 	_add_building_lod_proxy(root, footprint, height, accent)
 
+
+
+func _add_building_facade_details(root: Node3D, footprint: Vector2, height: float, accent: Color) -> void:
+	# Repeated window panels are batched into two MultiMeshes per building to keep
+	# the richer Egyptian facade inexpensive on Android.
+	var levels: Array[float] = [3.55]
+	if height >= 9.0:
+		levels.append(height * 0.68)
+
+	var frame_transforms: Array[Transform3D] = []
+	var glass_transforms: Array[Transform3D] = []
+	for level in levels:
+		for side in [-1.0, 1.0]:
+			var front_at := Vector3(side * footprint.x * 0.28, level, footprint.y * 0.5 + 0.11)
+			frame_transforms.append(Transform3D(Basis.IDENTITY, front_at))
+			glass_transforms.append(Transform3D(Basis.IDENTITY, front_at + Vector3(0.0, 0.0, 0.075)))
+		for side in [-1.0, 1.0]:
+			for z_offset in [-footprint.y * 0.22, footprint.y * 0.22]:
+				var side_basis := Basis(Vector3.UP, PI * 0.5)
+				var side_at := Vector3(side * (footprint.x * 0.5 + 0.035), level, z_offset)
+				frame_transforms.append(Transform3D(side_basis, side_at))
+				glass_transforms.append(Transform3D(side_basis, side_at + Vector3(side * 0.075, 0.0, 0.0)))
+
+	var frame_mesh := BoxMesh.new()
+	frame_mesh.size = Vector3(1.48, 1.72, 0.12)
+	var frame_multi := MultiMesh.new()
+	frame_multi.transform_format = MultiMesh.TRANSFORM_3D
+	frame_multi.mesh = frame_mesh
+	frame_multi.instance_count = frame_transforms.size()
+	for i in range(frame_transforms.size()):
+		frame_multi.set_instance_transform(i, frame_transforms[i])
+	var frames := MultiMeshInstance3D.new()
+	frames.name = "BatchedGoldWindowFrames"
+	frames.multimesh = frame_multi
+	frames.material_override = _mat(accent, 0.42)
+	frames.visibility_range_end = 140.0
+	frames.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	frames.add_to_group("city_world_geometry")
+	root.add_child(frames)
+
+	var glass_mesh := BoxMesh.new()
+	glass_mesh.size = Vector3(1.22, 1.46, 0.08)
+	var glass_multi := MultiMesh.new()
+	glass_multi.transform_format = MultiMesh.TRANSFORM_3D
+	glass_multi.mesh = glass_mesh
+	glass_multi.instance_count = glass_transforms.size()
+	for i in range(glass_transforms.size()):
+		glass_multi.set_instance_transform(i, glass_transforms[i])
+	var glass_material := StandardMaterial3D.new()
+	glass_material.albedo_color = Color(0.035, 0.12, 0.15)
+	glass_material.metallic = 0.32
+	glass_material.roughness = 0.2
+	glass_material.emission_enabled = true
+	glass_material.emission = Color(0.018, 0.055, 0.07)
+	glass_material.emission_energy_multiplier = 0.28
+	var glass := MultiMeshInstance3D.new()
+	glass.name = "BatchedDarkTealWindows"
+	glass.multimesh = glass_multi
+	glass.material_override = glass_material
+	glass.visibility_range_end = 140.0
+	glass.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	glass.add_to_group("city_world_geometry")
+	root.add_child(glass)
 
 
 func _add_pharaonic_door_band(root: Node3D, door_width: float, front_z: float) -> void:
@@ -591,6 +657,43 @@ func _build_access_roads_and_parking() -> void:
 	_path_segment(self, "BeachHandballApronEntry", Vector3(32.0, 0.12, 106.0), Vector3(40.0, 0.12, 107.0), 3.6, SAND)
 	# Temple approach branches from the mountain trail without moving the temple or summit.
 	_path_segment(self, "MountainTempleEntranceWalk", Vector3(83.0, 0.12, 68.0), Vector3(75.0, 0.12, 80.7), 3.2, SAND)
+	# Short, collision-backed approaches give the central building rows a clear
+	# walk from each visible doorway to the nearest street or waterfront promenade.
+	var entrance_walks := [
+		["RoyalPalaceEntranceWalk", Vector3(0.0, 0.12, -69.8), Vector3(0.0, 0.12, -58.5)],
+		["RoyalBankEntranceWalk", Vector3(42.0, 0.12, -54.1), Vector3(42.0, 0.12, -50.0)],
+		["SupermarketEntranceWalk", Vector3(-30.0, 0.12, -23.6), Vector3(-30.0, 0.12, -20.0)],
+		["MarketEntranceWalk", Vector3(0.0, 0.12, 6.4), Vector3(0.0, 0.12, 10.0)],
+		["EmploymentEntranceWalk", Vector3(30.0, 0.12, -23.6), Vector3(30.0, 0.12, -20.0)],
+		["RestaurantEntranceWalk", Vector3(60.0, 0.12, -23.6), Vector3(60.0, 0.12, -20.0)],
+		["CafeEntranceWalk", Vector3(-60.0, 0.12, 6.4), Vector3(-60.0, 0.12, 10.0)],
+		["CommercialServicesEntranceWalk", Vector3(60.0, 0.12, 6.4), Vector3(60.0, 0.12, 10.0)],
+		["ApartmentOneEntranceWalk", Vector3(-60.0, 0.12, 37.4), Vector3(-60.0, 0.12, 40.0)],
+		["ApartmentTwoEntranceWalk", Vector3(-30.0, 0.12, 37.4), Vector3(-30.0, 0.12, 40.0)],
+		["ApartmentThreeEntranceWalk", Vector3(0.0, 0.12, 37.4), Vector3(0.0, 0.12, 40.0)],
+		["ApartmentFourEntranceWalk", Vector3(30.0, 0.12, 37.4), Vector3(30.0, 0.12, 40.0)],
+		["CinemaEntranceWalk", Vector3(60.0, 0.12, 36.4), Vector3(60.0, 0.12, 40.0)],
+		["TheaterEntranceWalk", Vector3(-60.0, 0.12, 66.9), Vector3(-60.0, 0.12, 74.0)],
+		["StadiumEntranceWalk", Vector3(-30.0, 0.12, 66.9), Vector3(-30.0, 0.12, 74.0)],
+		["SportsClubEntranceWalk", Vector3(0.0, 0.12, 66.9), Vector3(0.0, 0.12, 74.0)],
+		["WaterCityEntranceWalk", Vector3(30.0, 0.12, 66.9), Vector3(30.0, 0.12, 74.0)],
+		["DailyArcadeEntranceWalk", Vector3(60.0, 0.12, 66.9), Vector3(60.0, 0.12, 74.0)]
+	]
+	for walk in entrance_walks:
+		_path_segment(self, str(walk[0]), walk[1], walk[2], 2.6, SAND)
+	# Missing outer service approaches are tied back to the perimeter road.
+	_path_segment(self, "PoliceServiceAccess", Vector3(-95.0, 0.12, -5.0), Vector3(-84.0, 0.12, -5.0), 3.2, SAND)
+	_path_segment(self, "PoliceEntranceTurn", Vector3(-84.0, 0.12, -5.0), Vector3(-84.0, 0.12, -0.5), 3.2, SAND)
+	_path_segment(self, "PoliceFrontWalk", Vector3(-84.0, 0.12, -0.5), Vector3(-80.5, 0.12, -0.5), 3.2, SAND)
+	_path_segment(self, "CourthouseServiceAccess", Vector3(95.0, 0.12, -5.0), Vector3(84.0, 0.12, -5.0), 3.2, SAND)
+	_path_segment(self, "CourthouseEntranceTurn", Vector3(84.0, 0.12, -5.0), Vector3(84.0, 0.12, -0.5), 3.2, SAND)
+	_path_segment(self, "CourthouseFrontWalk", Vector3(84.0, 0.12, -0.5), Vector3(80.5, 0.12, -0.5), 3.2, SAND)
+	_path_segment(self, "FireServiceAccess", Vector3(-95.0, 0.12, 15.0), Vector3(-84.0, 0.12, 15.0), 3.2, SAND)
+	_path_segment(self, "FireEntranceTurn", Vector3(-84.0, 0.12, 15.0), Vector3(-84.0, 0.12, 19.5), 3.2, SAND)
+	_path_segment(self, "FireFrontWalk", Vector3(-84.0, 0.12, 19.5), Vector3(-80.5, 0.12, 19.5), 3.2, SAND)
+	_path_segment(self, "TrainServiceAccess", Vector3(95.0, 0.12, 15.0), Vector3(84.0, 0.12, 15.0), 3.2, SAND)
+	_path_segment(self, "TrainEntranceTurn", Vector3(84.0, 0.12, 15.0), Vector3(84.0, 0.12, 19.5), 3.2, SAND)
+	_path_segment(self, "TrainFrontWalk", Vector3(84.0, 0.12, 19.5), Vector3(80.5, 0.12, 19.5), 3.2, SAND)
 	# Green buffers line the outer edges while keeping sidewalks, parking courts, and entrances clear.
 	for side in [-1.0, 1.0]:
 		for z in [-65.0, -35.0, -5.0, 55.0]:
