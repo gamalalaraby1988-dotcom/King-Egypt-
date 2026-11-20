@@ -28,14 +28,6 @@ insert into private.player_puzzle_piece_balances (
 ('60000000-0000-4000-8000-000000000001','puzzle_test_30day','00000000-0000-4000-8000-000000000062','piece_b',4);
 
 select extensions.throws_ok(
-    $sql$insert into private.player_puzzle_piece_balances
-    (season_id,puzzle_id,user_id,piece_id,quantity)
-    values ('60000000-0000-4000-8000-000000000001','puzzle_test_30day',
-    '00000000-0000-4000-8000-000000000061','piece_b',1)$sql$,
-    '42501',null,'authenticated clients cannot mint inventory rows'
-);
-
-select extensions.throws_ok(
     $sql$insert into private.puzzle_seasons (puzzle_id,status,start_at,end_at)
     values ('invalid_duration_test','draft',now(),now()+interval '719 hours')$sql$,
     '23514',null,'season duration must be exactly 720 hours'
@@ -43,6 +35,14 @@ select extensions.throws_ok(
 
 set local role authenticated;
 select pg_catalog.set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000061',true);
+
+select extensions.throws_ok(
+    $sql$insert into private.player_puzzle_piece_balances
+    (season_id,puzzle_id,user_id,piece_id,quantity)
+    values ('60000000-0000-4000-8000-000000000001','puzzle_test_30day',
+    '00000000-0000-4000-8000-000000000061','piece_b',1)$sql$,
+    '42501',null,'authenticated clients cannot mint inventory rows'
+);
 
 select extensions.ok(
     not (select prosecdef from pg_catalog.pg_proc
