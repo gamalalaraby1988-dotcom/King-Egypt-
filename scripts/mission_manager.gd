@@ -1537,6 +1537,7 @@ func _complete_active_mission() -> void:
 	var saved := complete_activity_once(key, "mission", reward_money, reward_xp, reward_chips)
 	if not saved:
 		mission_running = false
+		survival_time_remaining = 0.0
 		target_marker.visible = false
 		status_label.text = "لم يتم حفظ إكمال المهمة؛ لم تُصرف المكافأة. ابدأ المهمة مجددًا للمحاولة."
 		accept_button.disabled = false
@@ -1547,6 +1548,7 @@ func _complete_active_mission() -> void:
 	if is_instance_valid(achievement_manager):
 		achievement_manager.record_mission_completed(key)
 	mission_running = false
+	survival_time_remaining = 0.0
 	target_marker.visible = false
 	status_label.text = "اكتملت المغامرة! تم تسجيلها محليًا دون مكافأة." if selected_activity_kind == "adventure" else "اكتملت المهمة! تم حفظ المكافأة."
 	description_label.text = "تم تسجيل إكمال المغامرة في هذا الجهاز فقط." if selected_activity_kind == "adventure" else "رصيدك الحالي: %d جنيه، %d رقائق، المستوى %d." % [money, chips, player_level]
