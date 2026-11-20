@@ -597,7 +597,7 @@ func _create_building_interior(building_title: String) -> void:
 	light.light_energy = 1.2
 	light.omni_range = 18.0
 	interior_root.add_child(light)
-	_create_palace_portal(interior_root, "BuildingCityExitGate", "الخروج إلى المدينة", Vector3(0,0,6.0), "city_exit")
+	_create_palace_portal(interior_root, "BuildingCityExitGate", "الخروج إلى المدينة", Vector3(0,0,6.8), "city_exit")
 
 func _create_royal_palace_interior(root: Node3D) -> void:
 	# ردهة مركزية وخمسة أجنحة مغلقة بجدران وتصادمات مستقلة.
@@ -662,7 +662,7 @@ func _create_royal_palace_interior(root: Node3D) -> void:
 	for i in range(3):
 		_create_box(root, "GardenPlanter_%d" % i, Vector3(1.3,0.6,1.3), Vector3(5.0 + float(i)*1.8,0.42,10.0), Color(0.20,0.36,0.22), true)
 		_create_box(root, "GardenPlant_%d" % i, Vector3(0.55,1.6,0.55), Vector3(5.0 + float(i)*1.8,1.45,10.0), Color(0.15,0.42,0.20))
-	_create_palace_portal(root, "PalaceCityExitGate", "الخروج إلى المدينة", Vector3(0,0,4.0), "city_exit")
+	_create_palace_portal(root, "PalaceCityExitGate", "الخروج إلى المدينة", Vector3(0,0,13.0), "city_exit")
 	var title := Label3D.new()
 	title.name = "RoyalPalaceInteriorTitle"
 	title.text = "القصر الملكي"
@@ -779,7 +779,7 @@ func _navigate_palace_quick(destination: String) -> void:
 		"casino":Vector3(10,1.05,-9),
 		"vip":Vector3(-7,1.05,9),
 		"garden":Vector3(7,1.05,9),
-		"exit_gate":Vector3(0,1.05,3.0)
+		"exit_gate":Vector3(0,1.05,11.2)
 	}
 	if not positions.has(destination):
 		return
