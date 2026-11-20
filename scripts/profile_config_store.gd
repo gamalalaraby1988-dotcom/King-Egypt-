@@ -1,59 +1,66 @@
 extends RefCounted
-## Merges only explicitly supplied profile/settings keys into the latest file snapshot.
-## This prevents a stale settings form from replacing wallet, receipts, ledger, or ownership data.
+## Shared atomic writer for the player's single local profile file.
+## Section updates always reload the latest snapshot; full snapshots are reserved for WalletManager.
+static var _write_in_progress := false
 
-static func save_sections(
-	file_path: String,
-	section_updates: Dictionary,
-	temp_path: String = "",
-	backup_path: String = ""
-) -> bool:
+static func save_sections(file_path: String, section_updates: Dictionary, temp_path: String = "", backup_path: String = "") -> bool:
 	if file_path.strip_edges().is_empty() or section_updates.is_empty():
 		return false
 	for section_name in section_updates:
-		if str(section_name) not in ["profile", "settings"]:
+		if str(section_name) not in ["profile", "settings"] or not (section_updates[section_name] is Dictionary):
 			return false
-		if not (section_updates[section_name] is Dictionary):
-			return false
-
 	var config := ConfigFile.new()
 	var load_error := config.load(file_path)
 	if load_error != OK and FileAccess.file_exists(file_path):
 		return false
-
 	for section_name in section_updates:
 		var section_data: Dictionary = section_updates[section_name]
 		for key in section_data:
 			config.set_value(str(section_name), str(key), section_data[key])
+	return _write_config(config, file_path, temp_path, backup_path)
 
+static func save_config_snapshot(config: ConfigFile, file_path: String, temp_path: String, backup_path: String) -> bool:
+	if config == null or file_path.strip_edges().is_empty() or temp_path.strip_edges().is_empty() or backup_path.strip_edges().is_empty():
+		return false
+	return _write_config(config, file_path, temp_path, backup_path)
+
+static func _write_config(config: ConfigFile, file_path: String, temp_path: String, backup_path: String) -> bool:
+	if _write_in_progress:
+		push_warning("ProfileConfigStore: nested profile write rejected.")
+		return false
+	_write_in_progress = true
 	var resolved_temp := temp_path if not temp_path.is_empty() else file_path + ".tmp"
 	var resolved_backup := backup_path if not backup_path.is_empty() else file_path + ".backup"
+	var result := false
 	if config.save(resolved_temp) != OK:
+		_write_in_progress = false
 		return false
-
 	var original_exists := FileAccess.file_exists(file_path)
 	var original_absolute := ProjectSettings.globalize_path(file_path)
 	var temp_absolute := ProjectSettings.globalize_path(resolved_temp)
 	var backup_absolute := ProjectSettings.globalize_path(resolved_backup)
 	var pending_absolute := backup_absolute + ".pending"
-
 	if original_exists and not FileAccess.file_exists(resolved_backup):
 		if DirAccess.copy_absolute(original_absolute, backup_absolute) != OK:
 			DirAccess.remove_absolute(temp_absolute)
+			_write_in_progress = false
 			return false
-
 	if original_exists:
 		if FileAccess.file_exists(pending_absolute):
 			DirAccess.remove_absolute(pending_absolute)
 		if DirAccess.rename_absolute(original_absolute, pending_absolute) != OK:
 			DirAccess.remove_absolute(temp_absolute)
+			_write_in_progress = false
 			return false
 		if DirAccess.rename_absolute(temp_absolute, original_absolute) != OK:
 			DirAccess.rename_absolute(pending_absolute, original_absolute)
+			_write_in_progress = false
 			return false
 		DirAccess.remove_absolute(pending_absolute)
+		result = true
 	else:
-		if DirAccess.rename_absolute(temp_absolute, original_absolute) != OK:
+		result = DirAccess.rename_absolute(temp_absolute, original_absolute) == OK
+		if not result:
 			DirAccess.remove_absolute(temp_absolute)
-			return false
-	return true
+	_write_in_progress = false
+	return result
