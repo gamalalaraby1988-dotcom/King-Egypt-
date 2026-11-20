@@ -722,9 +722,6 @@ func request_arcade_slot_spin_rpc(spin_type: String, wager_chips: int) -> void:
 	if wager_chips < 10 or wager_chips > 2000000000:
 		_notify_slot_spin_failed(peer_id, session_id, "قيمة الرهان غير صالحة.")
 		return
-	if false:
-		# The reference wager for a free spin is fixed by the server, never selected by the client.
-		wager_chips = 10
 	if _pending_slot_spins.has(session_id):
 		_notify_slot_spin_failed(peer_id, session_id, "هناك لفة قيد المعالجة بالفعل.")
 		return
