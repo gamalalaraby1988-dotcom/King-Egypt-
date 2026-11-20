@@ -55,6 +55,9 @@ var social_friend_list: VBoxContainer
 var social_chat_log: RichTextLabel
 var social_chat_input: LineEdit
 var social_status_label: Label
+var social_add_code_input: LineEdit
+var social_requests_cache: Array = []
+var social_friends_cache: Array = []
 var social_active_tab := "friends"
 
 
@@ -87,6 +90,18 @@ func _ready() -> void:
 	_build_group_popup()
 	_build_group_chat_popup()
 	_build_social_popup()
+	if not PlayerFriendsClient.friends_updated.is_connected(_on_social_friends_updated):
+		PlayerFriendsClient.friends_updated.connect(_on_social_friends_updated)
+	if not PlayerFriendsClient.requests_updated.is_connected(_on_social_requests_updated):
+		PlayerFriendsClient.requests_updated.connect(_on_social_requests_updated)
+	if not PlayerFriendsClient.operation_finished.is_connected(_on_social_operation_finished):
+		PlayerFriendsClient.operation_finished.connect(_on_social_operation_finished)
+	if not PlayerFriendsClient.connection_state_changed.is_connected(_on_social_connection_state_changed):
+		PlayerFriendsClient.connection_state_changed.connect(_on_social_connection_state_changed)
+	if not PlayerAccountAuthClient.account_authenticated.is_connected(_on_social_account_authenticated):
+		PlayerAccountAuthClient.account_authenticated.connect(_on_social_account_authenticated)
+	if PlayerAccountAuthClient.has_active_session():
+		call_deferred("_refresh_social_friends")
 	_refresh_wallet()
 
 
@@ -392,9 +407,22 @@ func _build_social_popup() -> void:
 	friends_column.add_theme_constant_override("separation", 6)
 	friends_panel.add_child(friends_column)
 	var friends_heading := Label.new()
-	friends_heading.text = "قائمة اللاعبين"
+	friends_heading.text = "قائمة الأصدقاء"
 	friends_heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	friends_column.add_child(friends_heading)
+	social_add_code_input = LineEdit.new()
+	social_add_code_input.placeholder_text = "رمز اللاعب — 10 خانات"
+	social_add_code_input.max_length = 10
+	social_add_code_input.alignment = HORIZONTAL_ALIGNMENT_CENTER
+	friends_column.add_child(social_add_code_input)
+	var add_friend_button := Button.new()
+	add_friend_button.text = "إرسال طلب صداقة"
+	add_friend_button.pressed.connect(_on_social_add_friend_pressed)
+	friends_column.add_child(add_friend_button)
+	var refresh_friends_button := Button.new()
+	refresh_friends_button.text = "تحديث القائمة"
+	refresh_friends_button.pressed.connect(_refresh_social_friends)
+	friends_column.add_child(refresh_friends_button)
 	var friends_scroll := ScrollContainer.new()
 	friends_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	friends_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -449,13 +477,22 @@ func _show_social_tab(tab: String) -> void:
 	for child in social_friend_list.get_children():
 		child.queue_free()
 	if tab == "friends":
-		var empty_friends := Label.new()
-		empty_friends.text = "لا توجد قائمة أصدقاء متصلة بعد."
-		empty_friends.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		social_friend_list.add_child(empty_friends)
-		social_chat_log.text = "اختر صديقًا من القائمة لعرض المحادثة الخاصة."
-		social_chat_input.placeholder_text = "المحادثة الخاصة تحتاج اتصال الحسابات"
-		social_status_label.text = "تصميم النافذة جاهز؛ قائمة الأصدقاء والرسائل الحقيقية تنتظر ربط خدمة الحسابات."
+		social_chat_log.text = "المحادثات الخاصة ستُفعّل في مرحلة مستقلة بعد تجهيز خادم الرسائل."
+		social_chat_input.placeholder_text = "المحادثة الخاصة غير متاحة بعد"
+		social_chat_input.editable = false
+		if not PlayerAccountAuthClient.has_active_session():
+			var login_label := Label.new()
+			login_label.text = "سجّل الدخول إلى حساب اللاعب لعرض الأصدقاء وإرسال الطلبات."
+			login_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			social_friend_list.add_child(login_label)
+			social_status_label.text = "الحساب غير متصل."
+		else:
+			var loading_label := Label.new()
+			loading_label.text = "جارٍ تحميل الأصدقاء والطلبات..."
+			loading_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			social_friend_list.add_child(loading_label)
+			social_status_label.text = "يتم جلب بيانات الحساب من الخادم."
+			_refresh_social_friends()
 	else:
 		var empty_players := Label.new()
 		empty_players.text = "لا توجد قائمة لاعبين متصلين بعد."
@@ -464,6 +501,164 @@ func _show_social_tab(tab: String) -> void:
 		social_chat_log.text = "ستظهر رسائل المدينة هنا بعد ربط خدمة المحادثة العامة."
 		social_chat_input.placeholder_text = "المحادثة العامة غير متصلة بعد"
 		social_status_label.text = "واجهة المحادثة العامة موضوعة؛ الإرسال والاستقبال الفعليان لم يُفعّلا بعد."
+
+
+func _refresh_social_friends() -> void:
+	if social_active_tab != "friends":
+		return
+	if not PlayerAccountAuthClient.has_active_session():
+		_on_social_connection_state_changed(false, "سجّل الدخول إلى حساب اللاعب أولًا.")
+		return
+	PlayerFriendsClient.refresh()
+
+
+func _on_social_account_authenticated(_user_id: String, _email: String) -> void:
+	_refresh_social_friends()
+
+
+func _on_social_add_friend_pressed() -> void:
+	if not is_instance_valid(social_add_code_input):
+		return
+	var code := social_add_code_input.text.strip_edges().to_upper()
+	if code.length() != 10:
+		social_status_label.text = "أدخل رمز اللاعب الصحيح المكوّن من 10 خانات."
+		return
+	PlayerFriendsClient.send_friend_request(code)
+
+
+func _on_social_requests_updated(requests: Array) -> void:
+	social_requests_cache = requests.duplicate(true)
+	_render_social_friend_list()
+
+
+func _on_social_friends_updated(friends: Array) -> void:
+	social_friends_cache = friends.duplicate(true)
+	_render_social_friend_list()
+
+
+func _render_social_friend_list() -> void:
+	if social_active_tab != "friends" or not is_instance_valid(social_friend_list):
+		return
+	for child in social_friend_list.get_children():
+		child.queue_free()
+	var incoming_count := 0
+	for request_value in social_requests_cache:
+		if request_value is Dictionary and str(request_value.get("direction", "")) == "incoming":
+			incoming_count += 1
+	if incoming_count > 0:
+		var incoming_heading := Label.new()
+		incoming_heading.text = "طلبات واردة"
+		incoming_heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		social_friend_list.add_child(incoming_heading)
+	for request_value in social_requests_cache:
+		if not (request_value is Dictionary):
+			continue
+		var request: Dictionary = request_value
+		var request_row := VBoxContainer.new()
+		request_row.add_theme_constant_override("separation", 3)
+		social_friend_list.add_child(request_row)
+		var request_label := Label.new()
+		var request_name := str(request.get("display_name", "لاعب")).substr(0, 24)
+		var request_code := str(request.get("player_code", "")).substr(0, 10)
+		request_label.text = request_name + " • " + request_code
+		request_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		request_row.add_child(request_label)
+		if str(request.get("direction", "")) == "incoming":
+			var request_actions := HBoxContainer.new()
+			request_row.add_child(request_actions)
+			var accept_button := Button.new()
+			accept_button.text = "قبول"
+			accept_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			accept_button.pressed.connect(_on_social_respond_request.bind(str(request.get("request_id", "")), true))
+			request_actions.add_child(accept_button)
+			var decline_button := Button.new()
+			decline_button.text = "رفض"
+			decline_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			decline_button.pressed.connect(_on_social_respond_request.bind(str(request.get("request_id", "")), false))
+			request_actions.add_child(decline_button)
+		else:
+			var pending_label := Label.new()
+			pending_label.text = "طلب مُرسل — بانتظار الرد"
+			pending_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			request_row.add_child(pending_label)
+	if not social_requests_cache.is_empty():
+		var separator := HSeparator.new()
+		social_friend_list.add_child(separator)
+	var friends_heading := Label.new()
+	friends_heading.text = "الأصدقاء"
+	friends_heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	social_friend_list.add_child(friends_heading)
+	if social_friends_cache.is_empty():
+		var empty_label := Label.new()
+		empty_label.text = "لا يوجد أصدقاء بعد. أرسل طلبًا باستخدام رمز اللاعب."
+		empty_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		social_friend_list.add_child(empty_label)
+	for friend_value in social_friends_cache:
+		if not (friend_value is Dictionary):
+			continue
+		var friend: Dictionary = friend_value
+		var friend_row := VBoxContainer.new()
+		friend_row.add_theme_constant_override("separation", 3)
+		social_friend_list.add_child(friend_row)
+		var friend_label := Label.new()
+		var friend_name := str(friend.get("display_name", "لاعب")).substr(0, 24)
+		var friend_code := str(friend.get("player_code", "")).substr(0, 10)
+		friend_label.text = friend_name + " • " + friend_code
+		friend_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		friend_row.add_child(friend_label)
+		var friend_actions := HBoxContainer.new()
+		friend_row.add_child(friend_actions)
+		var remove_button := Button.new()
+		remove_button.text = "إزالة"
+		remove_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		remove_button.pressed.connect(_on_social_remove_friend.bind(friend_code))
+		friend_actions.add_child(remove_button)
+		var block_button := Button.new()
+		block_button.text = "حظر"
+		block_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		block_button.pressed.connect(_on_social_block_player.bind(friend_code))
+		friend_actions.add_child(block_button)
+
+
+func _on_social_respond_request(request_id: String, accept: bool) -> void:
+	PlayerFriendsClient.respond_friend_request(request_id, accept)
+
+
+func _on_social_remove_friend(player_code: String) -> void:
+	PlayerFriendsClient.remove_friend(player_code)
+
+
+func _on_social_block_player(player_code: String) -> void:
+	PlayerFriendsClient.block_player(player_code)
+
+
+func _on_social_operation_finished(operation: String, success: bool, result_code: String) -> void:
+	var messages := {
+		"sent": "تم إرسال طلب الصداقة.",
+		"accepted": "تم قبول طلب الصداقة.",
+		"declined": "تم رفض طلب الصداقة.",
+		"removed": "تمت إزالة الصديق.",
+		"blocked": "تم حظر اللاعب.",
+		"invalid_player_code": "رمز اللاعب غير صحيح.",
+		"player_not_found": "لم يتم العثور على لاعب بهذا الرمز.",
+		"already_friends": "هذا اللاعب ضمن قائمة أصدقائك بالفعل.",
+		"request_already_pending": "يوجد طلب صداقة معلّق بينكما.",
+		"blocked": "لا يمكن إرسال طلب بسبب وجود حظر بين الحسابين.",
+		"authentication_required": "سجّل الدخول إلى حساب اللاعب أولًا.",
+		"request_in_progress": "انتظر انتهاء الطلب الحالي.",
+		"server_error": "تعذر تنفيذ العملية على الخادم. حاول لاحقًا."
+	}
+	if is_instance_valid(social_status_label):
+		social_status_label.text = str(messages.get(result_code, "تعذر إكمال العملية." if not success else "تم تنفيذ العملية."))
+	if success and operation == "send" and is_instance_valid(social_add_code_input):
+		social_add_code_input.clear()
+
+
+func _on_social_connection_state_changed(connected: bool, message: String) -> void:
+	if is_instance_valid(social_status_label):
+		social_status_label.text = message
+	if not connected and social_active_tab == "friends":
+		_render_social_friend_list()
 
 
 func _make_hud_panel_style() -> StyleBoxFlat:
