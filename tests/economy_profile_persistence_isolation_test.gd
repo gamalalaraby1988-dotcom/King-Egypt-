@@ -194,7 +194,14 @@ func _run() -> void:
 		_fail("Could not select synthetic account B profile.")
 		return
 	var account_b_path := Store.get_active_profile_path()
+	var account_b_achievements := Store.get_active_scoped_path("user://kings_city_achievements.cfg")
+	var account_b_daily := Store.get_active_scoped_path("user://kings_city_daily.cfg")
+	if account_b_achievements == _account_fixture_paths[1] or account_b_daily == _account_fixture_paths[2]:
+		_fail("Achievement or daily progress storage is shared between authenticated accounts.")
+		return
 	_account_fixture_paths.append(account_b_path)
+	_account_fixture_paths.append(account_b_achievements)
+	_account_fixture_paths.append(account_b_daily)
 	if account_b_path == account_a_path:
 		_fail("Two authenticated accounts resolved to the same local profile.")
 		return
