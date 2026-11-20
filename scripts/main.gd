@@ -1724,6 +1724,7 @@ func _create_european_vip_slot_machines(root: Node3D, room_center: Vector3) -> v
 		machine.name = str(definition["id"])
 		machine.set_script(slot_script)
 		machine.set("machine_id", str(definition["id"]))
+		machine.set("zone_id", "european_vip_casino")
 		machine.set("machine_title", str(definition["title"]))
 		machine.set("machine_subtitle", str(definition["subtitle"]))
 		machine.set("accent_color", definition["accent"])
