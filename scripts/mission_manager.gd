@@ -75,6 +75,7 @@ var active_job_stops: Array[Vector3] = []
 var active_job_stop_index := 0
 var returning_to_fuel := false
 var job_package_visual: Node3D = null
+var job_delivery_ring: MeshInstance3D = null
 var selected_animal_staff: Node3D = null
 # معرف ثابت طوال نافذة التأجير الحالية؛ يمنع تكرار الخصم بسبب النقر المزدوج.
 var active_rental_transaction_id: String = ""
@@ -1085,6 +1086,7 @@ func _accept_job() -> void:
 	active_job_reward["money"] = 0
 	active_job_reward["chips"] = 0
 	job_running = true
+	job_delivery_ring.visible = true
 	_attach_job_package()
 	target_marker.global_position = active_job_target
 	target_marker.visible = true
@@ -1286,6 +1288,7 @@ func _complete_active_job() -> void:
 		active_job_stops.clear()
 		target_marker.visible = false
 		job_delivery_button.visible = false
+		job_delivery_ring.visible = false
 		status_label.text = "لم يتم حفظ إكمال الوظيفة؛ لم تُصرف مكافأة. يمكنك إعادة المحاولة لاحقًا."
 		accept_button.disabled = false
 		panel.visible = true
@@ -1299,6 +1302,7 @@ func _complete_active_job() -> void:
 	active_job_stops.clear()
 	target_marker.visible = false
 	job_delivery_button.visible = false
+	job_delivery_ring.visible = false
 	status_label.text = "أنهيت جميع التوصيلات وعدت بالسيارة إلى محطة الوقود. تم تسجيل إنجاز الوظيفة."
 	description_label.text = "رصيدك الحالي: %d جنيه، %d رقائق، المستوى %d." % [money, chips, player_level]
 	reward_label.text = "تم حفظ إنجاز الوظيفة. الأجر لم يُحدد بعد."
@@ -1615,6 +1619,8 @@ func _cancel_active_navigation() -> void:
 	_remove_job_package()
 	if is_instance_valid(job_delivery_button):
 		job_delivery_button.visible = false
+	if is_instance_valid(job_delivery_ring):
+		job_delivery_ring.visible = false
 	target_marker.visible = false
 	status_label.text = "تم إلغاء التوجيه. لم تُحتسب المهمة أو الوظيفة ولم تُصرف مكافأة."
 	description_label.text = "يمكنك فتح المبنى أو لوحة الوظيفة مرة أخرى للبدء من جديد."
@@ -1635,6 +1641,8 @@ func _create_target_marker() -> void:
 	ring_mesh.outer_radius = 1.65
 	delivery_ring.mesh = ring_mesh
 	delivery_ring.position.y = 0.08
+	delivery_ring.visible = false
+	job_delivery_ring = delivery_ring
 	var ring_material := StandardMaterial3D.new()
 	ring_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	ring_material.albedo_color = Color(1.0, 0.72, 0.20, 0.9)
