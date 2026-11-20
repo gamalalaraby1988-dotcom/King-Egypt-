@@ -386,6 +386,18 @@ func _create_interior_transition_ui() -> void:
 	frame_style.set_corner_radius_all(12)
 	frame.add_theme_stylebox_override("panel", frame_style)
 	backdrop.add_child(frame)
+	for side in [-1, 1]:
+		var hieroglyphs := Label.new()
+		hieroglyphs.name = "HieroglyphColumn_%d" % side
+		hieroglyphs.text = "𓂀\n𓆣\n𓋹\n𓊖\n𓇳"
+		hieroglyphs.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		hieroglyphs.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		hieroglyphs.position = Vector2(34 if side < 0 else 0, 0)
+		hieroglyphs.set_anchors_and_offsets_preset(Control.PRESET_CENTER_LEFT if side < 0 else Control.PRESET_CENTER_RIGHT)
+		hieroglyphs.size = Vector2(86, 390)
+		hieroglyphs.add_theme_font_size_override("font_size", 38)
+		hieroglyphs.add_theme_color_override("font_color", Color(0.78, 0.58, 0.27, 0.22))
+		backdrop.add_child(hieroglyphs)
 	var ornament := Label.new()
 	ornament.name = "PharaonicOrnament"
 	ornament.text = "𓂀     𓆣     𓋹     𓂀"
