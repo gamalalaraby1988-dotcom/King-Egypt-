@@ -131,10 +131,10 @@ func save_profile_update(config: ConfigFile, money_value: int, chips_value: int)
 	latest_config.set_value("profile", "money", money_value)
 	latest_config.set_value("profile", "chips", chips_value)
 	latest_config.set_value("wallet", "schema_version", SCHEMA_VERSION)
-	config.set_value("wallet", "balances", next_balances)
-	config.set_value("wallet", "receipts", receipts)
-	config.set_value("wallet", "ledger", next_ledger)
-	config.set_value("wallet", "integrity_seal", _compute_integrity_seal(next_balances, receipts, next_ledger))
+	latest_config.set_value("wallet", "balances", next_balances)
+	latest_config.set_value("wallet", "receipts", receipts)
+	latest_config.set_value("wallet", "ledger", next_ledger)
+	latest_config.set_value("wallet", "integrity_seal", _compute_integrity_seal(next_balances, receipts, next_ledger))
 	if not _atomic_save(latest_config):
 		return false
 	balances = next_balances
