@@ -12,6 +12,7 @@ extends CharacterBody3D
 var mobile_move: Vector2 = Vector2.ZERO
 var mobile_sprint: bool = false
 var sitting := false
+var arcade_seated := false
 var _sit_key_was_down := false
 var animal_riding := false
 var ride_visual: Node3D = null
@@ -28,6 +29,13 @@ func _ready() -> void:
 			avatar.call("apply_founder_style")
 
 func _physics_process(delta: float) -> void:
+	if arcade_seated:
+		velocity = Vector3.ZERO
+		mobile_move = Vector2.ZERO
+		mobile_sprint = false
+		sitting = true
+		_update_avatar_animation("sit", 0.0)
+		return
 	if GameModeManager.is_online_ready():
 		_process_online_input()
 		return
@@ -182,6 +190,25 @@ func sit_at_position(world_position: Vector3, facing_y: float = 0.0) -> bool:
 	mobile_sprint = false
 	sitting = true
 	return true
+
+func set_arcade_seated(enabled: bool) -> void:
+	if animal_riding and enabled:
+		return
+	arcade_seated = enabled
+	if enabled:
+		mobile_move = Vector2.ZERO
+		mobile_sprint = false
+		sitting = true
+		velocity = Vector3.ZERO
+
+func end_arcade_seat(world_position: Vector3, facing_y: float = 0.0) -> void:
+	arcade_seated = false
+	sitting = false
+	global_position = world_position
+	rotation.y = facing_y
+	velocity = Vector3.ZERO
+	mobile_move = Vector2.ZERO
+	mobile_sprint = false
 
 func toggle_sit() -> void:
 	# الجلوس غير متاح أثناء ركوب الحيوان حتى لا تتعارض حالتا الحركة.
