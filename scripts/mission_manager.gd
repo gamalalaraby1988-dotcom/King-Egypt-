@@ -1,8 +1,6 @@
 extends Node
 const ProfileConfigStore = preload("res://scripts/profile_config_store.gd")
 
-func _save_path() -> String:
-	return ProfileConfigStore.get_active_profile_path()
 ## مهام بأهداف حركة فعلية وتقدم خبرة محلي داخل جلسة اللعب.
 
 var player: Node3D
@@ -118,6 +116,9 @@ const CITY_ADVENTURE_STAGES := {
 const MAX_CURRENCY_BALANCE := 2000000000
 
 # الوظائف السبع المعتمدة متاحة من مكتب التوظيف الموحد.
+
+func _save_path() -> String:
+	return ProfileConfigStore.get_active_profile_path()
 
 func _egypt_datetime() -> Dictionary:
 	return GameCalendar.get_egypt_datetime()
