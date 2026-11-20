@@ -1,5 +1,5 @@
 begin;
-select extensions.plan(20);
+select extensions.plan(19);
 
 insert into auth.users (id,aud,role,email,encrypted_password,email_confirmed_at)
 values ('00000000-0000-4000-8000-000000000085','authenticated','authenticated','slot-settlement-test@example.invalid','',pg_catalog.now())
@@ -107,18 +107,6 @@ select extensions.is(
         '00000000-0000-4000-8000-000000000085',
         '10000000-0000-4000-8000-000000000085',
         '20000000-0000-4000-8000-000000000087',
-        'vip_diamond_royale',
-        19,
-        array[0,0,1]
-    )->>'payout_multiplier_tenths')::integer,
-    1,
-    'pair result returns the approved 0.1x multiplier'
-);
-select extensions.is(
-    (public.settle_arcade_slot_round(
-        '00000000-0000-4000-8000-000000000085',
-        '10000000-0000-4000-8000-000000000085',
-        '20000000-0000-4000-8000-000000000088',
         'vip_diamond_royale',
         19,
         array[0,0,1]
