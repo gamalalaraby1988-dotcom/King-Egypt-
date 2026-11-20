@@ -92,8 +92,8 @@ func register_city_layout(layout: Node3D) -> void:
 		marker.set("building_id", building_id)
 		marker.set("building_title", str(definition.get("name", building_id)))
 		marker.set("interaction_radius", INTERACTION_RADIUS)
-		marker.global_position = building.to_global(Vector3(0.0, 0.0, 8.0))
 		layout.add_child(marker)
+		marker.global_position = building.to_global(Vector3(0.0, 0.0, 8.0))
 		_create_ground_marker(marker)
 		building.set_meta("development_interaction_created", true)
 		registered += 1
