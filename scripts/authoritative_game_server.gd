@@ -328,6 +328,7 @@ func _get_server_job_definition(_job_id: String) -> Dictionary:
 	# Legacy one-stop job definitions are intentionally retired. The approved
 	# multi-stop delivery workflow remains offline-only until vehicle state and
 	# hand-delivery interactions are authoritative on the server.
+	return {}
 
 
 @rpc("any_peer", "call_remote", "reliable")
