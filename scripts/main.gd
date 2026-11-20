@@ -8,6 +8,8 @@ var interior_player: CharacterBody3D = null
 var interior_return_transform: Transform3D
 var interior_loading_layer: CanvasLayer
 var interior_loading_label: Label
+var interior_loading_progress: ProgressBar
+var interior_loading_tween: Tween
 var interior_exit_button: Button
 var interior_transition_busy := false
 var interior_loading_message_key := "interior_loading"
@@ -361,29 +363,72 @@ func _create_interior_transition_ui() -> void:
 	add_child(interior_loading_layer)
 	var backdrop := ColorRect.new()
 	backdrop.name = "LoadingBackdrop"
-	backdrop.color = Color(0.035, 0.045, 0.055, 0.96)
+	backdrop.color = Color(0.035, 0.025, 0.018, 0.98)
 	backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	backdrop.visible = false
 	interior_loading_layer.add_child(backdrop)
+	# إطار فرعوني ذهبي وزخارف هندسية خفيفة بدل خلفية فارغة.
+	var frame := Panel.new()
+	frame.name = "PharaonicFrame"
+	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	frame.offset_left = 22
+	frame.offset_top = 22
+	frame.offset_right = -22
+	frame.offset_bottom = -22
+	var frame_style := StyleBoxFlat.new()
+	frame_style.bg_color = Color(0.07, 0.045, 0.025, 0.0)
+	frame_style.border_color = Color(0.78, 0.57, 0.23, 0.95)
+	frame_style.set_border_width_all(3)
+	frame_style.set_corner_radius_all(12)
+	frame.add_theme_stylebox_override("panel", frame_style)
+	backdrop.add_child(frame)
+	var ornament := Label.new()
+	ornament.name = "PharaonicOrnament"
+	ornament.text = "𓂀     𓆣     𓋹     𓂀"
+	ornament.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	ornament.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
+	ornament.position = Vector2(-190, 95)
+	ornament.size = Vector2(380, 60)
+	ornament.add_theme_font_size_override("font_size", 38)
+	ornament.add_theme_color_override("font_color", Color(0.88, 0.68, 0.31))
+	backdrop.add_child(ornament)
 	var content := VBoxContainer.new()
 	content.name = "LoadingContent"
 	content.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-	content.position = Vector2(-210, -85)
-	content.size = Vector2(420, 170)
+	content.position = Vector2(-230, -55)
+	content.size = Vector2(460, 190)
 	content.alignment = BoxContainer.ALIGNMENT_CENTER
 	content.add_theme_constant_override("separation", 18)
 	backdrop.add_child(content)
 	interior_loading_label = Label.new()
 	interior_loading_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	interior_loading_label.add_theme_font_size_override("font_size", 26)
-	interior_loading_label.add_theme_color_override("font_color", Color(0.94, 0.79, 0.43))
+	interior_loading_label.add_theme_font_size_override("font_size", 27)
+	interior_loading_label.add_theme_color_override("font_color", Color(0.98, 0.82, 0.48))
 	content.add_child(interior_loading_label)
 	var hint := Label.new()
 	hint.text = "𓂀   KING OF EGYPT CITY   𓂀"
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	hint.add_theme_font_size_override("font_size", 16)
-	hint.add_theme_color_override("font_color", Color(0.88, 0.86, 0.78))
+	hint.add_theme_font_size_override("font_size", 17)
+	hint.add_theme_color_override("font_color", Color(0.91, 0.84, 0.68))
 	content.add_child(hint)
+	interior_loading_progress = ProgressBar.new()
+	interior_loading_progress.name = "LoadingProgress"
+	interior_loading_progress.custom_minimum_size = Vector2(420, 20)
+	interior_loading_progress.min_value = 0.0
+	interior_loading_progress.max_value = 100.0
+	interior_loading_progress.value = 0.0
+	interior_loading_progress.show_percentage = true
+	var progress_style := StyleBoxFlat.new()
+	progress_style.bg_color = Color(0.12, 0.09, 0.06)
+	progress_style.border_color = Color(0.78, 0.57, 0.23)
+	progress_style.set_border_width_all(2)
+	progress_style.set_corner_radius_all(8)
+	interior_loading_progress.add_theme_stylebox_override("background", progress_style)
+	var fill_style := StyleBoxFlat.new()
+	fill_style.bg_color = Color(0.86, 0.65, 0.27)
+	fill_style.set_corner_radius_all(6)
+	interior_loading_progress.add_theme_stylebox_override("fill", fill_style)
+	content.add_child(interior_loading_progress)
 	interior_exit_button = Button.new()
 	interior_exit_button.text = CityLanguage.translate("interior_exit")
 	interior_exit_button.visible = false
@@ -410,6 +455,12 @@ func _show_interior_loading(show_exit: bool = false, message_key: String = "inte
 	if is_instance_valid(backdrop):
 		backdrop.visible = not show_exit
 	interior_exit_button.visible = show_exit
+	if not show_exit and is_instance_valid(interior_loading_progress):
+		if is_instance_valid(interior_loading_tween):
+			interior_loading_tween.kill()
+		interior_loading_progress.value = 0.0
+		interior_loading_tween = create_tween()
+		interior_loading_tween.tween_property(interior_loading_progress, "value", 100.0, 0.65)
 	_refresh_interior_ui_language()
 
 func _hide_interior_loading() -> void:
@@ -419,6 +470,8 @@ func _hide_interior_loading() -> void:
 	if is_instance_valid(backdrop):
 		backdrop.visible = false
 	interior_exit_button.visible = false
+	if is_instance_valid(interior_loading_tween):
+		interior_loading_tween.kill()
 
 func enter_building_interior(building: Node3D, actor: Node3D) -> void:
 	var body := actor as CharacterBody3D
