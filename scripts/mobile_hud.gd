@@ -24,6 +24,12 @@ func _ready() -> void:
 func _process(_delta: float) -> void:
 	if not is_instance_valid(player):
 		return
+	# Arcade seating owns camera input; discard any held joystick/camera touch
+	# so it cannot leak movement when the player leaves the seat.
+	if bool(player.get("arcade_seated")):
+		if joystick_finger != -1 or camera_finger != -1 or not joystick_vector.is_zero_approx():
+			_clear_touch_state()
+		return
 	if not visible:
 		player.set_mobile_move(Vector2.ZERO)
 		player.set_mobile_sprint(false)
@@ -57,6 +63,10 @@ func _draw() -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not visible:
+		return
+	# The seated player script is the sole owner of arcade camera swipes.
+	if is_instance_valid(player) and bool(player.get("arcade_seated")):
+		_clear_touch_state()
 		return
 	if event is InputEventScreenTouch:
 		if event.pressed:
