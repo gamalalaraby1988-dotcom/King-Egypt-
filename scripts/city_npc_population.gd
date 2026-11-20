@@ -162,6 +162,9 @@ func _create_active_visual(record: Dictionary) -> void:
 	var avatar := AVATAR_SCENE.instantiate() as Node3D
 	avatar.name = "AvatarVisual"
 	actor.add_child(avatar)
+	# NPCs are visual-only actors: disable any physics objects inherited from
+	# future avatar/outfit assets so they never block or push real players.
+	_disable_npc_collisions(actor)
 	avatar.call("apply_outfit", outfit_id)
 	avatar.call("apply_hairstyle", hairstyle_id)
 	_active_visuals[str(record["id"])] = {
@@ -172,6 +175,21 @@ func _create_active_visual(record: Dictionary) -> void:
 		"phase": float(record["phase"]),
 		"speed": 0.32 + float(source_index % 5) * 0.055
 	}
+
+func _disable_npc_collisions(node: Node) -> void:
+	if node is CollisionObject3D:
+		var collision_object := node as CollisionObject3D
+		collision_object.collision_layer = 0
+		collision_object.collision_mask = 0
+		if collision_object is Area3D:
+			(collision_object as Area3D).monitoring = false
+			(collision_object as Area3D).monitorable = false
+	if node is CollisionShape3D:
+		(node as CollisionShape3D).set_deferred("disabled", true)
+	elif node is CollisionPolygon3D:
+		(node as CollisionPolygon3D).set_deferred("disabled", true)
+	for child in node.get_children():
+		_disable_npc_collisions(child)
 
 func _update_active_motion() -> void:
 	for actor_id in _active_visuals:
