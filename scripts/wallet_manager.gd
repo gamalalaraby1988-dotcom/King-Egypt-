@@ -1,9 +1,7 @@
 extends Node
 ## خدمة محفظة محلية موحدة. الخادم الموثوق مطلوب لحماية اقتصاد اللعب الجماعي.
 
-const PROFILE_PATH := "user://kings_city_profile.cfg"
-const TEMP_PATH := "user://kings_city_profile.wallet.tmp"
-const BACKUP_PATH := "user://kings_city_profile.pre_wallet_backup.cfg"
+const ProfileConfigStore = preload("res://scripts/profile_config_store.gd")
 const SCHEMA_VERSION := 2
 const MAX_BALANCE := 2000000000
 const CURRENCIES := ["money", "chips", "gems"]
@@ -18,10 +16,26 @@ var integrity_warning := false
 func _ready() -> void:
 	initialize_wallet()
 
+func _profile_path() -> String:
+	return ProfileConfigStore.get_active_profile_path()
+
+func _profile_temp_path() -> String:
+	return _profile_path() + ".wallet.tmp"
+
+func _profile_backup_path() -> String:
+	return _profile_path() + ".pre_wallet_backup.cfg"
+
 func initialize_wallet() -> bool:
+	# Reset in-memory state before loading another account's isolated profile.
+	balances = {"money": 0, "chips": 0, "gems": 0}
+	receipts = {}
+	ledger = []
+	initialized = false
+	integrity_seal = ""
+	integrity_warning = false
 	var config := ConfigFile.new()
-	var err := config.load(PROFILE_PATH)
-	if err != OK and FileAccess.file_exists(PROFILE_PATH):
+	var err := config.load(_profile_path())
+	if err != OK and FileAccess.file_exists(_profile_path()):
 		push_error("Wallet: profile file is unreadable; wallet initialization stopped.")
 		return false
 
@@ -100,6 +114,17 @@ func save_profile_update(config: ConfigFile, money_value: int, chips_value: int)
 	# حفظ بيانات اللاعب وتغيير أرصدته وسجل المحفظة في الملف الذري نفسه.
 	if not initialized or not _valid_amount(money_value) or not _valid_amount(chips_value):
 		return false
+	# Rebase progression changes onto the newest file so a stale MissionManager
+	# snapshot cannot replace newer settings, language, wallet receipts, or ownership.
+	var latest_config := ConfigFile.new()
+	var latest_error := latest_config.load(_profile_path())
+	if latest_error != OK:
+		return false
+	const PROTECTED_PROFILE_KEYS := ["money", "chips", "owned_vehicles", "owned_horus_colors"]
+	for key in config.get_section_keys("profile"):
+		if PROTECTED_PROFILE_KEYS.has(str(key)):
+			continue
+		latest_config.set_value("profile", str(key), config.get_value("profile", key))
 	var next_balances := balances.duplicate(true)
 	var next_ledger := ledger.duplicate(true)
 	var timestamp := Time.get_datetime_string_from_system(true)
@@ -119,14 +144,14 @@ func save_profile_update(config: ConfigFile, money_value: int, chips_value: int)
 			"timestamp": timestamp
 		})
 		next_balances[currency] = target
-	config.set_value("profile", "money", money_value)
-	config.set_value("profile", "chips", chips_value)
-	config.set_value("wallet", "schema_version", SCHEMA_VERSION)
-	config.set_value("wallet", "balances", next_balances)
-	config.set_value("wallet", "receipts", receipts)
-	config.set_value("wallet", "ledger", next_ledger)
-	config.set_value("wallet", "integrity_seal", _compute_integrity_seal(next_balances, receipts, next_ledger))
-	if not _atomic_save(config):
+	latest_config.set_value("profile", "money", money_value)
+	latest_config.set_value("profile", "chips", chips_value)
+	latest_config.set_value("wallet", "schema_version", SCHEMA_VERSION)
+	latest_config.set_value("wallet", "balances", next_balances)
+	latest_config.set_value("wallet", "receipts", receipts)
+	latest_config.set_value("wallet", "ledger", next_ledger)
+	latest_config.set_value("wallet", "integrity_seal", _compute_integrity_seal(next_balances, receipts, next_ledger))
+	if not _atomic_save(latest_config):
 		return false
 	balances = next_balances
 	ledger = next_ledger
@@ -152,7 +177,7 @@ func purchase_once(transaction_id: String, currency: String, amount: int, reason
 	if amount < 0 or amount > MAX_BALANCE or receipts.has(transaction_id):
 		return false
 	var config := ConfigFile.new()
-	if config.load(PROFILE_PATH) != OK:
+	if config.load(_profile_path()) != OK:
 		return false
 	_refresh_legacy_balances()
 	var current := int(balances[currency])
@@ -205,7 +230,7 @@ func _transact(transaction_id: String, currency: String, amount: int, kind: Stri
 	if amount <= 0 or amount > MAX_BALANCE or receipts.has(transaction_id):
 		return false
 	var config := ConfigFile.new()
-	if config.load(PROFILE_PATH) != OK:
+	if config.load(_profile_path()) != OK:
 		return false
 	_refresh_legacy_balances()
 	var current := int(balances[currency])
@@ -257,7 +282,7 @@ func credit_bundle_once(transaction_id: String, money_amount: int, chips_amount:
 	if money_amount == 0 and chips_amount == 0:
 		return true
 	var config := ConfigFile.new()
-	if config.load(PROFILE_PATH) != OK:
+	if config.load(_profile_path()) != OK:
 		return false
 	var next_balances := balances.duplicate(true)
 	var next_receipts := receipts.duplicate(true)
@@ -309,31 +334,7 @@ func _persist_wallet(config: ConfigFile) -> bool:
 	return true
 
 func _atomic_save(config: ConfigFile) -> bool:
-	if config.save(TEMP_PATH) != OK:
-		return false
-	var original_exists := FileAccess.file_exists(PROFILE_PATH)
-	if original_exists and not FileAccess.file_exists(BACKUP_PATH):
-		if DirAccess.copy_absolute(ProjectSettings.globalize_path(PROFILE_PATH), ProjectSettings.globalize_path(BACKUP_PATH)) != OK:
-			DirAccess.remove_absolute(ProjectSettings.globalize_path(TEMP_PATH))
-			return false
-	var original_path := ProjectSettings.globalize_path(PROFILE_PATH)
-	var temp_path := ProjectSettings.globalize_path(TEMP_PATH)
-	var backup_path := ProjectSettings.globalize_path(BACKUP_PATH)
-	if original_exists:
-		var rotate_error := DirAccess.rename_absolute(original_path, backup_path + ".pending")
-		if rotate_error != OK:
-			DirAccess.remove_absolute(temp_path)
-			return false
-		var install_error := DirAccess.rename_absolute(temp_path, original_path)
-		if install_error != OK:
-			DirAccess.rename_absolute(backup_path + ".pending", original_path)
-			return false
-		DirAccess.remove_absolute(backup_path + ".pending")
-	else:
-		if DirAccess.rename_absolute(temp_path, original_path) != OK:
-			DirAccess.remove_absolute(temp_path)
-			return false
-	return true
+	return ProfileConfigStore.save_config_snapshot(config, _profile_path(), _profile_temp_path(), _profile_backup_path())
 
 func _valid_amount(value: Variant) -> bool:
 	return (value is int or value is float) and is_finite(float(value)) and float(value) >= 0.0 and float(value) <= float(MAX_BALANCE) and floorf(float(value)) == float(value)

@@ -1,4 +1,6 @@
 extends Node
+const ProfileConfigStore = preload("res://scripts/profile_config_store.gd")
+
 ## تقدم اللاعب عبر مباني التطوير الـ28 المعتمدة فقط.
 ## كل مبنى يضم خمس مراحل؛ إكمال المرحلة يفتح نطاق المستوى التالي.
 ## ترقية المستوى تتم بالمال، ولا تمنح الوظائف أو الأنشطة XP.
@@ -6,7 +8,6 @@ extends Node
 signal progression_changed(player_level: int, completed_stages: int)
 signal development_panel_opened(building_id: String)
 
-const SAVE_PATH := "user://kings_city_profile.cfg"
 const MAX_PLAYER_LEVEL := 5000
 const STAGES_PER_BUILDING := 5
 const TOTAL_BUILDINGS := 28
@@ -69,6 +70,9 @@ var _progress_label: Label
 var _cost_label: Label
 var _status_label: Label
 var _upgrade_button: Button
+
+func _save_path() -> String:
+	return ProfileConfigStore.get_active_profile_path()
 
 func _ready() -> void:
 	_load_progress()
@@ -309,8 +313,8 @@ func _sync_mission_manager() -> void:
 
 func _load_progress() -> void:
 	var config := ConfigFile.new()
-	var err := config.load(SAVE_PATH)
-	if err != OK and FileAccess.file_exists(SAVE_PATH):
+	var err := config.load(_save_path())
+	if err != OK and FileAccess.file_exists(_save_path()):
 		push_warning("Development progression: profile unreadable; progression was not overwritten.")
 		return
 	var saved_level := 1
