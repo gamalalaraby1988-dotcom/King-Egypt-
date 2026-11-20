@@ -530,12 +530,8 @@ func request_submit_message_puzzle_answer(answer: String) -> void:
 	if normalized_answer != "النيل":
 		rpc_id(peer_id, "receive_mission_stage_updated", "city_adventure_message", final_target, stages.size(), stages.size(), "الإجابة غير صحيحة. راجع الأدلة وحاول مرة أخرى.")
 		return
-	var completed_missions: Dictionary = session.get("completed_missions", {})
-	completed_missions["city_adventure_message"] = true
-	session["completed_missions"] = completed_missions
 	session["active_mission"] = {}
 	_sessions[peer_id] = session
-	server_objective_reached.emit(str(session.get("user_id", "")), "mission", "city_adventure_message")
 	rpc_id(peer_id, "receive_server_mission_completed", "city_adventure_message")
 
 
@@ -1262,14 +1258,13 @@ func _physics_process(delta: float) -> void:
 							session["active_mission"] = active_mission
 							rpc_id(peer_id, "receive_mission_stage_updated", completed_mission_id, mission_target, mission_stages.size() + 1, mission_stages.size(), "جمعت الأدلة الثلاثة. فك الشفرة وأرسل الإجابة.")
 					else:
-						var completed_missions: Dictionary = session.get("completed_missions", {})
-						completed_missions[completed_mission_id] = true
-						session["completed_missions"] = completed_missions
 						session["active_mission"] = {}
-						server_objective_reached.emit(str(session.get("user_id", "")), "mission", completed_mission_id)
 						rpc_id(peer_id, "receive_server_mission_completed", completed_mission_id)
-						# Adventure activities do not issue rewards until persistent trusted settlement exists.
 						if not completed_mission_id.begins_with("city_adventure_"):
+							var completed_missions: Dictionary = session.get("completed_missions", {})
+							completed_missions[completed_mission_id] = true
+							session["completed_missions"] = completed_missions
+							server_objective_reached.emit(str(session.get("user_id", "")), "mission", completed_mission_id)
 							_issue_activity_proof(peer_id, str(session.get("user_id", "")), "mission", completed_mission_id)
 		_sessions[peer_id] = session
 	_snapshot_elapsed += safe_delta

@@ -70,6 +70,28 @@ func _run_city_adventure_contract() -> void:
 		push_error("Treasure adventure must display a collectible chest visual at its final existing checkpoint.")
 		quit(1)
 		return
+	if not manager_source.contains("chest.global_position = active_target + Vector3(0.0, 0.34, 0.0)"):
+		push_error("Treasure visual must sit close to the ground at the existing final checkpoint.")
+		quit(1)
+		return
+	var completion_start := manager_source.find("func _complete_active_mission()")
+	var completion_end := manager_source.find("func _update_navigation_hud(", completion_start)
+	if completion_start < 0 or completion_end <= completion_start:
+		push_error("Could not inspect adventure completion side effects.")
+		quit(1)
+		return
+	var completion_source := manager_source.substr(completion_start, completion_end - completion_start)
+	var adventure_completion_start := completion_source.find("if selected_activity_kind == \"adventure\":")
+	var generic_completion_start := completion_source.find("var data: Dictionary = active_mission.get_mission_data()")
+	if adventure_completion_start < 0 or generic_completion_start <= adventure_completion_start:
+		push_error("Adventure completion must exit before generic mission settlement.")
+		quit(1)
+		return
+	var adventure_completion_source := completion_source.substr(adventure_completion_start, generic_completion_start - adventure_completion_start)
+	if adventure_completion_source.contains("complete_activity_once(") or adventure_completion_source.contains("record_mission_completed("):
+		push_error("Adventure completion must not trigger generic rewards, daily tasks, or achievements.")
+		quit(1)
+		return
 	if not manager_source.contains("if mission_id == \"city_adventure_treasure\" and stage_number == stage_count") or not manager_source.contains("_hide_adventure_treasure()"):
 		push_error("Treasure visual must appear at the final checkpoint and be cleared on completion.")
 		quit(1)
@@ -108,6 +130,10 @@ func _run_city_adventure_contract() -> void:
 		return
 	if not server_source.contains("func request_submit_message_puzzle_answer(answer: String)") or not server_source.contains('normalized_answer != "النيل"') or not server_source.contains('"puzzle_ready"') or not server_source.contains("mission_stages.size() + 1"):
 		push_error("Online mystery answer must be unlocked and validated by the server only after the final checkpoint.")
+		quit(1)
+		return
+	if server_source.contains('completed_missions["city_adventure_message"] = true') or server_source.contains('server_objective_reached.emit(str(session.get("user_id", "")), "mission", "city_adventure_message")'):
+		push_error("Adventure completion must not be counted as a generic rewarded mission.")
 		quit(1)
 		return
 	if not manager_source.contains("stage_number > stage_count") or not manager_source.contains("adventure_stage_index = stage_count - 1"):

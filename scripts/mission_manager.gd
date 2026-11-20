@@ -1614,6 +1614,24 @@ func _accept_mission() -> void:
 func _complete_active_mission() -> void:
 	if not mission_running or not is_instance_valid(active_mission):
 		return
+	if selected_activity_kind == "adventure":
+		mission_running = false
+		survival_time_remaining = 0.0
+		survival_prep_remaining = 0.0
+		if is_instance_valid(survival_progress_label):
+			survival_progress_label.visible = false
+		if is_instance_valid(survival_progress_bar):
+			survival_progress_bar.visible = false
+		_set_message_puzzle_visible(false)
+		_clear_rescue_citizen()
+		_hide_adventure_treasure()
+		target_marker.visible = false
+		status_label.text = "اكتملت المغامرة! لا توجد مكافأة أو نقاط يومية مفعلة."
+		description_label.text = "تم إنهاء المغامرة في هذه الجلسة دون تسجيل تقدم دائم."
+		reward_label.text = "لا توجد مكافأة، ولم تُضف نقاط مهام يومية أو إنجازات."
+		accept_button.disabled = false
+		panel.visible = true
+		return
 	var data: Dictionary = active_mission.get_mission_data()
 	var key: String = "adventure:%s:%s" % [selected_adventure_id, _egypt_day_key()] if selected_activity_kind == "adventure" else str(active_mission.get("building_id"))
 	var reward_money := 0 if selected_activity_kind == "adventure" else int(data["money"])
@@ -2023,7 +2041,7 @@ func _show_adventure_treasure() -> void:
 	var chest := Node3D.new()
 	chest.name = "AdventureTreasureVisual"
 	city_root.add_child(chest)
-	chest.global_position = active_target + Vector3(0.0, 0.58, 0.0)
+	chest.global_position = active_target + Vector3(0.0, 0.34, 0.0)
 	var wood := StandardMaterial3D.new()
 	wood.albedo_color = Color(0.20, 0.075, 0.025)
 	wood.roughness = 0.78
