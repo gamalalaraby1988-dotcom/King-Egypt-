@@ -60,6 +60,7 @@ func _building(parent: Node3D, id: String, title: String, at: Vector3, footprint
 	_box(root, "RoofCornice", Vector3(w + 0.5, 0.35, d + 0.5), Vector3(0, height + 0.12, 0), accent)
 	_box(root, "Entrance", Vector3(maxf(1.5, w * 0.18), 2.8, 0.16), Vector3(0, 1.4, d * 0.5 + 0.09), DARK)
 	_add_pharaonic_door_band(root, maxf(1.5, w * 0.18), d * 0.5 + 0.205)
+	_add_building_collision_shell(root, footprint, height, maxf(1.5, w * 0.18))
 	for side in [-1.0, 1.0]:
 		_box(root, "FrontColumn", Vector3(0.38, minf(height - 0.8, 5.0), 0.42), Vector3(side * w * 0.34, minf(height - 0.8, 5.0) * 0.5, d * 0.5 + 0.25), accent)
 	var sign := Label3D.new()
@@ -514,6 +515,39 @@ func _build_royal_ship() -> void:
 	for x in [-10.0, -2.0]:
 		for z in [79.0, 84.0, 89.0]:
 			_box(self, "RoyalShipPierPost", Vector3(0.35, 1.1, 0.35), Vector3(x, 0.5, z), GOLD)
+
+
+func _add_building_collision_shell(root: Node3D, footprint: Vector2, height: float, door_width: float) -> void:
+	# Physical walls mirror the visible facade while leaving a real doorway opening.
+	var body := StaticBody3D.new()
+	body.name = "BuildingCollisionShell"
+	body.add_to_group("city_world_geometry")
+	root.add_child(body)
+
+	var wall_height := maxf(height, 3.0)
+	var wall_depth := 0.35
+	var half_width := footprint.x * 0.5
+	var half_depth := footprint.y * 0.5
+	var opening_width := clampf(door_width, 1.5, maxf(1.5, footprint.x - 0.8))
+	var side_width := maxf(0.25, (footprint.x - opening_width) * 0.5)
+
+	_add_collision_box(body, "BackWall", Vector3(footprint.x, wall_height, wall_depth), Vector3(0.0, wall_height * 0.5, -half_depth))
+	_add_collision_box(body, "LeftWall", Vector3(wall_depth, wall_height, footprint.y), Vector3(-half_width, wall_height * 0.5, 0.0))
+	_add_collision_box(body, "RightWall", Vector3(wall_depth, wall_height, footprint.y), Vector3(half_width, wall_height * 0.5, 0.0))
+	_add_collision_box(body, "FrontLeftWall", Vector3(side_width, wall_height, wall_depth), Vector3(-(opening_width + side_width) * 0.5, wall_height * 0.5, half_depth))
+	_add_collision_box(body, "FrontRightWall", Vector3(side_width, wall_height, wall_depth), Vector3((opening_width + side_width) * 0.5, wall_height * 0.5, half_depth))
+	var lintel_height := maxf(0.2, wall_height - 2.8)
+	_add_collision_box(body, "DoorLintel", Vector3(opening_width, lintel_height, wall_depth), Vector3(0.0, 2.8 + lintel_height * 0.5, half_depth))
+
+
+func _add_collision_box(parent: Node3D, label: String, size: Vector3, at: Vector3) -> void:
+	var collision := CollisionShape3D.new()
+	collision.name = label
+	var shape := BoxShape3D.new()
+	shape.size = size
+	collision.shape = shape
+	collision.position = at
+	parent.add_child(collision)
 
 func _add_static_box_collision(parent: Node3D, label: String, size: Vector3, at: Vector3) -> void:
 	var body := StaticBody3D.new()
