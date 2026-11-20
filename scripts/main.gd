@@ -1553,6 +1553,9 @@ func _on_player_account_session_expired() -> void:
 		player_account_button.text = "حساب اللاعب - تسجيل الدخول وحفظ التقدم"
 	if is_instance_valid(player_account_status_label):
 		player_account_status_label.text = "انتهت جلسة الحساب. سجّل الدخول مجددًا لاستعادة المزامنة."
+	if GameModeManager.is_online_ready():
+		_on_mode_status_changed("انتهت جلسة حساب اللاعب؛ تم إنهاء اتصال Online لحماية الحساب.")
+		GameModeManager.disconnect_online()
 
 func _on_player_profile_ready(_user_id: String, player_code: String, display_name: String) -> void:
 	if is_instance_valid(player_account_profile_label):
@@ -1689,12 +1692,6 @@ func _on_mode_connected() -> void:
 		GameModeManager.disconnect_online()
 		return
 	AuthoritativeGameServer.authenticate_player.rpc_id(1, access_token)
-
-
-func _on_player_account_session_expired() -> void:
-	if GameModeManager.is_online_ready():
-		_on_mode_status_changed("انتهت جلسة حساب اللاعب؛ تم إنهاء اتصال Online لحماية الحساب.")
-		GameModeManager.disconnect_online()
 
 
 func _on_player_access_token_changed(access_token: String) -> void:
