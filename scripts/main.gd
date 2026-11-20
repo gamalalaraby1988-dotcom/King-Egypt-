@@ -1314,7 +1314,7 @@ func _create_mode_selection_ui() -> void:
 	PlayerAccountAuthClient.player_profile_ready.connect(_on_player_profile_ready)
 	PlayerAccountAuthClient.player_profile_failed.connect(_on_player_profile_failed)
 	if PlayerAccountAuthClient.has_active_session():
-		PlayerSyncClient.set_session_access_token(PlayerAccountAuthClient.get_access_token())
+		PlayerSyncClient.set_session_access_token(PlayerAccountAuthClient.get_access_token(), PlayerAccountAuthClient.get_user_id())
 	var backdrop := ColorRect.new()
 	backdrop.color = Color(0.025, 0.035, 0.05, 0.94)
 	backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -1531,7 +1531,7 @@ func _on_player_account_authenticated(user_id: String, email: String) -> void:
 		player_account_profile_label.text = "معرّف الحساب: " + user_id
 
 func _on_player_account_access_token_changed(access_token: String) -> void:
-	PlayerSyncClient.set_session_access_token(access_token)
+	PlayerSyncClient.set_session_access_token(access_token, PlayerAccountAuthClient.get_user_id())
 
 func _on_player_account_session_expired() -> void:
 	PlayerSyncClient.clear_session_access_token()

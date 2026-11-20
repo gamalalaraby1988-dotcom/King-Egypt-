@@ -35,9 +35,13 @@ var _snapshot_action := ""
 var _snapshot_revision := 0
 var _snapshot_request_active := false
 var _access_token := ""
+var _session_user_id := ""
 var _events: Array[Dictionary] = []
 var _pending_event_ids: Array[String] = []
 var _request_active := false
+# Identity snapshot for the in-flight batch; late responses must never mutate a new account session.
+var _request_access_token := ""
+var _request_user_id := ""
 var _retry_timer: Timer
 var _retry_delay_seconds := 5.0
 const MAX_RETRY_DELAY_SECONDS := 300.0
@@ -71,9 +75,14 @@ func _ready() -> void:
 	_load_outbox()
 
 
-func set_session_access_token(access_token: String) -> void:
+func set_session_access_token(access_token: String, user_id: String) -> void:
 	_access_token = access_token.strip_edges()
-	if not _access_token.is_empty() and bool(ProjectSettings.get_setting(SYNC_ENABLED_SETTING, false)):
+	_session_user_id = user_id.strip_edges()
+	if _access_token.is_empty() or _session_user_id.is_empty():
+		clear_session_access_token()
+		push_warning("Player sync session requires both an access token and an authenticated account ID.")
+		return
+	if bool(ProjectSettings.get_setting(SYNC_ENABLED_SETTING, false)):
 		call_deferred("fetch_preference_snapshot")
 		call_deferred("fetch_progress_observations")
 		call_deferred("flush_pending")
@@ -81,6 +90,7 @@ func set_session_access_token(access_token: String) -> void:
 
 func clear_session_access_token() -> void:
 	_access_token = ""
+	_session_user_id = ""
 	_snapshot_action = ""
 	_snapshot_request_active = false
 	_progress_request_active = false
@@ -371,8 +381,11 @@ func enqueue_event(event_type: String, payload: Dictionary) -> bool:
 	var event_id := _create_event_uuid()
 	if event_id.is_empty():
 		return false
+	# Bind every event to the authenticated account active when it was created.
+	# Events created without an account remain local-only and are never claimed by a later login.
 	var event := {
 		"event_id": event_id,
+		"owner_user_id": _session_user_id,
 		"event_type": event_type,
 		"payload": payload.duplicate(true)
 	}
@@ -430,7 +443,7 @@ func enqueue_progress_observation(event_type: String, progress_key: String, prog
 func flush_pending() -> void:
 	if not bool(ProjectSettings.get_setting(SYNC_ENABLED_SETTING, false)):
 		return
-	if _request_active or _access_token.is_empty() or _events.is_empty():
+	if _request_active or _access_token.is_empty() or _session_user_id.is_empty() or _events.is_empty():
 		return
 
 	var base_url := str(ProjectSettings.get_setting("founder/auth/api_base_url", "")).strip_edges().trim_suffix("/")
@@ -441,10 +454,22 @@ func flush_pending() -> void:
 
 	var batch: Array[Dictionary] = []
 	_pending_event_ids.clear()
-	for index in range(mini(MAX_BATCH_SIZE, _events.size())):
-		var event: Dictionary = _events[index].duplicate(true)
+	for stored_event in _events:
+		if str(stored_event.get("owner_user_id", "")) != _session_user_id:
+			continue
+		var payload_value: Variant = stored_event.get("payload", {})
+		var safe_payload: Dictionary = payload_value.duplicate(true) if payload_value is Dictionary else {}
+		var event := {
+			"event_id": str(stored_event.get("event_id", "")),
+			"event_type": str(stored_event.get("event_type", "")),
+			"payload": safe_payload
+		}
 		batch.append(event)
 		_pending_event_ids.append(str(event.get("event_id", "")))
+		if batch.size() >= MAX_BATCH_SIZE:
+			break
+	if batch.is_empty():
+		return
 
 	var headers := PackedStringArray([
 		"Content-Type: application/json",
@@ -464,11 +489,24 @@ func flush_pending() -> void:
 		sync_finished.emit(false, 0, 0, "تعذر بدء مزامنة التقدم. ستبقى الأحداث محفوظة على الجهاز.")
 		_schedule_retry()
 		return
+	_request_access_token = _access_token
+	_request_user_id = _session_user_id
 	_request_active = true
 
 
 func _on_request_completed(result: int, response_code: int, response_headers: PackedStringArray, body: PackedByteArray) -> void:
 	_request_active = false
+	var request_token := _request_access_token
+	var request_user_id := _request_user_id
+	_request_access_token = ""
+	_request_user_id = ""
+	# A response belongs to the session that sent it. If the player switched accounts
+	# while it was in flight, keep every queued event and let the new session retry its own batch.
+	if request_token.is_empty() or request_user_id.is_empty() or request_token != _access_token or request_user_id != _session_user_id:
+		_pending_event_ids.clear()
+		if not _access_token.is_empty() and not _session_user_id.is_empty():
+			call_deferred("flush_pending")
+		return
 	if result != HTTPRequest.RESULT_SUCCESS:
 		_pending_event_ids.clear()
 		sync_finished.emit(false, 0, 0, "تعذرت المزامنة الآن. ستبقى الأحداث في قائمة الانتظار.")
@@ -564,7 +602,12 @@ func _load_outbox() -> void:
 	# prevents adding more events; already stored events remain available to retry.
 	for item in stored:
 		if item is Dictionary:
-			_events.append(item.duplicate(true))
+			var restored: Dictionary = item.duplicate(true)
+			# Legacy events have no owner and deliberately remain local-only.
+			# Never attach them to whichever account happens to log in next.
+			if not restored.has("owner_user_id"):
+				restored["owner_user_id"] = ""
+			_events.append(restored)
 	outbox_changed.emit(_events.size())
 
 

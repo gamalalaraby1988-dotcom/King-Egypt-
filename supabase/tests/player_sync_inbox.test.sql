@@ -36,9 +36,9 @@ select extensions.is((select not prosecdef from pg_catalog.pg_proc where oid='pu
 select extensions.throws_ok($$select public.submit_player_sync_events('[{"event_id":"10000000-0000-4000-8000-000000000005","event_type":"setting_changed","payload":{"key":"locale","value":"ar"},"user_id":"00000000-0000-4000-8000-000000000001"}]'::jsonb)$$,'22023','invalid_event_shape','rejects client-supplied identity');
 select pg_catalog.set_config('request.jwt.claim.sub','',true);
 select extensions.throws_ok($$select public.submit_player_sync_events('[{"event_id":"10000000-0000-4000-8000-000000000006","event_type":"setting_changed","payload":{"key":"locale","value":"ar"}}]'::jsonb)$$,'28000','authentication_required','rejects unauthenticated submissions');
+select extensions.throws_ok($$select public.get_player_progress_observations()$$,'28000','authentication_required','progress recovery rejects unauthenticated access');
 select pg_catalog.set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000038',true);
-select extensions.throws_ok($select public.get_player_progress_observations()$,'28000','authentication_required','progress recovery rejects unauthenticated access');
-select extensions.throws_ok($select public.submit_player_sync_events((select pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object('event_id','10000000-0000-4000-8000-000000000007','event_type','setting_changed','payload',pg_catalog.jsonb_build_object('key','locale','value','ar'))) from pg_catalog.generate_series(1,51)))$$,'22023','invalid_event_batch','rejects batches over 50 events');
+select extensions.throws_ok($$select public.submit_player_sync_events((select pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object('event_id','10000000-0000-4000-8000-000000000007','event_type','setting_changed','payload',pg_catalog.jsonb_build_object('key','locale','value','ar'))) from pg_catalog.generate_series(1,51)))$$,'22023','invalid_event_batch','rejects batches over 50 events');
 
 do $rate_test$
 declare
