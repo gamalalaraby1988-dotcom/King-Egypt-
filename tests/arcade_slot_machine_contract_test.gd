@@ -121,7 +121,7 @@ func _run_arcade_machine_tests() -> void:
 		quit(1)
 		return
 	var server_source := FileAccess.get_file_as_string("res://scripts/authoritative_game_server.gd")
-	if not server_source.contains("KING_CITY_SLOT_API_BASE_URL") or not server_source.contains("KING_CITY_SLOT_PUBLISHABLE_KEY") or not server_source.contains("[\"paid\", \"free\", \"auto\"]"):
+	if not server_source.contains("KING_CITY_SLOT_API_BASE_URL") or not server_source.contains("KING_CITY_SLOT_PUBLISHABLE_KEY") or not server_source.contains('spin_type != "auto"'):
 		push_error("Slot settlement must use explicit environment configuration, not production account settings.")
 		machine.queue_free()
 		quit(1)
