@@ -761,8 +761,8 @@ func _interaction_action_key(target: Node3D) -> String:
 func _update_interaction_hud() -> void:
 	if not is_instance_valid(interact_button) or not is_instance_valid(prompt_label):
 		return
-	var player_is_busy := is_instance_valid(player) and (player.get("sitting") == true or player.get("animal_riding") == true)
-	var has_interaction := is_instance_valid(nearest_interactable) and not player_is_busy
+	var player_is_busy: bool = is_instance_valid(player) and (bool(player.get("sitting")) or bool(player.get("animal_riding")))
+	var has_interaction: bool = is_instance_valid(nearest_interactable) and not player_is_busy
 	interact_button.visible = true
 	interact_button.text = "✋"
 	interact_button.add_theme_font_size_override("font_size", 28)
