@@ -1,6 +1,7 @@
 extends SceneTree
 
 const Store = preload("res://scripts/profile_config_store.gd")
+var _account_fixture_paths: Array[String] = []
 
 const TEST_PATH := "user://economy_profile_isolation_test.cfg"
 const TEMP_PATH := "user://economy_profile_isolation_test.cfg.tmp"
@@ -17,6 +18,8 @@ func _remove_if_exists(path: String) -> void:
 
 func _cleanup() -> void:
 	for path in [TEST_PATH, TEMP_PATH, BACKUP_PATH, BACKUP_PATH + ".pending", WALLET_PENDING_PATH]:
+		_remove_if_exists(path)
+	for path in _account_fixture_paths:
 		_remove_if_exists(path)
 
 func _fail(message: String) -> void:
@@ -172,6 +175,12 @@ func _run() -> void:
 		_fail("Could not select synthetic account A profile.")
 		return
 	var account_a_path := Store.get_active_profile_path()
+	_account_fixture_paths.append(account_a_path)
+	_account_fixture_paths.append(Store.get_active_scoped_path("user://kings_city_achievements.cfg"))
+	_account_fixture_paths.append(Store.get_active_scoped_path("user://kings_city_daily.cfg"))
+	if Store.get_active_scoped_path("user://kings_city_achievements.cfg") == "user://kings_city_achievements.cfg" or Store.get_active_scoped_path("user://kings_city_daily.cfg") == "user://kings_city_daily.cfg":
+		_fail("Authenticated account A reused guest achievement or daily-activity storage.")
+		return
 	if account_a_path == guest_path or account_a_path == "user://kings_city_profile.cfg":
 		_fail("Authenticated account A reused the legacy guest profile.")
 		return
@@ -185,6 +194,7 @@ func _run() -> void:
 		_fail("Could not select synthetic account B profile.")
 		return
 	var account_b_path := Store.get_active_profile_path()
+	_account_fixture_paths.append(account_b_path)
 	if account_b_path == account_a_path:
 		_fail("Two authenticated accounts resolved to the same local profile.")
 		return
@@ -212,8 +222,7 @@ func _run() -> void:
 		return
 	# Restore guest mode for the remainder of the test and clean only synthetic fixtures.
 	Store.set_active_account("")
-	DirAccess.remove_absolute(ProjectSettings.globalize_path(account_a_path))
-	DirAccess.remove_absolute(ProjectSettings.globalize_path(account_b_path))
+	_cleanup()
 	_cleanup()
 	print("Economy profile persistence isolation tests passed.")
 	quit(0)
