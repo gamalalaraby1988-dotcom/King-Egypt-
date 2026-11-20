@@ -916,12 +916,12 @@ func _add_sloped_vehicle_road_segment(parent: Node3D, label: String,
 	var length := delta.length()
 	var midpoint := (start + finish) * 0.5
 	var segment := _box(parent, label, Vector3(width, 0.28, length), midpoint, SAND)
-	segment.look_at(parent.to_global(start), Vector3.UP)
+	segment.look_at_from_position(parent.to_global(midpoint), parent.to_global(start), Vector3.UP)
 
 	var body := StaticBody3D.new()
 	body.name = label + "Collision"
 	body.position = midpoint
-	body.look_at(parent.to_global(start), Vector3.UP)
+	body.look_at_from_position(parent.to_global(midpoint), parent.to_global(start), Vector3.UP)
 	body.add_to_group("city_world_geometry")
 	var collision := CollisionShape3D.new()
 	var shape := BoxShape3D.new()
