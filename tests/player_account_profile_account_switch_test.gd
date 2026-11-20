@@ -34,18 +34,17 @@ func _run() -> void:
 	client._profile_action = "profile"
 	client._profile_request_user_id = "user-a"
 	client._profile_request_access_token = "token-a"
-	# Expire the session before delivering the stale callback to avoid starting a
-	# real HTTP request in this isolated test. The identity guard was checked above
-	# while account B was active.
-	client._access_token = ""
-	client._user_id = ""
+	# Deliver account A's response while account B remains active. The callback
+	# must ignore A's profile and schedule a fresh fetch for B.
 	var stale_body := JSON.stringify([{
 		"player_code": "AAAAAAAAAA",
 		"display_name": "Old Account"
 	}]).to_utf8_buffer()
 	client._on_profile_request_completed(HTTPRequest.RESULT_SUCCESS, 200, PackedStringArray(), stale_body)
+	var stale_profile_was_rejected := ready_profiles.is_empty()
 
-	# A response tied to the current account and token is accepted with that
+	# Simulate the follow-up request for B before the deferred fetch can run.
+	# Its response must be accepted with B's captured identity.
 	# captured account ID, never with a mutable global identity.
 	client._access_token = "token-b"
 	client._user_id = "user-b"
@@ -60,6 +59,7 @@ func _run() -> void:
 	client._on_profile_request_completed(HTTPRequest.RESULT_SUCCESS, 200, PackedStringArray(), current_body)
 
 	var passed := not stale_request_matches
+	passed = passed and stale_profile_was_rejected
 	passed = passed and ready_profiles.size() == 1
 	passed = passed and ready_profiles[0].get("user_id", "") == "user-b"
 	passed = passed and ready_profiles[0].get("player_code", "") == "BBBBBBBBBB"
