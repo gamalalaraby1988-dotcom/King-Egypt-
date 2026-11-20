@@ -16,5 +16,3 @@ services:
         value: "2456"
       - key: KING_CITY_TLS_TERMINATED_BY_PROXY
         value: "1"
-      - key: KING_CITY_PROOF_HMAC_SECRET_B64
-        sync: false
