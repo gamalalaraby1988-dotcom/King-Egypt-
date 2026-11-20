@@ -78,7 +78,6 @@ var _reward_claim_inflight := false
 
 const SAVE_PATH := "user://kings_city_profile.cfg"
 const MAX_CURRENCY_BALANCE := 2000000000
-const EGYPT_UTC_OFFSET_SECONDS := 7200
 
 # Weekly rotation for the currently implemented city job boards (Sunday=0).
 const WEEKLY_JOB_SCHEDULE := {
