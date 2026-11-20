@@ -35,7 +35,7 @@ func _process(_delta: float) -> void:
 		return
 	if not is_instance_valid(_nearby_player):
 		return
-	if _nearby_player.global_position.distance_to(global_position) > 4.2:
+	if _nearby_player.global_position.distance_to(global_position) > 1.9:
 		_nearby_player = null
 		_set_nearby_controls(false)
 
@@ -60,6 +60,7 @@ func _build_machine_visual() -> void:
 	title.name = "MachineTitle"
 	title.text = machine_title.to_upper()
 	title.position = Vector3(0, 2.66, 0.445)
+	title.rotation.y = PI
 	title.font_size = 26
 	title.pixel_size = 0.006
 	title.modulate = Color(0.12, 0.09, 0.035)
@@ -70,6 +71,7 @@ func _build_machine_visual() -> void:
 	reels.name = "ReelSymbols"
 	reels.text = "♛   ♦   ♛"
 	reels.position = Vector3(0, 2.08, 0.505)
+	reels.rotation.y = PI
 	reels.font_size = 48
 	reels.pixel_size = 0.006
 	reels.modulate = Color(1.0, 0.86, 0.52)
@@ -79,6 +81,7 @@ func _build_machine_visual() -> void:
 	subtitle.name = "MachineSubtitle"
 	subtitle.text = machine_subtitle
 	subtitle.position = Vector3(0, 1.38, 0.405)
+	subtitle.rotation.y = PI
 	subtitle.font_size = 15
 	subtitle.pixel_size = 0.006
 	subtitle.modulate = accent_color.lightened(0.25)
@@ -110,7 +113,7 @@ func _build_interaction_area() -> void:
 	area.monitoring = true
 	var shape_node := CollisionShape3D.new()
 	var shape := SphereShape3D.new()
-	shape.radius = 3.2
+	shape.radius = 1.5
 	shape_node.shape = shape
 	area.add_child(shape_node)
 	add_child(area)
@@ -249,9 +252,10 @@ func _on_exit_pressed() -> void:
 			player.call("end_arcade_seat", target_position, target_rotation)
 		elif is_instance_valid(player):
 			player.set("sitting", false)
+		_nearby_player = player
+		_set_nearby_controls(true)
 	)
 	_set_seated_controls(false)
-	_nearby_player = player
 
 func play_server_result(outcome: String) -> void:
 	# This entry point is intentionally callable only by the trusted game controller.
