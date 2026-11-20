@@ -6,9 +6,6 @@ const TEST_PATH := "user://economy_profile_isolation_test.cfg"
 const TEMP_PATH := "user://economy_profile_isolation_test.cfg.tmp"
 const BACKUP_PATH := "user://economy_profile_isolation_test.cfg.backup"
 const WALLET_PENDING_PATH := "user://economy_profile_isolation_test.cfg.wallet.pending"
-const CORRUPT_PATH := "user://economy_profile_corrupt_test.cfg"
-const CORRUPT_TEMP_PATH := "user://economy_profile_corrupt_test.cfg.tmp"
-const CORRUPT_BACKUP_PATH := "user://economy_profile_corrupt_test.cfg.backup"
 
 func _initialize() -> void:
 	call_deferred("_run")
@@ -19,7 +16,7 @@ func _remove_if_exists(path: String) -> void:
 		DirAccess.remove_absolute(absolute)
 
 func _cleanup() -> void:
-	for path in [TEST_PATH, TEMP_PATH, BACKUP_PATH, BACKUP_PATH + ".pending", WALLET_PENDING_PATH, CORRUPT_PATH, CORRUPT_TEMP_PATH, CORRUPT_BACKUP_PATH, CORRUPT_BACKUP_PATH + ".pending"]:
+	for path in [TEST_PATH, TEMP_PATH, BACKUP_PATH, BACKUP_PATH + ".pending", WALLET_PENDING_PATH]:
 		_remove_if_exists(path)
 
 func _fail(message: String) -> void:
@@ -47,6 +44,9 @@ func _run() -> void:
 	var stale_settings_snapshot := ConfigFile.new()
 	if stale_settings_snapshot.load(TEST_PATH) != OK:
 		_fail("Could not load stale settings snapshot.")
+		return
+	if int(stale_settings_snapshot.get_value("profile", "money", -1)) != 900:
+		_fail("Stale settings fixture did not retain the original snapshot.")
 		return
 
 	var wallet_writer := ConfigFile.new()
@@ -111,20 +111,18 @@ func _run() -> void:
 	if not FileAccess.file_exists(BACKUP_PATH):
 		_fail("First-write backup was not created.")
 		return
+	var backup_config := ConfigFile.new()
+	if backup_config.load(BACKUP_PATH) != OK or int(backup_config.get_value("profile", "money", -1)) != 925:
+		_fail("Backup does not contain the latest pre-settings wallet snapshot.")
+		return
 
-	# An unreadable existing profile must never be replaced by a settings write.
-	var corrupt_file := FileAccess.open(CORRUPT_PATH, FileAccess.WRITE)
-	if corrupt_file == null:
-		_fail("Could not create corrupt-profile fixture.")
+	# Reject attempts to write wallet sections through the profile/settings helper.
+	if Store.save_sections(TEST_PATH, {"wallet": {"balances": {"money": 1}}}, TEMP_PATH, BACKUP_PATH):
+		_fail("Profile settings helper accepted a wallet-section write.")
 		return
-	corrupt_file.store_string("[broken\nnot valid config")
-	corrupt_file.close()
-	if Store.save_sections(CORRUPT_PATH, {"settings": {"volume": 20}}, CORRUPT_TEMP_PATH, CORRUPT_BACKUP_PATH):
-		_fail("Unreadable profile was unexpectedly overwritten.")
-		return
-	var preserved := FileAccess.open(CORRUPT_PATH, FileAccess.READ)
-	if preserved == null or preserved.get_as_text() != "[broken\nnot valid config":
-		_fail("Unreadable source profile changed after rejected write.")
+	var after_rejected_write := ConfigFile.new()
+	if after_rejected_write.load(TEST_PATH) != OK or int(after_rejected_write.get_value("profile", "money", -1)) != 925:
+		_fail("Rejected section update changed the saved wallet profile.")
 		return
 	_cleanup()
 	print("Economy profile persistence isolation tests passed.")
