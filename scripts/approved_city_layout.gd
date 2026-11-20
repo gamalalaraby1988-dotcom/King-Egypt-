@@ -683,17 +683,17 @@ func _build_access_roads_and_parking() -> void:
 		_path_segment(self, str(walk[0]), walk[1], walk[2], 2.6, SAND)
 	# Missing outer service approaches are tied back to the perimeter road.
 	_path_segment(self, "PoliceServiceAccess", Vector3(-95.0, 0.12, -5.0), Vector3(-84.0, 0.12, -5.0), 3.2, SAND)
-	_path_segment(self, "PoliceEntranceTurn", Vector3(-84.0, 0.12, -5.0), Vector3(-84.0, 0.12, -0.5), 3.2, SAND)
-	_path_segment(self, "PoliceFrontWalk", Vector3(-84.0, 0.12, -0.5), Vector3(-80.5, 0.12, -0.5), 3.2, SAND)
+	_path_segment(self, "PoliceEntranceTurn", Vector3(-84.0, 0.12, -5.0), Vector3(-84.0, 0.12, 0.9), 3.2, SAND)
+	_path_segment(self, "PoliceFrontWalk", Vector3(-84.0, 0.12, 0.9), Vector3(-75.0, 0.12, 0.9), 3.2, SAND)
 	_path_segment(self, "CourthouseServiceAccess", Vector3(95.0, 0.12, -5.0), Vector3(84.0, 0.12, -5.0), 3.2, SAND)
-	_path_segment(self, "CourthouseEntranceTurn", Vector3(84.0, 0.12, -5.0), Vector3(84.0, 0.12, -0.5), 3.2, SAND)
-	_path_segment(self, "CourthouseFrontWalk", Vector3(84.0, 0.12, -0.5), Vector3(80.5, 0.12, -0.5), 3.2, SAND)
+	_path_segment(self, "CourthouseEntranceTurn", Vector3(84.0, 0.12, -5.0), Vector3(84.0, 0.12, 0.9), 3.2, SAND)
+	_path_segment(self, "CourthouseFrontWalk", Vector3(84.0, 0.12, 0.9), Vector3(75.0, 0.12, 0.9), 3.2, SAND)
 	_path_segment(self, "FireServiceAccess", Vector3(-95.0, 0.12, 15.0), Vector3(-84.0, 0.12, 15.0), 3.2, SAND)
-	_path_segment(self, "FireEntranceTurn", Vector3(-84.0, 0.12, 15.0), Vector3(-84.0, 0.12, 19.5), 3.2, SAND)
-	_path_segment(self, "FireFrontWalk", Vector3(-84.0, 0.12, 19.5), Vector3(-80.5, 0.12, 19.5), 3.2, SAND)
+	_path_segment(self, "FireEntranceTurn", Vector3(-84.0, 0.12, 15.0), Vector3(-84.0, 0.12, 20.9), 3.2, SAND)
+	_path_segment(self, "FireFrontWalk", Vector3(-84.0, 0.12, 20.9), Vector3(-75.0, 0.12, 20.9), 3.2, SAND)
 	_path_segment(self, "TrainServiceAccess", Vector3(95.0, 0.12, 15.0), Vector3(84.0, 0.12, 15.0), 3.2, SAND)
-	_path_segment(self, "TrainEntranceTurn", Vector3(84.0, 0.12, 15.0), Vector3(84.0, 0.12, 19.5), 3.2, SAND)
-	_path_segment(self, "TrainFrontWalk", Vector3(84.0, 0.12, 19.5), Vector3(80.5, 0.12, 19.5), 3.2, SAND)
+	_path_segment(self, "TrainEntranceTurn", Vector3(84.0, 0.12, 15.0), Vector3(84.0, 0.12, 20.9), 3.2, SAND)
+	_path_segment(self, "TrainFrontWalk", Vector3(84.0, 0.12, 20.9), Vector3(75.0, 0.12, 20.9), 3.2, SAND)
 	# Green buffers line the outer edges while keeping sidewalks, parking courts, and entrances clear.
 	for side in [-1.0, 1.0]:
 		for z in [-65.0, -35.0, -5.0, 55.0]:
