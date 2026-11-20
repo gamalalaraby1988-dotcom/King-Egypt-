@@ -54,6 +54,17 @@ func _run_city_adventure_contract() -> void:
 		push_error("Offline survival race must display and enforce its countdown.")
 		quit(1)
 		return
+	var local_fail_start := manager_source.find("func _fail_local_survival_race()")
+	var local_fail_end := manager_source.find("func _advance_local_adventure_stage(", local_fail_start)
+	if local_fail_start < 0 or local_fail_end <= local_fail_start:
+		push_error("Could not inspect local survival failure handler.")
+		quit(1)
+		return
+	var local_fail_source := manager_source.substr(local_fail_start, local_fail_end - local_fail_start)
+	if local_fail_source.contains("mission_id") or local_fail_source.contains("message"):
+		push_error("Offline survival failure handler must not reference server-only callback parameters.")
+		quit(1)
+		return
 	if not manager_source.contains("SurvivalRaceProgress") or not manager_source.contains("SurvivalRaceProgressBar") or not manager_source.contains("func _update_survival_race_hud("):
 		push_error("Survival race must show live five-checkpoint progress to the player.")
 		quit(1)

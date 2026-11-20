@@ -1223,7 +1223,7 @@ func _fail_local_survival_race() -> void:
 	survival_time_remaining = 0.0
 	target_marker.visible = false
 	status_label.text = "انتهى الوقت! لم تصل إلى نقطة النجاة."
-	description_label.text = "انتهى سباق النجاة بالوقت المحدد. يمكنك المحاولة مرة أخرى." if mission_id == "city_adventure_survival" and message.contains("انتهى الوقت") else "تم إيقاف المغامرة. يمكنك المحاولة مرة أخرى."
+	description_label.text = "انتهى سباق النجاة بالوقت المحدد. يمكنك المحاولة مرة أخرى."
 	reward_label.text = "لم تُسجل نتيجة فوز ولم تُصرف أي مكافأة."
 	accept_button.disabled = false
 	if is_instance_valid(navigation_cancel_button):
