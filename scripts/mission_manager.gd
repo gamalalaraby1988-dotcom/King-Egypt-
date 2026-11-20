@@ -1244,6 +1244,13 @@ func _on_server_mission_stage_updated(mission_id: String, server_target: Vector3
 	if not GameModeManager.is_online_ready() or not mission_running or selected_activity_kind != "adventure" or mission_id != selected_adventure_id:
 		return
 	active_target = server_target
+	if mission_id == "city_adventure_message" and stage_number > stage_count:
+		adventure_stage_index = stage_count - 1
+		target_marker.global_position = active_target
+		_set_message_puzzle_visible(true)
+		description_label.text = "الأدلة التي جمعتها: مجرى الحياة في مصر، يبدأ اسمه بحرف النون، وينتهي باللام. ما الكلمة المقصودة؟"
+		status_label.text = message
+		return
 	adventure_stage_index = stage_number - 1
 	if mission_id == "city_adventure_rescue" and stage_number > 1:
 		_clear_rescue_citizen()
@@ -1251,20 +1258,15 @@ func _on_server_mission_stage_updated(mission_id: String, server_target: Vector3
 	if mission_id == "city_adventure_treasure" and stage_number == stage_count:
 		_show_adventure_treasure()
 	if mission_id == "city_adventure_message":
-		if stage_number == stage_count:
-			_set_message_puzzle_visible(true)
-			description_label.text = "الأدلة التي جمعتها: مجرى الحياة في مصر، يبدأ اسمه بحرف النون، وينتهي باللام. ما الكلمة المقصودة؟"
-		else:
-			var clues := [
-				"الدليل الأول: ابحث عن مجرى الحياة الذي يمر في مصر.",
-				"الدليل الثاني: يبدأ اسم هذا المجرى بحرف النون.",
-				"الدليل الثالث: ينتهي الاسم بحرف اللام."
-			]
-			description_label.text = "%s\n%s" % [str(CITY_ADVENTURES.get(mission_id, {}).get("description", "")), clues[mini(stage_number - 2, clues.size() - 1)]]
+		var clues := [
+			"الدليل الأول: ابحث عن مجرى الحياة الذي يمر في مصر.",
+			"الدليل الثاني: يبدأ اسم هذا المجرى بحرف النون.",
+			"الدليل الثالث: ينتهي الاسم بحرف اللام."
+		]
+		description_label.text = "%s\\n%s" % [str(CITY_ADVENTURES.get(mission_id, {}).get("description", "")), clues[mini(stage_number - 2, clues.size() - 1)]]
 	else:
-		description_label.text = "%s\nالمرحلة %d من %d" % [str(CITY_ADVENTURES.get(mission_id, {}).get("description", "")), stage_number, stage_count]
+		description_label.text = "%s\\nالمرحلة %d من %d" % [str(CITY_ADVENTURES.get(mission_id, {}).get("description", "")), stage_number, stage_count]
 	status_label.text = message
-
 
 func _accept_job() -> void:
 	if not is_instance_valid(active_job) or mission_running or job_running:
