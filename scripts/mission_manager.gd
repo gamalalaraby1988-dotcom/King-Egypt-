@@ -1118,7 +1118,7 @@ func _on_server_mission_completed(mission_id: String) -> void:
 func _on_server_activity_proof_received(activity_kind: String, activity_id: String, proof_id: String) -> void:
 	if not GameModeManager.is_online_ready() or not ["mission", "job"].has(activity_kind):
 		return
-	var allowed_ids := ["mission_shop", "mission_restaurant", "mission_employment"] if activity_kind == "mission" else ["courier_delivery", "city_guide", "city_maintenance"]
+	var allowed_ids: Array = ["mission_shop", "mission_restaurant", "mission_employment"] if activity_kind == "mission" else CityJobsCatalog.get_job_ids()
 	if not allowed_ids.has(activity_id):
 		return
 	_pending_verified_proofs.append({"activity_kind": activity_kind, "activity_id": activity_id, "proof_id": proof_id})
@@ -1137,7 +1137,7 @@ func _process_next_server_reward_proof() -> void:
 func _on_server_activity_proof_failed(activity_kind: String, activity_id: String, message: String) -> void:
 	if not GameModeManager.is_online_ready():
 		return
-	var allowed_ids := ["mission_shop", "mission_restaurant", "mission_employment"] if activity_kind == "mission" else ["courier_delivery", "city_guide", "city_maintenance"] if activity_kind == "job" else []
+	var allowed_ids: Array = ["mission_shop", "mission_restaurant", "mission_employment"] if activity_kind == "mission" else CityJobsCatalog.get_job_ids() if activity_kind == "job" else []
 	if not allowed_ids.has(activity_id):
 		return
 	status_label.text = message
@@ -1257,8 +1257,11 @@ func _complete_active_job() -> void:
 	var saved := complete_activity_once(key, "job", 0, 0, 0)
 	if not saved:
 		job_running = false
+		returning_to_fuel = false
+		active_job_stops.clear()
 		target_marker.visible = false
-		status_label.text = "لم يتم حفظ إكمال الوظيفة؛ لم تُصرف المكافأة. افتح الوظيفة وحاول مرة أخرى."
+		job_delivery_button.visible = false
+		status_label.text = "لم يتم حفظ إكمال الوظيفة؛ لم تُصرف مكافأة. يمكنك إعادة المحاولة لاحقًا."
 		accept_button.disabled = false
 		panel.visible = true
 		return
@@ -1582,6 +1585,11 @@ func _cancel_active_navigation() -> void:
 	navigation_route_notice_remaining = 0.0
 	mission_running = false
 	job_running = false
+	returning_to_fuel = false
+	active_job_stops.clear()
+	_remove_job_package()
+	if is_instance_valid(job_delivery_button):
+		job_delivery_button.visible = false
 	target_marker.visible = false
 	status_label.text = "تم إلغاء التوجيه. لم تُحتسب المهمة أو الوظيفة ولم تُصرف مكافأة."
 	description_label.text = "يمكنك فتح المبنى أو لوحة الوظيفة مرة أخرى للبدء من جديد."
@@ -1595,6 +1603,22 @@ func _create_target_marker() -> void:
 	# هذا المجسم محلي داخل نسخة اللاعب فقط؛ لا يُرسل كعنصر شبكة إلى بقية اللاعبين.
 	target_marker = Node3D.new()
 	target_marker.name = "PrivateMissionSkyBeacon"
+	var delivery_ring := MeshInstance3D.new()
+	delivery_ring.name = "GoldenDeliveryCircle"
+	var ring_mesh := TorusMesh.new()
+	ring_mesh.inner_radius = 1.35
+	ring_mesh.outer_radius = 1.65
+	delivery_ring.mesh = ring_mesh
+	delivery_ring.position.y = 0.08
+	var ring_material := StandardMaterial3D.new()
+	ring_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	ring_material.albedo_color = Color(1.0, 0.72, 0.20, 0.9)
+	ring_material.emission_enabled = true
+	ring_material.emission = Color(1.0, 0.62, 0.12)
+	ring_material.emission_energy_multiplier = 2.0
+	delivery_ring.material_override = ring_material
+	target_marker.add_child(delivery_ring)
+
 	var outer_beam := MeshInstance3D.new()
 	outer_beam.name = "GoldenBeamGlow"
 	var outer_mesh := CylinderMesh.new()
