@@ -532,6 +532,16 @@ func unregister_arcade_machine(machine_id: String) -> void:
 	_arcade_machines.erase(machine_id)
 
 
+func _user_has_active_arcade_session(user_id: String) -> bool:
+	if user_id.is_empty():
+		return true
+	for peer_id_variant in _peer_arcade_sessions.keys():
+		var peer_id := int(peer_id_variant)
+		if _sessions.has(peer_id) and str(_sessions[peer_id].get("user_id", "")) == user_id:
+			return true
+	return false
+
+
 func _is_valid_arcade_machine_id(machine_id: String) -> bool:
 	if machine_id.is_empty() or machine_id.length() > 80:
 		return false
@@ -550,8 +560,8 @@ func request_start_arcade_session_rpc(machine_id: String, mode: String) -> void:
 	if not _is_valid_arcade_machine_id(machine_id) or not ARCADE_SESSION_MODES.has(mode):
 		_reply_arcade_session(peer_id, "", "rejected", machine_id, "طلب جلسة اللعب غير صالح.")
 		return
-	if _peer_arcade_sessions.has(peer_id):
-		_reply_arcade_session(peer_id, "", "rejected", machine_id, "لديك جلسة ماكينة أخرى قيد التنفيذ.")
+	if _peer_arcade_sessions.has(peer_id) or _user_has_active_arcade_session(str(_sessions[peer_id].get("user_id", ""))):
+		_reply_arcade_session(peer_id, "", "rejected", machine_id, "لديك جلسة ماكينة أخرى قيد التنفيذ على هذا الحساب.")
 		return
 	var machine: Dictionary = _arcade_machines.get(machine_id, {})
 	var anchor := machine.get("anchor") as Node3D
@@ -568,7 +578,7 @@ func request_start_arcade_session_rpc(machine_id: String, mode: String) -> void:
 		_reply_arcade_session(peer_id, "", "rejected", machine_id, "لا يمكن بدء جلسة بهذه الإعدادات حاليًا.")
 		return
 	var session_id := _new_server_event_uuid()
-	if session_id.is_empty() or _closed_arcade_sessions.has(session_id):
+	if session_id.is_empty() or _closed_arcade_sessions.has(session_id) or _arcade_sessions.has(session_id):
 		_reply_arcade_session(peer_id, "", "rejected", machine_id, "تعذر إنشاء معرّف جلسة آمن.")
 		return
 	var participants := {peer_id: {"user_id": user_id, "team_id": ""}}
@@ -599,8 +609,8 @@ func request_join_arcade_session_rpc(session_id: String) -> void:
 	var peer_id := multiplayer.get_remote_sender_id()
 	if not _sessions.has(peer_id) or not bool(_sessions[peer_id].get("authenticated", false)):
 		return
-	if _peer_arcade_sessions.has(peer_id):
-		_reply_arcade_session(peer_id, session_id, "rejected", "", "لديك جلسة ماكينة أخرى قيد التنفيذ.")
+	if _peer_arcade_sessions.has(peer_id) or _user_has_active_arcade_session(str(_sessions[peer_id].get("user_id", ""))):
+		_reply_arcade_session(peer_id, session_id, "rejected", "", "لديك جلسة ماكينة أخرى قيد التنفيذ على هذا الحساب.")
 		return
 	var session: Dictionary = _arcade_sessions.get(session_id, {})
 	if session.is_empty() or str(session.get("state", "")) != "waiting":
@@ -667,6 +677,8 @@ func _launch_arcade_session(session_id: String, peer_id: int) -> void:
 	if not bool(controller.call("start_arcade_session", session_id, str(session.get("mode", "")), participants.duplicate(true))):
 		_abort_arcade_session(session_id, "رفض نظام اللعبة بدء الجلسة؛ لم تبدأ الجولة.")
 		return
+	if not _arcade_sessions.has(session_id):
+		return
 	for participant_peer_variant in participants.keys():
 		_reply_arcade_session(int(participant_peer_variant), session_id, "running", str(session.get("machine_id", "")), "بدأت جلسة اللعب على الخادم.")
 
@@ -702,7 +714,6 @@ func complete_arcade_session(session_id: String, server_results: Dictionary) -> 
 	if event_id.is_empty() or _closed_arcade_sessions.has(session_id):
 		_abort_arcade_session(session_id, "تعذر إنشاء معرّف حدث آمن.")
 		return false
-	_closed_arcade_sessions[session_id] = event_id
 	_remember_closed_arcade_session(session_id, event_id)
 	session["state"] = "completed"
 	for participant_peer_variant in participants.keys():
