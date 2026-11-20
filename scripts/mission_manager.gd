@@ -68,6 +68,13 @@ var navigation_label: Label
 var navigation_arrow: Label
 var navigation_cancel_button: Button
 var animal_selector: OptionButton
+var job_selector: OptionButton
+var job_delivery_button: Button
+var selected_job_id := ""
+var active_job_stops: Array[Vector3] = []
+var active_job_stop_index := 0
+var returning_to_fuel := false
+var job_package_visual: Node3D = null
 var selected_animal_staff: Node3D = null
 # معرف ثابت طوال نافذة التأجير الحالية؛ يمنع تكرار الخصم بسبب النقر المزدوج.
 var active_rental_transaction_id: String = ""
@@ -79,16 +86,7 @@ var _reward_claim_inflight := false
 const SAVE_PATH := "user://kings_city_profile.cfg"
 const MAX_CURRENCY_BALANCE := 2000000000
 
-# Weekly rotation for the currently implemented city job boards (Sunday=0).
-const WEEKLY_JOB_SCHEDULE := {
-	0: ["courier_delivery"],
-	1: ["city_guide"],
-	2: ["city_maintenance"],
-	3: ["courier_delivery"],
-	4: ["city_guide"],
-	5: ["courier_delivery", "city_guide", "city_maintenance"],
-	6: ["courier_delivery", "city_guide", "city_maintenance"]
-}
+# الوظائف السبع المعتمدة متاحة من مكتب التوظيف الموحد.
 
 func _egypt_datetime() -> Dictionary:
 	return GameCalendar.get_egypt_datetime()
@@ -100,9 +98,7 @@ func _daily_job_key(job_id: String) -> String:
 	return "%s:%s" % [_egypt_day_key(), job_id]
 
 func is_job_available_today(job_id: String) -> bool:
-	var date := _egypt_datetime()
-	var jobs: Array = WEEKLY_JOB_SCHEDULE.get(int(date.weekday), [])
-	return jobs.has(job_id)
+	return CityJobsCatalog.is_approved_job(job_id)
 
 func _ready() -> void:
 	_build_ui()
@@ -608,10 +604,28 @@ func _process(_delta: float) -> void:
 
 	stats_label.text = "المستوى %d/5000  |  مراحل التطوير %d/140  |  المال %d  |  الرقائق %d  |  الجواهر %d" % [DevelopmentManager.player_level, DevelopmentManager.get_completed_stage_count(), money, chips, WalletManager.get_balance("gems")]
 	if job_running:
-		var job_distance := Vector2(player.global_position.x, player.global_position.z).distance_to(Vector2(active_job_target.x, active_job_target.z))
-		status_label.text = "الوظيفة: توجّه إلى نقطة العمل. المتبقي: %.1f متر" % job_distance
-		if job_distance <= 2.2:
-			_complete_active_job()
+		var city_root := get_tree().current_scene
+		var vehicle := city_root.get("city_vehicle") as Node3D if is_instance_valid(city_root) else null
+		var vehicle_occupied_now := bool(city_root.get("vehicle_occupied")) if is_instance_valid(city_root) else false
+		if returning_to_fuel:
+			job_delivery_button.visible = false
+			if vehicle_occupied_now and is_instance_valid(vehicle):
+				var fuel_distance := Vector2(vehicle.global_position.x, vehicle.global_position.z).distance_to(Vector2(active_job_target.x, active_job_target.z))
+				status_label.text = "عُد بالسيارة إلى محطة الوقود. المتبقي: %.1f متر" % fuel_distance
+				if fuel_distance <= 6.0:
+					_complete_active_job()
+			else:
+				status_label.text = "استخدم سيارتك للعودة إلى محطة الوقود وإنهاء الوظيفة."
+		elif vehicle_occupied_now and is_instance_valid(vehicle):
+			job_delivery_button.visible = false
+			var vehicle_distance := Vector2(vehicle.global_position.x, vehicle.global_position.z).distance_to(Vector2(active_job_target.x, active_job_target.z))
+			status_label.text = "وصل بالسيارة قرب نقطة التسليم ثم انزل واحمل الطرد. المتبقي: %.1f متر" % vehicle_distance
+		else:
+			var job_distance := Vector2(player.global_position.x, player.global_position.z).distance_to(Vector2(active_job_target.x, active_job_target.z))
+			job_delivery_button.visible = job_distance <= 2.6
+			status_label.text = "احمل الطرد إلى دائرة التسليم. المتبقي: %.1f متر" % job_distance
+			if job_delivery_button.visible:
+				status_label.text = "وصلت إلى نقطة التسليم. ضع الطرد داخل الدائرة."
 	if mission_running and (not is_instance_valid(active_mission) or active_mission.is_queued_for_deletion()):
 		# لا تترك اللاعب عالقًا في مهمة إذا أزيل المبنى أثناء تنفيذها.
 		mission_running = false
@@ -873,27 +887,37 @@ func open_job(job_board: Node3D) -> void:
 		return
 	active_job = job_board
 	active_mission = null
-	var data: Dictionary = job_board.get_job_data()
 	selected_activity_kind = "job"
-	title_label.text = "وظيفة | " + str(data.get("title", "عمل متاح"))
-	description_label.text = str(data.get("description", "نفّذ العمل المحدد في المدينة."))
-	reward_label.text = "أجر الوظيفة: %d جنيه | %d رقائق" % [int(data.get("money", 0)), int(data.get("chips", 0))]
-	var key := str(data.get("job_id", job_board.name))
-	var daily_key := _daily_job_key(key)
-	if not is_job_available_today(key):
-		status_label.text = "هذه الوظيفة غير متاحة اليوم. راجع جدول الوظائف الأسبوعي."
-		accept_button.disabled = true
-	elif completed_jobs.has(daily_key) and not GameModeManager.is_online_ready():
-		status_label.text = "أنجزت هذه الوظيفة اليوم. يمكنك اختيار وظيفة أخرى أو العودة غدًا."
-		accept_button.disabled = true
-	elif player_level < int(data.get("level", 1)) and not GameModeManager.is_online_ready():
-		status_label.text = "المستوى المطلوب لهذه الوظيفة: %d" % int(data.get("level", 1))
-		accept_button.disabled = true
-	else:
-		status_label.text = "اقبل الوظيفة ثم توجّه إلى نقطة العمل الظاهرة في المدينة."
-		accept_button.disabled = false
+	job_selector.clear()
+	for job_id in CityJobsCatalog.get_job_ids():
+		var job_data := CityJobsCatalog.get_job(job_id)
+		job_selector.add_item(str(job_data.get("title", job_id)))
+		job_selector.set_item_metadata(job_selector.item_count - 1, job_id)
+	job_selector.visible = true
+	if job_selector.item_count > 0:
+		job_selector.select(0)
+		_on_job_selected(0)
 	accept_button.text = "قبول الوظيفة"
 	panel.visible = true
+
+func _on_job_selected(index: int) -> void:
+	if not is_instance_valid(job_selector) or index < 0 or index >= job_selector.item_count:
+		return
+	selected_job_id = str(job_selector.get_item_metadata(index))
+	var data := CityJobsCatalog.get_job(selected_job_id)
+	title_label.text = "وظيفة | " + str(data.get("title", ""))
+	description_label.text = str(data.get("description", ""))
+	reward_label.text = "الأجر: يحدد لاحقًا وفق اقتصاد المدينة."
+	var daily_key := _daily_job_key(selected_job_id)
+	if GameModeManager.is_online_ready():
+		status_label.text = "وظائف التوصيل Online ستُفعّل بعد مزامنة قيادة المركبات والتسليم الخادمي."
+		accept_button.disabled = true
+	elif completed_jobs.has(daily_key):
+		status_label.text = "أنجزت هذه الوظيفة اليوم. يمكنك اختيار وظيفة أخرى."
+		accept_button.disabled = true
+	else:
+		status_label.text = "تحتاج إلى استدعاء سيارتك أولًا. سلّم كل طرد بنفسك ثم عُد بالسيارة إلى محطة الوقود."
+		accept_button.disabled = false
 
 func open_building(building: Node3D) -> void:
 	if not is_instance_valid(building) or building.is_queued_for_deletion() or mission_running or job_running:
@@ -1020,31 +1044,45 @@ func _accept_selected_activity() -> void:
 func _accept_job() -> void:
 	if not is_instance_valid(active_job) or mission_running or job_running:
 		return
+	if GameModeManager.is_online_ready():
+		status_label.text = "وظائف التوصيل Online غير مفعلة بعد؛ لن نستخدم نظام الوظائف القديم."
+		accept_button.disabled = true
+		return
+	var key := selected_job_id
+	var data := CityJobsCatalog.get_job(key)
+	if data.is_empty() or completed_jobs.has(_daily_job_key(key)):
+		status_label.text = "اختر وظيفة متاحة لم تنجزها اليوم."
+		return
+	var city_root := get_tree().current_scene
+	var vehicle := city_root.get("city_vehicle") as Node3D if is_instance_valid(city_root) else null
+	if not is_instance_valid(vehicle):
+		status_label.text = "استدعِ سيارتك من زر المركبة قبل بدء وظيفة التوصيل."
+		return
+	active_job_stops.clear()
+	for stop in data.get("stops", []):
+		active_job_stops.append(stop)
+	if active_job_stops.size() < 3:
+		status_label.text = "مسار الوظيفة غير مكتمل؛ لم تبدأ المهمة."
+		return
 	landmark_navigation_active = false
 	navigation_arrival_remaining = 0.0
-	var data: Dictionary = active_job.get_job_data()
-	var key := str(data.get("job_id", active_job.name))
-	if not is_job_available_today(key):
-		status_label.text = "هذه الوظيفة غير متاحة اليوم وفق جدول الأسبوع."
-		accept_button.disabled = false
-		return
-	if not GameModeManager.is_online_ready() and (completed_jobs.has(_daily_job_key(key)) or player_level < int(data.get("level", 1))):
-		return
-	if GameModeManager.is_online_ready():
-		accept_button.disabled = true
-		status_label.text = "يراجع الخادم موقعك ويبدأ الوظيفة..."
-		AuthoritativeGameServer.request_start_job.rpc_id(1, key)
-		return
-	active_job_target = active_job.global_position + data.get("target_offset", Vector3(0, 0, -10))
-	active_job_target.y = 0.15
+	active_job_stop_index = 0
+	returning_to_fuel = false
+	active_job_target = active_job_stops[0]
 	active_job_reward = data.duplicate(true)
+	active_job_reward["job_id"] = key
+	active_job_reward["money"] = 0
+	active_job_reward["chips"] = 0
 	job_running = true
+	_attach_job_package()
 	target_marker.global_position = active_job_target
 	target_marker.visible = true
+	job_delivery_button.visible = false
+	job_selector.visible = false
 	accept_button.disabled = true
-	description_label.text = "بدأت الوظيفة! اتبع علامة العمل حتى تصل إلى الموقع المطلوب."
-	reward_label.text = "الأجر عند إتمام العمل: %d جنيه | %d رقائق" % [int(data.get("money", 0)), int(data.get("chips", 0))]
-	status_label.text = "توجّه إلى نقطة العمل."
+	description_label.text = "بدأت الوظيفة. قُد إلى نقطة التسليم، انزل من السيارة، واحمل الطرد إلى دائرة التسليم."
+	reward_label.text = "سيتم تحديد الأجر لاحقًا بعد اعتماد اقتصاد المدينة."
+	status_label.text = "اتجه بالسيارة إلى نقطة التسليم الأولى."
 
 func _on_server_mission_start_result(success: bool, mission_id: String, server_target: Vector3, message: String) -> void:
 	if not GameModeManager.is_online_ready():
@@ -1160,12 +1198,63 @@ func _on_server_job_completed(job_id: String) -> void:
 	panel.visible = true
 
 
-func _complete_active_job() -> void:
-	if not job_running:
+
+func _attach_job_package() -> void:
+	_remove_job_package()
+	if not is_instance_valid(player):
 		return
-	var job_id := str(active_job_reward.get("job_id", active_job.name if is_instance_valid(active_job) else "job"))
+	job_package_visual = Node3D.new()
+	job_package_visual.name = "JobPackageCarry"
+	job_package_visual.position = Vector3(0.42, 1.05, -0.28)
+	player.add_child(job_package_visual)
+	var parcel := MeshInstance3D.new()
+	var box := BoxMesh.new()
+	box.size = Vector3(0.42, 0.34, 0.34)
+	parcel.mesh = box
+	var material := StandardMaterial3D.new()
+	material.albedo_color = Color(0.58, 0.34, 0.16)
+	material.roughness = 0.82
+	parcel.material_override = material
+	job_package_visual.add_child(parcel)
+
+func _remove_job_package() -> void:
+	if is_instance_valid(job_package_visual):
+		job_package_visual.queue_free()
+	job_package_visual = null
+
+func _deliver_current_job_package() -> void:
+	if not job_running or returning_to_fuel or not is_instance_valid(player):
+		return
+	var city_root := get_tree().current_scene
+	if is_instance_valid(city_root) and bool(city_root.get("vehicle_occupied")):
+		return
+	var distance := Vector2(player.global_position.x, player.global_position.z).distance_to(Vector2(active_job_target.x, active_job_target.z))
+	if distance > 2.6:
+		job_delivery_button.visible = false
+		return
+	_remove_job_package()
+	job_delivery_button.visible = false
+	active_job_stop_index += 1
+	if active_job_stop_index < active_job_stops.size():
+		active_job_target = active_job_stops[active_job_stop_index]
+		_attach_job_package()
+		status_label.text = "تم تسليم الطرد. احمل الطرد التالي واتجه إلى الوجهة %d من %d." % [active_job_stop_index + 1, active_job_stops.size()]
+	else:
+		returning_to_fuel = true
+		active_job_target = CityJobsCatalog.FUEL_STATION
+		status_label.text = "اكتملت جميع التوصيلات. اركب سيارتك وعُد إلى محطة الوقود."
+	target_marker.global_position = active_job_target
+	target_marker.visible = true
+	description_label.text = "التقدم: %d من %d توصيلات." % [active_job_stop_index, active_job_stops.size()]
+
+func _complete_active_job() -> void:
+	if not job_running or not returning_to_fuel:
+		return
+	var job_id := str(active_job_reward.get("job_id", "job"))
 	var key := _daily_job_key(job_id)
-	var saved := complete_activity_once(key, "job", int(active_job_reward.get("money", 0)), 0, int(active_job_reward.get("chips", 0)))
+	_remove_job_package()
+	job_delivery_button.visible = false
+	var saved := complete_activity_once(key, "job", 0, 0, 0)
 	if not saved:
 		job_running = false
 		target_marker.visible = false
@@ -1178,8 +1267,11 @@ func _complete_active_job() -> void:
 	if is_instance_valid(achievement_manager):
 		achievement_manager.record_job_completed(key)
 	job_running = false
+	returning_to_fuel = false
+	active_job_stops.clear()
 	target_marker.visible = false
-	status_label.text = "أتممت الوظيفة واستلمت أجرك!"
+	job_delivery_button.visible = false
+	status_label.text = "أنهيت جميع التوصيلات وعدت بالسيارة إلى محطة الوقود. تم تسجيل إنجاز الوظيفة."
 	description_label.text = "رصيدك الحالي: %d جنيه، %d رقائق، المستوى %d." % [money, chips, player_level]
 	reward_label.text = "تم حفظ إكمال الوظيفة ومكافأتها."
 	accept_button.disabled = true
@@ -1637,9 +1729,18 @@ func _build_ui() -> void:
 	status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	content.add_child(status_label)
 
+	job_selector = OptionButton.new()
+	job_selector.visible = false
+	job_selector.item_selected.connect(_on_job_selected)
+	content.add_child(job_selector)
 	animal_selector = OptionButton.new()
 	animal_selector.visible = false
 	content.add_child(animal_selector)
+	job_delivery_button = Button.new()
+	job_delivery_button.text = "تسليم الطرد"
+	job_delivery_button.visible = false
+	job_delivery_button.pressed.connect(_deliver_current_job_package)
+	content.add_child(job_delivery_button)
 	accept_button = Button.new()
 	accept_button.text = "بدء المهمة"
 	accept_button.pressed.connect(_accept_selected_activity)
