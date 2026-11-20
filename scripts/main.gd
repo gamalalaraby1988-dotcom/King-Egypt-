@@ -1093,9 +1093,9 @@ func _create_interactive_buildings() -> void:
 	achievements.name = "AchievementManager"
 	achievements.set_script(load("res://scripts/achievement_manager.gd"))
 	achievements.set("player", get_node_or_null("Player"))
-	achievements.mission_manager = manager
-	manager.achievement_manager = achievements
- 	daily.set("achievement_manager", achievements)
+	achievements.set("mission_manager", manager)
+	manager.set("achievement_manager", achievements)
+	daily.set("achievement_manager", achievements)
 	add_child(achievements)
 	add_child(daily)
 	var profile_ui := Node.new()
