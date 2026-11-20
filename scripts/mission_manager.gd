@@ -708,6 +708,14 @@ func _update_interaction_hud() -> void:
 		var display_name := CityLanguage.translate("interaction_place")
 		if nearest_interactable.has_meta("palace_portal_label"):
 			display_name = str(nearest_interactable.get_meta("palace_portal_label"))
+			if nearest_interactable.has_meta("palace_room_center"):
+				var room_center: Vector3 = nearest_interactable.get_meta("palace_room_center")
+				var portal_position := nearest_interactable.global_position
+				var actor_position := player.global_position
+				var door_side := str(nearest_interactable.get_meta("palace_door_side", "south"))
+				var inside_room := actor_position.z < portal_position.z if door_side == "south" else actor_position.z > portal_position.z
+				if inside_room:
+					display_name = "الخروج إلى الردهة"
 		elif nearest_interactable.has_method("get_development_data"):
 			display_name = str(nearest_interactable.get_development_data().get("title", "مبنى التطوير"))
 		elif nearest_interactable.has_method("get_job_data"):
