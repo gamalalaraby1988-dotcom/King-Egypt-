@@ -1117,6 +1117,7 @@ func _accept_adventure() -> void:
 	adventure_stage_index = 0
 	landmark_navigation_active = false
 	navigation_arrival_remaining = 0.0
+	job_selector.visible = false
 	if GameModeManager.is_online_ready():
 		accept_button.disabled = true
 		status_label.text = "يراجع الخادم موقعك ويبدأ المغامرة..."
@@ -1237,6 +1238,8 @@ func _on_server_mission_completed(mission_id: String) -> void:
 	status_label.text = "اكتملت المغامرة بعد تحقق الخادم من جميع المراحل." if selected_activity_kind == "adventure" else "تحقق الخادم من وصولك إلى هدف المهمة."
 	description_label.text = "تم تسجيل اكتمال المسار خادميًا. لا يوجد صرف مكافآت في هذه النسخة."
 	reward_label.text = "لم تُضف أي مكافأة محليًا."
+	accept_button.disabled = false
+	panel.visible = true
 
 
 func _on_server_activity_proof_received(activity_kind: String, activity_id: String, proof_id: String) -> void:
@@ -1474,7 +1477,7 @@ func _complete_active_mission() -> void:
 	status_label.text = "اكتملت المغامرة! تم تسجيلها محليًا دون مكافأة." if selected_activity_kind == "adventure" else "اكتملت المهمة! تم حفظ المكافأة."
 	description_label.text = "تم تسجيل إكمال المغامرة في هذا الجهاز فقط." if selected_activity_kind == "adventure" else "رصيدك الحالي: %d جنيه، %d رقائق، المستوى %d." % [money, chips, player_level]
 	reward_label.text = "لا توجد مكافأة لهذه النسخة." if selected_activity_kind == "adventure" else "تم حفظ إكمال المهمة ومكافآتها."
-	accept_button.disabled = true
+	accept_button.disabled = selected_activity_kind != "adventure"
 	panel.visible = true
 
 func _update_navigation_hud() -> void:
