@@ -1,0 +1,12 @@
+.git
+.github
+.godot
+.gradle
+android/build
+build
+dist
+*.apk
+*.aab
+*.keystore
+*.jks
+.DS_Store
