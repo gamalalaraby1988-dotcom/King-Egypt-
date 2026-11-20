@@ -112,6 +112,9 @@ func _ready() -> void:
 	AuthoritativeGameServer.mission_completed.connect(_on_server_mission_completed)
 	AuthoritativeGameServer.activity_proof_received.connect(_on_server_activity_proof_received)
 	AuthoritativeGameServer.activity_proof_failed.connect(_on_server_activity_proof_failed)
+	AuthoritativeGameServer.puzzle_piece_proof_received.connect(_on_server_puzzle_piece_proof_received)
+	AuthoritativeGameServer.puzzle_piece_proof_failed.connect(_on_server_puzzle_piece_proof_failed)
+	PlayerSyncClient.puzzle_piece_claim_finished.connect(_on_puzzle_piece_claim_finished)
 	PlayerSyncClient.verified_reward_claim_finished.connect(_on_verified_reward_claim_finished)
 
 func _exit_tree() -> void:
@@ -129,6 +132,12 @@ func _exit_tree() -> void:
 		AuthoritativeGameServer.activity_proof_received.disconnect(_on_server_activity_proof_received)
 	if AuthoritativeGameServer.activity_proof_failed.is_connected(_on_server_activity_proof_failed):
 		AuthoritativeGameServer.activity_proof_failed.disconnect(_on_server_activity_proof_failed)
+	if AuthoritativeGameServer.puzzle_piece_proof_received.is_connected(_on_server_puzzle_piece_proof_received):
+		AuthoritativeGameServer.puzzle_piece_proof_received.disconnect(_on_server_puzzle_piece_proof_received)
+	if AuthoritativeGameServer.puzzle_piece_proof_failed.is_connected(_on_server_puzzle_piece_proof_failed):
+		AuthoritativeGameServer.puzzle_piece_proof_failed.disconnect(_on_server_puzzle_piece_proof_failed)
+	if PlayerSyncClient.puzzle_piece_claim_finished.is_connected(_on_puzzle_piece_claim_finished):
+		PlayerSyncClient.puzzle_piece_claim_finished.disconnect(_on_puzzle_piece_claim_finished)
 	if PlayerSyncClient.verified_reward_claim_finished.is_connected(_on_verified_reward_claim_finished):
 		PlayerSyncClient.verified_reward_claim_finished.disconnect(_on_verified_reward_claim_finished)
 
@@ -1158,6 +1167,34 @@ func _on_server_activity_proof_failed(activity_kind: String, activity_id: String
 	reward_label.text = "لم تُصرف مكافأة ولم يُضف أي رصيد."
 
 
+func _on_server_puzzle_piece_proof_received(activity_kind: String, activity_id: String, _piece_id: String, proof_id: String) -> void:
+	if not GameModeManager.is_online_ready() or not ["mission", "job"].has(activity_kind):
+		return
+	var allowed_ids := ["mission_shop", "mission_restaurant", "mission_employment"] if activity_kind == "mission" else ["parcel_shipping", "postal_mail", "pizza_delivery", "pharmacy_orders", "flowers_gifts", "home_orders", "luggage_delivery"]
+	if not allowed_ids.has(activity_id):
+		return
+	PlayerSyncClient.claim_verified_puzzle_piece(proof_id)
+
+
+func _on_server_puzzle_piece_proof_failed(_activity_kind: String, _activity_id: String, message: String) -> void:
+	if not GameModeManager.is_online_ready():
+		return
+	status_label.text = message
+	description_label.text = "لم تُضف قطعة بازل؛ لا يوجد صرف محلي بديل."
+
+
+func _on_puzzle_piece_claim_finished(success: bool, result: Dictionary, message: String) -> void:
+	if not GameModeManager.is_online_ready():
+		return
+	status_label.text = message
+	if success:
+		description_label.text = "تم اعتماد قطعة الصورة من الخادم."
+		reward_label.text = "قطعة البازل: %s | الكمية: %d" % [str(result.get("piece_id", "")), int(result.get("quantity", 0))]
+	else:
+		description_label.text = "لم يعتمد الخادم إضافة قطعة البازل."
+		reward_label.text = "لم تُضف أي قطعة محليًا."
+
+
 func _on_verified_reward_claim_finished(success: bool, result: Dictionary, message: String) -> void:
 	_reward_claim_inflight = false
 	if not GameModeManager.is_online_ready():
@@ -1460,7 +1497,6 @@ const CITY_LANDMARK_ENTRANCES := {
 	"restaurant": Vector3(-16.0, 0.0, 19.56),
 	"employment": Vector3(16.0, 0.0, -12.44),
 	"delivery": Vector3(24.0, 0.0, 4.5),
-	"city_guide": Vector3(-24.0, 0.0, 4.5),
 	"maintenance": Vector3(4.5, 0.0, 24.0),
 	"animal_camp": Vector3(60.0, 0.0, 68.0)
 }
