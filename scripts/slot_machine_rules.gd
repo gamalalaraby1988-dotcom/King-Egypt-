@@ -52,7 +52,7 @@ static func get_payout_multiplier_tenths(symbol_indices: Array) -> int:
 		return 0
 	var counts: Dictionary = {}
 	for symbol_variant in symbol_indices:
-		if not (symbol_variant is int) or int(symbol_variant) < 0 or int(symbol_variant) >= SYMBOL_COUNT:
+		if typeof(symbol_variant) != TYPE_INT or int(symbol_variant) < 0 or int(symbol_variant) >= SYMBOL_COUNT:
 			return 0
 		var symbol_index := int(symbol_variant)
 		counts[symbol_index] = int(counts.get(symbol_index, 0)) + 1
