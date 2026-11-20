@@ -1,6 +1,12 @@
 name: Android debug APK
 
 on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "export_presets.cfg"
+      - "project.godot"
+      - ".github/workflows/android-debug-apk.yml"
   push:
     branches: [main]
     paths:
