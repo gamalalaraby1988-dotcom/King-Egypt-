@@ -1,21 +1,30 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=7 format=3]
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
 [ext_resource type="PackedScene" path="res://scenes/player.tscn" id="2_player"]
+[ext_resource type="Shader" path="res://shaders/royal_cinematic_sky.gdshader" id="3_royal_sky"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_royal_sky"]
+shader = ExtResource("3_royal_sky")
+
+[sub_resource type="Sky" id="Sky_royal"]
+sky_material = SubResource("ShaderMaterial_royal_sky")
+radiance_size = 2
 
 [sub_resource type="Environment" id="Environment_main"]
-background_mode = 1
+background_mode = 2
 background_color = Color(0.48, 0.68, 0.82, 1)
+sky = SubResource("Sky_royal")
 ambient_light_source = 3
 ambient_light_color = Color(0.82, 0.86, 0.92, 1)
-ambient_light_energy = 0.7
+ambient_light_energy = 0.78
 fog_enabled = true
-fog_light_color = Color(0.78, 0.68, 0.56, 1)
-fog_light_energy = 0.85
-fog_sun_scatter = 0.18
+fog_light_color = Color(0.86, 0.62, 0.43, 1)
+fog_light_energy = 0.9
+fog_sun_scatter = 0.22
 fog_density = 0.0012
 fog_aerial_perspective = 0.35
-fog_sky_affect = 0.08
+fog_sky_affect = 0.12
 fog_depth_begin = 100.0
 fog_depth_end = 430.0
 fog_depth_curve = 1.15
@@ -28,8 +37,9 @@ environment = SubResource("Environment_main")
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
 rotation = Vector3(-0.8, -0.5, 0)
+light_color = Color(1, 0.84, 0.68, 1)
 shadow_enabled = true
-light_energy = 1.1
+light_energy = 1.15
 
 [node name="Player" parent="." instance=ExtResource("2_player")]
 position = Vector3(0, 1, -42)
