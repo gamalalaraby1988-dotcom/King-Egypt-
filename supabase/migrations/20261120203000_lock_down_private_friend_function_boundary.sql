@@ -1,8 +1,6 @@
 -- Keep private implementation functions inaccessible to API roles.
 -- Public RPC wrappers are narrow SECURITY DEFINER entrypoints with an empty
 -- search_path; they only delegate to fixed, schema-qualified private functions.
-revoke all on schema private from public, anon, authenticated;
-
 revoke all on function private.send_friend_request(text) from public, anon, authenticated;
 revoke all on function private.respond_friend_request(uuid, boolean) from public, anon, authenticated;
 revoke all on function private.list_friend_requests() from public, anon, authenticated;
