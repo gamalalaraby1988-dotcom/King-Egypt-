@@ -28,6 +28,7 @@ select extensions.is(
     false,
     'a paid spin is settled once by the trusted role'
 );
+reset role;
 select extensions.is(
     (select collection_match_count from private.arcade_slot_round_ledger
      where server_event_id='20000000-0000-4000-8000-000000000087'),
@@ -57,12 +58,15 @@ select extensions.throws_ok(
     '22003','free_spin_balance_insufficient',
     'a free spin cannot run without a server-owned free-spin balance'
 );
+reset role;
 
 update private.arcade_slot_challenge_state
 set challenge_progress=14, free_spins=1
 where user_id='00000000-0000-4000-8000-000000000087'
   and machine_id='vip_royal_classic';
 
+set local role service_role;
+set local role service_role;
 select extensions.is(
     (public.settle_arcade_slot_spin(
         '00000000-0000-4000-8000-000000000087',
@@ -74,6 +78,7 @@ select extensions.is(
     5,
     'a free spin can complete the challenge and award five more free spins'
 );
+reset role;
 select extensions.is(
     (select challenge_progress from private.arcade_slot_challenge_state
      where user_id='00000000-0000-4000-8000-000000000087' and machine_id='vip_royal_classic'),
@@ -109,6 +114,7 @@ select extensions.is(
     true,
     'replaying the same free-spin event does not grant or consume twice'
 );
+reset role;
 select extensions.is(
     (select chips from public.player_wallets where user_id='00000000-0000-4000-8000-000000000087'),
     240::bigint,
