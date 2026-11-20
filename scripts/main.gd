@@ -1041,6 +1041,42 @@ func _create_city() -> void:
 		for i in range(4):
 			var mark_x: float = side * (28.0 + float(i) * 18.0)
 			_create_box(self, "RoadMark_X_%s_%d" % [str(side), i], Vector3(3, 0.025, 0.16), Vector3(mark_x, 0.06, -45), Color(0.92, 0.86, 0.62))
+	_create_city_pedestrian_network()
+
+func _create_city_pedestrian_network() -> void:
+	# Raised sandstone sidewalks frame the active street grid while leaving
+	# the royal square, marina basin, and approved building footprints untouched.
+	var sidewalk_color := Color(0.58, 0.51, 0.40)
+	var curb_color := Color(0.78, 0.69, 0.53)
+	for road_z in [-15.0, 15.0, 45.0]:
+		for side in [-1.0, 1.0]:
+			var walk_z := road_z + side * 4.0
+			_create_box(self, "Sidewalk_H_%d_%d" % [int(road_z), int(side)], Vector3(132.0, 0.14, 1.7), Vector3(0.0, 0.07, walk_z), sidewalk_color)
+			_create_box(self, "Curb_H_%d_%d" % [int(road_z), int(side)], Vector3(132.0, 0.22, 0.16), Vector3(0.0, 0.11, road_z + side * 4.92), curb_color)
+	for road_x in [-15.0, 15.0]:
+		for side in [-1.0, 1.0]:
+			var walk_x := road_x + side * 3.65
+			_create_box(self, "Sidewalk_V_%d_%d" % [int(road_x), int(side)], Vector3(1.65, 0.14, 118.0), Vector3(walk_x, 0.07, 36.0), sidewalk_color)
+			_create_box(self, "Curb_V_%d_%d" % [int(road_x), int(side)], Vector3(0.16, 0.22, 118.0), Vector3(road_x + side * 4.55, 0.11, 36.0), curb_color)
+
+	# Dashed center guidance makes the two-way streets legible from street level.
+	for road_z in [-15.0, 15.0, 45.0]:
+		for mark_index in range(12):
+			var mark_x := -62.0 + float(mark_index) * 11.0
+			_create_box(self, "LaneDash_H_%d_%d" % [int(road_z), mark_index], Vector3(2.4, 0.025, 0.12), Vector3(mark_x, 0.065, road_z), Color(0.91, 0.85, 0.68))
+	for road_x in [-15.0, 15.0]:
+		for mark_index in range(10):
+			var mark_z := -18.0 + float(mark_index) * 11.0
+			_create_box(self, "LaneDash_V_%d_%d" % [int(road_x), mark_index], Vector3(0.12, 0.025, 2.4), Vector3(road_x, 0.065, mark_z), Color(0.91, 0.85, 0.68))
+
+	# Zebra crossings are centered on the real street intersections.
+	for road_x in [-15.0, 15.0]:
+		for road_z in [-15.0, 15.0, 45.0]:
+			for stripe in range(5):
+				var stripe_z := road_z - 2.1 + float(stripe) * 1.05
+				_create_box(self, "Crosswalk_H_%d_%d_%d" % [int(road_x), int(road_z), stripe], Vector3(3.4, 0.035, 0.42), Vector3(road_x, 0.075, stripe_z), Color(0.88, 0.85, 0.76))
+				var stripe_x := road_x - 1.8 + float(stripe) * 0.9
+				_create_box(self, "Crosswalk_V_%d_%d_%d" % [int(road_x), int(road_z), stripe], Vector3(0.42, 0.035, 3.4), Vector3(stripe_x, 0.075, road_z), Color(0.88, 0.85, 0.76))
 
 func _create_mobile_hud() -> void:
 	var layer := CanvasLayer.new()
@@ -1073,9 +1109,9 @@ func _set_mobile_hud_active(active: bool) -> void:
 func _create_interactive_buildings() -> void:
 	_create_adventure_hub_interaction()
 	if AuthoritativeGameServer.is_dedicated_server_requested():
-		_add_functional_building(null, "المتجر", "مهمة شراء احتياجات", "تعرّف على المتجر واستلم قائمة احتياجات تجريبية من البوابة.", Vector3(16, 0, 16), Color(0.20, 0.48, 0.30), 150, 0, 1)
-		_add_functional_building(null, "المطعم", "مهمة توصيل وجبة", "استلم طلب توصيل تجريبي من المطعم.", Vector3(-16, 0, 16), Color(0.65, 0.30, 0.18), 220, 2, 1)
-		_add_functional_building(null, "مركز التوظيف", "مهمة التسجيل في وظيفة", "تعرّف على الوظائف المتاحة وشروط الالتحاق بها.", Vector3(16, 0, -16), Color(0.22, 0.34, 0.62), 300, 5, 1)
+		_add_functional_building(null, "المتجر", "مهمة شراء احتياجات", "تعرّف على المتجر واستلم قائمة احتياجات تجريبية من البوابة.", Vector3(0, 0, 6.4), Color(0.20, 0.48, 0.30), 150, 0, 1)
+		_add_functional_building(null, "المطعم", "مهمة توصيل وجبة", "استلم طلب توصيل تجريبي من المطعم.", Vector3(60, 0, -23.6), Color(0.65, 0.30, 0.18), 220, 2, 1)
+		_add_functional_building(null, "مركز التوظيف", "مهمة التسجيل في وظيفة", "تعرّف على الوظائف المتاحة وشروط الالتحاق بها.", Vector3(30, 0, -23.6), Color(0.22, 0.34, 0.62), 300, 5, 1)
 		_create_job_board("مكتب الوظائف", "اختر من الوظائف السبع المعتمدة: الشحنات، البريد، البيتزا، الصيدلية، الزهور والهدايا، طلبات المنازل، والأمتعة.", Vector3(30, 0, -22.0), Vector3.ZERO, 0, 0, 0, "city_jobs_hub")
 		return
 	var manager := Node.new()
@@ -1105,9 +1141,9 @@ func _create_interactive_buildings() -> void:
 	profile_ui.player = get_node_or_null("Player")
 	add_child(profile_ui)
 
-	_add_functional_building(manager, "المتجر", "مهمة شراء احتياجات", "تعرّف على المتجر واستلم قائمة احتياجات تجريبية من البوابة.", Vector3(16, 0, 16), Color(0.20, 0.48, 0.30), 150, 0, 1)
-	_add_functional_building(manager, "المطعم", "مهمة توصيل وجبة", "استلم طلب توصيل تجريبي من المطعم. ستصبح أهداف التوصيل الفعلية جزءًا من مرحلة لاحقة.", Vector3(-16, 0, 16), Color(0.65, 0.30, 0.18), 220, 2, 1)
-	_add_functional_building(manager, "مركز التوظيف", "مهمة التسجيل في وظيفة", "تعرّف على الوظائف المتاحة وشروط الالتحاق بها.", Vector3(16, 0, -16), Color(0.22, 0.34, 0.62), 300, 5, 1)
+	_add_functional_building(manager, "المتجر", "مهمة شراء احتياجات", "تعرّف على المتجر واستلم قائمة احتياجات تجريبية من البوابة.", Vector3(0, 0, 6.4), Color(0.20, 0.48, 0.30), 150, 0, 1)
+	_add_functional_building(manager, "المطعم", "مهمة توصيل وجبة", "استلم طلب توصيل تجريبي من المطعم. ستصبح أهداف التوصيل الفعلية جزءًا من مرحلة لاحقة.", Vector3(60, 0, -23.6), Color(0.65, 0.30, 0.18), 220, 2, 1)
+	_add_functional_building(manager, "مركز التوظيف", "مهمة التسجيل في وظيفة", "تعرّف على الوظائف المتاحة وشروط الالتحاق بها.", Vector3(30, 0, -23.6), Color(0.22, 0.34, 0.62), 300, 5, 1)
 	_create_job_board("مكتب الوظائف", "اختر من الوظائف السبع المعتمدة: الشحنات، البريد، البيتزا، الصيدلية، الزهور والهدايا، طلبات المنازل، والأمتعة.", Vector3(30, 0, -22.0), Vector3.ZERO, 0, 0, 0, "city_jobs_hub")
 	_create_service_staff("صاحب المتجر", "صاحب محل", "أهلًا بك! يمكنني مساعدتك في احتياجاتك ومشترياتك من المتجر.", Vector3(19.5, 0, 20.2))
 	_create_service_staff("موظف المطعم", "موظف", "مرحبًا! أستقبل طلبات المطعم وأساعدك في أنشطة التوصيل.", Vector3(-12.5, 0, 20.2))
@@ -1150,16 +1186,10 @@ func _add_functional_building(manager: Node, title: String, mission: String, des
 	building.reward_xp = max(20, int(reward / 5))
 	building.required_level = level
 	building.requires_interior = false
+	# This is an invisible mission anchor for the matching approved building.
+	# The visible building is created only by ApprovedCityLayout, preventing
+	# duplicate placeholder structures from appearing in the middle of the city.
 	add_child(building)
-	_create_box(building, "BuildingBody", Vector3(8, 5, 7), Vector3(0, 2.5, 0), color, true)
-	_create_box(building, "Entrance", Vector3(1.5, 2.4, 0.12), Vector3(0, 1.2, 3.56), Color(0.12, 0.14, 0.18), false)
-	_create_box(building, "Sign", Vector3(5.0, 0.8, 0.16), Vector3(0, 4.25, 3.58), Color(0.10, 0.22, 0.25), false)
-	var sign_key := "shop"
-	if title == "المطعم":
-		sign_key = "restaurant"
-	elif title == "مركز التوظيف":
-		sign_key = "employment"
-	_add_sign_label(building, sign_key, Vector3(0, 4.25, 3.70), PI)
 	if is_instance_valid(manager) and manager.has_method("register_building"):
 		manager.register_building(building)
 
