@@ -21,18 +21,28 @@ func _run_arcade_machine_tests() -> void:
 	for required_path in [
 		"PlayerSeat/SeatAnchor",
 		"PlayerSeat/ExitAnchor",
-		"InteractionArea/CollisionShape3D",
 		"MachineCabinet",
 		"ScreenGlass",
 		"SlotMachineTouchLayer/SlotMachineControls"
 	]:
 		if machine.get_node_or_null(required_path) == null:
-			print("Arcade machine tree at failed assertion:")
-			machine.print_tree_pretty()
 			push_error("Missing slot machine component: " + required_path)
 			machine.queue_free()
 			quit(1)
 			return
+
+	var interaction_area := machine.get_node_or_null("InteractionArea") as Area3D
+	var interaction_shape: CollisionShape3D = null
+	if interaction_area != null:
+		for child in interaction_area.get_children():
+			if child is CollisionShape3D:
+				interaction_shape = child as CollisionShape3D
+				break
+	if interaction_shape == null or not (interaction_shape.shape is SphereShape3D) or (interaction_shape.shape as SphereShape3D).radius <= 0.0:
+		push_error("InteractionArea must contain a valid sphere collision shape.")
+		machine.queue_free()
+		quit(1)
+		return
 
 	var controls := machine.get_node("SlotMachineTouchLayer/SlotMachineControls")
 	for required_control in ["KingOfEgyptBrand", "BalanceValue", "BetValue", "WinValue", "DecreaseBetButton", "IncreaseBetButton", "MaxBetButton", "SpinButton", "AutoButton", "LeaveSeatButton", "MinimumBetNote", "CameraSwipeHint"]:
