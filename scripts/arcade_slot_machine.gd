@@ -142,7 +142,7 @@ func _build_touch_controls() -> void:
 	panel.anchor_bottom = 1.0
 	panel.offset_left = 0
 	panel.offset_right = 0
-	panel.offset_top = -286
+	panel.offset_top = -306
 	panel.offset_bottom = -12
 	panel.visible = false
 	var panel_style := StyleBoxFlat.new()
@@ -191,6 +191,14 @@ func _build_touch_controls() -> void:
 	minimum_note.add_theme_font_size_override("font_size", 12)
 	minimum_note.add_theme_color_override("font_color", Color(0.58, 0.78, 1.0))
 	content.add_child(minimum_note)
+
+	var camera_hint := Label.new()
+	camera_hint.name = "CameraSwipeHint"
+	camera_hint.text = "اسحب الشاشة يمينًا ويسارًا لتدوير الرؤية، وأعلى وأسفل لتغيير زاوية الكاميرا"
+	camera_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	camera_hint.add_theme_font_size_override("font_size", 11)
+	camera_hint.add_theme_color_override("font_color", Color(0.72, 0.82, 0.94))
+	content.add_child(camera_hint)
 
 	var action_row := HBoxContainer.new()
 	action_row.alignment = BoxContainer.ALIGNMENT_CENTER
