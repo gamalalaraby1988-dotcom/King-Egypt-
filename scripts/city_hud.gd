@@ -644,6 +644,7 @@ func _on_social_operation_finished(operation: String, success: bool, result_code
 		"request_already_pending": "يوجد طلب صداقة معلّق بينكما.",
 		"blocked": "لا يمكن إرسال طلب بسبب وجود حظر بين الحسابين.",
 		"authentication_required": "سجّل الدخول إلى حساب اللاعب أولًا.",
+		"backend_not_enabled": "خدمة الأصدقاء غير مفعلة على الخادم الحالي بعد.",
 		"request_in_progress": "انتظر انتهاء الطلب الحالي.",
 		"server_error": "تعذر تنفيذ العملية على الخادم. حاول لاحقًا."
 	}
