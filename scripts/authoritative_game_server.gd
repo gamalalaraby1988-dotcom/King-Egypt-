@@ -616,9 +616,10 @@ func request_join_arcade_session_rpc(session_id: String) -> void:
 		return
 	var user_id := str(_sessions[peer_id].get("user_id", ""))
 	var participants: Dictionary = session.get("participants", {})
-	if participants.values().any(func(item): return str(item.get("user_id", "")) == user_id):
-		_reply_arcade_session(peer_id, session_id, "rejected", str(session.get("machine_id", "")), "هذا الحساب مشارك بالفعل في الجلسة.")
-		return
+	for participant in participants.values():
+		if str(participant.get("user_id", "")) == user_id:
+			_reply_arcade_session(peer_id, session_id, "rejected", str(session.get("machine_id", "")), "هذا الحساب مشارك بالفعل في الجلسة.")
+			return
 	if participants.size() >= MAX_PLAYERS or not bool(controller.call("can_join_arcade_session", user_id, str(session.get("mode", "")), participants.size())):
 		_reply_arcade_session(peer_id, session_id, "rejected", str(session.get("machine_id", "")), "لا يمكن الانضمام إلى هذه الجلسة.")
 		return
@@ -690,8 +691,7 @@ func complete_arcade_session(session_id: String, server_results: Dictionary) -> 
 		_abort_arcade_session(session_id, "تعذر إنشاء معرّف حدث آمن.")
 		return false
 	_closed_arcade_sessions[session_id] = event_id
-	if _closed_arcade_sessions.size() > 1024:
-		_closed_arcade_sessions.erase(_closed_arcade_sessions.keys()[0])
+	_remember_closed_arcade_session(session_id, event_id)
 	session["state"] = "completed"
 	for participant_peer_variant in participants.keys():
 		_peer_arcade_sessions.erase(int(participant_peer_variant))
@@ -720,8 +720,14 @@ func _abort_arcade_session(session_id: String, reason: String) -> void:
 		var participant_peer := int(participant_peer_variant)
 		_peer_arcade_sessions.erase(participant_peer)
 		_reply_arcade_session(participant_peer, session_id, "aborted", str(session.get("machine_id", "")), reason)
-	_closed_arcade_sessions[session_id] = "aborted"
+	_remember_closed_arcade_session(session_id, "aborted")
 	_arcade_sessions.erase(session_id)
+
+
+func _remember_closed_arcade_session(session_id: String, outcome: String) -> void:
+	_closed_arcade_sessions[session_id] = outcome
+	while _closed_arcade_sessions.size() > 1024:
+		_closed_arcade_sessions.erase(_closed_arcade_sessions.keys()[0])
 
 
 func _reply_arcade_session(peer_id: int, session_id: String, state: String, machine_id: String, message: String) -> void:
