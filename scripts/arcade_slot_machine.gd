@@ -26,14 +26,27 @@ var _max_bet_button: Button
 const MIN_BET_CHIPS: int = 10
 var _transition_tween: Tween
 var _result_tween: Tween
+var _active_session_id: String = ""
+var _session_request_pending := false
+var _slot_spin_pending := false
+var _server_active_session_id: String = ""
+@export var zone_id: String = "european_vip_casino"
 
 func _ready() -> void:
 	add_to_group("city_interactables")
 	_build_machine_visual()
 	_build_seat()
 	_build_interaction_area()
-	if not AuthoritativeGameServer.is_dedicated_server_requested():
+	if AuthoritativeGameServer.is_dedicated_server_requested():
+		call_deferred("_register_authoritative_machine")
+	else:
 		_build_touch_controls()
+		if not AuthoritativeGameServer.arcade_session_state_changed.is_connected(_on_arcade_session_state_changed):
+			AuthoritativeGameServer.arcade_session_state_changed.connect(_on_arcade_session_state_changed)
+		if not AuthoritativeGameServer.arcade_slot_spin_settled.is_connected(_on_authoritative_spin_settled):
+			AuthoritativeGameServer.arcade_slot_spin_settled.connect(_on_authoritative_spin_settled)
+		if not AuthoritativeGameServer.arcade_slot_spin_failed.is_connected(_on_authoritative_spin_failed):
+			AuthoritativeGameServer.arcade_slot_spin_failed.connect(_on_authoritative_spin_failed)
 
 func _process(_delta: float) -> void:
 	if is_instance_valid(_seated_player):
@@ -338,7 +351,7 @@ func set_auto_play_mode_visual(auto_mode: bool) -> void:
 		_status_label.text = "وضع AUTO (عرض فقط)" if auto_mode else machine_title.to_upper()
 
 func _on_auto_pressed() -> void:
-	# Auto-play remains unavailable until the authoritative server controller is connected.
+	# AUTO remains disabled until a separately rate-limited server scheduler is implemented.
 	if is_instance_valid(_status_label):
 		_status_label.text = "اللعب التلقائي غير متاح حاليًا."
 
@@ -363,6 +376,7 @@ func _set_seated_controls(seated: bool) -> void:
 	panel.visible = seated
 	_enter_button.visible = false
 	_spin_button.visible = seated
+	_spin_button.disabled = not seated or _active_session_id.is_empty() or _slot_spin_pending
 	_auto_button.visible = seated
 	_exit_button.visible = seated
 	if is_instance_valid(_status_label):
@@ -379,13 +393,23 @@ func _on_body_exited(body: Node3D) -> void:
 		_set_nearby_controls(false)
 
 func _on_enter_pressed() -> void:
+	if not is_instance_valid(_nearby_player) or is_instance_valid(_seated_player) or _session_request_pending:
+		return
+	var player := _nearby_player
+	if bool(player.get("animal_riding")) or bool(player.get("arcade_seated")) or bool(player.get("sitting")):
+		return
+	if not AuthoritativeGameServer.is_authenticated():
+		_status_label.text = "سجّل الدخول أولًا لبدء جلسة الماكينة."
+		return
+	_session_request_pending = true
+	_status_label.text = "جارٍ التحقق من جلسة الماكينة..."
+	AuthoritativeGameServer.request_start_arcade_session(machine_id, "solo")
+
+
+func _seat_local_player() -> void:
 	if not is_instance_valid(_nearby_player) or is_instance_valid(_seated_player):
 		return
 	var player := _nearby_player
-	if bool(player.get("animal_riding")) or bool(player.get("arcade_seated")):
-		return
-	if bool(player.get("sitting")):
-		return
 	_seated_player = player
 	_nearby_player = null
 	if player.has_method("set_arcade_seated"):
@@ -403,15 +427,99 @@ func _on_enter_pressed() -> void:
 			player.call("sit_at_position", target_position, target_rotation)
 	)
 	_set_seated_controls(true)
+	_spin_button.disabled = false
+	_status_label.text = "الجلسة متصلة بالخادم — " + machine_title
+
+
+func _on_arcade_session_state_changed(session_id: String, state: String, received_machine_id: String, message: String) -> void:
+	if received_machine_id != machine_id:
+		return
+	if state == "running":
+		_session_request_pending = false
+		_active_session_id = session_id
+		_seat_local_player()
+	elif state in ["rejected", "unavailable", "aborted"]:
+		_session_request_pending = false
+		_active_session_id = ""
+		_slot_spin_pending = false
+		if is_instance_valid(_status_label):
+			_status_label.text = message
+		if is_instance_valid(_spin_button):
+			_spin_button.disabled = true
+
 
 func _on_spin_pressed() -> void:
-	# No client-side spin or result is permitted before a trusted server game controller exists.
-	if is_instance_valid(_status_label):
-		_status_label.text = "اللعبة قيد التجهيز والتحقق الخادمي."
+	if _active_session_id.is_empty() or _slot_spin_pending or not is_instance_valid(_seated_player):
+		return
+	_slot_spin_pending = true
+	_spin_button.disabled = true
+	_status_label.text = "جارٍ اعتماد اللفة على الخادم..."
+	AuthoritativeGameServer.request_arcade_slot_spin("auto", MIN_BET_CHIPS)
+
+
+func _on_authoritative_spin_settled(session_id: String, result: Dictionary) -> void:
+	if session_id != _active_session_id:
+		return
+	_slot_spin_pending = false
+	var balance := int(result.get("balance_after", 0))
+	var gross_return := int(result.get("gross_return_chips", 0))
+	var free_spins := int(result.get("free_spins_balance", 0))
+	var progress := int(result.get("challenge_progress", 0))
+	var awarded := int(result.get("free_spins_awarded", 0))
+	_balance_label.text = "BALANCE\n%d رقائق" % balance
+	_win_label.text = "WIN\n%d رقائق" % gross_return
+	_status_label.text = "تم اعتماد اللفة — اللفات المجانية: %d — التحدي: %d/15" % [free_spins, progress]
+	if awarded > 0:
+		_status_label.text += " — حصلت على %d لفات مجانية!" % awarded
+	_spin_button.disabled = false
+
+
+func _on_authoritative_spin_failed(session_id: String, message: String) -> void:
+	if session_id != _active_session_id:
+		return
+	_slot_spin_pending = false
+	_status_label.text = "تعذر تنفيذ اللفة: " + message
+	_spin_button.disabled = false
+
+
+func _register_authoritative_machine() -> void:
+	if not AuthoritativeGameServer.is_dedicated_server_requested():
+		return
+	if not AuthoritativeGameServer.register_arcade_machine(machine_id, zone_id, self, self):
+		push_warning("Could not register authoritative slot machine: " + machine_id)
+
+
+func can_start_arcade_session(user_id: String, mode: String) -> bool:
+	return AuthoritativeGameServer.is_dedicated_server_requested() and not user_id.is_empty() and mode == "solo" and _server_active_session_id.is_empty()
+
+
+func can_join_arcade_session(_user_id: String, _mode: String, _participant_count: int) -> bool:
+	return false
+
+
+func start_arcade_session(session_id: String, mode: String, participants: Dictionary) -> bool:
+	if not AuthoritativeGameServer.is_dedicated_server_requested() or mode != "solo" or session_id.is_empty() or participants.size() != 1 or not _server_active_session_id.is_empty():
+		return false
+	_server_active_session_id = session_id
+	return true
+
+
+func validate_arcade_session_result(session_id: String, mode: String, participants: Dictionary, _server_results: Dictionary, elapsed_usec: int) -> bool:
+	return AuthoritativeGameServer.is_dedicated_server_requested() and session_id == _server_active_session_id and mode == "solo" and participants.size() == 1 and elapsed_usec > 0
+
+
+func abort_arcade_session(session_id: String, _reason: String) -> void:
+	if session_id == _server_active_session_id:
+		_server_active_session_id = ""
 
 func _on_exit_pressed() -> void:
 	if not is_instance_valid(_seated_player):
 		return
+	if not _active_session_id.is_empty():
+		AuthoritativeGameServer.request_leave_arcade_session(_active_session_id)
+	_active_session_id = ""
+	_slot_spin_pending = false
+	_session_request_pending = false
 	var player := _seated_player
 	_seated_player = null
 	var target_position := _exit_anchor.global_position

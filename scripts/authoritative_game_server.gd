@@ -14,6 +14,8 @@ signal activity_proof_received(activity_kind: String, activity_id: String, proof
 signal activity_proof_failed(activity_kind: String, activity_id: String, message: String)
 signal arcade_session_state_changed(session_id: String, state: String, machine_id: String, message: String)
 signal arcade_session_verified(session_id: String, server_event_id: String, machine_id: String, zone_id: String, mode: String, participants: Dictionary, results: Dictionary)
+signal arcade_slot_spin_settled(session_id: String, result: Dictionary)
+signal arcade_slot_spin_failed(session_id: String, message: String)
 
 const DEFAULT_PORT := 2456
 const MAX_PLAYERS := 64
@@ -38,6 +40,7 @@ var _proof_secret_warning_shown := false
 var _arcade_machines: Dictionary = {}
 var _arcade_sessions: Dictionary = {}
 var _peer_arcade_sessions: Dictionary = {}
+var _pending_slot_spins: Dictionary = {}
 var _closed_arcade_sessions: Dictionary = {}
 const ARCADE_ZONE_IDS := [
 	"european_vip_casino",
@@ -314,6 +317,12 @@ func request_launch_arcade_session(session_id: String) -> void:
 	if _is_dedicated_server or not is_authenticated():
 		return
 	request_launch_arcade_session_rpc.rpc_id(1, session_id)
+
+
+func request_arcade_slot_spin(spin_type: String, wager_chips: int = 10) -> void:
+	if _is_dedicated_server or not is_authenticated() or spin_type != "auto":
+		return
+	request_arcade_slot_spin_rpc.rpc_id(1, spin_type, wager_chips)
 
 
 func request_leave_arcade_session(session_id: String) -> void:
@@ -681,6 +690,141 @@ func _launch_arcade_session(session_id: String, peer_id: int) -> void:
 		return
 	for participant_peer_variant in participants.keys():
 		_reply_arcade_session(int(participant_peer_variant), session_id, "running", str(session.get("machine_id", "")), "بدأت جلسة اللعب على الخادم.")
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func request_arcade_slot_spin_rpc(spin_type: String, wager_chips: int) -> void:
+	if not multiplayer.is_server():
+		return
+	var peer_id := multiplayer.get_remote_sender_id()
+	if not _sessions.has(peer_id) or not bool(_sessions[peer_id].get("authenticated", false)):
+		return
+	if spin_type != "auto":
+		return
+	var session_id := str(_peer_arcade_sessions.get(peer_id, ""))
+	var session: Dictionary = _arcade_sessions.get(session_id, {})
+	if session.is_empty() or str(session.get("state", "")) != "running" or str(session.get("mode", "")) != "solo":
+		_notify_slot_spin_failed(peer_id, session_id, "لا توجد جلسة ماكينة فردية نشطة.")
+		return
+	var participants: Dictionary = session.get("participants", {})
+	if not participants.has(peer_id):
+		return
+	var machine_id := str(session.get("machine_id", ""))
+	var machine: Dictionary = _arcade_machines.get(machine_id, {})
+	var anchor := machine.get("anchor") as Node3D
+	var body := _sessions[peer_id].get("body") as CharacterBody3D
+	if machine.is_empty() or not is_instance_valid(anchor) or not is_instance_valid(body):
+		_notify_slot_spin_failed(peer_id, session_id, "الماكينة أو اللاعب غير متاح.")
+		return
+	if body.global_position.distance_to(anchor.global_position) > ARCADE_MACHINE_INTERACTION_RADIUS:
+		_notify_slot_spin_failed(peer_id, session_id, "يجب البقاء بجوار الماكينة أثناء اللعب.")
+		return
+	if wager_chips < 10 or wager_chips > 2000000000:
+		_notify_slot_spin_failed(peer_id, session_id, "قيمة الرهان غير صالحة.")
+		return
+	if _pending_slot_spins.has(session_id):
+		_notify_slot_spin_failed(peer_id, session_id, "هناك لفة قيد المعالجة بالفعل.")
+		return
+	if _proof_hmac_secret.size() < 32:
+		_notify_slot_spin_failed(peer_id, session_id, "إعداد توقيع خادم اللعبة غير مكتمل.")
+		return
+	# Slot settlement is explicitly environment-configured for TEST first.
+	# Never fall back to the production project settings used by account authentication.
+	var base_url := OS.get_environment("KING_CITY_SLOT_API_BASE_URL").strip_edges().trim_suffix("/")
+	var publishable_key := OS.get_environment("KING_CITY_SLOT_PUBLISHABLE_KEY").strip_edges()
+	if not base_url.begins_with("https://") or publishable_key.is_empty():
+		_notify_slot_spin_failed(peer_id, session_id, "خدمة تسوية الماكينات غير مهيأة على بيئة الاختبار.")
+		return
+	var user_id := str(_sessions[peer_id].get("user_id", ""))
+	var event_id := _new_server_event_uuid()
+	if event_id.is_empty():
+		_notify_slot_spin_failed(peer_id, session_id, "تعذر إنشاء معرف لفة آمن.")
+		return
+	var issued_at := int(Time.get_unix_time_from_system())
+	var canonical := "v2|%s|%s|%s|%s|%s|%d|%d" % [user_id, session_id, machine_id, event_id, spin_type, wager_chips, issued_at]
+	var hmac_context := HMACContext.new()
+	if hmac_context.start(HashingContext.HASH_SHA256, _proof_hmac_secret) != OK or hmac_context.update(canonical.to_utf8_buffer()) != OK:
+		_notify_slot_spin_failed(peer_id, session_id, "تعذر توقيع طلب اللفة.")
+		return
+	var payload := {
+		"user_id": user_id,
+		"session_id": session_id,
+		"server_event_id": event_id,
+		"machine_id": machine_id,
+		"spin_type": spin_type,
+		"issued_at": issued_at,
+		"signature_hex": hmac_context.finish().hex_encode()
+	}
+	payload["wager_chips"] = wager_chips
+	_pending_slot_spins[session_id] = event_id
+	_send_slot_spin_request(peer_id, session_id, payload, 0, base_url, publishable_key)
+
+
+func _send_slot_spin_request(peer_id: int, session_id: String, payload: Dictionary, attempt: int, base_url: String, publishable_key: String) -> void:
+	var request := HTTPRequest.new()
+	request.timeout = 15.0
+	add_child(request)
+	request.request_completed.connect(_on_slot_spin_request_completed.bind(request, peer_id, session_id, payload, attempt, base_url, publishable_key))
+	var error := request.request(
+		base_url + "/functions/v1/slot-machine-spin",
+		PackedStringArray(["Content-Type: application/json", "apikey: " + publishable_key]),
+		HTTPClient.METHOD_POST,
+		JSON.stringify(payload)
+	)
+	if error != OK:
+		request.queue_free()
+		_schedule_slot_spin_retry(peer_id, session_id, payload, attempt, base_url, publishable_key)
+
+
+func _schedule_slot_spin_retry(peer_id: int, session_id: String, payload: Dictionary, attempt: int, base_url: String, publishable_key: String) -> void:
+	if attempt >= 2:
+		_pending_slot_spins.erase(session_id)
+		_notify_slot_spin_failed(peer_id, session_id, "تعذر إكمال اللفة بعد إعادة المحاولة؛ راجع الرصيد قبل بدء لفة جديدة.")
+		return
+	await get_tree().create_timer([2.0, 5.0][attempt]).timeout
+	_send_slot_spin_request(peer_id, session_id, payload, attempt + 1, base_url, publishable_key)
+
+
+func _on_slot_spin_request_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray, request: HTTPRequest, peer_id: int, session_id: String, payload: Dictionary, attempt: int, base_url: String, publishable_key: String) -> void:
+	if is_instance_valid(request):
+		request.queue_free()
+	if result != HTTPRequest.RESULT_SUCCESS or response_code == 429 or response_code >= 500:
+		_schedule_slot_spin_retry(peer_id, session_id, payload, attempt, base_url, publishable_key)
+		return
+	_pending_slot_spins.erase(session_id)
+	if response_code != 200:
+		var error_data: Variant = JSON.parse_string(body.get_string_from_utf8())
+		var error_code := str(error_data.get("error", "slot_spin_rejected")) if error_data is Dictionary else "slot_spin_rejected"
+		_notify_slot_spin_failed(peer_id, session_id, error_code)
+		return
+	var parsed: Variant = JSON.parse_string(body.get_string_from_utf8())
+	if not parsed is Dictionary or not bool(parsed.get("settled", false)) or not parsed.has("balance_after"):
+		_notify_slot_spin_failed(peer_id, session_id, "استجابة تسوية اللفة غير صالحة.")
+		return
+	if not _sessions.has(peer_id) or not multiplayer.get_peers().has(peer_id):
+		return
+	if str(_peer_arcade_sessions.get(peer_id, "")) != session_id:
+		return
+	rpc_id(peer_id, "receive_authoritative_slot_spin_result", session_id, parsed)
+
+
+func _notify_slot_spin_failed(peer_id: int, session_id: String, message: String) -> void:
+	if _sessions.has(peer_id) and multiplayer.get_peers().has(peer_id):
+		rpc_id(peer_id, "receive_authoritative_slot_spin_failed", session_id, message)
+
+
+@rpc("authority", "call_remote", "reliable")
+func receive_authoritative_slot_spin_result(session_id: String, result: Dictionary) -> void:
+	if multiplayer.is_server() or not is_authenticated():
+		return
+	arcade_slot_spin_settled.emit(session_id, result)
+
+
+@rpc("authority", "call_remote", "reliable")
+func receive_authoritative_slot_spin_failed(session_id: String, message: String) -> void:
+	if multiplayer.is_server() or not is_authenticated():
+		return
+	arcade_slot_spin_failed.emit(session_id, message)
 
 
 @rpc("any_peer", "call_remote", "reliable")
