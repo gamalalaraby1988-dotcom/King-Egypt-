@@ -87,8 +87,12 @@ func _run_city_adventure_contract() -> void:
 		push_error("Mystery message must reveal three clues and validate the decoded answer.")
 		quit(1)
 		return
-	if not server_source.contains("func request_submit_message_puzzle_answer(answer: String)") or not server_source.contains('normalized_answer != "النيل"') or not server_source.contains('"puzzle_ready"'):
-		push_error("Online mystery answer must be validated by the server after all checkpoints.")
+	if not server_source.contains("func request_submit_message_puzzle_answer(answer: String)") or not server_source.contains('normalized_answer != "النيل"') or not server_source.contains('"puzzle_ready"') or not server_source.contains("mission_stages.size() + 1"):
+		push_error("Online mystery answer must be unlocked and validated by the server only after the final checkpoint.")
+		quit(1)
+		return
+	if not manager_source.contains("stage_number > stage_count") or not manager_source.contains("adventure_stage_index = stage_count - 1"):
+		push_error("The mystery cipher must remain hidden until the server confirms arrival at the final checkpoint.")
 		quit(1)
 		return
 	print("City adventure activity contract checks passed.")
