@@ -5,8 +5,6 @@ signal language_changed
 
 const ProfileConfigStore = preload("res://scripts/profile_config_store.gd")
 
-func _save_path() -> String:
-	return ProfileConfigStore.get_active_profile_path()
 var language_mode: String = "auto"
 
 const TEXTS := {
@@ -167,6 +165,9 @@ const TEXTS := {
 		"service_npc_close": "CLOSE"
 	}
 }
+
+func _save_path() -> String:
+	return ProfileConfigStore.get_active_profile_path()
 
 func _ready() -> void:
 	var config := ConfigFile.new()
