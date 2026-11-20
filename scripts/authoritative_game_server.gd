@@ -536,6 +536,23 @@ func request_submit_message_puzzle_answer(answer: String) -> void:
 
 
 @rpc("any_peer", "call_remote", "reliable")
+func request_cancel_mission() -> void:
+	if not multiplayer.is_server():
+		return
+	var peer_id := multiplayer.get_remote_sender_id()
+	if not _sessions.has(peer_id) or not bool(_sessions[peer_id].get("authenticated", false)):
+		return
+	var session: Dictionary = _sessions[peer_id]
+	var active_mission: Dictionary = session.get("active_mission", {})
+	var mission_id := str(active_mission.get("mission_id", ""))
+	if not mission_id.begins_with("city_adventure_"):
+		return
+	session["active_mission"] = {}
+	_sessions[peer_id] = session
+	rpc_id(peer_id, "receive_server_mission_failed", mission_id, "تم إلغاء المغامرة بناءً على طلبك.")
+
+
+@rpc("any_peer", "call_remote", "reliable")
 func request_rescue_citizen_interaction() -> void:
 	if not multiplayer.is_server():
 		return

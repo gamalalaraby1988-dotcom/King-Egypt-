@@ -116,6 +116,14 @@ func _run_city_adventure_contract() -> void:
 		push_error("Online rescue progression must require server-validated citizen interaction.")
 		quit(1)
 		return
+	if not server_source.contains("func request_cancel_mission()") or not server_source.contains('if not mission_id.begins_with("city_adventure_")') or not manager_source.contains("AuthoritativeGameServer.request_cancel_mission.rpc_id(1)"):
+		push_error("Online adventure cancellation must clear the active server mission instead of orphaning it.")
+		quit(1)
+		return
+	if not manager_source.contains("جارٍ إلغاء المغامرة من الخادم...") or not manager_source.contains("_hide_adventure_treasure()"):
+		push_error("Adventure cancellation must wait for server confirmation and clean local visuals.")
+		quit(1)
+		return
 	var local_process_start := manager_source.find("func _process(")
 	var local_process_end := manager_source.find("func _update_interaction_target(", local_process_start)
 	if local_process_start < 0 or local_process_end <= local_process_start:

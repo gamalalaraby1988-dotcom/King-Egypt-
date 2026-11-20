@@ -1223,9 +1223,11 @@ func _fail_local_survival_race() -> void:
 	survival_time_remaining = 0.0
 	target_marker.visible = false
 	status_label.text = "انتهى الوقت! لم تصل إلى نقطة النجاة."
-	description_label.text = "انتهت مغامرة سباق النجاة. يمكنك المحاولة مرة أخرى."
+	description_label.text = "انتهى سباق النجاة بالوقت المحدد. يمكنك المحاولة مرة أخرى." if mission_id == "city_adventure_survival" and message.contains("انتهى الوقت") else "تم إيقاف المغامرة. يمكنك المحاولة مرة أخرى."
 	reward_label.text = "لم تُسجل نتيجة فوز ولم تُصرف أي مكافأة."
 	accept_button.disabled = false
+	if is_instance_valid(navigation_cancel_button):
+		navigation_cancel_button.disabled = false
 	panel.visible = true
 
 
@@ -1924,6 +1926,12 @@ func navigate_to_landmark(landmark_key: String, destination: Vector3) -> bool:
 func _cancel_active_navigation() -> void:
 	if not mission_running and not job_running and not landmark_navigation_active:
 		return
+	if GameModeManager.is_online_ready() and selected_activity_kind == "adventure" and mission_running:
+		status_label.text = "جارٍ إلغاء المغامرة من الخادم..."
+		if is_instance_valid(navigation_cancel_button):
+			navigation_cancel_button.disabled = true
+		AuthoritativeGameServer.request_cancel_mission.rpc_id(1)
+		return
 	landmark_navigation_active = false
 	landmark_route_points.clear()
 	landmark_route_index = 0
@@ -1932,6 +1940,16 @@ func _cancel_active_navigation() -> void:
 	navigation_route_notice_remaining = 0.0
 	mission_running = false
 	job_running = false
+	if selected_activity_kind == "adventure":
+		survival_prep_remaining = 0.0
+		survival_time_remaining = 0.0
+		if is_instance_valid(survival_progress_label):
+			survival_progress_label.visible = false
+		if is_instance_valid(survival_progress_bar):
+			survival_progress_bar.visible = false
+		_set_message_puzzle_visible(false)
+		_clear_rescue_citizen()
+		_hide_adventure_treasure()
 	returning_to_fuel = false
 	active_job_stops.clear()
 	_remove_job_package()
