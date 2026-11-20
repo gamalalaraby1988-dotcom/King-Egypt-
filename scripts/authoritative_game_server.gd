@@ -159,6 +159,7 @@ func _on_peer_connected(peer_id: int) -> void:
 		"velocity": Vector3.ZERO,
 		"last_sequence": -1,
 		"last_input_usec": 0,
+		"last_safe_position": SPAWN_POSITION,
 		"input_window_usec": Time.get_ticks_usec(),
 		"input_count": 0,
 		"reached_objectives": {},
@@ -245,6 +246,9 @@ func _on_auth_request_completed(result: int, response_code: int, _headers: Packe
 		return
 	var body_node := CharacterBody3D.new()
 	body_node.name = "AuthoritativePlayer_%d" % peer_id
+	# Players collide with world geometry only, never with other players or vehicles.
+	body_node.collision_layer = 2
+	body_node.collision_mask = 1
 	body_node.position = SPAWN_POSITION
 	body_node.floor_snap_length = 0.25
 	var collision := CollisionShape3D.new()
@@ -639,9 +643,19 @@ func _physics_process(delta: float) -> void:
 		var body := session.get("body") as CharacterBody3D
 		if not is_instance_valid(body):
 			continue
-		if body.global_position.y < -15.0:
-			body.global_position = SPAWN_POSITION
+		var current_position := body.global_position
+		var outside_city := absf(current_position.x) > 155.0 or current_position.z < -340.0 or current_position.z > 180.0
+		if current_position.y < -3.0 or outside_city:
+			var safe_position: Vector3 = session.get("last_safe_position", SPAWN_POSITION)
+			if safe_position.y < -3.0 or absf(safe_position.x) > 155.0 or safe_position.z < -340.0 or safe_position.z > 180.0:
+				safe_position = SPAWN_POSITION
+			body.global_position = safe_position + Vector3.UP * 0.15
 			body.velocity = Vector3.ZERO
+			session["velocity"] = Vector3.ZERO
+			session["direction"] = Vector3.ZERO
+			session["sprint"] = false
+		elif body.is_on_floor() and current_position.y > -0.25:
+			session["last_safe_position"] = current_position
 		var direction: Vector3 = session.get("direction", Vector3.ZERO)
 		var last_input_usec := int(session.get("last_input_usec", 0))
 		if Time.get_ticks_usec() - last_input_usec > 250000:
@@ -658,6 +672,7 @@ func _physics_process(delta: float) -> void:
 		else:
 			velocity.y = 0.0
 		body.velocity = velocity
+		_try_player_step_up(body, safe_delta)
 		body.move_and_slide()
 		if direction.length() > 0.1:
 			body.rotation.y = atan2(direction.x, direction.z)
@@ -712,3 +727,22 @@ func receive_authoritative_state(position: Vector3, rotation_y: float, velocity:
 	if multiplayer.is_server() or not is_authenticated():
 		return
 	authoritative_state_received.emit(position, rotation_y, velocity)
+
+
+func _try_player_step_up(body: CharacterBody3D, delta: float) -> void:
+	# Server-authoritative low-curb assist, shared by all online players.
+	if not body.is_on_floor() or Vector2(body.velocity.x, body.velocity.z).length() < 0.15:
+		return
+	var horizontal_motion := Vector3(body.velocity.x, 0.0, body.velocity.z) * maxf(delta, 0.001)
+	if not body.test_move(body.global_transform, horizontal_motion):
+		return
+	var raised := body.global_transform
+	raised.origin.y += 0.38
+	if body.test_move(raised, horizontal_motion):
+		return
+	var landing := KinematicCollision3D.new()
+	if not body.test_move(raised, horizontal_motion + Vector3.DOWN * 0.5, landing):
+		return
+	if landing.get_normal(0).angle_to(Vector3.UP) > deg_to_rad(50.0):
+		return
+	body.global_position.y += 0.38

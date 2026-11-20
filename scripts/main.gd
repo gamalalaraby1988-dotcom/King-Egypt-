@@ -24,6 +24,11 @@ var vehicle_occupied := false
 var _vehicle_key_was_down := false
 var _player_saved_collision_layer := 1
 var _player_saved_collision_mask := 1
+var _last_safe_player_position := Vector3(0.0, 1.0, -42.0)
+const PLAYER_RECOVERY_FALL_LIMIT := -3.0
+const CITY_SAFE_X_LIMIT := 155.0
+const CITY_SAFE_Z_MIN := -340.0
+const CITY_SAFE_Z_MAX := 180.0
 const INTERIOR_WORLD_POSITION := Vector3(1000.0, 0.0, 1000.0)
 
 func _ready() -> void:
@@ -46,6 +51,9 @@ func _ready() -> void:
 	_create_approved_city_layout()
 	_create_city_signage()
 	_create_mobile_hud()
+	var initial_player := get_node_or_null("Player") as CharacterBody3D
+	if is_instance_valid(initial_player):
+		_last_safe_player_position = initial_player.global_position
 	var key_light := get_node_or_null("DirectionalLight3D")
 	if key_light:
 		key_light.add_to_group("quality_shadow_light")
@@ -86,6 +94,7 @@ func _process(_delta: float) -> void:
 		if is_instance_valid(vehicle_summon_button):
 			vehicle_summon_button.visible = false
 		return
+	_guard_player_safety()
 	# المركبات تخص مساحة المدينة؛ أخفِ أدواتها طوال الانتقال أو الوجود داخل مبنى.
 	if interior_transition_busy or is_instance_valid(interior_root):
 		if is_instance_valid(vehicle_interaction_button):
@@ -125,6 +134,33 @@ func _process(_delta: float) -> void:
 	if is_instance_valid(vehicle_interaction_button):
 		vehicle_interaction_button.visible = close_enough
 		vehicle_interaction_button.text = "🚪 ركوب السيارة" if CityLanguage.get_language() == "ar" else "Enter vehicle"
+
+
+func _guard_player_safety() -> void:
+	# Offline recovery only; online movement remains server-authoritative.
+	if interior_transition_busy or is_instance_valid(interior_root) or vehicle_occupied:
+		return
+	var player := get_node_or_null("Player") as CharacterBody3D
+	if not is_instance_valid(player) or not player.is_physics_processing():
+		return
+	var position := player.global_position
+	var outside_city := absf(position.x) > CITY_SAFE_X_LIMIT or position.z < CITY_SAFE_Z_MIN or position.z > CITY_SAFE_Z_MAX
+	if position.y < PLAYER_RECOVERY_FALL_LIMIT or outside_city:
+		var recovery := _last_safe_player_position
+		if not _is_safe_city_position(recovery):
+			recovery = Vector3(0.0, 1.0, -42.0)
+		player.global_position = recovery + Vector3.UP * 0.15
+		player.velocity = Vector3.ZERO
+		player.mobile_move = Vector2.ZERO
+		player.mobile_sprint = false
+		player.sitting = false
+		return
+	if player.is_on_floor() and position.y > -0.25 and _is_safe_city_position(position):
+		_last_safe_player_position = position
+
+
+func _is_safe_city_position(position: Vector3) -> bool:
+	return position.y > PLAYER_RECOVERY_FALL_LIMIT and absf(position.x) <= CITY_SAFE_X_LIMIT and position.z >= CITY_SAFE_Z_MIN and position.z <= CITY_SAFE_Z_MAX
 
 func _unhandled_input(event: InputEvent) -> void:
 	if GameModeManager.is_online_ready():

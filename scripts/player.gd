@@ -5,6 +5,8 @@ extends CharacterBody3D
 @export var run_speed: float = 6.2
 @export var acceleration: float = 18.0
 @export var gravity: float = 20.0
+@export var max_step_height: float = 0.38
+@export var step_forward_probe: float = 0.32
 @export var turn_speed: float = 10.0
 
 var mobile_move: Vector2 = Vector2.ZERO
@@ -74,6 +76,7 @@ func _physics_process(delta: float) -> void:
 	if world_direction.length() > 0.1:
 		var target_angle := atan2(world_direction.x, world_direction.z)
 		rotation.y = lerp_angle(rotation.y, target_angle, turn_speed * delta)
+	_try_step_up(delta)
 	move_and_slide()
 	var planar_speed := Vector2(velocity.x, velocity.z).length()
 	var motion_state := "idle"
@@ -199,3 +202,23 @@ func set_mobile_move(value: Vector2) -> void:
 
 func set_mobile_sprint(value: bool) -> void:
 	mobile_sprint = value
+
+
+func _try_step_up(delta: float) -> void:
+	# Small grounded step assist for sidewalks and low curbs; never climbs tall walls.
+	if not is_on_floor() or Vector2(velocity.x, velocity.z).length() < 0.15:
+		return
+	var horizontal_motion := Vector3(velocity.x, 0.0, velocity.z) * maxf(delta, 0.001)
+	if not test_move(global_transform, horizontal_motion):
+		return
+	var raised := global_transform
+	raised.origin.y += max_step_height
+	if test_move(raised, horizontal_motion):
+		return
+	var landing := KinematicCollision3D.new()
+	var landing_motion := horizontal_motion + Vector3.DOWN * (max_step_height + 0.12)
+	if not test_move(raised, landing_motion, landing):
+		return
+	if landing.get_normal(0).angle_to(Vector3.UP) > deg_to_rad(50.0):
+		return
+	global_position.y += max_step_height

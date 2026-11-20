@@ -8,6 +8,7 @@ extends CharacterBody3D
 @export var braking: float = 28.0
 @export var steering_speed: float = 1.8
 @export var gravity: float = 20.0
+@export var max_step_height: float = 0.42
 
 var drive_pressed := false
 var brake_pressed := false
@@ -36,6 +37,7 @@ func _physics_process(delta: float) -> void:
 		velocity.y -= gravity * delta
 	else:
 		velocity.y = 0.0
+	_try_step_up(delta)
 	move_and_slide()
 
 func set_drive(value: bool) -> void:
@@ -54,3 +56,22 @@ func set_reverse(value: bool) -> void:
 
 func set_steering(value: float) -> void:
 	steering_input = clampf(value, -1.0, 1.0)
+
+
+func _try_step_up(delta: float) -> void:
+	# Lets the car roll onto low curbs while preserving collision with tall obstacles.
+	if not is_on_floor() or Vector2(velocity.x, velocity.z).length() < 0.25:
+		return
+	var horizontal_motion := Vector3(velocity.x, 0.0, velocity.z) * maxf(delta, 0.001)
+	if not test_move(global_transform, horizontal_motion):
+		return
+	var raised := global_transform
+	raised.origin.y += max_step_height
+	if test_move(raised, horizontal_motion):
+		return
+	var landing := KinematicCollision3D.new()
+	if not test_move(raised, horizontal_motion + Vector3.DOWN * (max_step_height + 0.16), landing):
+		return
+	if landing.get_normal(0).angle_to(Vector3.UP) > deg_to_rad(50.0):
+		return
+	global_position.y += max_step_height
