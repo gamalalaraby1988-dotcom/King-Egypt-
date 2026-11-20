@@ -47,6 +47,13 @@ static func get_machine_rules(machine_id: String) -> Dictionary:
 	}
 
 
+static func get_gross_return_chips(wager_chips: int, payout_multiplier_tenths: int) -> int:
+	if wager_chips < MIN_BET_CHIPS or payout_multiplier_tenths < 0:
+		return 0
+	# Positive integer division deliberately rounds fractional chip returns down.
+	return int((wager_chips * payout_multiplier_tenths) / 10)
+
+
 static func get_payout_multiplier_tenths(symbol_indices: Array) -> int:
 	if symbol_indices.size() != REEL_COUNT:
 		return 0
