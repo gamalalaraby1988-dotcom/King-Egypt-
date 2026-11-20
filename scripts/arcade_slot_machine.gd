@@ -454,7 +454,7 @@ func _on_spin_pressed() -> void:
 	_slot_spin_pending = true
 	_spin_button.disabled = true
 	_status_label.text = "جارٍ اعتماد اللفة على الخادم..."
-	AuthoritativeGameServer.request_arcade_slot_spin("paid", MIN_BET_CHIPS)
+	AuthoritativeGameServer.request_arcade_slot_spin("auto", MIN_BET_CHIPS)
 
 
 func _on_authoritative_spin_settled(session_id: String, result: Dictionary) -> void:
