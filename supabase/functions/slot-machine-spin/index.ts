@@ -141,16 +141,15 @@ Deno.serve(async (req: Request) => {
   const eventId = String(body.server_event_id ?? "");
   const machineId = String(body.machine_id ?? "");
   const spinType = String(body.spin_type ?? "");
-  const wager = spinType === "free" ? 10 : body.wager_chips;
+  const wager = body.wager_chips;
   const issuedAt = body.issued_at;
   const signatureHex = String(body.signature_hex ?? "").toLowerCase();
 
   if (
     !UUID_RE.test(userId) || !UUID_RE.test(sessionId) || !UUID_RE.test(eventId) ||
-    !Object.hasOwn(MACHINE_WEIGHTS, machineId) || !["paid", "free", "auto"].includes(spinType) ||
+    !Object.hasOwn(MACHINE_WEIGHTS, machineId) || spinType !== "auto" ||
     typeof wager !== "number" || !Number.isSafeInteger(wager) ||
-    (spinType !== "free" && (wager < 10 || wager > 2_000_000_000)) ||
-    (spinType === "free" && wager !== 10) ||
+    (wager < 10 || wager > 2_000_000_000) ||
     typeof issuedAt !== "number" || !Number.isSafeInteger(issuedAt) ||
     !/^[0-9a-f]{64}$/.test(signatureHex)
   ) return json({ error: "invalid_slot_spin_intent" }, 400);
@@ -179,22 +178,18 @@ Deno.serve(async (req: Request) => {
 
   let rpcResponse: Response;
   try {
-    const autoSpin = spinType === "auto";
-    const rpcName = autoSpin ? "settle_arcade_slot_spin_auto" : "settle_arcade_slot_spin";
-    const rpcPayload: Record<string, unknown> = {
-      p_user_id: userId,
-      p_session_id: sessionId,
-      p_server_event_id: eventId,
-      p_machine_id: machineId,
-      p_wager_chips: wager,
-      p_reel_symbols: outcome.reelSymbols,
-      p_collection_symbols: outcome.collectionSymbols,
-    };
-    if (!autoSpin) rpcPayload.p_spin_type = spinType;
-    rpcResponse = await fetch(projectUrl + "/rest/v1/rpc/" + rpcName, {
+    rpcResponse = await fetch(projectUrl + "/rest/v1/rpc/settle_arcade_slot_spin_auto", {
       method: "POST",
       headers: { "apikey": secretKey, "Content-Type": "application/json", "Accept": "application/json" },
-      body: JSON.stringify(rpcPayload),
+      body: JSON.stringify({
+        p_user_id: userId,
+        p_session_id: sessionId,
+        p_server_event_id: eventId,
+        p_machine_id: machineId,
+        p_wager_chips: wager,
+        p_reel_symbols: outcome.reelSymbols,
+        p_collection_symbols: outcome.collectionSymbols,
+      }),
     });
   } catch {
     return json({ error: "slot_spin_database_unavailable" }, 503);
