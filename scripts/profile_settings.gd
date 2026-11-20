@@ -3,8 +3,6 @@ extends Node
 
 const ProfileConfigStore = preload("res://scripts/profile_config_store.gd")
 
-func _save_path() -> String:
-	return ProfileConfigStore.get_active_profile_path()
 var mission_manager: Node
 var player: Node3D
 var panel: PanelContainer
@@ -17,6 +15,9 @@ var info_label: Label
 var shadow_light: DirectionalLight3D
 var root_control: Control
 var founder_identity_label: Label
+
+func _save_path() -> String:
+	return ProfileConfigStore.get_active_profile_path()
 
 func _ready() -> void:
 	_build_ui()
