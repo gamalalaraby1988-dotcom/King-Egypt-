@@ -502,6 +502,8 @@ func _refresh_wallet_cache() -> bool:
 	return true
 
 func _save_profile() -> bool:
+	if ProfileConfigStore.is_account_switch_in_progress():
+		return false
 	if not _refresh_wallet_cache():
 		push_warning("تخطي حفظ ملف اللاعب لأن المحفظة غير مهيأة أو موقوفة للمراجعة.")
 		return false
