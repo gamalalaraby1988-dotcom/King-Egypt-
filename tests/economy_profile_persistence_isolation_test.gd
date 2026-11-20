@@ -5,6 +5,7 @@ const Store = preload("res://scripts/profile_config_store.gd")
 const TEST_PATH := "user://economy_profile_isolation_test.cfg"
 const TEMP_PATH := "user://economy_profile_isolation_test.cfg.tmp"
 const BACKUP_PATH := "user://economy_profile_isolation_test.cfg.backup"
+const WALLET_PENDING_PATH := "user://economy_profile_isolation_test.cfg.wallet.pending"
 const CORRUPT_PATH := "user://economy_profile_corrupt_test.cfg"
 const CORRUPT_TEMP_PATH := "user://economy_profile_corrupt_test.cfg.tmp"
 const CORRUPT_BACKUP_PATH := "user://economy_profile_corrupt_test.cfg.backup"
@@ -18,7 +19,7 @@ func _remove_if_exists(path: String) -> void:
 		DirAccess.remove_absolute(absolute)
 
 func _cleanup() -> void:
-	for path in [TEST_PATH, TEMP_PATH, BACKUP_PATH, BACKUP_PATH + ".pending", CORRUPT_PATH, CORRUPT_TEMP_PATH, CORRUPT_BACKUP_PATH, CORRUPT_BACKUP_PATH + ".pending"]:
+	for path in [TEST_PATH, TEMP_PATH, BACKUP_PATH, BACKUP_PATH + ".pending", WALLET_PENDING_PATH, CORRUPT_PATH, CORRUPT_TEMP_PATH, CORRUPT_BACKUP_PATH, CORRUPT_BACKUP_PATH + ".pending"]:
 		_remove_if_exists(path)
 
 func _fail(message: String) -> void:
@@ -48,17 +49,28 @@ func _run() -> void:
 		_fail("Could not load stale settings snapshot.")
 		return
 
-	if not Store.save_sections(TEST_PATH, {
-		"profile": {"money": 925, "chips": 42, "owned_vehicles": ["toyota_corolla", "hyundai_elantra"]},
-		"wallet": {
-			"balances": {"money": 925, "chips": 42, "gems": 12},
-			"receipts": {"purchase_vehicle_toyota": "receipt-1", "purchase_vehicle_elantra": "receipt-2"},
-			"ledger": [{"transaction_id": "receipt-1", "amount": 50}, {"transaction_id": "receipt-2", "amount": 25}],
-			"integrity_seal": "new-test-seal"
-		}
-	}, TEMP_PATH, BACKUP_PATH):
-		_fail("Could not write the newer wallet snapshot.")
+	var wallet_writer := ConfigFile.new()
+	if wallet_writer.load(TEST_PATH) != OK:
+		_fail("Wallet writer could not load the latest profile.")
 		return
+	wallet_writer.set_value("profile", "money", 925)
+	wallet_writer.set_value("profile", "chips", 42)
+	wallet_writer.set_value("profile", "owned_vehicles", ["toyota_corolla", "hyundai_elantra"])
+	wallet_writer.set_value("wallet", "balances", {"money": 925, "chips": 42, "gems": 12})
+	wallet_writer.set_value("wallet", "receipts", {"purchase_vehicle_toyota": "receipt-1", "purchase_vehicle_elantra": "receipt-2"})
+	wallet_writer.set_value("wallet", "ledger", [{"transaction_id": "receipt-1", "amount": 50}, {"transaction_id": "receipt-2", "amount": 25}])
+	wallet_writer.set_value("wallet", "integrity_seal", "new-test-seal")
+	if wallet_writer.save(TEMP_PATH) != OK:
+		_fail("Wallet writer could not stage the new snapshot.")
+		return
+	if DirAccess.rename_absolute(ProjectSettings.globalize_path(TEST_PATH), ProjectSettings.globalize_path(WALLET_PENDING_PATH)) != OK:
+		_fail("Wallet writer could not rotate the previous snapshot.")
+		return
+	if DirAccess.rename_absolute(ProjectSettings.globalize_path(TEMP_PATH), ProjectSettings.globalize_path(TEST_PATH)) != OK:
+		DirAccess.rename_absolute(ProjectSettings.globalize_path(WALLET_PENDING_PATH), ProjectSettings.globalize_path(TEST_PATH))
+		_fail("Wallet writer could not install the new snapshot.")
+		return
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(WALLET_PENDING_PATH))
 
 	# The settings writer receives stale UI values, but may update only its own keys.
 	if not Store.save_sections(TEST_PATH, {
