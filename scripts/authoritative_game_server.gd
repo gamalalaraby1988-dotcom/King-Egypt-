@@ -320,7 +320,7 @@ func request_launch_arcade_session(session_id: String) -> void:
 
 
 func request_arcade_slot_spin(spin_type: String, wager_chips: int = 10) -> void:
-	if _is_dedicated_server or not is_authenticated() or not ["paid", "free"].has(spin_type):
+	if _is_dedicated_server or not is_authenticated() or not ["paid", "free", "auto"].has(spin_type):
 		return
 	request_arcade_slot_spin_rpc.rpc_id(1, spin_type, wager_chips)
 
@@ -699,7 +699,7 @@ func request_arcade_slot_spin_rpc(spin_type: String, wager_chips: int) -> void:
 	var peer_id := multiplayer.get_remote_sender_id()
 	if not _sessions.has(peer_id) or not bool(_sessions[peer_id].get("authenticated", false)):
 		return
-	if not ["paid", "free"].has(spin_type):
+	if not ["paid", "free", "auto"].has(spin_type):
 		return
 	var session_id := str(_peer_arcade_sessions.get(peer_id, ""))
 	var session: Dictionary = _arcade_sessions.get(session_id, {})
@@ -719,7 +719,7 @@ func request_arcade_slot_spin_rpc(spin_type: String, wager_chips: int) -> void:
 	if body.global_position.distance_to(anchor.global_position) > ARCADE_MACHINE_INTERACTION_RADIUS:
 		_notify_slot_spin_failed(peer_id, session_id, "يجب البقاء بجوار الماكينة أثناء اللعب.")
 		return
-	if spin_type == "paid" and (wager_chips < 10 or wager_chips > 2000000000):
+	if spin_type in ["paid", "auto"] and (wager_chips < 10 or wager_chips > 2000000000):
 		_notify_slot_spin_failed(peer_id, session_id, "قيمة الرهان غير صالحة.")
 		return
 	if spin_type == "free" and wager_chips != 10:
@@ -758,7 +758,7 @@ func request_arcade_slot_spin_rpc(spin_type: String, wager_chips: int) -> void:
 		"issued_at": issued_at,
 		"signature_hex": hmac_context.finish().hex_encode()
 	}
-	if spin_type == "paid":
+	if spin_type in ["paid", "auto"]:
 		payload["wager_chips"] = wager_chips
 	_pending_slot_spins[session_id] = event_id
 	_send_slot_spin_request(peer_id, session_id, payload, 0, base_url, publishable_key)
