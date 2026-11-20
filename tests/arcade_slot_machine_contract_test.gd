@@ -33,7 +33,7 @@ func _run_arcade_machine_tests() -> void:
 			return
 
 	var controls := machine.get_node("SlotMachineTouchLayer/SlotMachineControls")
-	for required_control in ["KingOfEgyptBrand", "BalanceValue", "BetValue", "WinValue", "DecreaseBetButton", "IncreaseBetButton", "MaxBetButton", "SpinButton", "AutoButton", "LeaveSeatButton", "MinimumBetNote"]:
+	for required_control in ["KingOfEgyptBrand", "BalanceValue", "BetValue", "WinValue", "DecreaseBetButton", "IncreaseBetButton", "MaxBetButton", "SpinButton", "AutoButton", "LeaveSeatButton", "MinimumBetNote", "CameraSwipeHint"]:
 		if controls.find_child(required_control, true, false) == null:
 			push_error("Missing chip/bet display control: " + required_control)
 			machine.queue_free()
@@ -129,6 +129,16 @@ func _run_arcade_machine_tests() -> void:
 	var player_source := FileAccess.get_file_as_string("res://scripts/player.gd")
 	if not player_source.contains("func set_arcade_seated") or not player_source.contains("func end_arcade_seat"):
 		push_error("Player arcade seating lock/unlock methods are missing.")
+		machine.queue_free()
+		quit(1)
+		return
+	if not player_source.contains("func _unhandled_input") or not player_source.contains("InputEventScreenDrag") or not player_source.contains("func _apply_arcade_camera_drag"):
+		push_error("Seated arcade camera swipe controls are missing.")
+		machine.queue_free()
+		quit(1)
+		return
+	if not player_source.contains("ARCADE_CAMERA_YAW_LIMIT") or not player_source.contains("ARCADE_CAMERA_PITCH_MIN") or not player_source.contains("camera_reset.tween_property"):
+		push_error("Seated camera limits and smooth reset are required.")
 		machine.queue_free()
 		quit(1)
 		return

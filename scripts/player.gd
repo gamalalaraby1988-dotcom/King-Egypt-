@@ -14,11 +14,19 @@ var mobile_sprint: bool = false
 var sitting := false
 var arcade_seated := false
 var _sit_key_was_down := false
+var _arcade_touch_index: int = -1
+var _arcade_mouse_dragging := false
+var _arcade_camera_default_rotation: Vector3 = Vector3.ZERO
+const ARCADE_CAMERA_DRAG_SENSITIVITY: float = 0.006
+const ARCADE_CAMERA_PITCH_MIN: float = -0.72
+const ARCADE_CAMERA_PITCH_MAX: float = 0.24
+const ARCADE_CAMERA_YAW_LIMIT: float = 1.15
 var animal_riding := false
 var ride_visual: Node3D = null
 @onready var camera_pivot: Node3D = $CameraPivot
 
 func _ready() -> void:
+	_arcade_camera_default_rotation = camera_pivot.rotation
 	add_to_group("player")
 	if not AuthoritativeGameServer.authoritative_state_received.is_connected(_apply_authoritative_state):
 		AuthoritativeGameServer.authoritative_state_received.connect(_apply_authoritative_state)
@@ -27,6 +35,41 @@ func _ready() -> void:
 		var avatar := get_node_or_null("AvatarVisual")
 		if is_instance_valid(avatar) and avatar.has_method("apply_founder_style"):
 			avatar.call("apply_founder_style")
+
+func _unhandled_input(event: InputEvent) -> void:
+	if not arcade_seated or not is_instance_valid(camera_pivot):
+		_arcade_touch_index = -1
+		_arcade_mouse_dragging = false
+		return
+	if event is InputEventScreenTouch:
+		var touch := event as InputEventScreenTouch
+		if touch.pressed:
+			if _arcade_touch_index == -1:
+				_arcade_touch_index = touch.index
+		else:
+			if touch.index == _arcade_touch_index:
+				_arcade_touch_index = -1
+	elif event is InputEventScreenDrag:
+		var drag := event as InputEventScreenDrag
+		if drag.index == _arcade_touch_index:
+			_apply_arcade_camera_drag(drag.relative)
+	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+		_arcade_mouse_dragging = event.pressed
+	elif event is InputEventMouseMotion and _arcade_mouse_dragging:
+		_apply_arcade_camera_drag((event as InputEventMouseMotion).relative)
+
+func _apply_arcade_camera_drag(relative: Vector2) -> void:
+	# أثناء الجلوس فقط: السحب الأفقي يلف الرؤية، والرأسي يرفع/يخفض زاوية الكاميرا.
+	camera_pivot.rotation.y = clampf(
+		camera_pivot.rotation.y - relative.x * ARCADE_CAMERA_DRAG_SENSITIVITY,
+		-ARCADE_CAMERA_YAW_LIMIT,
+		ARCADE_CAMERA_YAW_LIMIT
+	)
+	camera_pivot.rotation.x = clampf(
+		camera_pivot.rotation.x - relative.y * ARCADE_CAMERA_DRAG_SENSITIVITY,
+		ARCADE_CAMERA_PITCH_MIN,
+		ARCADE_CAMERA_PITCH_MAX
+	)
 
 func _physics_process(delta: float) -> void:
 	if arcade_seated:
@@ -209,6 +252,12 @@ func end_arcade_seat(world_position: Vector3, facing_y: float = 0.0) -> void:
 	velocity = Vector3.ZERO
 	mobile_move = Vector2.ZERO
 	mobile_sprint = false
+	_arcade_touch_index = -1
+	_arcade_mouse_dragging = false
+	if is_instance_valid(camera_pivot):
+		var camera_reset := create_tween()
+		camera_reset.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+		camera_reset.tween_property(camera_pivot, "rotation", _arcade_camera_default_rotation, 0.24)
 
 func toggle_sit() -> void:
 	# الجلوس غير متاح أثناء ركوب الحيوان حتى لا تتعارض حالتا الحركة.
