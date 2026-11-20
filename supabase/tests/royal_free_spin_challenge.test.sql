@@ -1,5 +1,5 @@
 begin;
-select extensions.plan(24);
+select extensions.plan(26);
 
 insert into auth.users (id,aud,role,email,encrypted_password,email_confirmed_at)
 values ('00000000-0000-4000-8000-000000000087','authenticated','authenticated','royal-free-spin-test@example.invalid','',pg_catalog.now())
@@ -198,6 +198,24 @@ select extensions.ok(
 select extensions.ok(
     pg_catalog.has_function_privilege('service_role','public.settle_arcade_slot_spin_auto(uuid,uuid,uuid,text,bigint,integer[],integer[])','EXECUTE'),
     'only service_role can execute automatic spin settlement'
+);
+
+set local role service_role;
+select extensions.is(
+    (public.settle_arcade_slot_spin_auto(
+        '00000000-0000-4000-8000-000000000088',
+        '10000000-0000-4000-8000-000000000088',
+        '20000000-0000-4000-8000-000000000090',
+        'vip_royal_classic',10,array[0,1,2],array[1,2,3,4,1,2,3,4,1]
+    )->>'duplicate')::boolean,
+    true,
+    'retrying the automatic free spin returns the original result without consuming twice'
+);
+reset role;
+select extensions.is(
+    (select chips from public.player_wallets where user_id='00000000-0000-4000-8000-000000000088'),
+    90::bigint,
+    'retrying an automatic free-spin event does not change the wallet or create a paid spin'
 );
 
 select * from extensions.finish();
