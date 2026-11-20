@@ -622,10 +622,16 @@ func _process(_delta: float) -> void:
 			status_label.text = "وصل بالسيارة قرب نقطة التسليم ثم انزل واحمل الطرد. المتبقي: %.1f متر" % vehicle_distance
 		else:
 			var job_distance := Vector2(player.global_position.x, player.global_position.z).distance_to(Vector2(active_job_target.x, active_job_target.z))
-			job_delivery_button.visible = job_distance <= 2.6
-			status_label.text = "احمل الطرد إلى دائرة التسليم. المتبقي: %.1f متر" % job_distance
-			if job_delivery_button.visible:
-				status_label.text = "وصلت إلى نقطة التسليم. ضع الطرد داخل الدائرة."
+			var parked_vehicle_distance := INF
+			if is_instance_valid(vehicle):
+				parked_vehicle_distance = Vector2(vehicle.global_position.x, vehicle.global_position.z).distance_to(Vector2(active_job_target.x, active_job_target.z))
+			job_delivery_button.visible = job_distance <= 2.6 and parked_vehicle_distance <= 8.0
+			if parked_vehicle_distance > 8.0:
+				status_label.text = "قرّب السيارة من نقطة التسليم أولًا، ثم انزل واحمل الطرد."
+			else:
+				status_label.text = "احمل الطرد إلى دائرة التسليم. المتبقي: %.1f متر" % job_distance
+				if job_delivery_button.visible:
+					status_label.text = "وصلت إلى نقطة التسليم. ضع الطرد داخل الدائرة."
 	if mission_running and (not is_instance_valid(active_mission) or active_mission.is_queued_for_deletion()):
 		# لا تترك اللاعب عالقًا في مهمة إذا أزيل المبنى أثناء تنفيذها.
 		mission_running = false
@@ -1238,7 +1244,14 @@ func _deliver_current_job_package() -> void:
 	if not job_running or returning_to_fuel or not is_instance_valid(player):
 		return
 	var city_root := get_tree().current_scene
-	if is_instance_valid(city_root) and bool(city_root.get("vehicle_occupied")):
+	if not is_instance_valid(city_root) or bool(city_root.get("vehicle_occupied")):
+		return
+	var vehicle := city_root.get("city_vehicle") as Node3D
+	if not is_instance_valid(vehicle):
+		return
+	var vehicle_distance := Vector2(vehicle.global_position.x, vehicle.global_position.z).distance_to(Vector2(active_job_target.x, active_job_target.z))
+	if vehicle_distance > 8.0:
+		status_label.text = "قرّب السيارة من دائرة التسليم قبل تسليم الطرد."
 		return
 	var distance := Vector2(player.global_position.x, player.global_position.z).distance_to(Vector2(active_job_target.x, active_job_target.z))
 	if distance > 2.6:
