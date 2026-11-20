@@ -508,7 +508,7 @@ func request_start_mission(mission_id: String) -> void:
 
 @rpc("any_peer", "call_remote", "reliable")
 func request_submit_message_puzzle_answer(answer: String) -> void:
-	if not multiplayer.is_server():
+	if not multiplayer.is_server() or answer.length() > 64:
 		return
 	var peer_id := multiplayer.get_remote_sender_id()
 	if not _sessions.has(peer_id) or not bool(_sessions[peer_id].get("authenticated", false)):
@@ -1260,7 +1260,7 @@ func _physics_process(delta: float) -> void:
 						if not bool(active_mission.get("puzzle_ready", false)):
 							active_mission["puzzle_ready"] = true
 							session["active_mission"] = active_mission
-							rpc_id(peer_id, "receive_mission_stage_updated", completed_mission_id, mission_target, mission_stages.size(), mission_stages.size(), "جمعت الأدلة الثلاثة. فك الشفرة وأرسل الإجابة.")
+							rpc_id(peer_id, "receive_mission_stage_updated", completed_mission_id, mission_target, mission_stages.size() + 1, mission_stages.size(), "جمعت الأدلة الثلاثة. فك الشفرة وأرسل الإجابة.")
 					else:
 						var completed_missions: Dictionary = session.get("completed_missions", {})
 						completed_missions[completed_mission_id] = true
