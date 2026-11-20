@@ -46,5 +46,17 @@ func _run_city_adventure_contract() -> void:
 		push_error("Adventure activities must not issue unconfigured rewards.")
 		quit(1)
 		return
+	if not manager_source.contains("const SURVIVAL_PREPARATION_SECONDS := 10.0") or not manager_source.contains("const SURVIVAL_DURATION_SECONDS := 60.0"):
+		push_error("Survival race must use the approved 10-second preparation and 60-second duration.")
+		quit(1)
+		return
+	if not manager_source.contains("func _update_survival_timers(") or not manager_source.contains("func _fail_local_survival_race("):
+		push_error("Offline survival race must display and enforce its countdown.")
+		quit(1)
+		return
+	if not server_source.contains("\"time_limit_seconds\": 60.0 if safe_mission_id == \"city_adventure_survival\" else 0.0") or not server_source.contains("receive_server_mission_failed"):
+		push_error("Online survival race timeout must be enforced by the authoritative server.")
+		quit(1)
+		return
 	print("City adventure activity contract checks passed.")
 	quit(0)
