@@ -1,8 +1,6 @@
 extends Node
 const ProfileConfigStore = preload("res://scripts/profile_config_store.gd")
 
-func _save_path() -> String:
-	return ProfileConfigStore.get_active_profile_path()
 ## مرجع ملكية المركبات وعمليات شرائها. لا يمثل وجود هذا الكتالوج توافر مجسمات 3D لكل مركبة.
 const DEFAULT_OWNED := ["pharaonic_scooter", "toyota_corolla", "hyundai_elantra", "byd_qin_plus"]
 const VEHICLES := {
@@ -28,6 +26,9 @@ const HORUS_COLORS := {
 	"golden_horus": {"name": "الذهب الخالص", "price": 600}
 }
 var selected_vehicle_id := "toyota_corolla"
+
+func _save_path() -> String:
+	return ProfileConfigStore.get_active_profile_path()
 
 func get_catalog() -> Dictionary:
 	return VEHICLES.duplicate(true)
