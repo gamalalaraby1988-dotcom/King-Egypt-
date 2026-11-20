@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: king-of-egypt-city-game-test
+    runtime: docker
+    plan: free
+    region: frankfurt
+    branch: deploy/render-free-wss-proxy
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /healthz
+    autoDeploy: false
+    envVars:
+      - key: PORT
+        value: "10000"
+      - key: KING_CITY_GAME_PORT
+        value: "2456"
+      - key: KING_CITY_TLS_TERMINATED_BY_PROXY
+        value: "1"
+      - key: KING_CITY_PROOF_HMAC_SECRET_B64
+        sync: false
