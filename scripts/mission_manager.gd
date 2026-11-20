@@ -677,11 +677,6 @@ func _update_interaction_target() -> void:
 func _interaction_action_key(target: Node3D) -> String:
 	if target.has_meta("palace_portal_target"):
 		return "interaction_enter"
-	if target.has_meta("palace_portal_target"):
-		var city_root := get_tree().current_scene
-		if is_instance_valid(city_root) and city_root.has_method("use_palace_portal"):
-			city_root.use_palace_portal(target, player)
-		return
 	if target.has_method("sit_player"):
 		return "interaction_talk"
 	if target.has_method("get_development_data"):
@@ -753,6 +748,11 @@ func open_interactable(target: Node3D) -> void:
 	var allowed_distance := float(radius_value) if radius_value != null else 4.5
 	if player.global_position.distance_to(target.global_position) > clampf(allowed_distance, 0.5, 4.8) + 0.65:
 		_update_interaction_target()
+		return
+	if target.has_meta("palace_portal_target"):
+		var city_root := get_tree().current_scene
+		if is_instance_valid(city_root) and city_root.has_method("use_palace_portal"):
+			city_root.use_palace_portal(target, player)
 		return
 	if target.has_method("sit_player"):
 		var seated := bool(target.call("sit_player", player))
