@@ -68,6 +68,25 @@ jobs:
             exit 1
           fi
 
+      - name: Run monthly season calendar tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          GODOT="/tmp/godot/Godot_v4.7.2-stable_linux.x86_64"
+          LOG="/tmp/godot-season-calendar-tests.log"
+          set +e
+          "$GODOT" --headless --path . --script res://tests/game_calendar_test.gd 2>&1 | tee "$LOG"
+          GODOT_STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$GODOT_STATUS" -ne 0 ]; then
+            echo "Monthly season calendar tests exited with code $GODOT_STATUS."
+            exit "$GODOT_STATUS"
+          fi
+          if grep -E '(^|[[:space:]])(ERROR|SCRIPT ERROR):|Parse Error:|Monthly season .* failed|Egypt game calendar .* failed' "$LOG"; then
+            echo "Monthly season calendar tests reported an error."
+            exit 1
+          fi
+
       - name: Run wallet transaction tests
         shell: bash
         run: |
