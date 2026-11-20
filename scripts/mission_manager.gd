@@ -1136,10 +1136,10 @@ func _update_survival_race_hud() -> void:
 	var active := selected_adventure_id == "city_adventure_survival" and (mission_running or survival_prep_remaining > 0.0)
 	if is_instance_valid(survival_progress_label):
 		survival_progress_label.visible = active
-		survival_progress_label.text = "نقاط السباق: %d / 5" % clampi(adventure_stage_index + (1 if mission_running else 0), 0, 5)
+		survival_progress_label.text = "نقاط السباق: %d / 5" % clampi(adventure_stage_index, 0, 5)
 	if is_instance_valid(survival_progress_bar):
 		survival_progress_bar.visible = active
-		survival_progress_bar.value = clampf(float(adventure_stage_index + (1 if mission_running else 0)), 0.0, 5.0)
+		survival_progress_bar.value = clampf(float(adventure_stage_index), 0.0, 5.0)
 
 
 func _accept_adventure() -> void:
@@ -1277,7 +1277,7 @@ func _on_server_mission_stage_updated(mission_id: String, server_target: Vector3
 	adventure_stage_index = stage_number - 1
 	if mission_id == "city_adventure_survival":
 		_update_survival_race_hud()
-		status_label.text = "اجتزت النقطة %d من 5! تابع السباق." % stage_number
+		status_label.text = "اجتزت النقطة %d من 5! تابع السباق." % maxi(stage_number - 1, 1)
 	if mission_id == "city_adventure_rescue" and stage_number > 1:
 		_clear_rescue_citizen()
 	target_marker.global_position = active_target
@@ -2168,7 +2168,7 @@ func _build_ui() -> void:
 
 	panel = PanelContainer.new()
 	panel.position = Vector2(220, 120)
-	panel.size = Vector2(500, 320)
+	panel.size = Vector2(500, 360)
 	panel.visible = false
 	root_control.add_child(panel)
 	var content := VBoxContainer.new()
