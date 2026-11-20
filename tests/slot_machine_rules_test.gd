@@ -75,7 +75,7 @@ func _run_slot_rules_tests() -> void:
 		quit(1)
 		return
 	# Collection bonuses count eligible machine-specific symbols anywhere in one 3x3 result.
-	var royal_three: Dictionary = rules_script.get_collection_result("vip_royal_classic", [0, 1, 2, 3, 0, 1, 2, 3, 4])
+	var royal_three: Dictionary = rules_script.get_collection_result("vip_royal_classic", [0, 1, 2, 3, 0, 1, 2, 3, 0])
 	if not bool(royal_three.valid) or int(royal_three.match_count) != 3 or int(royal_three.activity_multiplier) != 10:
 		push_error("Three Royal Classic scarabs in any positions must award 10x activity.")
 		quit(1)
@@ -90,7 +90,7 @@ func _run_slot_rules_tests() -> void:
 		push_error("Nine matching Golden Crown collectibles must award 100x activity.")
 		quit(1)
 		return
-	var four_matches: Dictionary = rules_script.get_collection_result("vip_royal_classic", [0, 0, 1, 2, 4, 3, 0, 1, 2])
+	var four_matches: Dictionary = rules_script.get_collection_result("vip_royal_classic", [0, 0, 0, 0, 4, 3, 1, 2, 3])
 	if int(four_matches.activity_multiplier) != 15:
 		push_error("Four matching collection symbols must award 15x activity.")
 		quit(1)
