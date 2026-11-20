@@ -4,11 +4,13 @@ extends RefCounted
 static var _write_in_progress := false
 static var _active_account_id := ""
 static var _active_profile_path := "user://kings_city_profile.cfg"
+static var _active_account_key := ""
 
 static func set_active_account(user_id: String) -> bool:
 	var normalized := user_id.strip_edges()
 	if normalized.is_empty():
 		_active_account_id = ""
+		_active_account_key = ""
 		_active_profile_path = "user://kings_city_profile.cfg"
 		return true
 	if normalized.length() > 128:
@@ -22,6 +24,7 @@ static func set_active_account(user_id: String) -> bool:
 	if DirAccess.make_dir_recursive_absolute(directory) != OK and not DirAccess.dir_exists_absolute(directory):
 		return false
 	_active_account_id = normalized
+	_active_account_key = account_key
 	_active_profile_path = "user://accounts/player_%s.cfg" % account_key
 	return true
 
@@ -30,6 +33,12 @@ static func get_active_account_id() -> String:
 
 static func get_active_profile_path() -> String:
 	return _active_profile_path
+
+static func get_active_scoped_path(legacy_path: String) -> String:
+	if _active_account_key.is_empty():
+		return legacy_path
+	var file_name := legacy_path.get_file()
+	return "user://accounts/player_%s.%s" % [_active_account_key, file_name]
 
 
 static func save_sections(file_path: String, section_updates: Dictionary, temp_path: String = "", backup_path: String = "") -> bool:
