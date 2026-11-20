@@ -241,7 +241,7 @@ func _on_exit_pressed() -> void:
 	var player := _seated_player
 	_seated_player = null
 	var target_position := _exit_anchor.global_position
-	var target_rotation := global_rotation.y + PI
+	var target_rotation := global_rotation.y
 	if _transition_tween and _transition_tween.is_running():
 		_transition_tween.kill()
 	_transition_tween = create_tween()
