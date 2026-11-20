@@ -1,4 +1,8 @@
 extends Node
+const ProfileConfigStore = preload("res://scripts/profile_config_store.gd")
+
+func _save_path() -> String:
+	return ProfileConfigStore.get_active_profile_path()
 ## مهام بأهداف حركة فعلية وتقدم خبرة محلي داخل جلسة اللعب.
 
 var player: Node3D
@@ -111,7 +115,6 @@ const CITY_ADVENTURE_STAGES := {
 	"city_adventure_survival": [Vector3(-60.0, 0.15, 45.0), Vector3(-30.0, 0.15, 45.0), Vector3(0.0, 0.15, 45.0), Vector3(30.0, 0.15, 45.0), Vector3(60.0, 0.15, 45.0)]
 }
 
-const SAVE_PATH := "user://kings_city_profile.cfg"
 const MAX_CURRENCY_BALANCE := 2000000000
 
 # الوظائف السبع المعتمدة متاحة من مكتب التوظيف الموحد.
@@ -201,8 +204,8 @@ func grant_reward_once(reward_id: String, money_amount: int = 0, xp_amount: int 
 	var next_receipts := reward_receipts.duplicate(true)
 	next_receipts[reward_id] = Time.get_datetime_string_from_system()
 	var config := ConfigFile.new()
-	var load_error := config.load(SAVE_PATH)
-	if load_error != OK and FileAccess.file_exists(SAVE_PATH):
+	var load_error := config.load(_save_path())
+	if load_error != OK and FileAccess.file_exists(_save_path()):
 		push_warning("ملف اللاعب موجود لكنه غير قابل للقراءة؛ أُوقفت إضافة المكافأة لحماية البيانات.")
 		return false
 	config.set_value("profile", "player_level", next_level)
@@ -245,8 +248,8 @@ func record_achievement_event_once(event_id: String, stat_key: String) -> bool:
 	next_totals[stat_key] = int(next_totals.get(stat_key, 0)) + 1
 	next_events[event_id] = Time.get_datetime_string_from_system()
 	var config := ConfigFile.new()
-	var load_error := config.load(SAVE_PATH)
-	if load_error != OK and FileAccess.file_exists(SAVE_PATH):
+	var load_error := config.load(_save_path())
+	if load_error != OK and FileAccess.file_exists(_save_path()):
 		push_warning("ملف اللاعب غير قابل للقراءة؛ لم يتم تسجيل تقدم الإنجاز.")
 		return false
 	config.set_value("profile", "player_level", player_level)
@@ -281,8 +284,8 @@ func initialize_achievement_totals_if_missing(legacy_totals: Dictionary) -> bool
 		return false
 	var migrated := {"jobs": maxi(0, int(legacy_totals.get("jobs", 0))), "missions": maxi(0, int(legacy_totals.get("missions", 0))), "daily_claims": maxi(0, int(legacy_totals.get("daily_claims", 0)))}
 	var config := ConfigFile.new()
-	var load_error := config.load(SAVE_PATH)
-	if load_error != OK and FileAccess.file_exists(SAVE_PATH):
+	var load_error := config.load(_save_path())
+	if load_error != OK and FileAccess.file_exists(_save_path()):
 		push_warning("تعذر ترحيل عدادات الإنجازات لأن ملف اللاعب غير قابل للقراءة.")
 		return false
 	config.set_value("profile", "player_level", player_level)
@@ -360,8 +363,8 @@ func complete_activity_once(activity_id: String, activity_kind: String, money_am
 		next_daily_progress[today_key] = today_progress
 		next_daily_events[daily_event_id] = Time.get_datetime_string_from_system()
 	var config := ConfigFile.new()
-	var load_error := config.load(SAVE_PATH)
-	if load_error != OK and FileAccess.file_exists(SAVE_PATH):
+	var load_error := config.load(_save_path())
+	if load_error != OK and FileAccess.file_exists(_save_path()):
 		push_warning("ملف اللاعب غير قابل للقراءة؛ لم يُعتمد إكمال النشاط أو مكافأته.")
 		return false
 	config.set_value("profile", "player_level", next_level)
@@ -502,8 +505,8 @@ func _save_profile() -> bool:
 		push_warning("تخطي حفظ ملف اللاعب لأن المحفظة غير مهيأة أو موقوفة للمراجعة.")
 		return false
 	var config := ConfigFile.new()
-	var load_error := config.load(SAVE_PATH)
-	if load_error != OK and FileAccess.file_exists(SAVE_PATH):
+	var load_error := config.load(_save_path())
+	if load_error != OK and FileAccess.file_exists(_save_path()):
 		push_warning("ملف اللاعب غير قابل للقراءة؛ لم تتم الكتابة فوقه.")
 		return false
 	config.set_value("profile", "player_level", player_level)
@@ -526,8 +529,8 @@ func _save_profile() -> bool:
 
 func _load_profile() -> void:
 	var config := ConfigFile.new()
-	var error := config.load(SAVE_PATH)
-	if error != OK and FileAccess.file_exists(SAVE_PATH):
+	var error := config.load(_save_path())
+	if error != OK and FileAccess.file_exists(_save_path()):
 		push_warning("تعذر قراءة ملف اللاعب؛ تم إيقاف الترحيل لتجنب فقدان البيانات.")
 		return
 	if error == OK:
