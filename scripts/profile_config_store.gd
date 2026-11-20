@@ -5,6 +5,20 @@ static var _write_in_progress := false
 static var _active_account_id := ""
 static var _active_profile_path := "user://kings_city_profile.cfg"
 static var _active_account_key := ""
+static var _account_switch_in_progress := false
+
+static func begin_account_switch(user_id: String) -> bool:
+	_account_switch_in_progress = true
+	if not set_active_account(user_id):
+		_account_switch_in_progress = false
+		return false
+	return true
+
+static func complete_account_switch() -> void:
+	_account_switch_in_progress = false
+
+static func is_account_switch_in_progress() -> bool:
+	return _account_switch_in_progress
 
 static func set_active_account(user_id: String) -> bool:
 	var normalized := user_id.strip_edges()
