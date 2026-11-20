@@ -85,6 +85,11 @@ var _pending_verified_proofs: Array[Dictionary] = []
 var _reward_claim_inflight := false
 var selected_adventure_id := ""
 var adventure_stage_index := 0
+var survival_prep_remaining := 0.0
+var survival_time_remaining := 0.0
+var survival_start_pending_online := false
+const SURVIVAL_PREPARATION_SECONDS := 10.0
+const SURVIVAL_DURATION_SECONDS := 60.0
 const CITY_ADVENTURES := {
 	"city_adventure_rescue": {"title": "مهمة الإنقاذ", "description": "اتجه إلى مركز الإنقاذ ثم إلى مركز الشرطة لإتمام المهمة."},
 	"city_adventure_treasure": {"title": "الكنز المفقود", "description": "اتبع الأدلة بين مواقع المدينة الموجودة حتى تصل إلى الهدف."},
@@ -124,6 +129,7 @@ func _ready() -> void:
 	AuthoritativeGameServer.job_completed.connect(_on_server_job_completed)
 	AuthoritativeGameServer.mission_start_result.connect(_on_server_mission_start_result)
 	AuthoritativeGameServer.mission_stage_updated.connect(_on_server_mission_stage_updated)
+	AuthoritativeGameServer.mission_failed.connect(_on_server_mission_failed)
 	AuthoritativeGameServer.mission_completed.connect(_on_server_mission_completed)
 	AuthoritativeGameServer.activity_proof_received.connect(_on_server_activity_proof_received)
 	AuthoritativeGameServer.activity_proof_failed.connect(_on_server_activity_proof_failed)
@@ -140,6 +146,8 @@ func _exit_tree() -> void:
 		AuthoritativeGameServer.mission_start_result.disconnect(_on_server_mission_start_result)
 	if AuthoritativeGameServer.mission_stage_updated.is_connected(_on_server_mission_stage_updated):
 		AuthoritativeGameServer.mission_stage_updated.disconnect(_on_server_mission_stage_updated)
+	if AuthoritativeGameServer.mission_failed.is_connected(_on_server_mission_failed):
+		AuthoritativeGameServer.mission_failed.disconnect(_on_server_mission_failed)
 	if AuthoritativeGameServer.mission_completed.is_connected(_on_server_mission_completed):
 		AuthoritativeGameServer.mission_completed.disconnect(_on_server_mission_completed)
 	if AuthoritativeGameServer.activity_proof_received.is_connected(_on_server_activity_proof_received):
@@ -580,6 +588,7 @@ func register_building(building: Node3D) -> void:
 	buildings.append(building)
 
 func _process(_delta: float) -> void:
+	_update_survival_timers(_delta)
 	if GameModeManager.is_online_ready():
 		if not is_instance_valid(player):
 			return
@@ -1118,26 +1127,68 @@ func _accept_adventure() -> void:
 	landmark_navigation_active = false
 	navigation_arrival_remaining = 0.0
 	job_selector.visible = false
-	if GameModeManager.is_online_ready():
-		accept_button.disabled = true
-		status_label.text = "يراجع الخادم موقعك ويبدأ المغامرة..."
-		AuthoritativeGameServer.request_start_mission.rpc_id(1, adventure_id)
+	accept_button.disabled = true
+	if adventure_id == "city_adventure_survival":
+		survival_prep_remaining = SURVIVAL_PREPARATION_SECONDS
+		survival_time_remaining = 0.0
+		survival_start_pending_online = GameModeManager.is_online_ready()
+		status_label.text = "استعد للسباق! يبدأ بعد 10 ثوانٍ."
+		description_label.text = "لديك 10 ثوانٍ للاستعداد، ثم 60 ثانية للوصول إلى نقطة النجاة."
 		return
-	var stages: Array = CITY_ADVENTURE_STAGES[adventure_id]
+	_begin_selected_adventure()
+
+
+func _begin_selected_adventure() -> void:
+	if not CITY_ADVENTURE_STAGES.has(selected_adventure_id):
+		return
+	var stages: Array = CITY_ADVENTURE_STAGES[selected_adventure_id]
 	if stages.is_empty():
 		status_label.text = "مسار المغامرة غير مكتمل."
+		accept_button.disabled = false
+		return
+	if GameModeManager.is_online_ready():
+		status_label.text = "يراجع الخادم موقعك ويبدأ المغامرة..."
+		AuthoritativeGameServer.request_start_mission.rpc_id(1, selected_adventure_id)
 		return
 	active_target = stages[0]
 	mission_running = true
+	if selected_adventure_id == "city_adventure_survival":
+		survival_time_remaining = SURVIVAL_DURATION_SECONDS
 	target_marker.global_position = active_target
 	target_marker.visible = true
 	accept_button.disabled = true
-	job_selector.visible = false
-	var adventure: Dictionary = CITY_ADVENTURES[adventure_id]
+	var adventure: Dictionary = CITY_ADVENTURES[selected_adventure_id]
 	title_label.text = str(adventure.get("title", "مغامرة"))
 	description_label.text = str(adventure.get("description", ""))
 	status_label.text = "بدأت المغامرة. اتبع علامة الهدف الأولى."
 	reward_label.text = "لا توجد مكافأة محلية؛ إكمال المراحل يسجل كتقدم تجريبي فقط."
+
+
+func _update_survival_timers(delta: float) -> void:
+	if survival_prep_remaining > 0.0:
+		survival_prep_remaining = maxf(survival_prep_remaining - delta, 0.0)
+		status_label.text = "استعد للسباق! البداية خلال %d ثانية." % ceili(survival_prep_remaining)
+		if survival_prep_remaining <= 0.0:
+			survival_start_pending_online = false
+			_begin_selected_adventure()
+		return
+	if selected_adventure_id != "city_adventure_survival" or not mission_running or survival_time_remaining <= 0.0:
+		return
+	survival_time_remaining = maxf(survival_time_remaining - delta, 0.0)
+	status_label.text = "سباق النجاة: %d ثانية متبقية." % ceili(survival_time_remaining)
+	if survival_time_remaining <= 0.0 and not GameModeManager.is_online_ready():
+		_fail_local_survival_race()
+
+
+func _fail_local_survival_race() -> void:
+	mission_running = false
+	survival_time_remaining = 0.0
+	target_marker.visible = false
+	status_label.text = "انتهى الوقت! لم تصل إلى نقطة النجاة."
+	description_label.text = "انتهت مغامرة سباق النجاة. يمكنك المحاولة مرة أخرى."
+	reward_label.text = "لم تُسجل نتيجة فوز ولم تُصرف أي مكافأة."
+	accept_button.disabled = false
+	panel.visible = true
 
 
 func _advance_local_adventure_stage() -> void:
@@ -1220,11 +1271,26 @@ func _on_server_mission_start_result(success: bool, mission_id: String, server_t
 		return
 	active_target = server_target
 	mission_running = true
+	if mission_id == "city_adventure_survival":
+		survival_time_remaining = SURVIVAL_DURATION_SECONDS
 	target_marker.global_position = active_target
 	target_marker.visible = true
 	accept_button.disabled = true
 	description_label.text = "بدأت المهمة على الخادم. اتبع علامة الهدف."
 	reward_label.text = "سيتم اعتماد الإكمال والمكافأة من الخادم بعد التحقق."
+
+
+func _on_server_mission_failed(mission_id: String, message: String) -> void:
+	if not GameModeManager.is_online_ready() or not mission_running or selected_activity_kind != "adventure" or mission_id != selected_adventure_id:
+		return
+	mission_running = false
+	survival_time_remaining = 0.0
+	target_marker.visible = false
+	status_label.text = message
+	description_label.text = "انتهت مغامرة سباق النجاة. يمكنك المحاولة مرة أخرى."
+	reward_label.text = "لم تُسجل نتيجة فوز ولم تُصرف أي مكافأة."
+	accept_button.disabled = false
+	panel.visible = true
 
 
 func _on_server_mission_completed(mission_id: String) -> void:
@@ -1234,6 +1300,8 @@ func _on_server_mission_completed(mission_id: String) -> void:
 	if expected_mission_id != mission_id:
 		return
 	mission_running = false
+	survival_time_remaining = 0.0
+	survival_prep_remaining = 0.0
 	target_marker.visible = false
 	status_label.text = "اكتملت المغامرة بعد تحقق الخادم من جميع المراحل." if selected_activity_kind == "adventure" else "تحقق الخادم من وصولك إلى هدف المهمة."
 	description_label.text = "تم تسجيل اكتمال المسار خادميًا. لا يوجد صرف مكافآت في هذه النسخة."
