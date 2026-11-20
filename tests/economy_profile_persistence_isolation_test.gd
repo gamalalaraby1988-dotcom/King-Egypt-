@@ -1,6 +1,7 @@
 extends SceneTree
 
 const Store = preload("res://scripts/profile_config_store.gd")
+const WalletManagerScript = preload("res://scripts/wallet_manager.gd")
 var _account_fixture_paths: Array[String] = []
 
 const TEST_PATH := "user://economy_profile_isolation_test.cfg"
@@ -176,6 +177,8 @@ func _run() -> void:
 		return
 	var account_a_path := Store.get_active_profile_path()
 	_account_fixture_paths.append(account_a_path)
+	_account_fixture_paths.append(account_a_path + ".wallet.tmp")
+	_account_fixture_paths.append(account_a_path + ".pre_wallet_backup.cfg")
 	_account_fixture_paths.append(Store.get_active_scoped_path("user://kings_city_achievements.cfg"))
 	_account_fixture_paths.append(Store.get_active_scoped_path("user://kings_city_daily.cfg"))
 	if Store.get_active_scoped_path("user://kings_city_achievements.cfg") == "user://kings_city_achievements.cfg" or Store.get_active_scoped_path("user://kings_city_daily.cfg") == "user://kings_city_daily.cfg":
@@ -186,7 +189,13 @@ func _run() -> void:
 		return
 	var account_a_config := ConfigFile.new()
 	account_a_config.set_value("profile", "player_name", "Account A")
+	account_a_config.set_value("profile", "money", 111)
+	account_a_config.set_value("profile", "chips", 0)
+	account_a_config.set_value("wallet", "schema_version", 2)
 	account_a_config.set_value("wallet", "balances", {"money": 111, "chips": 0, "gems": 0})
+	account_a_config.set_value("wallet", "receipts", {"account_a_receipt": "fixture"})
+	account_a_config.set_value("wallet", "ledger", [{"transaction_id": "account_a_receipt"}])
+	account_a_config.set_value("wallet", "integrity_seal", "")
 	if account_a_config.save(account_a_path) != OK:
 		_fail("Could not create synthetic account A profile.")
 		return
@@ -194,6 +203,8 @@ func _run() -> void:
 		_fail("Could not select synthetic account B profile.")
 		return
 	var account_b_path := Store.get_active_profile_path()
+	_account_fixture_paths.append(account_b_path + ".wallet.tmp")
+	_account_fixture_paths.append(account_b_path + ".pre_wallet_backup.cfg")
 	var account_b_achievements := Store.get_active_scoped_path("user://kings_city_achievements.cfg")
 	var account_b_daily := Store.get_active_scoped_path("user://kings_city_daily.cfg")
 	if account_b_achievements == _account_fixture_paths[1] or account_b_daily == _account_fixture_paths[2]:
@@ -213,10 +224,36 @@ func _run() -> void:
 		_fail("Account B loaded Account A's local profile.")
 		return
 	account_b_config.set_value("profile", "player_name", "Account B")
+	account_b_config.set_value("profile", "money", 222)
+	account_b_config.set_value("profile", "chips", 0)
+	account_b_config.set_value("wallet", "schema_version", 2)
 	account_b_config.set_value("wallet", "balances", {"money": 222, "chips": 0, "gems": 0})
+	account_b_config.set_value("wallet", "receipts", {"account_b_receipt": "fixture"})
+	account_b_config.set_value("wallet", "ledger", [{"transaction_id": "account_b_receipt"}])
+	account_b_config.set_value("wallet", "integrity_seal", "")
 	if account_b_config.save(account_b_path) != OK:
 		_fail("Could not create synthetic account B profile.")
 		return
+	# Exercise the real wallet loader to prove its in-memory state is replaced on account changes.
+	var wallet_manager := WalletManagerScript.new()
+	root.add_child(wallet_manager)
+	await process_frame
+	if not wallet_manager.initialized or wallet_manager.get_balance("money") != 222 or wallet_manager.has_transaction("account_a_receipt"):
+		_fail("WalletManager did not load only Account B's isolated wallet.")
+		return
+	if not Store.set_active_account("synthetic-account-a") or not wallet_manager.initialize_wallet():
+		_fail("WalletManager could not switch back to Account A's wallet.")
+		return
+	if wallet_manager.get_balance("money") != 111 or not wallet_manager.has_transaction("account_a_receipt") or wallet_manager.has_transaction("account_b_receipt"):
+		_fail("WalletManager retained Account B's balance or receipts after switching to Account A.")
+		return
+	if not Store.set_active_account("synthetic-account-b") or not wallet_manager.initialize_wallet():
+		_fail("WalletManager could not switch back to Account B's wallet.")
+		return
+	if wallet_manager.get_balance("money") != 222 or not wallet_manager.has_transaction("account_b_receipt") or wallet_manager.has_transaction("account_a_receipt"):
+		_fail("WalletManager retained Account A's balance or receipts after switching to Account B.")
+		return
+	wallet_manager.queue_free()
 	var verify_a := ConfigFile.new()
 	if verify_a.load(account_a_path) != OK or str(verify_a.get_value("profile", "player_name", "")) != "Account A" or int(verify_a.get_value("wallet", "balances", {}).get("money", -1)) != 111:
 		_fail("Account B profile writes changed Account A's saved data.")
