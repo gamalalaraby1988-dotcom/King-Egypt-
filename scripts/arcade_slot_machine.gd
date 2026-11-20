@@ -159,6 +159,7 @@ func _build_touch_controls() -> void:
 	_spin_button.disabled = true
 	_spin_button.tooltip_text = "يتاح بعد اكتمال لعبة السلوت والتحقق الخادمي من النتيجة."
 	content.add_child(_spin_button)
+	_apply_spin_mode_visual(false)
 	_exit_button = _make_button("🚪 خروج من المقعد", _on_exit_pressed)
 	content.add_child(_exit_button)
 	panel.set_meta("controls_content", content)
@@ -171,6 +172,34 @@ func _make_button(label: String, callback: Callable) -> Button:
 	button.add_theme_font_size_override("font_size", 14)
 	button.pressed.connect(callback)
 	return button
+
+func _make_spin_style(background: Color, border: Color) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = background
+	style.border_color = border
+	style.set_border_width_all(2)
+	style.set_corner_radius_all(10)
+	style.set_content_margin_all(8)
+	return style
+
+func _apply_spin_mode_visual(auto_mode: bool) -> void:
+	if not is_instance_valid(_spin_button):
+		return
+	var active_color := Color(0.12, 0.78, 0.30) if not auto_mode else Color(0.88, 0.12, 0.12)
+	var dark_color := Color(0.025, 0.20, 0.075) if not auto_mode else Color(0.24, 0.025, 0.025)
+	_spin_button.text = "AUTO" if auto_mode else "SPIN"
+	_spin_button.add_theme_stylebox_override("normal", _make_spin_style(dark_color, active_color))
+	_spin_button.add_theme_stylebox_override("hover", _make_spin_style(dark_color.lightened(0.12), active_color.lightened(0.12)))
+	_spin_button.add_theme_stylebox_override("pressed", _make_spin_style(dark_color.darkened(0.12), active_color))
+	_spin_button.add_theme_stylebox_override("disabled", _make_spin_style(dark_color, active_color))
+	_spin_button.add_theme_color_override("font_color", active_color.lightened(0.35))
+	_spin_button.add_theme_color_override("font_hover_color", Color.WHITE)
+	_spin_button.add_theme_color_override("font_pressed_color", Color.WHITE)
+	_spin_button.add_theme_color_override("font_disabled_color", active_color.lightened(0.35))
+
+func set_auto_play_mode_visual(auto_mode: bool) -> void:
+	# Visual state only: this does not start or stop rounds; the trusted server controller must own auto-play.
+	_apply_spin_mode_visual(auto_mode)
 
 func _set_nearby_controls(visible_now: bool) -> void:
 	var panel := get_node_or_null("SlotMachineTouchLayer/SlotMachineControls") as PanelContainer
