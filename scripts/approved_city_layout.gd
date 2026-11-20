@@ -648,7 +648,7 @@ func _build_pedestrian_green_pockets() -> void:
 			for z in [-4.0, 4.0]:
 				_tree(pocket, "PocketPalm", Vector3(x, 0.0, z), 0.62)
 		for side in [-1.0, 1.0]:
-			var bench_x := side * 2.9
+			var bench_x: float = side * 2.9
 			_box(pocket, "PocketBenchSeat", Vector3(2.2, 0.22, 0.62), Vector3(bench_x, 0.72, 0.0), SAND)
 			_box(pocket, "PocketBenchBack", Vector3(2.2, 0.82, 0.16), Vector3(bench_x, 1.12, -0.22), GOLD)
 			_add_static_box_collision(pocket, "PocketBenchCollision", Vector3(2.2, 1.0, 0.62), Vector3(bench_x, 0.62, 0.0))
@@ -809,11 +809,11 @@ func _build_mountain_route() -> void:
 		var ramp_length := ramp_delta.length()
 		var ramp_midpoint := (ramp_start + ramp_end) * 0.5
 		var ramp := _box(mountain, "SummitAccessRamp_%02d" % (ramp_index + 1), Vector3(3.8, 0.28, ramp_length), ramp_midpoint, SAND)
-		ramp.look_at(mountain.to_global(ramp_end), Vector3.UP)
+		ramp.look_at_from_position(mountain.to_global(ramp_midpoint), mountain.to_global(ramp_end), Vector3.UP)
 		var ramp_body := StaticBody3D.new()
 		ramp_body.name = "SummitAccessRampCollision_%02d" % (ramp_index + 1)
 		ramp_body.position = ramp_midpoint
-		ramp_body.look_at(mountain.to_global(ramp_end), Vector3.UP)
+		ramp_body.look_at_from_position(mountain.to_global(ramp_midpoint), mountain.to_global(ramp_end), Vector3.UP)
 		ramp_body.add_to_group("city_world_geometry")
 		var ramp_collision := CollisionShape3D.new()
 		var ramp_shape := BoxShape3D.new()
@@ -916,12 +916,12 @@ func _add_sloped_vehicle_road_segment(parent: Node3D, label: String,
 	var length := delta.length()
 	var midpoint := (start + finish) * 0.5
 	var segment := _box(parent, label, Vector3(width, 0.28, length), midpoint, SAND)
-	segment.look_at(parent.to_global(start), Vector3.UP)
+	segment.look_at_from_position(parent.to_global(midpoint), parent.to_global(start), Vector3.UP)
 
 	var body := StaticBody3D.new()
 	body.name = label + "Collision"
 	body.position = midpoint
-	body.look_at(parent.to_global(start), Vector3.UP)
+	body.look_at_from_position(parent.to_global(midpoint), parent.to_global(start), Vector3.UP)
 	body.add_to_group("city_world_geometry")
 	var collision := CollisionShape3D.new()
 	var shape := BoxShape3D.new()
@@ -934,7 +934,7 @@ func _add_sloped_vehicle_road_segment(parent: Node3D, label: String,
 		var rails := Node3D.new()
 		rails.name = label + "Guardrails"
 		rails.position = midpoint
-		rails.look_at(parent.to_global(start), Vector3.UP)
+		rails.look_at_from_position(parent.to_global(midpoint), parent.to_global(start), Vector3.UP)
 		parent.add_child(rails)
 		for side in [-1.0, 1.0]:
 			var rail_at := Vector3(side * (width * 0.5 - 0.18), 0.55, 0.0)

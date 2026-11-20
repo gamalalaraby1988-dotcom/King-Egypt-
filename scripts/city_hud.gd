@@ -682,9 +682,9 @@ func _refresh_wallet() -> void:
 	if not is_instance_valid(mission_manager):
 		return
 	if is_instance_valid(money_label):
-		money_label.text = "ذهب: %d  +" % int(mission_manager.get("money"))
+		money_label.text = "ذهب: %d  +" % floori(float(mission_manager.get("money")))
 	if is_instance_valid(chips_label):
-		chips_label.text = "رقائق: %d  +" % int(mission_manager.get("chips"))
+		chips_label.text = "رقائق: %d  +" % floori(float(mission_manager.get("chips")))
 	if is_instance_valid(gems_label):
 		gems_label.text = "جواهر: %d" % WalletManager.get_balance("gems")
 

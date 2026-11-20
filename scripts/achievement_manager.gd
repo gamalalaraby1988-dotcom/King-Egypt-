@@ -75,7 +75,7 @@ func _current_value(kind: String) -> int:
 		"walk":
 			return int(walked_meters)
 		"level":
-			return int(mission_manager.player_level) if is_instance_valid(mission_manager) else 1
+			return int(mission_manager.get("player_level")) if is_instance_valid(mission_manager) else 1
 		_:
 			return int(totals.get(kind, 0))
 

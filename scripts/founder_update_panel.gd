@@ -224,7 +224,7 @@ func _add_supervisor_draft() -> void:
 			supervisor_status.text = "هذا اللاعب موجود بالفعل في القائمة."
 			return
 	var roles := ["مشرف محادثة", "مشرف فعاليات", "مشرف دعم"]
-	var role := roles[supervisor_role_option.selected]
+	var role: String = str(roles[supervisor_role_option.selected])
 	supervisor_drafts.append({"player_id": player_id, "role": role})
 	supervisor_id_input.clear()
 	_refresh_supervisors_list()

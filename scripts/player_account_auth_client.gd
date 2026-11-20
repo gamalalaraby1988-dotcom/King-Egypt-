@@ -20,6 +20,8 @@ var _auth_http: HTTPRequest
 var _profile_http: HTTPRequest
 var _pending_action := ""
 var _profile_action := ""
+var _profile_request_access_token := ""
+var _profile_request_user_id := ""
 var _pending_email := ""
 var _access_token := ""
 var _refresh_token := ""
@@ -284,15 +286,33 @@ func _fetch_player_profile() -> void:
 		player_profile_failed.emit("تعذر تحميل ملف اللاعب الآن.")
 		return
 	_profile_action = "profile"
+	_profile_request_access_token = _access_token
+	_profile_request_user_id = _user_id
+
+func _is_profile_request_current(request_user_id: String, request_access_token: String) -> bool:
+	return has_active_session() and not request_user_id.is_empty() and not request_access_token.is_empty() and request_user_id == _user_id and request_access_token == _access_token
 
 func _on_profile_request_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
 	var action := _profile_action
+	var request_user_id := _profile_request_user_id
+	var request_access_token := _profile_request_access_token
 	_profile_action = ""
+	_profile_request_user_id = ""
+	_profile_request_access_token = ""
+	if action != "profile":
+		return
+	# A profile response is valid only for the exact account session that sent it.
+	# If the account changed while the request was in flight, ignore it and load the
+	# currently authenticated account after the old HTTPRequest has completed.
+	if not _is_profile_request_current(request_user_id, request_access_token):
+		if has_active_session():
+			call_deferred("_fetch_player_profile")
+		return
 	if result != HTTPRequest.RESULT_SUCCESS or response_code < 200 or response_code >= 300:
 		player_profile_failed.emit("تعذر تحميل ملف اللاعب. سيظل تسجيل الدخول صالحًا.")
 		return
 	var parsed: Variant = JSON.parse_string(body.get_string_from_utf8())
-	if action != "profile" or not (parsed is Array) or parsed.is_empty() or not (parsed[0] is Dictionary):
+	if not (parsed is Array) or parsed.is_empty() or not (parsed[0] is Dictionary):
 		player_profile_failed.emit("ملف اللاعب غير جاهز على الخادم.")
 		return
 	var profile: Dictionary = parsed[0]
@@ -301,7 +321,7 @@ func _on_profile_request_completed(result: int, response_code: int, _headers: Pa
 	if player_code.length() != 10:
 		player_profile_failed.emit("رمز اللاعب المستلم غير صالح.")
 		return
-	player_profile_ready.emit(_user_id, player_code, display_name)
+	player_profile_ready.emit(request_user_id, player_code, display_name)
 
 func _safe_error(response: Dictionary) -> String:
 	match str(response.get("code", "")):

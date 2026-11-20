@@ -646,9 +646,9 @@ func _process(_delta: float) -> void:
 
 	stats_label.text = "المستوى %d/5000  |  مراحل التطوير %d/140  |  المال %d  |  الرقائق %d  |  الجواهر %d" % [DevelopmentManager.player_level, DevelopmentManager.get_completed_stage_count(), money, chips, WalletManager.get_balance("gems")]
 	if job_running:
-		var city_root := get_tree().current_scene
-		var vehicle := city_root.get("city_vehicle") as Node3D if is_instance_valid(city_root) else null
-		var vehicle_occupied_now := bool(city_root.get("vehicle_occupied")) if is_instance_valid(city_root) else false
+		var job_city_root := get_tree().current_scene
+		var vehicle := job_city_root.get("city_vehicle") as Node3D if is_instance_valid(job_city_root) else null
+		var vehicle_occupied_now := bool(job_city_root.get("vehicle_occupied")) if is_instance_valid(job_city_root) else false
 		if returning_to_fuel:
 			job_delivery_button.visible = false
 			if vehicle_occupied_now and is_instance_valid(vehicle):
@@ -761,8 +761,8 @@ func _interaction_action_key(target: Node3D) -> String:
 func _update_interaction_hud() -> void:
 	if not is_instance_valid(interact_button) or not is_instance_valid(prompt_label):
 		return
-	var player_is_busy := is_instance_valid(player) and (player.get("sitting") == true or player.get("animal_riding") == true)
-	var has_interaction := is_instance_valid(nearest_interactable) and not player_is_busy
+	var player_is_busy: bool = is_instance_valid(player) and (bool(player.get("sitting")) or bool(player.get("animal_riding")))
+	var has_interaction: bool = is_instance_valid(nearest_interactable) and not player_is_busy
 	interact_button.visible = true
 	interact_button.text = "✋"
 	interact_button.add_theme_font_size_override("font_size", 28)

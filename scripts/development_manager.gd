@@ -92,8 +92,8 @@ func register_city_layout(layout: Node3D) -> void:
 		marker.set("building_id", building_id)
 		marker.set("building_title", str(definition.get("name", building_id)))
 		marker.set("interaction_radius", INTERACTION_RADIUS)
-		marker.global_position = building.to_global(Vector3(0.0, 0.0, 8.0))
 		layout.add_child(marker)
+		marker.global_position = building.to_global(Vector3(0.0, 0.0, 8.0))
 		_create_ground_marker(marker)
 		building.set_meta("development_interaction_created", true)
 		registered += 1
@@ -316,8 +316,9 @@ func _load_progress() -> void:
 	var saved_level := 1
 	if err == OK:
 		saved_level = clampi(int(config.get_value("profile", "development_level", config.get_value("profile", "player_level", 1))), 1, MAX_PLAYER_LEVEL)
-		var saved_count: Variant = config.get_value("profile", "development_stage_count", null)
-		if saved_count == null:
+		var has_saved_count := config.has_section_key("profile", "development_stage_count")
+		var saved_count: int = int(config.get_value("profile", "development_stage_count")) if has_saved_count else -1
+		if not has_saved_count:
 			completed_stage_count = _completed_stages_for_level(saved_level)
 		else:
 			var legacy_level_stage_count := _completed_stages_for_level(saved_level)

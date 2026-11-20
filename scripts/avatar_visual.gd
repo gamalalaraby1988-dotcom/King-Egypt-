@@ -318,7 +318,8 @@ func apply_founder_style() -> void:
 		var angle := TAU * float(i) / 5.0
 		var point := MeshInstance3D.new()
 		point.name = "CrownPoint_%d" % i
-		var point_mesh := ConeMesh.new()
+		var point_mesh := CylinderMesh.new()
+		point_mesh.top_radius = 0.0
 		point_mesh.bottom_radius = 0.045
 		point_mesh.height = 0.16
 		point.mesh = point_mesh

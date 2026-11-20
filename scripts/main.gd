@@ -71,8 +71,6 @@ func _ready() -> void:
 	GameModeManager.status_changed.connect(_on_mode_status_changed)
 	GameModeManager.online_connected.connect(_on_mode_connected)
 	AuthoritativeGameServer.authentication_completed.connect(_on_player_server_authenticated)
-	PlayerAccountAuthClient.session_access_token_changed.connect(_on_player_access_token_changed)
-	PlayerAccountAuthClient.session_expired.connect(_on_player_account_session_expired)
 	GameModeManager.online_disconnected.connect(_on_mode_disconnected)
 
 
@@ -916,8 +914,9 @@ func _create_interior_furnishings(root: Node3D, building_title: String) -> void:
 			var z := -3.8 if index < 2 else 1.0
 			_create_box(root, "RestaurantTable_%d" % index, Vector3(2.0, 0.18, 1.6), Vector3(x, 1.0, z), Color(0.40, 0.24, 0.13), true)
 			_create_box(root, "RestaurantTableLeg_%d" % index, Vector3(0.22, 0.9, 0.22), Vector3(x, 0.48, z), Color(0.25, 0.18, 0.12), true)
-			for side in [-1.0, 1.0]:
-				_create_box(root, "RestaurantSeat_%d_%d" % [index, int(side)], Vector3(0.8, 0.85, 0.8), Vector3(x + side * 1.35, 0.42, z), Color(0.18, 0.31, 0.29), true)
+			for side_index in range(2):
+				var side: float = -1.0 if side_index == 0 else 1.0
+				_create_box(root, "RestaurantSeat_%d_%d" % [index, side_index], Vector3(0.8, 0.85, 0.8), Vector3(x + side * 1.35, 0.42, z), Color(0.18, 0.31, 0.29), true)
 		_create_box(root, "RestaurantServingCounter", Vector3(4.0, 1.0, 0.9), Vector3(0, 0.5, -5.1), Color(0.32, 0.19, 0.12), true)
 	elif building_title == "مركز التوظيف":
 		for index in range(3):
@@ -1040,7 +1039,7 @@ func _create_city() -> void:
 	# خطوط إرشادية على جزأي الطريق المحيط بالميدان.
 	for side in [-1.0, 1.0]:
 		for i in range(4):
-			var mark_x := side * (28.0 + float(i) * 18.0)
+			var mark_x: float = side * (28.0 + float(i) * 18.0)
 			_create_box(self, "RoadMark_X_%s_%d" % [str(side), i], Vector3(3, 0.025, 0.16), Vector3(mark_x, 0.06, -45), Color(0.92, 0.86, 0.62))
 
 func _create_mobile_hud() -> void:
@@ -1087,16 +1086,16 @@ func _create_interactive_buildings() -> void:
 	var daily := Node.new()
 	daily.name = "DailyActivities"
 	daily.set_script(load("res://scripts/daily_activities.gd"))
-	daily.player = get_node_or_null("Player")
-	daily.mission_manager = manager
-	manager.daily_activities = daily
+	daily.set("player", get_node_or_null("Player"))
+	daily.set("mission_manager", manager)
+	manager.set("daily_activities", daily)
 	var achievements := Node.new()
 	achievements.name = "AchievementManager"
 	achievements.set_script(load("res://scripts/achievement_manager.gd"))
 	achievements.set("player", get_node_or_null("Player"))
-	achievements.mission_manager = manager
-	manager.achievement_manager = achievements
-	daily.achievement_manager = achievements
+	achievements.set("mission_manager", manager)
+	manager.set("achievement_manager", achievements)
+	daily.set("achievement_manager", achievements)
 	add_child(achievements)
 	add_child(daily)
 	var profile_ui := Node.new()
@@ -1553,6 +1552,9 @@ func _on_player_account_session_expired() -> void:
 		player_account_button.text = "حساب اللاعب - تسجيل الدخول وحفظ التقدم"
 	if is_instance_valid(player_account_status_label):
 		player_account_status_label.text = "انتهت جلسة الحساب. سجّل الدخول مجددًا لاستعادة المزامنة."
+	if GameModeManager.is_online_ready():
+		_on_mode_status_changed("انتهت جلسة حساب اللاعب؛ تم إنهاء اتصال Online لحماية الحساب.")
+		GameModeManager.disconnect_online()
 
 func _on_player_profile_ready(_user_id: String, player_code: String, display_name: String) -> void:
 	if is_instance_valid(player_account_profile_label):
@@ -1689,12 +1691,6 @@ func _on_mode_connected() -> void:
 		GameModeManager.disconnect_online()
 		return
 	AuthoritativeGameServer.authenticate_player.rpc_id(1, access_token)
-
-
-func _on_player_account_session_expired() -> void:
-	if GameModeManager.is_online_ready():
-		_on_mode_status_changed("انتهت جلسة حساب اللاعب؛ تم إنهاء اتصال Online لحماية الحساب.")
-		GameModeManager.disconnect_online()
 
 
 func _on_player_access_token_changed(access_token: String) -> void:

@@ -352,5 +352,8 @@ func _compute_integrity_seal(balance_data: Dictionary, receipt_data: Dictionary,
 
 func _online_economy_locked() -> bool:
 	# ENet يثبت الاتصال فقط، ولا يثبت صلاحية المعاملات أو وجود اقتصاد خادمي موثوق.
-	var mode_manager := get_node_or_null("/root/GameModeManager")
+	var scene_tree := Engine.get_main_loop() as SceneTree
+	if not is_instance_valid(scene_tree) or not is_instance_valid(scene_tree.root):
+		return false
+	var mode_manager := scene_tree.root.get_node_or_null("GameModeManager")
 	return is_instance_valid(mode_manager) and mode_manager.has_method("is_online_ready") and mode_manager.is_online_ready()
