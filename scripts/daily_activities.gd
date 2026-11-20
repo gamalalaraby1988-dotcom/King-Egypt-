@@ -182,10 +182,10 @@ func _save_state() -> bool:
 	cfg.set_value("daily", "progress", progress)
 	cfg.set_value("daily", "claimed", claimed)
 	cfg.set_value("daily", "walked_meters", walked_meters)
-	var error := cfg.save(_save_path())
-	if error != OK:
-		push_warning("تعذر حفظ الأنشطة اليومية: %s" % error)
-	return error == OK
+	var saved := ProfileConfigStore.save_config_snapshot(cfg, _save_path(), _save_path() + ".tmp", _save_path() + ".backup")
+	if not saved:
+		push_warning("تعذر حفظ الأنشطة اليومية عبر الحفظ الذري.")
+	return saved
 
 func _build_ui() -> void:
 	var layer := CanvasLayer.new()
