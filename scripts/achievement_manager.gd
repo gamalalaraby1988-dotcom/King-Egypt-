@@ -112,6 +112,8 @@ func _check_all() -> void:
 	_refresh_ui()
 
 func _save_state() -> void:
+	if ProfileConfigStore.is_account_switch_in_progress():
+		return
 	var cfg := ConfigFile.new()
 	var load_error := cfg.load(_save_path())
 	if load_error != OK and FileAccess.file_exists(_save_path()):
