@@ -10,6 +10,7 @@ signal job_start_result(success: bool, job_id: String, target: Vector3, message:
 signal job_completed(job_id: String)
 signal mission_start_result(success: bool, mission_id: String, target: Vector3, message: String)
 signal mission_stage_updated(mission_id: String, target: Vector3, stage_number: int, stage_count: int, message: String)
+signal mission_failed(mission_id: String, message: String)
 signal mission_completed(mission_id: String)
 signal activity_proof_received(activity_kind: String, activity_id: String, proof_id: String)
 signal activity_proof_failed(activity_kind: String, activity_id: String, message: String)
@@ -492,7 +493,15 @@ func request_start_mission(mission_id: String) -> void:
 		rpc_id(peer_id, "receive_mission_start_result", false, safe_mission_id, Vector3.ZERO, "مسار المهمة غير مكتمل على الخادم.")
 		return
 	var first_target: Vector3 = mission_stages[0]
-	session["active_mission"] = {"mission_id": safe_mission_id, "target": first_target, "stages": mission_stages.duplicate(true), "stage_index": 0, "radius": 2.2}
+	session["active_mission"] = {
+		"mission_id": safe_mission_id,
+		"target": first_target,
+		"stages": mission_stages.duplicate(true),
+		"stage_index": 0,
+		"radius": 2.2,
+		"started_at_usec": Time.get_ticks_usec(),
+		"time_limit_seconds": 60.0 if safe_mission_id == "city_adventure_survival" else 0.0
+	}
 	_sessions[peer_id] = session
 	rpc_id(peer_id, "receive_mission_start_result", true, safe_mission_id, first_target, "بدأت المهمة على الخادم. اتبع علامة الهدف.")
 
@@ -509,6 +518,13 @@ func receive_mission_stage_updated(mission_id: String, target: Vector3, stage_nu
 	if multiplayer.is_server() or not is_authenticated():
 		return
 	mission_stage_updated.emit(mission_id, target, stage_number, stage_count, message)
+
+
+@rpc("authority", "call_remote", "reliable")
+func receive_server_mission_failed(mission_id: String, message: String) -> void:
+	if multiplayer.is_server() or not is_authenticated():
+		return
+	mission_failed.emit(mission_id, message)
 
 
 @rpc("authority", "call_remote", "reliable")
@@ -1156,29 +1172,35 @@ func _physics_process(delta: float) -> void:
 				_issue_activity_proof(peer_id, str(session.get("user_id", "")), "job", completed_job_id)
 		var active_mission: Dictionary = session.get("active_mission", {})
 		if not active_mission.is_empty():
-			var mission_target: Vector3 = active_mission.get("target", Vector3.ZERO)
-			var mission_distance := Vector2(body.global_position.x, body.global_position.z).distance_to(Vector2(mission_target.x, mission_target.z))
-			if mission_distance <= float(active_mission.get("radius", 2.2)):
-				var completed_mission_id := str(active_mission.get("mission_id", ""))
-				var mission_stages: Array = active_mission.get("stages", [mission_target])
-				var stage_index := int(active_mission.get("stage_index", 0))
-				if stage_index + 1 < mission_stages.size():
-					stage_index += 1
-					var next_target: Vector3 = mission_stages[stage_index]
-					active_mission["stage_index"] = stage_index
-					active_mission["target"] = next_target
-					session["active_mission"] = active_mission
-					rpc_id(peer_id, "receive_mission_stage_updated", completed_mission_id, next_target, stage_index + 1, mission_stages.size(), "تم اجتياز المرحلة. اتجه إلى النقطة التالية.")
-				else:
-					var completed_missions: Dictionary = session.get("completed_missions", {})
-					completed_missions[completed_mission_id] = true
-					session["completed_missions"] = completed_missions
-					session["active_mission"] = {}
-					server_objective_reached.emit(str(session.get("user_id", "")), "mission", completed_mission_id)
-					rpc_id(peer_id, "receive_server_mission_completed", completed_mission_id)
-					# Adventure activities do not issue rewards until persistent trusted settlement exists.
-					if not completed_mission_id.begins_with("city_adventure_"):
-						_issue_activity_proof(peer_id, str(session.get("user_id", "")), "mission", completed_mission_id)
+			var completed_mission_id := str(active_mission.get("mission_id", ""))
+			var time_limit := float(active_mission.get("time_limit_seconds", 0.0))
+			var started_at_usec := int(active_mission.get("started_at_usec", now_usec))
+			if time_limit > 0.0 and now_usec - started_at_usec >= int(time_limit * 1000000.0):
+				session["active_mission"] = {}
+				rpc_id(peer_id, "receive_server_mission_failed", completed_mission_id, "انتهى الوقت! لم تصل إلى نقطة النجاة.")
+			else:
+				var mission_target: Vector3 = active_mission.get("target", Vector3.ZERO)
+				var mission_distance := Vector2(body.global_position.x, body.global_position.z).distance_to(Vector2(mission_target.x, mission_target.z))
+				if mission_distance <= float(active_mission.get("radius", 2.2)):
+					var mission_stages: Array = active_mission.get("stages", [mission_target])
+					var stage_index := int(active_mission.get("stage_index", 0))
+					if stage_index + 1 < mission_stages.size():
+						stage_index += 1
+						var next_target: Vector3 = mission_stages[stage_index]
+						active_mission["stage_index"] = stage_index
+						active_mission["target"] = next_target
+						session["active_mission"] = active_mission
+						rpc_id(peer_id, "receive_mission_stage_updated", completed_mission_id, next_target, stage_index + 1, mission_stages.size(), "تم اجتياز المرحلة. اتجه إلى النقطة التالية.")
+					else:
+						var completed_missions: Dictionary = session.get("completed_missions", {})
+						completed_missions[completed_mission_id] = true
+						session["completed_missions"] = completed_missions
+						session["active_mission"] = {}
+						server_objective_reached.emit(str(session.get("user_id", "")), "mission", completed_mission_id)
+						rpc_id(peer_id, "receive_server_mission_completed", completed_mission_id)
+						# Adventure activities do not issue rewards until persistent trusted settlement exists.
+						if not completed_mission_id.begins_with("city_adventure_"):
+							_issue_activity_proof(peer_id, str(session.get("user_id", "")), "mission", completed_mission_id)
 		_sessions[peer_id] = session
 	_snapshot_elapsed += safe_delta
 	if _snapshot_elapsed >= SNAPSHOT_INTERVAL:
