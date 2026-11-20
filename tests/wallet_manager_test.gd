@@ -87,6 +87,35 @@ func _run_wallet_tests() -> void:
 		quit(1)
 		return
 
+	# A reward bundle must be atomic and its receipt must survive wallet reload.
+	var bundle_id := transaction_id + "_bundle"
+	var bundle_money_before: int = wallet.get_balance("money")
+	var bundle_chips_before: int = wallet.get_balance("chips")
+	if not wallet.credit_bundle_once(bundle_id, 13, 4, "CI reward bundle"):
+		push_error("Atomic reward bundle credit failed.")
+		quit(1)
+		return
+	if wallet.get_balance("money") != bundle_money_before + 13 or wallet.get_balance("chips") != bundle_chips_before + 4:
+		push_error("Atomic reward bundle balances mismatch.")
+		quit(1)
+		return
+	if wallet.credit_bundle_once(bundle_id, 13, 4, "duplicate reward bundle"):
+		push_error("Duplicate reward bundle was accepted.")
+		quit(1)
+		return
+	if not wallet.initialize_wallet():
+		push_error("Wallet reload after reward bundle failed.")
+		quit(1)
+		return
+	if wallet.credit_bundle_once(bundle_id, 13, 4, "replayed reward bundle"):
+		push_error("Reward bundle receipt did not survive wallet reload.")
+		quit(1)
+		return
+	if wallet.get_balance("money") != bundle_money_before + 13 or wallet.get_balance("chips") != bundle_chips_before + 4:
+		push_error("Reward bundle replay changed balances after wallet reload.")
+		quit(1)
+		return
+
 	var vehicle_store := root.get_node_or_null("VehicleStoreManager")
 	if vehicle_store == null or not vehicle_store.has_vehicle("toyota_corolla"):
 		push_error("Default vehicle ownership was not initialized.")
