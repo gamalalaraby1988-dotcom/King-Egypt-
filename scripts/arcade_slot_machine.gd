@@ -151,7 +151,8 @@ func _build_touch_controls() -> void:
 	_status_label.text = machine_title
 	_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	content.add_child(_status_label)
-	_enter_button = _make_button("اجلس أمام الماكينة", _on_enter_pressed)
+	_enter_button = _make_button("✋ اجلس أمام الماكينة", _on_enter_pressed)
+	_enter_button.modulate = Color(0.55, 0.78, 1.0)
 	content.add_child(_enter_button)
 	_spin_button = _make_button("SPIN — قريبًا", _on_spin_pressed)
 	_spin_button.name = "SpinButton"
