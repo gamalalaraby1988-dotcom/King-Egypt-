@@ -1,5 +1,7 @@
 extends Node3D
 
+const ProfileConfigStore = preload("res://scripts/profile_config_store.gd")
+
 @export var city_half_size: int = 3
 @export var block_spacing: float = 24.0
 
@@ -1327,7 +1329,7 @@ func _create_mode_selection_ui() -> void:
 	PlayerAccountAuthClient.player_profile_ready.connect(_on_player_profile_ready)
 	PlayerAccountAuthClient.player_profile_failed.connect(_on_player_profile_failed)
 	if PlayerAccountAuthClient.has_active_session():
-		PlayerSyncClient.set_session_access_token(PlayerAccountAuthClient.get_access_token(), PlayerAccountAuthClient.get_user_id())
+		_on_player_account_access_token_changed(PlayerAccountAuthClient.get_access_token())
 	var backdrop := ColorRect.new()
 	backdrop.color = Color(0.025, 0.035, 0.05, 0.94)
 	backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -1545,11 +1547,19 @@ func _on_player_account_authenticated(user_id: String, email: String) -> void:
 
 func _on_player_account_access_token_changed(access_token: String) -> void:
 	var account_id := PlayerAccountAuthClient.get_user_id()
+	var account_changed := ProfileConfigStore.get_active_account_id() != account_id
 	if not ProfileConfigStore.set_active_account(account_id):
 		push_error("Could not activate the isolated local profile for the authenticated account.")
 		return
 	WalletManager.initialize_wallet()
 	PlayerSyncClient.set_session_access_token(access_token, account_id)
+	if account_changed:
+		call_deferred("_reload_scene_for_account_profile")
+
+func _reload_scene_for_account_profile() -> void:
+	# Recreate scene managers so mission, achievement, daily, vehicle, and settings state
+	# is loaded from the newly selected account file instead of stale in-memory data.
+	get_tree().reload_current_scene()
 
 func _on_player_account_session_expired() -> void:
 	PlayerSyncClient.clear_session_access_token()
