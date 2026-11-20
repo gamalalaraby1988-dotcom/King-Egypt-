@@ -12,6 +12,8 @@ signal mission_start_result(success: bool, mission_id: String, target: Vector3, 
 signal mission_completed(mission_id: String)
 signal activity_proof_received(activity_kind: String, activity_id: String, proof_id: String)
 signal activity_proof_failed(activity_kind: String, activity_id: String, message: String)
+signal puzzle_piece_proof_received(activity_kind: String, activity_id: String, piece_id: String, proof_id: String)
+signal puzzle_piece_proof_failed(activity_kind: String, activity_id: String, message: String)
 signal arcade_session_state_changed(session_id: String, state: String, machine_id: String, message: String)
 signal arcade_session_verified(session_id: String, server_event_id: String, machine_id: String, zone_id: String, mode: String, participants: Dictionary, results: Dictionary)
 signal arcade_slot_spin_settled(session_id: String, result: Dictionary)
@@ -37,6 +39,9 @@ var _client_authenticated := false
 var _objective_zones: Dictionary = {}
 var _proof_hmac_secret := PackedByteArray()
 var _proof_secret_warning_shown := false
+var _puzzle_season_id := ""
+var _puzzle_piece_map: Dictionary = {}
+var _puzzle_config_warning_shown := false
 var _arcade_machines: Dictionary = {}
 var _arcade_sessions: Dictionary = {}
 var _peer_arcade_sessions: Dictionary = {}
@@ -99,7 +104,40 @@ func _ready() -> void:
 		var secret_b64 := OS.get_environment("KING_CITY_PROOF_HMAC_SECRET_B64").strip_edges()
 		if not secret_b64.is_empty():
 			_proof_hmac_secret = Marshalls.base64_to_raw(secret_b64)
+		_load_puzzle_piece_configuration()
 		call_deferred("start_dedicated_server")
+
+
+func _load_puzzle_piece_configuration() -> void:
+	_puzzle_season_id = OS.get_environment("KING_CITY_PUZZLE_SEASON_ID").strip_edges().to_lower()
+	var uuid_pattern := RegEx.new()
+	uuid_pattern.compile("^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")
+	if uuid_pattern.search(_puzzle_season_id) == null:
+		_puzzle_season_id = ""
+	var raw_map := OS.get_environment("KING_CITY_PUZZLE_ACTIVITY_PIECES_JSON").strip_edges()
+	if raw_map.is_empty():
+		return
+	var parsed: Variant = JSON.parse_string(raw_map)
+	if not (parsed is Dictionary):
+		push_warning("Puzzle piece activity map is invalid JSON; puzzle piece issuance remains disabled.")
+		return
+	var id_pattern := RegEx.new()
+	id_pattern.compile("^[a-z0-9][a-z0-9_.-]{0,79}$")
+	for key_variant in parsed.keys():
+		var activity_key := str(key_variant).strip_edges().to_lower()
+		var parts := activity_key.split(":", false, 1)
+		var piece_id := str(parsed[key_variant]).strip_edges().to_lower()
+		if parts.size() != 2 or not ["mission", "job"].has(parts[0]) or id_pattern.search(parts[1]) == null or id_pattern.search(piece_id) == null:
+			continue
+		if parts[0] == "mission" and not ["mission_shop", "mission_restaurant", "mission_employment"].has(parts[1]):
+			continue
+		if parts[0] == "job" and not ["parcel_shipping", "postal_mail", "pizza_delivery", "pharmacy_orders", "flowers_gifts", "home_orders", "luggage_delivery"].has(parts[1]):
+			continue
+		_puzzle_piece_map[activity_key] = piece_id
+	if _puzzle_season_id.is_empty() or _puzzle_piece_map.is_empty():
+		push_warning("Puzzle piece issuance is disabled until a valid season ID and approved activity-to-piece map are configured.")
+		_puzzle_config_warning_shown = true
+
 
 
 func is_dedicated_server_requested() -> bool:
@@ -915,6 +953,126 @@ func _notify_proof_issue_failed(peer_id: int, activity_kind: String, activity_id
 		rpc_id(peer_id, "receive_server_activity_proof_failed", activity_kind, activity_id, message)
 
 
+func _issue_puzzle_piece_proof(peer_id: int, user_id: String, activity_kind: String, activity_id: String) -> void:
+	if _puzzle_season_id.is_empty():
+		return
+	var piece_id := str(_puzzle_piece_map.get(activity_kind + ":" + activity_id, ""))
+	if piece_id.is_empty():
+		return
+	if _proof_hmac_secret.size() < 32:
+		_notify_puzzle_piece_proof_failed(peer_id, activity_kind, activity_id, "إعداد إثبات قطع البازل غير مكتمل على الخادم.")
+		return
+	var base_url := str(ProjectSettings.get_setting("founder/auth/api_base_url", "")).strip_edges().trim_suffix("/")
+	var publishable_key := str(ProjectSettings.get_setting("founder/auth/publishable_key", "")).strip_edges()
+	if not base_url.begins_with("https://") or publishable_key.is_empty():
+		_notify_puzzle_piece_proof_failed(peer_id, activity_kind, activity_id, "خدمة قطع البازل غير مهيأة على الخادم.")
+		return
+	var event_id := _new_server_event_uuid()
+	if event_id.is_empty():
+		_notify_puzzle_piece_proof_failed(peer_id, activity_kind, activity_id, "تعذر إنشاء رقم حدث آمن لقطعة البازل.")
+		return
+	var issued_at := int(Time.get_unix_time_from_system())
+	var expires_at := issued_at + 300
+	var canonical := "v1|%s|%s|%s|%s|%s|%s|%d|%d" % [user_id, _puzzle_season_id, piece_id, activity_kind, activity_id, event_id, issued_at, expires_at]
+	var digest_context := HashingContext.new()
+	if digest_context.start(HashingContext.HASH_SHA256) != OK or digest_context.update(canonical.to_utf8_buffer()) != OK:
+		_notify_puzzle_piece_proof_failed(peer_id, activity_kind, activity_id, "تعذر تجهيز بصمة قطعة البازل.")
+		return
+	var hmac_context := HMACContext.new()
+	if hmac_context.start(HashingContext.HASH_SHA256, _proof_hmac_secret) != OK or hmac_context.update(canonical.to_utf8_buffer()) != OK:
+		_notify_puzzle_piece_proof_failed(peer_id, activity_kind, activity_id, "تعذر توقيع إثبات قطعة البازل.")
+		return
+	var payload := {
+		"user_id": user_id,
+		"season_id": _puzzle_season_id,
+		"piece_id": piece_id,
+		"activity_kind": activity_kind,
+		"activity_id": activity_id,
+		"server_event_id": event_id,
+		"issued_at": issued_at,
+		"expires_at": expires_at,
+		"evidence_digest_hex": digest_context.finish().hex_encode(),
+		"signature_hex": hmac_context.finish().hex_encode()
+	}
+	_send_puzzle_piece_proof_request(peer_id, payload, 0, base_url, publishable_key)
+
+
+func _send_puzzle_piece_proof_request(peer_id: int, payload: Dictionary, attempt: int, base_url: String, publishable_key: String) -> void:
+	if not _sessions.has(peer_id) or not multiplayer.get_peers().has(peer_id):
+		return
+	var request := HTTPRequest.new()
+	request.timeout = 10.0
+	add_child(request)
+	request.request_completed.connect(_on_puzzle_piece_proof_issue_completed.bind(request, peer_id, payload, attempt, base_url, publishable_key))
+	var error := request.request(
+		base_url + "/functions/v1/game-puzzle-piece-issuer",
+		PackedStringArray(["Content-Type: application/json", "apikey: " + publishable_key]),
+		HTTPClient.METHOD_POST,
+		JSON.stringify(payload)
+	)
+	if error != OK:
+		request.queue_free()
+		_schedule_puzzle_piece_proof_retry(peer_id, payload, attempt, base_url, publishable_key)
+
+
+func _schedule_puzzle_piece_proof_retry(peer_id: int, payload: Dictionary, attempt: int, base_url: String, publishable_key: String) -> void:
+	if attempt >= 3:
+		_notify_puzzle_piece_proof_failed(peer_id, str(payload.get("activity_kind", "")), str(payload.get("activity_id", "")), "تعذر إصدار إثبات قطعة البازل؛ لم تتم إضافة أي قطعة.")
+		return
+	var delays := [2.0, 5.0, 15.0]
+	_retry_puzzle_piece_proof_after(peer_id, payload, attempt + 1, delays[attempt], base_url, publishable_key)
+
+
+func _retry_puzzle_piece_proof_after(peer_id: int, payload: Dictionary, attempt: int, delay_seconds: float, base_url: String, publishable_key: String) -> void:
+	await get_tree().create_timer(delay_seconds).timeout
+	_send_puzzle_piece_proof_request(peer_id, payload, attempt, base_url, publishable_key)
+
+
+func _on_puzzle_piece_proof_issue_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray, request: HTTPRequest, peer_id: int, payload: Dictionary, attempt: int, base_url: String, publishable_key: String) -> void:
+	if is_instance_valid(request):
+		request.queue_free()
+	var activity_kind := str(payload.get("activity_kind", ""))
+	var activity_id := str(payload.get("activity_id", ""))
+	if result != HTTPRequest.RESULT_SUCCESS or response_code == 429 or response_code >= 500:
+		_schedule_puzzle_piece_proof_retry(peer_id, payload, attempt, base_url, publishable_key)
+		return
+	if response_code != 200:
+		push_warning("Puzzle piece proof issuer rejected %s/%s with HTTP %d." % [activity_kind, activity_id, response_code])
+		_notify_puzzle_piece_proof_failed(peer_id, activity_kind, activity_id, "لم تصدر خدمة البازل إثباتًا صالحًا؛ لم تُضف قطعة.")
+		return
+	var parsed: Variant = JSON.parse_string(body.get_string_from_utf8())
+	var proof_id := str(parsed.get("proof_id", "")) if parsed is Dictionary else ""
+	var uuid_pattern := RegEx.new()
+	uuid_pattern.compile("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$")
+	if uuid_pattern.search(proof_id) == null:
+		_notify_puzzle_piece_proof_failed(peer_id, activity_kind, activity_id, "استجابة إثبات قطعة البازل غير صالحة.")
+		return
+	var user_id := str(payload.get("user_id", ""))
+	if not _sessions.has(peer_id) or str(_sessions[peer_id].get("user_id", "")) != user_id:
+		return
+	rpc_id(peer_id, "receive_server_puzzle_piece_proof", activity_kind, activity_id, str(payload.get("piece_id", "")), proof_id)
+
+
+@rpc("authority", "call_remote", "reliable")
+func receive_server_puzzle_piece_proof(activity_kind: String, activity_id: String, piece_id: String, proof_id: String) -> void:
+	if multiplayer.is_server() or not is_authenticated():
+		return
+	puzzle_piece_proof_received.emit(activity_kind, activity_id, piece_id, proof_id)
+
+
+@rpc("authority", "call_remote", "reliable")
+func receive_server_puzzle_piece_proof_failed(activity_kind: String, activity_id: String, message: String) -> void:
+	if multiplayer.is_server() or not is_authenticated():
+		return
+	puzzle_piece_proof_failed.emit(activity_kind, activity_id, message)
+
+
+func _notify_puzzle_piece_proof_failed(peer_id: int, activity_kind: String, activity_id: String, message: String) -> void:
+	if _sessions.has(peer_id) and multiplayer.get_peers().has(peer_id):
+		rpc_id(peer_id, "receive_server_puzzle_piece_proof_failed", activity_kind, activity_id, message)
+
+
+
 func _new_server_event_uuid() -> String:
 	var crypto := Crypto.new()
 	var bytes := crypto.generate_random_bytes(16)
@@ -1133,6 +1291,7 @@ func _physics_process(delta: float) -> void:
 				server_objective_reached.emit(str(session.get("user_id", "")), "job", completed_job_id)
 				rpc_id(peer_id, "receive_server_job_completed", completed_job_id)
 				_issue_activity_proof(peer_id, str(session.get("user_id", "")), "job", completed_job_id)
+				_issue_puzzle_piece_proof(peer_id, str(session.get("user_id", "")), "job", completed_job_id)
 		var active_mission: Dictionary = session.get("active_mission", {})
 		if not active_mission.is_empty():
 			var mission_target: Vector3 = active_mission.get("target", Vector3.ZERO)
@@ -1146,6 +1305,7 @@ func _physics_process(delta: float) -> void:
 				server_objective_reached.emit(str(session.get("user_id", "")), "mission", completed_mission_id)
 				rpc_id(peer_id, "receive_server_mission_completed", completed_mission_id)
 				_issue_activity_proof(peer_id, str(session.get("user_id", "")), "mission", completed_mission_id)
+				_issue_puzzle_piece_proof(peer_id, str(session.get("user_id", "")), "mission", completed_mission_id)
 		_sessions[peer_id] = session
 	_snapshot_elapsed += safe_delta
 	if _snapshot_elapsed >= SNAPSHOT_INTERVAL:

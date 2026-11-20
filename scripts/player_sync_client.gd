@@ -9,6 +9,7 @@ signal preference_snapshot_finished(success: bool, message: String)
 signal progress_observations_received(observations: Array, trust_label: String)
 signal progress_observations_finished(success: bool, message: String)
 signal verified_reward_claim_finished(success: bool, result: Dictionary, message: String)
+signal puzzle_piece_claim_finished(success: bool, result: Dictionary, message: String)
 
 const OUTBOX_PATH := "user://player_sync_outbox.cfg"
 const PROGRESS_REVIEW_PATH := "user://player_sync_progress_review.cfg"
@@ -33,6 +34,10 @@ var _reward_claim_http: HTTPRequest
 var _reward_claim_active := false
 var _reward_claim_token := ""
 var _reward_claim_user_id := ""
+var _puzzle_piece_claim_http: HTTPRequest
+var _puzzle_piece_claim_active := false
+var _puzzle_piece_claim_token := ""
+var _puzzle_piece_claim_user_id := ""
 var _snapshot_action := ""
 var _snapshot_revision := 0
 var _snapshot_request_active := false
@@ -72,6 +77,11 @@ func _ready() -> void:
 	_reward_claim_http.timeout = 25.0
 	add_child(_reward_claim_http)
 	_reward_claim_http.request_completed.connect(_on_verified_reward_claim_completed)
+	_puzzle_piece_claim_http = HTTPRequest.new()
+	_puzzle_piece_claim_http.name = "VerifiedPuzzlePieceClaimHTTPRequest"
+	_puzzle_piece_claim_http.timeout = 25.0
+	add_child(_puzzle_piece_claim_http)
+	_puzzle_piece_claim_http.request_completed.connect(_on_puzzle_piece_claim_completed)
 	_retry_timer = Timer.new()
 	_retry_timer.one_shot = true
 	_retry_timer.timeout.connect(flush_pending)
@@ -313,6 +323,66 @@ func _on_progress_recovery_completed(result: int, response_code: int, _headers: 
 		return
 	progress_observations_received.emit(clean_observations.duplicate(true), "غير معتمد — يحتاج تحققًا خادميًا")
 	progress_observations_finished.emit(true, "تم حفظ سجل التقدم للمراجعة فقط؛ لم يُعتمد داخل اللعب ولم تُمنح مكافآت.")
+
+
+func claim_verified_puzzle_piece(proof_id: String) -> void:
+	if _access_token.is_empty() or _session_user_id.is_empty() or _puzzle_piece_claim_active:
+		puzzle_piece_claim_finished.emit(false, {}, "سجّل الدخول أولًا أو انتظر انتهاء طلب قطعة البازل الحالي.")
+		return
+	var uuid_pattern := RegEx.new()
+	uuid_pattern.compile("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$")
+	var normalized_proof_id := proof_id.strip_edges().to_lower()
+	if uuid_pattern.search(normalized_proof_id) == null:
+		puzzle_piece_claim_finished.emit(false, {}, "معرّف إثبات قطعة البازل غير صالح.")
+		return
+	var base_url := str(ProjectSettings.get_setting("founder/auth/api_base_url", "")).strip_edges().trim_suffix("/")
+	var publishable_key := str(ProjectSettings.get_setting("founder/auth/publishable_key", "")).strip_edges()
+	if not base_url.begins_with("https://") or publishable_key.is_empty():
+		puzzle_piece_claim_finished.emit(false, {}, "إعدادات الحساب غير مكتملة.")
+		return
+	var headers := PackedStringArray([
+		"Content-Type: application/json",
+		"Accept: application/json",
+		"apikey: " + publishable_key,
+		"Authorization: Bearer " + _access_token
+	])
+	var error := _puzzle_piece_claim_http.request(
+		base_url + "/rest/v1/rpc/claim_verified_puzzle_piece",
+		headers,
+		HTTPClient.METHOD_POST,
+		JSON.stringify({"p_proof_id": normalized_proof_id})
+	)
+	if error != OK:
+		puzzle_piece_claim_finished.emit(false, {}, "تعذر بدء طلب إضافة قطعة البازل.")
+		return
+	_puzzle_piece_claim_active = true
+	_puzzle_piece_claim_token = _access_token
+	_puzzle_piece_claim_user_id = _session_user_id
+
+
+func _on_puzzle_piece_claim_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+	_puzzle_piece_claim_active = false
+	var request_token := _puzzle_piece_claim_token
+	var request_user_id := _puzzle_piece_claim_user_id
+	_puzzle_piece_claim_token = ""
+	_puzzle_piece_claim_user_id = ""
+	if request_token.is_empty() or request_user_id.is_empty() or request_token != _access_token or request_user_id != _session_user_id:
+		return
+	if result != HTTPRequest.RESULT_SUCCESS or response_code < 200 or response_code >= 300:
+		puzzle_piece_claim_finished.emit(false, {}, "لم يعتمد الخادم قطعة البازل؛ لم تُضف أي قطعة محليًا.")
+		return
+	var parsed: Variant = JSON.parse_string(body.get_string_from_utf8())
+	if parsed is Array and parsed.size() == 1:
+		parsed = parsed[0]
+	if not (parsed is Dictionary):
+		puzzle_piece_claim_finished.emit(false, {}, "استجابة اعتماد قطعة البازل غير صالحة.")
+		return
+	var duplicate := bool(parsed.get("duplicate", false))
+	var claimed := bool(parsed.get("claimed", false))
+	if not claimed and not duplicate:
+		puzzle_piece_claim_finished.emit(false, parsed.duplicate(true), "لم يؤكد الخادم إضافة قطعة البازل.")
+		return
+	puzzle_piece_claim_finished.emit(true, parsed.duplicate(true), "تمت إضافة قطعة البازل." if claimed else "هذه القطعة سبق اعتمادها؛ لم تتكرر الإضافة.")
 
 
 func claim_verified_activity_reward(proof_id: String) -> void:

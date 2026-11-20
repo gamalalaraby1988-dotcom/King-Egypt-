@@ -15,3 +15,8 @@ verify_jwt = false
 # Dedicated game server proof issuer: HMAC is verified in the function before DB insertion.
 [functions.game-proof-issuer]
 verify_jwt = false
+
+# Dedicated puzzle-piece issuer: calls originate from the trusted game server.
+# The function validates the publishable API key and HMAC signature itself.
+[functions.game-puzzle-piece-issuer]
+verify_jwt = false
