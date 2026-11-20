@@ -87,6 +87,7 @@ var selected_adventure_id := ""
 var adventure_stage_index := 0
 var survival_prep_remaining := 0.0
 var survival_time_remaining := 0.0
+var adventure_treasure_visual: Node3D
 const SURVIVAL_PREPARATION_SECONDS := 10.0
 const SURVIVAL_DURATION_SECONDS := 60.0
 const CITY_ADVENTURES := {
@@ -1127,6 +1128,7 @@ func _accept_adventure() -> void:
 		status_label.text = "المغامرة المختارة غير متاحة."
 		return
 	selected_adventure_id = adventure_id
+	_hide_adventure_treasure()
 	active_mission.set("server_activity_id", adventure_id)
 	adventure_stage_index = 0
 	landmark_navigation_active = false
@@ -1200,10 +1202,13 @@ func _advance_local_adventure_stage() -> void:
 		return
 	adventure_stage_index += 1
 	if adventure_stage_index >= stages.size():
+		_hide_adventure_treasure()
 		_complete_active_mission()
 		return
 	active_target = stages[adventure_stage_index]
 	target_marker.global_position = active_target
+	if selected_adventure_id == "city_adventure_treasure" and adventure_stage_index == stages.size() - 1:
+		_show_adventure_treasure()
 	var adventure: Dictionary = CITY_ADVENTURES.get(selected_adventure_id, {})
 	description_label.text = "%s\nالمرحلة %d من %d" % [str(adventure.get("description", "")), adventure_stage_index + 1, stages.size()]
 	status_label.text = "أحسنت! انتقل إلى نقطة المغامرة التالية."
@@ -1214,6 +1219,8 @@ func _on_server_mission_stage_updated(mission_id: String, server_target: Vector3
 		return
 	active_target = server_target
 	target_marker.global_position = active_target
+	if mission_id == "city_adventure_treasure" and stage_number == stage_count:
+		_show_adventure_treasure()
 	description_label.text = "%s\nالمرحلة %d من %d" % [str(CITY_ADVENTURES.get(mission_id, {}).get("description", "")), stage_number, stage_count]
 	status_label.text = message
 
@@ -1305,8 +1312,9 @@ func _on_server_mission_completed(mission_id: String) -> void:
 	mission_running = false
 	survival_time_remaining = 0.0
 	survival_prep_remaining = 0.0
+	_hide_adventure_treasure()
 	target_marker.visible = false
-	status_label.text = "اكتملت المغامرة بعد تحقق الخادم من جميع المراحل." if selected_activity_kind == "adventure" else "تحقق الخادم من وصولك إلى هدف المهمة."
+	status_label.text = "عثرت على الكنز وأكد الخادم إكمال المغامرة." if mission_id == "city_adventure_treasure" else ("اكتملت المغامرة بعد تحقق الخادم من جميع المراحل." if selected_activity_kind == "adventure" else "تحقق الخادم من وصولك إلى هدف المهمة.")
 	description_label.text = "تم تسجيل اكتمال المسار خادميًا. لا يوجد صرف مكافآت في هذه النسخة."
 	reward_label.text = "لم تُضف أي مكافأة محليًا."
 	accept_button.disabled = false
@@ -1546,8 +1554,9 @@ func _complete_active_mission() -> void:
 		achievement_manager.record_mission_completed(key)
 	mission_running = false
 	survival_time_remaining = 0.0
+	_hide_adventure_treasure()
 	target_marker.visible = false
-	status_label.text = "اكتملت المغامرة! تم تسجيلها محليًا دون مكافأة." if selected_activity_kind == "adventure" else "اكتملت المهمة! تم حفظ المكافأة."
+	status_label.text = "عثرت على الكنز وأكملت المغامرة! لا توجد مكافأة مفعلة." if selected_adventure_id == "city_adventure_treasure" else ("اكتملت المغامرة! تم تسجيلها محليًا دون مكافأة." if selected_activity_kind == "adventure" else "اكتملت المهمة! تم حفظ المكافأة.")
 	description_label.text = "تم تسجيل إكمال المغامرة في هذا الجهاز فقط." if selected_activity_kind == "adventure" else "رصيدك الحالي: %d جنيه، %d رقائق، المستوى %d." % [money, chips, player_level]
 	reward_label.text = "لا توجد مكافأة لهذه النسخة." if selected_activity_kind == "adventure" else "تم حفظ إكمال المهمة ومكافآتها."
 	accept_button.disabled = selected_activity_kind != "adventure"
@@ -1819,6 +1828,48 @@ func _cancel_active_navigation() -> void:
 	accept_button.text = "بدء من جديد"
 	panel.visible = true
 	_update_navigation_hud()
+
+func _hide_adventure_treasure() -> void:
+	if is_instance_valid(adventure_treasure_visual):
+		adventure_treasure_visual.queue_free()
+	adventure_treasure_visual = null
+
+
+func _add_treasure_box_part(parent: Node3D, part_name: String, size: Vector3, offset: Vector3, material: StandardMaterial3D) -> void:
+	var part := MeshInstance3D.new()
+	part.name = part_name
+	var box := BoxMesh.new()
+	box.size = size
+	part.mesh = box
+	part.material_override = material
+	part.position = offset
+	parent.add_child(part)
+
+
+func _show_adventure_treasure() -> void:
+	_hide_adventure_treasure()
+	var city_root := get_tree().current_scene
+	if not is_instance_valid(city_root):
+		return
+	var chest := Node3D.new()
+	chest.name = "AdventureTreasureVisual"
+	city_root.add_child(chest)
+	chest.global_position = active_target + Vector3(0.0, 0.58, 0.0)
+	var wood := StandardMaterial3D.new()
+	wood.albedo_color = Color(0.20, 0.075, 0.025)
+	wood.roughness = 0.78
+	var gold := StandardMaterial3D.new()
+	gold.albedo_color = Color(0.92, 0.62, 0.12)
+	gold.metallic = 0.72
+	gold.roughness = 0.28
+	_add_treasure_box_part(chest, "ChestBody", Vector3(1.05, 0.62, 0.72), Vector3(0.0, -0.18, 0.0), wood)
+	_add_treasure_box_part(chest, "GoldenLid", Vector3(1.12, 0.22, 0.78), Vector3(0.0, 0.24, 0.0), gold)
+	_add_treasure_box_part(chest, "FrontBand", Vector3(1.08, 0.09, 0.035), Vector3(0.0, -0.16, 0.37), gold)
+	_add_treasure_box_part(chest, "SideBandLeft", Vector3(0.035, 0.52, 0.76), Vector3(-0.39, -0.16, 0.0), gold)
+	_add_treasure_box_part(chest, "SideBandRight", Vector3(0.035, 0.52, 0.76), Vector3(0.39, -0.16, 0.0), gold)
+	_add_treasure_box_part(chest, "LockPlate", Vector3(0.18, 0.22, 0.06), Vector3(0.0, -0.05, 0.405), gold)
+	adventure_treasure_visual = chest
+
 
 func _create_target_marker() -> void:
 	# هذا المجسم محلي داخل نسخة اللاعب فقط؛ لا يُرسل كعنصر شبكة إلى بقية اللاعبين.
