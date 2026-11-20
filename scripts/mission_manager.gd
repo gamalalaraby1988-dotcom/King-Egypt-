@@ -1301,7 +1301,7 @@ func _complete_active_job() -> void:
 	job_delivery_button.visible = false
 	status_label.text = "أنهيت جميع التوصيلات وعدت بالسيارة إلى محطة الوقود. تم تسجيل إنجاز الوظيفة."
 	description_label.text = "رصيدك الحالي: %d جنيه، %d رقائق، المستوى %d." % [money, chips, player_level]
-	reward_label.text = "تم حفظ إكمال الوظيفة ومكافأتها."
+	reward_label.text = "تم حفظ إنجاز الوظيفة. الأجر لم يُحدد بعد."
 	accept_button.disabled = true
 	panel.visible = true
 
