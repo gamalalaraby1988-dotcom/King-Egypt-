@@ -1110,6 +1110,7 @@ func _physics_process(delta: float) -> void:
 	if not multiplayer.is_server():
 		return
 	var safe_delta := clampf(delta, 0.0, 0.05)
+	var now_usec := Time.get_ticks_usec()
 	for peer_id_variant in _sessions.keys():
 		var peer_id := int(peer_id_variant)
 		var session: Dictionary = _sessions[peer_id]
