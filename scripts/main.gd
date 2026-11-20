@@ -585,6 +585,7 @@ func _create_building_interior(building_title: String) -> void:
 	light.light_energy = 1.2
 	light.omni_range = 18.0
 	interior_root.add_child(light)
+	_create_palace_portal(interior_root, "BuildingCityExitGate", "الخروج إلى المدينة", Vector3(0,0,6.0), "city_exit")
 
 func _create_royal_palace_interior(root: Node3D) -> void:
 	# ردهة مركزية وخمسة أجنحة مغلقة بجدران وتصادمات مستقلة.
