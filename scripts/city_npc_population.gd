@@ -152,6 +152,7 @@ func _refresh_population() -> void:
 			if is_instance_valid(actor):
 				actor.queue_free()
 			_active_visuals.erase(actor_id)
+			_rescue_actor_ids.erase(str(actor_id))
 			_clear_social_actor(str(actor_id))
 
 func _create_active_visual(record: Dictionary) -> void:
