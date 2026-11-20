@@ -1,7 +1,8 @@
 extends Node
 ## إنجازات دائمة محليًا مرتبطة بالتجول والوظائف والمهام والأنشطة اليومية.
 
-const SAVE_PATH := "user://kings_city_achievements.cfg"
+const ProfileConfigStore = preload("res://scripts/profile_config_store.gd")
+
 var player: Node3D
 var mission_manager: Node
 var walked_meters := 0.0
@@ -20,6 +21,9 @@ var panel: PanelContainer
 var list_label: Label
 var summary_label: Label
 var open_button: Button
+
+func _save_path() -> String:
+	return ProfileConfigStore.get_active_scoped_path("user://kings_city_achievements.cfg")
 
 func _ready() -> void:
 	_load_state()
@@ -48,6 +52,8 @@ func _process(_delta: float) -> void:
 	last_position = current
 
 func _notification(what: int) -> void:
+	if ProfileConfigStore.is_account_switch_in_progress():
+		return
 	if what == NOTIFICATION_WM_CLOSE_REQUEST or what == NOTIFICATION_PREDELETE:
 		_save_state()
 
@@ -106,15 +112,17 @@ func _check_all() -> void:
 	_refresh_ui()
 
 func _save_state() -> void:
+	if ProfileConfigStore.is_account_switch_in_progress():
+		return
 	var cfg := ConfigFile.new()
-	var load_error := cfg.load(SAVE_PATH)
-	if load_error != OK and FileAccess.file_exists(SAVE_PATH):
+	var load_error := cfg.load(_save_path())
+	if load_error != OK and FileAccess.file_exists(_save_path()):
 		push_warning("ملف الإنجازات موجود لكنه غير قابل للقراءة؛ أُوقفت الكتابة لحماية التقدم السابق.")
 		return
 	cfg.set_value("achievements", "walked_meters", walked_meters)
 	cfg.set_value("achievements", "totals", totals)
 	cfg.set_value("achievements", "unlocked", unlocked)
-	var error := cfg.save(SAVE_PATH)
+	var error := cfg.save(_save_path())
 	if error != OK:
 		push_warning("تعذر حفظ الإنجازات: %s" % error)
 	else:
@@ -128,7 +136,7 @@ func _save_state() -> void:
 
 func _load_state() -> void:
 	var cfg := ConfigFile.new()
-	if cfg.load(SAVE_PATH) != OK:
+	if cfg.load(_save_path()) != OK:
 		return
 	var saved_walked: float = float(cfg.get_value("achievements", "walked_meters", 0.0))
 	walked_meters = maxf(0.0, saved_walked) if is_finite(saved_walked) else 0.0

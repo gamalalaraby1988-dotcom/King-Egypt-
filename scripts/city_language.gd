@@ -3,7 +3,8 @@ extends Node
 
 signal language_changed
 
-const SAVE_PATH := "user://kings_city_profile.cfg"
+const ProfileConfigStore = preload("res://scripts/profile_config_store.gd")
+
 var language_mode: String = "auto"
 
 const TEXTS := {
@@ -165,9 +166,12 @@ const TEXTS := {
 	}
 }
 
+func _save_path() -> String:
+	return ProfileConfigStore.get_active_profile_path()
+
 func _ready() -> void:
 	var config := ConfigFile.new()
-	if config.load(SAVE_PATH) == OK:
+	if config.load(_save_path()) == OK:
 		language_mode = str(config.get_value("settings", "language", "auto"))
 	if not ["auto", "ar", "en"].has(language_mode):
 		language_mode = "auto"
@@ -187,15 +191,8 @@ func set_language(mode: String) -> void:
 		mode = "auto"
 	if language_mode == mode:
 		return
-	var config := ConfigFile.new()
-	var load_error := config.load(SAVE_PATH)
-	if load_error != OK and FileAccess.file_exists(SAVE_PATH):
-		push_warning("ملف إعدادات اللغة غير قابل للقراءة؛ لم يتم استبداله.")
-		return
-	config.set_value("settings", "language", mode)
-	var save_error := config.save(SAVE_PATH)
-	if save_error != OK:
-		push_warning("تعذر حفظ إعداد اللغة: %s" % save_error)
+	if not ProfileConfigStore.save_sections(_save_path(), {"settings": {"language": mode}}):
+		push_warning("تعذر حفظ إعداد اللغة؛ لم يتم استبدال بيانات اللاعب.")
 		return
 	language_mode = mode
 	if is_instance_valid(PlayerSyncClient):

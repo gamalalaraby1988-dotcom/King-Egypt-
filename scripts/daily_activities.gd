@@ -1,7 +1,8 @@
 extends Node
 ## أنشطة يومية خفيفة تتجدد وفق يوم اللعبة الموحد بتوقيت مصر وتحفظ تقدمها ومكافآتها.
 
-const SAVE_PATH := "user://kings_city_daily.cfg"
+const ProfileConfigStore = preload("res://scripts/profile_config_store.gd")
+
 const DAILY_REWARD_MONEY := 250
 const DAILY_REWARD_XP := 60
 
@@ -18,6 +19,9 @@ var root_panel: PanelContainer
 var content_label: Label
 var reward_button: Button
 var open_button: Button
+
+func _save_path() -> String:
+	return ProfileConfigStore.get_active_scoped_path("user://kings_city_daily.cfg")
 
 func _ready() -> void:
 	day_key = GameCalendar.get_egypt_day_key()
@@ -57,6 +61,9 @@ func _process(_delta: float) -> void:
 
 
 func _exit_tree() -> void:
+	# لا تكتب حالة الحساب القديم في ملف الحساب الجديد أثناء تبديل الهوية.
+	if ProfileConfigStore.is_account_switch_in_progress():
+		return
 	# احفظ المسافة الجزئية عند مغادرة المشهد دون الكتابة على القرص كل إطار.
 	_save_state()
 
@@ -147,7 +154,7 @@ func _check_new_day() -> void:
 
 func _load_state() -> void:
 	var cfg := ConfigFile.new()
-	if cfg.load(SAVE_PATH) != OK:
+	if cfg.load(_save_path()) != OK:
 		return
 	var saved_day := str(cfg.get_value("daily", "day", day_key))
 	if saved_day != day_key:
@@ -164,16 +171,18 @@ func _load_state() -> void:
 	walked_meters = maxf(0.0, saved_walked) if is_finite(saved_walked) else 0.0
 
 func _save_state() -> bool:
+	if ProfileConfigStore.is_account_switch_in_progress():
+		return false
 	var cfg := ConfigFile.new()
-	var load_error := cfg.load(SAVE_PATH)
-	if load_error != OK and FileAccess.file_exists(SAVE_PATH):
+	var load_error := cfg.load(_save_path())
+	if load_error != OK and FileAccess.file_exists(_save_path()):
 		push_warning("ملف الأنشطة اليومية موجود لكنه غير قابل للقراءة؛ أُوقفت الكتابة لحماية التقدم السابق.")
 		return false
 	cfg.set_value("daily", "day", day_key)
 	cfg.set_value("daily", "progress", progress)
 	cfg.set_value("daily", "claimed", claimed)
 	cfg.set_value("daily", "walked_meters", walked_meters)
-	var error := cfg.save(SAVE_PATH)
+	var error := cfg.save(_save_path())
 	if error != OK:
 		push_warning("تعذر حفظ الأنشطة اليومية: %s" % error)
 	return error == OK
