@@ -107,7 +107,7 @@ Deno.serve(async (req: Request) => {
 
   if (
     !UUID_RE.test(userId) || !UUID_RE.test(seasonId) || !UUID_RE.test(eventId) ||
-    !ID_RE.test(pieceId) || !(activityKind in ACTIVITY_IDS) ||
+    !ID_RE.test(pieceId) || !Object.hasOwn(ACTIVITY_IDS, activityKind) ||
     !ACTIVITY_IDS[activityKind].has(activityId) ||
     typeof issuedAt !== "number" || typeof expiresAt !== "number" ||
     !Number.isSafeInteger(issuedAt) || !Number.isSafeInteger(expiresAt) ||
