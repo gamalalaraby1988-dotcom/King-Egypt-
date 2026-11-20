@@ -39,6 +39,9 @@ var _session_user_id := ""
 var _events: Array[Dictionary] = []
 var _pending_event_ids: Array[String] = []
 var _request_active := false
+# Identity snapshot for the in-flight batch; late responses must never mutate a new account session.
+var _request_access_token := ""
+var _request_user_id := ""
 var _retry_timer: Timer
 var _retry_delay_seconds := 5.0
 const MAX_RETRY_DELAY_SECONDS := 300.0
@@ -486,11 +489,24 @@ func flush_pending() -> void:
 		sync_finished.emit(false, 0, 0, "تعذر بدء مزامنة التقدم. ستبقى الأحداث محفوظة على الجهاز.")
 		_schedule_retry()
 		return
+	_request_access_token = _access_token
+	_request_user_id = _session_user_id
 	_request_active = true
 
 
 func _on_request_completed(result: int, response_code: int, response_headers: PackedStringArray, body: PackedByteArray) -> void:
 	_request_active = false
+	var request_token := _request_access_token
+	var request_user_id := _request_user_id
+	_request_access_token = ""
+	_request_user_id = ""
+	# A response belongs to the session that sent it. If the player switched accounts
+	# while it was in flight, keep every queued event and let the new session retry its own batch.
+	if request_token.is_empty() or request_user_id.is_empty() or request_token != _access_token or request_user_id != _session_user_id:
+		_pending_event_ids.clear()
+		if not _access_token.is_empty() and not _session_user_id.is_empty():
+			call_deferred("flush_pending")
+		return
 	if result != HTTPRequest.RESULT_SUCCESS:
 		_pending_event_ids.clear()
 		sync_finished.emit(false, 0, 0, "تعذرت المزامنة الآن. ستبقى الأحداث في قائمة الانتظار.")
