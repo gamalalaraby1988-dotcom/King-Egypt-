@@ -83,6 +83,20 @@ var active_rental_transaction_id: String = ""
 var _key_was_down := false
 var _pending_verified_proofs: Array[Dictionary] = []
 var _reward_claim_inflight := false
+var selected_adventure_id := ""
+var adventure_stage_index := 0
+const CITY_ADVENTURES := {
+	"city_adventure_rescue": {"title": "مهمة الإنقاذ", "description": "اتجه إلى مركز الإنقاذ ثم إلى مركز الشرطة لإتمام المهمة."},
+	"city_adventure_treasure": {"title": "الكنز المفقود", "description": "اتبع الأدلة بين مواقع المدينة الموجودة حتى تصل إلى الهدف."},
+	"city_adventure_message": {"title": "الرسالة الغامضة", "description": "اجمع أجزاء الرسالة من نقاط المدينة ثم أكمل فك الشفرة."},
+	"city_adventure_survival": {"title": "سباق النجاة", "description": "اعبر نقاط المسار المحددة في شوارع المدينة بالترتيب."}
+}
+const CITY_ADVENTURE_STAGES := {
+	"city_adventure_rescue": [Vector3(-75.0, 0.15, 20.9), Vector3(-75.0, 0.15, 0.9)],
+	"city_adventure_treasure": [Vector3(-30.0, 0.15, -23.6), Vector3(0.0, 0.15, 6.4), Vector3(60.0, 0.15, 36.4)],
+	"city_adventure_message": [Vector3(75.0, 0.15, 0.9), Vector3(75.0, 0.15, 20.9), Vector3(60.0, 0.15, -23.6)],
+	"city_adventure_survival": [Vector3(-60.0, 0.15, 45.0), Vector3(-30.0, 0.15, 45.0), Vector3(0.0, 0.15, 45.0), Vector3(30.0, 0.15, 45.0), Vector3(60.0, 0.15, 45.0)]
+}
 
 const SAVE_PATH := "user://kings_city_profile.cfg"
 const MAX_CURRENCY_BALANCE := 2000000000
@@ -109,6 +123,7 @@ func _ready() -> void:
 	AuthoritativeGameServer.job_start_result.connect(_on_server_job_start_result)
 	AuthoritativeGameServer.job_completed.connect(_on_server_job_completed)
 	AuthoritativeGameServer.mission_start_result.connect(_on_server_mission_start_result)
+	AuthoritativeGameServer.mission_stage_updated.connect(_on_server_mission_stage_updated)
 	AuthoritativeGameServer.mission_completed.connect(_on_server_mission_completed)
 	AuthoritativeGameServer.activity_proof_received.connect(_on_server_activity_proof_received)
 	AuthoritativeGameServer.activity_proof_failed.connect(_on_server_activity_proof_failed)
@@ -123,6 +138,8 @@ func _exit_tree() -> void:
 		AuthoritativeGameServer.job_completed.disconnect(_on_server_job_completed)
 	if AuthoritativeGameServer.mission_start_result.is_connected(_on_server_mission_start_result):
 		AuthoritativeGameServer.mission_start_result.disconnect(_on_server_mission_start_result)
+	if AuthoritativeGameServer.mission_stage_updated.is_connected(_on_server_mission_stage_updated):
+		AuthoritativeGameServer.mission_stage_updated.disconnect(_on_server_mission_stage_updated)
 	if AuthoritativeGameServer.mission_completed.is_connected(_on_server_mission_completed):
 		AuthoritativeGameServer.mission_completed.disconnect(_on_server_mission_completed)
 	if AuthoritativeGameServer.activity_proof_received.is_connected(_on_server_activity_proof_received):
@@ -647,7 +664,10 @@ func _process(_delta: float) -> void:
 		var distance_to_target := Vector2(player.global_position.x, player.global_position.z).distance_to(Vector2(active_target.x, active_target.z))
 		status_label.text = "الهدف: اذهب إلى علامة المهمة. المسافة المتبقية: %.1f متر" % distance_to_target
 		if distance_to_target <= 2.2:
-			_complete_active_mission()
+			if selected_activity_kind == "adventure":
+				_advance_local_adventure_stage()
+			else:
+				_complete_active_mission()
 	_update_navigation_hud()
 
 
@@ -932,6 +952,9 @@ func open_building(building: Node3D) -> void:
 	job_selector.visible = false
 	if not is_instance_valid(building) or building.is_queued_for_deletion() or mission_running or job_running:
 		return
+	if str(building.get("building_id")) == "city_adventure_hub":
+		_open_city_adventure_hub(building)
+		return
 	animal_selector.visible = false
 	selected_activity_kind = "mission"
 	active_mission = building
@@ -1045,13 +1068,100 @@ func _close_interior_preview() -> void:
 	accept_button.visible = true
 	panel.visible = false
 
+func _open_city_adventure_hub(building: Node3D) -> void:
+	if not is_instance_valid(building) or mission_running or job_running:
+		return
+	active_mission = building
+	selected_activity_kind = "adventure"
+	animal_selector.visible = false
+	job_selector.clear()
+	for adventure_id in CITY_ADVENTURES.keys():
+		var adventure: Dictionary = CITY_ADVENTURES[adventure_id]
+		job_selector.add_item(str(adventure.get("title", adventure_id)))
+		job_selector.set_item_metadata(job_selector.item_count - 1, adventure_id)
+	job_selector.select(0)
+	selected_adventure_id = str(job_selector.get_item_metadata(0))
+	adventure_stage_index = 0
+	interior_activities_button.visible = false
+	interior_return_button.visible = false
+	accept_button.visible = true
+	accept_button.disabled = false
+	accept_button.text = "ابدأ المغامرة"
+	title_label.text = "مغامرات المدينة"
+	description_label.text = "اختر مغامرتك. جميع المراحل تستخدم مواقع موجودة بالفعل داخل المدينة."
+	reward_label.text = "المكافآت غير مفعلة لهذه النسخة؛ لا يوجد صرف محلي."
+	status_label.text = "اختر واحدة من المغامرات الأربع."
+	job_selector.visible = true
+	panel.visible = true
+
+
 func _accept_selected_activity() -> void:
 	if selected_activity_kind == "animal_rental":
 		_rent_selected_animal()
 	elif selected_activity_kind == "job":
 		_accept_job()
+	elif selected_activity_kind == "adventure":
+		_accept_adventure()
 	else:
 		_accept_mission()
+
+func _accept_adventure() -> void:
+	if not is_instance_valid(active_mission) or mission_running or job_running or job_selector.selected < 0:
+		return
+	var adventure_id := str(job_selector.get_item_metadata(job_selector.selected))
+	if not CITY_ADVENTURES.has(adventure_id) or not CITY_ADVENTURE_STAGES.has(adventure_id):
+		status_label.text = "المغامرة المختارة غير متاحة."
+		return
+	selected_adventure_id = adventure_id
+	active_mission.set("server_activity_id", adventure_id)
+	adventure_stage_index = 0
+	landmark_navigation_active = false
+	navigation_arrival_remaining = 0.0
+	if GameModeManager.is_online_ready():
+		accept_button.disabled = true
+		status_label.text = "يراجع الخادم موقعك ويبدأ المغامرة..."
+		AuthoritativeGameServer.request_start_mission.rpc_id(1, adventure_id)
+		return
+	var stages: Array = CITY_ADVENTURE_STAGES[adventure_id]
+	if stages.is_empty():
+		status_label.text = "مسار المغامرة غير مكتمل."
+		return
+	active_target = stages[0]
+	mission_running = true
+	target_marker.global_position = active_target
+	target_marker.visible = true
+	accept_button.disabled = true
+	job_selector.visible = false
+	var adventure: Dictionary = CITY_ADVENTURES[adventure_id]
+	title_label.text = str(adventure.get("title", "مغامرة"))
+	description_label.text = str(adventure.get("description", ""))
+	status_label.text = "بدأت المغامرة. اتبع علامة الهدف الأولى."
+	reward_label.text = "لا توجد مكافأة محلية؛ إكمال المراحل يسجل كتقدم تجريبي فقط."
+
+
+func _advance_local_adventure_stage() -> void:
+	var stages: Array = CITY_ADVENTURE_STAGES.get(selected_adventure_id, [])
+	if stages.is_empty():
+		return
+	adventure_stage_index += 1
+	if adventure_stage_index >= stages.size():
+		_complete_active_mission()
+		return
+	active_target = stages[adventure_stage_index]
+	target_marker.global_position = active_target
+	var adventure: Dictionary = CITY_ADVENTURES.get(selected_adventure_id, {})
+	description_label.text = "%s\nالمرحلة %d من %d" % [str(adventure.get("description", "")), adventure_stage_index + 1, stages.size()]
+	status_label.text = "أحسنت! انتقل إلى نقطة المغامرة التالية."
+
+
+func _on_server_mission_stage_updated(mission_id: String, server_target: Vector3, stage_number: int, stage_count: int, message: String) -> void:
+	if not GameModeManager.is_online_ready() or not mission_running or selected_activity_kind != "adventure" or mission_id != selected_adventure_id:
+		return
+	active_target = server_target
+	target_marker.global_position = active_target
+	description_label.text = "%s\nالمرحلة %d من %d" % [str(CITY_ADVENTURES.get(mission_id, {}).get("description", "")), stage_number, stage_count]
+	status_label.text = message
+
 
 func _accept_job() -> void:
 	if not is_instance_valid(active_job) or mission_running or job_running:
@@ -1119,12 +1229,13 @@ func _on_server_mission_start_result(success: bool, mission_id: String, server_t
 func _on_server_mission_completed(mission_id: String) -> void:
 	if not GameModeManager.is_online_ready() or not mission_running or not is_instance_valid(active_mission):
 		return
-	if str(active_mission.get("building_id")) != mission_id:
+	var expected_mission_id := selected_adventure_id if selected_activity_kind == "adventure" else str(active_mission.get("building_id"))
+	if expected_mission_id != mission_id:
 		return
 	mission_running = false
 	target_marker.visible = false
-	status_label.text = "تحقق الخادم من وصولك إلى هدف المهمة."
-	description_label.text = "تم تسجيل الوصول خادميًا. جارٍ إصدار إثبات المكافأة الآمن."
+	status_label.text = "اكتملت المغامرة بعد تحقق الخادم من جميع المراحل." if selected_activity_kind == "adventure" else "تحقق الخادم من وصولك إلى هدف المهمة."
+	description_label.text = "تم تسجيل اكتمال المسار خادميًا. لا يوجد صرف مكافآت في هذه النسخة."
 	reward_label.text = "لم تُضف أي مكافأة محليًا."
 
 
@@ -1342,8 +1453,11 @@ func _complete_active_mission() -> void:
 	if not mission_running or not is_instance_valid(active_mission):
 		return
 	var data: Dictionary = active_mission.get_mission_data()
-	var key: String = str(active_mission.get("building_id"))
-	var saved := complete_activity_once(key, "mission", int(data["money"]), int(data["xp"]), int(data["chips"]))
+	var key: String = "adventure:%s:%s" % [selected_adventure_id, _egypt_day_key()] if selected_activity_kind == "adventure" else str(active_mission.get("building_id"))
+	var reward_money := 0 if selected_activity_kind == "adventure" else int(data["money"])
+	var reward_xp := 0 if selected_activity_kind == "adventure" else int(data["xp"])
+	var reward_chips := 0 if selected_activity_kind == "adventure" else int(data["chips"])
+	var saved := complete_activity_once(key, "mission", reward_money, reward_xp, reward_chips)
 	if not saved:
 		mission_running = false
 		target_marker.visible = false
@@ -1357,9 +1471,9 @@ func _complete_active_mission() -> void:
 		achievement_manager.record_mission_completed(key)
 	mission_running = false
 	target_marker.visible = false
-	status_label.text = "اكتملت المهمة! تم حفظ المكافأة."
-	description_label.text = "رصيدك الحالي: %d جنيه، %d رقائق، المستوى %d." % [money, chips, player_level]
-	reward_label.text = "تم حفظ إكمال المهمة ومكافآتها."
+	status_label.text = "اكتملت المغامرة! تم تسجيلها محليًا دون مكافأة." if selected_activity_kind == "adventure" else "اكتملت المهمة! تم حفظ المكافأة."
+	description_label.text = "تم تسجيل إكمال المغامرة في هذا الجهاز فقط." if selected_activity_kind == "adventure" else "رصيدك الحالي: %d جنيه، %d رقائق، المستوى %d." % [money, chips, player_level]
+	reward_label.text = "لا توجد مكافأة لهذه النسخة." if selected_activity_kind == "adventure" else "تم حفظ إكمال المهمة ومكافآتها."
 	accept_button.disabled = true
 	panel.visible = true
 
