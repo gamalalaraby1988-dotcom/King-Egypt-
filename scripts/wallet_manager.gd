@@ -2,6 +2,7 @@ extends Node
 ## خدمة محفظة محلية موحدة. الخادم الموثوق مطلوب لحماية اقتصاد اللعب الجماعي.
 
 const PROFILE_PATH := "user://kings_city_profile.cfg"
+const ProfileConfigStore = preload("res://scripts/profile_config_store.gd")
 const TEMP_PATH := "user://kings_city_profile.wallet.tmp"
 const BACKUP_PATH := "user://kings_city_profile.pre_wallet_backup.cfg"
 const SCHEMA_VERSION := 2
@@ -309,31 +310,7 @@ func _persist_wallet(config: ConfigFile) -> bool:
 	return true
 
 func _atomic_save(config: ConfigFile) -> bool:
-	if config.save(TEMP_PATH) != OK:
-		return false
-	var original_exists := FileAccess.file_exists(PROFILE_PATH)
-	if original_exists and not FileAccess.file_exists(BACKUP_PATH):
-		if DirAccess.copy_absolute(ProjectSettings.globalize_path(PROFILE_PATH), ProjectSettings.globalize_path(BACKUP_PATH)) != OK:
-			DirAccess.remove_absolute(ProjectSettings.globalize_path(TEMP_PATH))
-			return false
-	var original_path := ProjectSettings.globalize_path(PROFILE_PATH)
-	var temp_path := ProjectSettings.globalize_path(TEMP_PATH)
-	var backup_path := ProjectSettings.globalize_path(BACKUP_PATH)
-	if original_exists:
-		var rotate_error := DirAccess.rename_absolute(original_path, backup_path + ".pending")
-		if rotate_error != OK:
-			DirAccess.remove_absolute(temp_path)
-			return false
-		var install_error := DirAccess.rename_absolute(temp_path, original_path)
-		if install_error != OK:
-			DirAccess.rename_absolute(backup_path + ".pending", original_path)
-			return false
-		DirAccess.remove_absolute(backup_path + ".pending")
-	else:
-		if DirAccess.rename_absolute(temp_path, original_path) != OK:
-			DirAccess.remove_absolute(temp_path)
-			return false
-	return true
+	return ProfileConfigStore.save_config_snapshot(config, PROFILE_PATH, TEMP_PATH, BACKUP_PATH)
 
 func _valid_amount(value: Variant) -> bool:
 	return (value is int or value is float) and is_finite(float(value)) and float(value) >= 0.0 and float(value) <= float(MAX_BALANCE) and floorf(float(value)) == float(value)
