@@ -199,7 +199,7 @@ func _build_touch_controls() -> void:
 
 	_decrease_bet_button = _make_blue_button("−")
 	_decrease_bet_button.name = "DecreaseBetButton"
-	_decrease_bet_button.custom_minimum_size = Vector2(46, 44)
+	_decrease_bet_button.custom_minimum_size = Vector2(40, 42)
 	_decrease_bet_button.disabled = true
 	action_row.add_child(_decrease_bet_button)
 	_increase_bet_button = _make_blue_button("+")
@@ -209,13 +209,13 @@ func _build_touch_controls() -> void:
 	action_row.add_child(_increase_bet_button)
 	_max_bet_button = _make_blue_button("MAX")
 	_max_bet_button.name = "MaxBetButton"
-	_max_bet_button.custom_minimum_size = Vector2(58, 44)
+	_max_bet_button.custom_minimum_size = Vector2(52, 42)
 	_max_bet_button.disabled = true
 	action_row.add_child(_max_bet_button)
 
 	_spin_button = _make_button("SPIN", _on_spin_pressed)
 	_spin_button.name = "SpinButton"
-	_spin_button.custom_minimum_size = Vector2(112, 48)
+	_spin_button.custom_minimum_size = Vector2(100, 46)
 	_spin_button.disabled = true
 	_spin_button.tooltip_text = "يتاح بعد اكتمال لعبة السلوت والتحقق الخادمي من النتيجة."
 	_style_action_button(_spin_button, Color(0.025, 0.20, 0.075), Color(0.12, 0.78, 0.30))
@@ -223,7 +223,7 @@ func _build_touch_controls() -> void:
 
 	_auto_button = _make_button("AUTO", _on_auto_pressed)
 	_auto_button.name = "AutoButton"
-	_auto_button.custom_minimum_size = Vector2(76, 44)
+	_auto_button.custom_minimum_size = Vector2(68, 42)
 	_auto_button.disabled = true
 	_auto_button.tooltip_text = "اللعب التلقائي غير متاح قبل ربط المتحكم الخادمي."
 	_style_action_button(_auto_button, Color(0.24, 0.025, 0.025), Color(0.88, 0.12, 0.12))
@@ -235,11 +235,11 @@ func _build_touch_controls() -> void:
 	content.add_child(secondary_row)
 	_exit_button = _make_button("🚪 مغادرة المقعد", _on_exit_pressed)
 	_exit_button.name = "LeaveSeatButton"
-	_exit_button.custom_minimum_size = Vector2(150, 40)
+	_exit_button.custom_minimum_size = Vector2(140, 40)
 	_style_action_button(_exit_button, Color(0.025, 0.10, 0.23), Color(0.12, 0.38, 0.68))
 	secondary_row.add_child(_exit_button)
 	_enter_button = _make_button("✋ اجلس أمام الماكينة", _on_enter_pressed)
-	_enter_button.custom_minimum_size = Vector2(190, 40)
+	_enter_button.custom_minimum_size = Vector2(160, 40)
 	_style_action_button(_enter_button, Color(0.025, 0.10, 0.23), Color(0.25, 0.58, 0.92))
 	secondary_row.add_child(_enter_button)
 	_set_nearby_controls(false)
