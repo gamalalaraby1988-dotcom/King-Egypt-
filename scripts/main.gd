@@ -697,7 +697,7 @@ func return_from_building_interior() -> void:
 	if is_instance_valid(body) and not body.is_queued_for_deletion():
 		body.set_physics_process(false)
 	_show_interior_loading(false, "interior_return_loading")
-	await get_tree().create_timer(0.45).timeout
+	await get_tree().create_timer(0.65).timeout
 	if not is_inside_tree():
 		return
 	# استعد المدينة حتى لو تعذر استعادة اللاعب؛ لا تترك العالم مخفيًا أو الانتقال مقفولًا.
