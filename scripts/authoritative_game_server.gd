@@ -246,6 +246,9 @@ func _on_auth_request_completed(result: int, response_code: int, _headers: Packe
 		return
 	var body_node := CharacterBody3D.new()
 	body_node.name = "AuthoritativePlayer_%d" % peer_id
+	# Players collide with world geometry only, never with other players or vehicles.
+	body_node.collision_layer = 2
+	body_node.collision_mask = 1
 	body_node.position = SPAWN_POSITION
 	body_node.floor_snap_length = 0.25
 	var collision := CollisionShape3D.new()
