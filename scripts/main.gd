@@ -467,6 +467,10 @@ func _show_interior_loading(show_exit: bool = false, message_key: String = "inte
 	if not is_instance_valid(interior_loading_layer):
 		return
 	interior_loading_message_key = message_key
+	if is_instance_valid(palace_navigation_layer):
+		palace_navigation_layer.visible = false
+		if is_instance_valid(palace_navigation_popup):
+			palace_navigation_popup.hide()
 	var backdrop := interior_loading_layer.get_node_or_null("LoadingBackdrop") as ColorRect
 	if is_instance_valid(backdrop):
 		backdrop.visible = not show_exit
@@ -488,6 +492,8 @@ func _hide_interior_loading() -> void:
 	interior_exit_button.visible = false
 	if is_instance_valid(interior_loading_tween):
 		interior_loading_tween.kill()
+	if is_instance_valid(interior_root) and bool(interior_root.get_meta("royal_palace", false)):
+		_set_palace_navigation_visible(true)
 
 func enter_building_interior(building: Node3D, actor: Node3D) -> void:
 	var body := actor as CharacterBody3D
@@ -566,6 +572,7 @@ func _create_building_interior(building_title: String) -> void:
 	interior_root = Node3D.new()
 	interior_root.name = "GeneratedBuildingInterior"
 	interior_root.position = INTERIOR_WORLD_POSITION
+	interior_root.set_meta("royal_palace", building_title == "القصر الملكي")
 	add_child(interior_root)
 	if building_title == "القصر الملكي":
 		_create_royal_palace_interior(interior_root)
