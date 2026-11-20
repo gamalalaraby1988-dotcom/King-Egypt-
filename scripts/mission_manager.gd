@@ -93,6 +93,8 @@ var rescue_citizen_actor: Node3D
 var message_puzzle_input: LineEdit
 var message_puzzle_submit_button: Button
 var message_puzzle_ready := false
+var survival_progress_label: Label
+var survival_progress_bar: ProgressBar
 var rescue_population: Node
 const SURVIVAL_PREPARATION_SECONDS := 10.0
 const SURVIVAL_DURATION_SECONDS := 60.0
@@ -1130,6 +1132,16 @@ func _accept_selected_activity() -> void:
 	else:
 		_accept_mission()
 
+func _update_survival_race_hud() -> void:
+	var active := selected_adventure_id == "city_adventure_survival" and (mission_running or survival_prep_remaining > 0.0)
+	if is_instance_valid(survival_progress_label):
+		survival_progress_label.visible = active
+		survival_progress_label.text = "نقاط السباق: %d / 5" % clampi(adventure_stage_index + (1 if mission_running else 0), 0, 5)
+	if is_instance_valid(survival_progress_bar):
+		survival_progress_bar.visible = active
+		survival_progress_bar.value = clampf(float(adventure_stage_index + (1 if mission_running else 0)), 0.0, 5.0)
+
+
 func _accept_adventure() -> void:
 	if not is_instance_valid(active_mission) or mission_running or job_running or job_selector.selected < 0:
 		return
@@ -1147,10 +1159,12 @@ func _accept_adventure() -> void:
 	job_selector.visible = false
 	accept_button.disabled = true
 	if adventure_id == "city_adventure_survival":
+		adventure_stage_index = 0
 		survival_prep_remaining = SURVIVAL_PREPARATION_SECONDS
 		survival_time_remaining = 0.0
 		status_label.text = "استعد للسباق! يبدأ بعد 10 ثوانٍ."
-		description_label.text = "لديك 10 ثوانٍ للاستعداد، ثم 60 ثانية للوصول إلى نقطة النجاة."
+		description_label.text = "لديك 10 ثوانٍ للاستعداد، ثم 60 ثانية لاجتياز خمس نقاط على مسار الشارع. اتبع العلامة حتى خط النهاية."
+		_update_survival_race_hud()
 		return
 	_begin_selected_adventure()
 
@@ -1171,6 +1185,7 @@ func _begin_selected_adventure() -> void:
 	mission_running = true
 	if selected_adventure_id == "city_adventure_survival":
 		survival_time_remaining = SURVIVAL_DURATION_SECONDS
+		_update_survival_race_hud()
 	target_marker.global_position = active_target
 	target_marker.visible = true
 	accept_button.disabled = true
@@ -1185,19 +1200,25 @@ func _update_survival_timers(delta: float) -> void:
 	if survival_prep_remaining > 0.0:
 		survival_prep_remaining = maxf(survival_prep_remaining - delta, 0.0)
 		status_label.text = "استعد للسباق! البداية خلال %d ثانية." % ceili(survival_prep_remaining)
+		_update_survival_race_hud()
 		if survival_prep_remaining <= 0.0:
 			_begin_selected_adventure()
 		return
 	if selected_adventure_id != "city_adventure_survival" or not mission_running or survival_time_remaining <= 0.0:
 		return
 	survival_time_remaining = maxf(survival_time_remaining - delta, 0.0)
-	status_label.text = "سباق النجاة: %d ثانية متبقية." % ceili(survival_time_remaining)
+	status_label.text = "سباق النجاة: %d ثانية متبقية | النقطة %d من 5." % [ceili(survival_time_remaining), clampi(adventure_stage_index + 1, 1, 5)]
+	_update_survival_race_hud()
 	if survival_time_remaining <= 0.0 and not GameModeManager.is_online_ready():
 		_fail_local_survival_race()
 
 
 func _fail_local_survival_race() -> void:
 	mission_running = false
+	if is_instance_valid(survival_progress_label):
+		survival_progress_label.visible = false
+	if is_instance_valid(survival_progress_bar):
+		survival_progress_bar.visible = false
 	survival_time_remaining = 0.0
 	target_marker.visible = false
 	status_label.text = "انتهى الوقت! لم تصل إلى نقطة النجاة."
@@ -1212,6 +1233,8 @@ func _advance_local_adventure_stage() -> void:
 	if stages.is_empty():
 		return
 	adventure_stage_index += 1
+	if selected_adventure_id == "city_adventure_survival":
+		_update_survival_race_hud()
 	if adventure_stage_index >= stages.size():
 		if selected_adventure_id == "city_adventure_message":
 			adventure_stage_index = stages.size() - 1
@@ -1252,6 +1275,9 @@ func _on_server_mission_stage_updated(mission_id: String, server_target: Vector3
 		status_label.text = message
 		return
 	adventure_stage_index = stage_number - 1
+	if mission_id == "city_adventure_survival":
+		_update_survival_race_hud()
+		status_label.text = "اجتزت النقطة %d من 5! تابع السباق." % stage_number
 	if mission_id == "city_adventure_rescue" and stage_number > 1:
 		_clear_rescue_citizen()
 	target_marker.global_position = active_target
@@ -1326,6 +1352,8 @@ func _on_server_mission_start_result(success: bool, mission_id: String, server_t
 	mission_running = true
 	if mission_id == "city_adventure_survival":
 		survival_time_remaining = SURVIVAL_DURATION_SECONDS
+		adventure_stage_index = 0
+		_update_survival_race_hud()
 	target_marker.global_position = active_target
 	target_marker.visible = true
 	accept_button.disabled = true
@@ -1357,6 +1385,10 @@ func _on_server_mission_completed(mission_id: String) -> void:
 	mission_running = false
 	survival_time_remaining = 0.0
 	survival_prep_remaining = 0.0
+	if is_instance_valid(survival_progress_label):
+		survival_progress_label.visible = false
+	if is_instance_valid(survival_progress_bar):
+		survival_progress_bar.visible = false
 	_set_message_puzzle_visible(false)
 	_clear_rescue_citizen()
 	_hide_adventure_treasure()
@@ -2154,6 +2186,20 @@ func _build_ui() -> void:
 	status_label = Label.new()
 	status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	content.add_child(status_label)
+	survival_progress_label = Label.new()
+	survival_progress_label.name = "SurvivalRaceProgress"
+	survival_progress_label.text = "نقاط السباق: 0 / 5"
+	survival_progress_label.visible = false
+	content.add_child(survival_progress_label)
+	survival_progress_bar = ProgressBar.new()
+	survival_progress_bar.name = "SurvivalRaceProgressBar"
+	survival_progress_bar.min_value = 0.0
+	survival_progress_bar.max_value = 5.0
+	survival_progress_bar.value = 0.0
+	survival_progress_bar.show_percentage = false
+	survival_progress_bar.custom_minimum_size = Vector2(0, 14)
+	survival_progress_bar.visible = false
+	content.add_child(survival_progress_bar)
 
 	job_selector = OptionButton.new()
 	job_selector.visible = false
