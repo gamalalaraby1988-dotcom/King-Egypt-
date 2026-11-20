@@ -2,6 +2,7 @@ extends Node
 ## واجهة الملف الشخصي وإعدادات اللعب الأساسية، تحفظ محليًا.
 
 const SAVE_PATH := "user://kings_city_profile.cfg"
+const ProfileConfigStore = preload("res://scripts/profile_config_store.gd")
 var mission_manager: Node
 var player: Node3D
 var panel: PanelContainer
@@ -177,8 +178,7 @@ func _on_preference_snapshot_received(revision: int, remote_settings: Dictionary
 		info_label.text = "تعذر قراءة الملف المحلي؛ لم تُطبق إعدادات الحساب لحماية بيانات الجهاز."
 		return
 	if revision == 0 and remote_settings.is_empty():
-		config.set_value("settings", "cloud_revision", 0)
-		if config.save(SAVE_PATH) != OK:
+		if not ProfileConfigStore.save_sections(SAVE_PATH, {"settings": {"cloud_revision": 0}}):
 			info_label.text = "تعذر حفظ رقم مراجعة المزامنة محليًا."
 			return
 		PlayerSyncClient.save_preference_snapshot(_current_cloud_preferences())
@@ -190,16 +190,17 @@ func _on_preference_snapshot_received(revision: int, remote_settings: Dictionary
 		"quality": quality_select.selected,
 		"language": str(config.get_value("settings", "language", "auto"))
 	}
-	config.set_value("settings", "cloud_backup_before_apply", backup)
-	config.set_value("settings", "cloud_revision", revision)
-	config.set_value("settings", "volume", int(remote_settings.get("volume", volume_slider.value)))
-	config.set_value("settings", "quality", int(remote_settings.get("quality", quality_select.selected)))
 	var locale := str(remote_settings.get("locale", "auto"))
 	if locale not in ["auto", "ar", "en"]:
 		locale = "auto"
-	config.set_value("settings", "language", locale)
-	config.set_value("settings", "cloud_revision", revision)
-	if config.save(SAVE_PATH) != OK:
+	var remote_settings_update := {
+		"cloud_backup_before_apply": backup,
+		"cloud_revision": revision,
+		"volume": int(remote_settings.get("volume", volume_slider.value)),
+		"quality": int(remote_settings.get("quality", quality_select.selected)),
+		"language": locale
+	}
+	if not ProfileConfigStore.save_sections(SAVE_PATH, {"settings": remote_settings_update}):
 		info_label.text = "تعذر حفظ النسخة المحلية؛ لم تُطبق إعدادات الحساب."
 		return
 	volume_slider.value = int(remote_settings.get("volume", volume_slider.value))
@@ -239,17 +240,21 @@ func _save_settings() -> void:
 		name_change_blocked = true
 		requested_name = old_name
 		name_changed = false
-	config.set_value("profile", "player_name", requested_name)
+	var profile_updates := {"player_name": requested_name}
 	if name_changed:
-		config.set_value("profile", "player_name_change_date", today)
-	config.set_value("settings", "volume", int(volume_slider.value))
-	config.set_value("settings", "quality", quality_select.selected)
+		profile_updates["player_name_change_date"] = today
 	var language_modes := ["auto", "ar", "en"]
 	var selected_language: String = language_modes[clampi(language_select.selected, 0, 2)]
-	config.set_value("settings", "language", selected_language)
-	var error := config.save(SAVE_PATH)
-	if error != OK:
-		info_label.text = "تعذر حفظ الإعدادات؛ لم يتم اعتماد تغيير اللغة. رمز الخطأ: %s" % error
+	var settings_updates := {
+		"volume": int(volume_slider.value),
+		"quality": quality_select.selected,
+		"language": selected_language
+	}
+	if not ProfileConfigStore.save_sections(SAVE_PATH, {
+		"profile": profile_updates,
+		"settings": settings_updates
+	}):
+		info_label.text = "تعذر حفظ الإعدادات؛ لم يتم اعتماد تغيير اللغة."
 		return
 	CityLanguage.set_language(selected_language)
 	if is_instance_valid(PlayerSyncClient):
@@ -263,7 +268,9 @@ func _save_settings() -> void:
 	if name_change_blocked:
 		info_label.text += "\nيمكن تغيير اسم اللاعب مرة واحدة فقط في اليوم. حاول مرة أخرى غدًا؛ تم حفظ بقية الإعدادات دون تغيير الاسم."
 	info_label.text += "\nتم حفظ الإعدادات محليًا."
-	_update_name_change_status(config)
+	var latest_config := ConfigFile.new()
+	if latest_config.load(SAVE_PATH) == OK:
+		_update_name_change_status(latest_config)
 
 func _update_name_change_status(config: ConfigFile) -> void:
 	if not is_instance_valid(name_change_status):
