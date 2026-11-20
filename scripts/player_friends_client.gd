@@ -24,6 +24,9 @@ func _ready() -> void:
 		PlayerAccountAuthClient.session_expired.connect(clear_session)
 
 func refresh() -> void:
+	if not bool(ProjectSettings.get_setting("player_friends/enabled", false)):
+		connection_state_changed.emit(false, "خدمة الأصدقاء غير مفعلة على الخادم الحالي بعد.")
+		return
 	if not _has_session():
 		connection_state_changed.emit(false, "سجّل الدخول إلى حساب اللاعب لعرض الأصدقاء.")
 		return
@@ -82,6 +85,9 @@ func _valid_player_code(code: String) -> bool:
 	return true
 
 func _start_rpc(rpc_name: String, payload: Dictionary, action: String) -> void:
+	if not bool(ProjectSettings.get_setting("player_friends/enabled", false)):
+		operation_finished.emit(action, false, "backend_not_enabled")
+		return
 	if not _has_session():
 		operation_finished.emit(action, false, "authentication_required")
 		return
