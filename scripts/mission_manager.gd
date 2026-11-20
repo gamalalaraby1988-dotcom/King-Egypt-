@@ -1383,6 +1383,7 @@ func _on_server_mission_failed(mission_id: String, message: String) -> void:
 		survival_progress_bar.visible = false
 	_set_message_puzzle_visible(false)
 	_clear_rescue_citizen()
+	_hide_adventure_treasure()
 	target_marker.visible = false
 	status_label.text = message
 	description_label.text = "انتهت مغامرة سباق النجاة. يمكنك المحاولة مرة أخرى."
@@ -1647,10 +1648,10 @@ func _complete_active_mission() -> void:
 		panel.visible = true
 		return
 	var data: Dictionary = active_mission.get_mission_data()
-	var key: String = "adventure:%s:%s" % [selected_adventure_id, _egypt_day_key()] if selected_activity_kind == "adventure" else str(active_mission.get("building_id"))
-	var reward_money := 0 if selected_activity_kind == "adventure" else int(data["money"])
-	var reward_xp := 0 if selected_activity_kind == "adventure" else int(data["xp"])
-	var reward_chips := 0 if selected_activity_kind == "adventure" else int(data["chips"])
+	var key := str(active_mission.get("building_id"))
+	var reward_money := int(data["money"])
+	var reward_xp := int(data["xp"])
+	var reward_chips := int(data["chips"])
 	var saved := complete_activity_once(key, "mission", reward_money, reward_xp, reward_chips)
 	if not saved:
 		mission_running = false

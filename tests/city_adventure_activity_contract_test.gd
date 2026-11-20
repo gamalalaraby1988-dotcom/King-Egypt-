@@ -73,7 +73,7 @@ func _run_city_adventure_contract() -> void:
 		quit(1)
 		return
 	var server_failure_source := manager_source.substr(server_failure_start, server_failure_end - server_failure_start)
-	if not server_failure_source.contains("survival_progress_label.visible = false") or not server_failure_source.contains("survival_progress_bar.visible = false"):
+	if not server_failure_source.contains("survival_progress_label.visible = false") or not server_failure_source.contains("survival_progress_bar.visible = false") or not server_failure_source.contains("_hide_adventure_treasure()"):
 		push_error("Online race failure must clear the race progress HUD.")
 		quit(1)
 		return
