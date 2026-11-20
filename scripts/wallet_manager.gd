@@ -107,7 +107,7 @@ func save_profile_update(config: ConfigFile, money_value: int, chips_value: int)
 	var latest_error := latest_config.load(PROFILE_PATH)
 	if latest_error != OK:
 		return false
-	const PROTECTED_PROFILE_KEYS := ["money", "chips", "owned_vehicles", "selected_vehicle_id", "owned_horus_colors", "selected_horus_color"]
+	const PROTECTED_PROFILE_KEYS := ["money", "chips", "owned_vehicles", "owned_horus_colors"]
 	for key in config.get_section_keys("profile"):
 		if PROTECTED_PROFILE_KEYS.has(str(key)):
 			continue
