@@ -3,8 +3,6 @@ extends Node
 
 const ProfileConfigStore = preload("res://scripts/profile_config_store.gd")
 
-func _save_path() -> String:
-	return ProfileConfigStore.get_active_scoped_path("user://kings_city_daily.cfg")
 const DAILY_REWARD_MONEY := 250
 const DAILY_REWARD_XP := 60
 
@@ -21,6 +19,9 @@ var root_panel: PanelContainer
 var content_label: Label
 var reward_button: Button
 var open_button: Button
+
+func _save_path() -> String:
+	return ProfileConfigStore.get_active_scoped_path("user://kings_city_daily.cfg")
 
 func _ready() -> void:
 	day_key = GameCalendar.get_egypt_day_key()
