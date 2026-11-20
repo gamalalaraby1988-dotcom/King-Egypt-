@@ -1,5 +1,5 @@
 extends Node
-## أنشطة يومية خفيفة تتجدد حسب تاريخ الجهاز المحلي وتحفظ تقدمها ومكافآتها.
+## أنشطة يومية خفيفة تتجدد وفق يوم اللعبة الموحد بتوقيت مصر وتحفظ تقدمها ومكافآتها.
 
 const SAVE_PATH := "user://kings_city_daily.cfg"
 const DAILY_REWARD_MONEY := 250
@@ -20,7 +20,7 @@ var reward_button: Button
 var open_button: Button
 
 func _ready() -> void:
-	day_key = Time.get_date_string_from_system()
+	day_key = GameCalendar.get_egypt_day_key()
 	_load_state()
 	_build_tasks_if_needed()
 	_sync_completed_daily_tasks_from_profile()
@@ -134,7 +134,7 @@ func _claim_reward() -> void:
 	_refresh_ui()
 
 func _check_new_day() -> void:
-	var today := Time.get_date_string_from_system()
+	var today := GameCalendar.get_egypt_day_key()
 	if today == day_key:
 		return
 	day_key = today

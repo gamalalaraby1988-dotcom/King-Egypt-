@@ -78,7 +78,6 @@ var _reward_claim_inflight := false
 
 const SAVE_PATH := "user://kings_city_profile.cfg"
 const MAX_CURRENCY_BALANCE := 2000000000
-const EGYPT_UTC_OFFSET_SECONDS := 7200
 
 # Weekly rotation for the currently implemented city job boards (Sunday=0).
 const WEEKLY_JOB_SCHEDULE := {
@@ -92,11 +91,10 @@ const WEEKLY_JOB_SCHEDULE := {
 }
 
 func _egypt_datetime() -> Dictionary:
-	return Time.get_datetime_dict_from_unix_time(int(Time.get_unix_time_from_system()) + EGYPT_UTC_OFFSET_SECONDS)
+	return GameCalendar.get_egypt_datetime()
 
 func _egypt_day_key() -> String:
-	var date := _egypt_datetime()
-	return "%04d-%02d-%02d" % [int(date.year), int(date.month), int(date.day)]
+	return GameCalendar.get_egypt_day_key()
 
 func _daily_job_key(job_id: String) -> String:
 	return "%s:%s" % [_egypt_day_key(), job_id]
@@ -321,7 +319,7 @@ func complete_activity_once(activity_id: String, activity_kind: String, money_am
 		next_achievement_events[achievement_event_id] = Time.get_datetime_string_from_system()
 	var next_daily_progress := daily_task_progress.duplicate(true)
 	var next_daily_events := daily_task_events.duplicate(true)
-	var today_key := Time.get_date_string_from_system()
+	var today_key := GameCalendar.get_egypt_day_key()
 	var daily_event_id := "%s:%s:%s" % [today_key, activity_kind, activity_id]
 	if not next_daily_events.has(daily_event_id):
 		var today_progress: Dictionary = next_daily_progress.get(today_key, {}).duplicate(true)
