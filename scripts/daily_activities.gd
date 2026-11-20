@@ -61,6 +61,9 @@ func _process(_delta: float) -> void:
 
 
 func _exit_tree() -> void:
+	# لا تكتب حالة الحساب القديم في ملف الحساب الجديد أثناء تبديل الهوية.
+	if ProfileConfigStore.is_account_switch_in_progress():
+		return
 	# احفظ المسافة الجزئية عند مغادرة المشهد دون الكتابة على القرص كل إطار.
 	_save_state()
 
