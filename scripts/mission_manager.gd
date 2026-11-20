@@ -87,7 +87,6 @@ var selected_adventure_id := ""
 var adventure_stage_index := 0
 var survival_prep_remaining := 0.0
 var survival_time_remaining := 0.0
-var survival_start_pending_online := false
 const SURVIVAL_PREPARATION_SECONDS := 10.0
 const SURVIVAL_DURATION_SECONDS := 60.0
 const CITY_ADVENTURES := {
@@ -1137,7 +1136,6 @@ func _accept_adventure() -> void:
 	if adventure_id == "city_adventure_survival":
 		survival_prep_remaining = SURVIVAL_PREPARATION_SECONDS
 		survival_time_remaining = 0.0
-		survival_start_pending_online = GameModeManager.is_online_ready()
 		status_label.text = "استعد للسباق! يبدأ بعد 10 ثوانٍ."
 		description_label.text = "لديك 10 ثوانٍ للاستعداد، ثم 60 ثانية للوصول إلى نقطة النجاة."
 		return
@@ -1175,7 +1173,6 @@ func _update_survival_timers(delta: float) -> void:
 		survival_prep_remaining = maxf(survival_prep_remaining - delta, 0.0)
 		status_label.text = "استعد للسباق! البداية خلال %d ثانية." % ceili(survival_prep_remaining)
 		if survival_prep_remaining <= 0.0:
-			survival_start_pending_online = false
 			_begin_selected_adventure()
 		return
 	if selected_adventure_id != "city_adventure_survival" or not mission_running or survival_time_remaining <= 0.0:
