@@ -58,5 +58,13 @@ func _run_city_adventure_contract() -> void:
 		push_error("Online survival race timeout must be enforced by the authoritative server.")
 		quit(1)
 		return
+	if not manager_source.contains("func _show_adventure_treasure()") or not manager_source.contains("AdventureTreasureVisual") or not manager_source.contains("ChestBody") or not manager_source.contains("GoldenLid"):
+		push_error("Treasure adventure must display a collectible chest visual at its final existing checkpoint.")
+		quit(1)
+		return
+	if not manager_source.contains("if mission_id == \"city_adventure_treasure\" and stage_number == stage_count") or not manager_source.contains("_hide_adventure_treasure()"):
+		push_error("Treasure visual must appear at the final checkpoint and be cleared on completion.")
+		quit(1)
+		return
 	print("City adventure activity contract checks passed.")
 	quit(0)
