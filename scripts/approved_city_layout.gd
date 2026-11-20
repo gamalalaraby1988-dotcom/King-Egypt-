@@ -809,11 +809,11 @@ func _build_mountain_route() -> void:
 		var ramp_length := ramp_delta.length()
 		var ramp_midpoint := (ramp_start + ramp_end) * 0.5
 		var ramp := _box(mountain, "SummitAccessRamp_%02d" % (ramp_index + 1), Vector3(3.8, 0.28, ramp_length), ramp_midpoint, SAND)
-		ramp.look_at(mountain.to_global(ramp_end), Vector3.UP)
+		ramp.look_at_from_position(mountain.to_global(ramp_midpoint), mountain.to_global(ramp_end), Vector3.UP)
 		var ramp_body := StaticBody3D.new()
 		ramp_body.name = "SummitAccessRampCollision_%02d" % (ramp_index + 1)
 		ramp_body.position = ramp_midpoint
-		ramp_body.look_at(mountain.to_global(ramp_end), Vector3.UP)
+		ramp_body.look_at_from_position(mountain.to_global(ramp_midpoint), mountain.to_global(ramp_end), Vector3.UP)
 		ramp_body.add_to_group("city_world_geometry")
 		var ramp_collision := CollisionShape3D.new()
 		var ramp_shape := BoxShape3D.new()
@@ -934,7 +934,7 @@ func _add_sloped_vehicle_road_segment(parent: Node3D, label: String,
 		var rails := Node3D.new()
 		rails.name = label + "Guardrails"
 		rails.position = midpoint
-		rails.look_at(parent.to_global(start), Vector3.UP)
+		rails.look_at_from_position(parent.to_global(midpoint), parent.to_global(start), Vector3.UP)
 		parent.add_child(rails)
 		for side in [-1.0, 1.0]:
 			var rail_at := Vector3(side * (width * 0.5 - 0.18), 0.55, 0.0)
