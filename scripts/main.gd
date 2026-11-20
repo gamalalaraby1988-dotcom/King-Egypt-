@@ -776,6 +776,8 @@ func _navigate_palace_quick(destination: String) -> void:
 	_show_interior_loading(false, "interior_loading")
 	await get_tree().create_timer(0.65).timeout
 	if not is_inside_tree() or not is_instance_valid(interior_root) or not is_instance_valid(interior_player):
+		if is_instance_valid(interior_player):
+			interior_player.set_physics_process(true)
 		interior_transition_busy = false
 		_hide_interior_loading()
 		return
@@ -816,6 +818,8 @@ func use_palace_portal(portal: Node3D, actor: Node3D) -> void:
 	_show_interior_loading(false, "interior_loading")
 	await get_tree().create_timer(0.65).timeout
 	if not is_inside_tree() or not is_instance_valid(interior_root) or not is_instance_valid(actor):
+		if is_instance_valid(actor):
+			actor.set_physics_process(true)
 		interior_transition_busy = false
 		_hide_interior_loading()
 		return
