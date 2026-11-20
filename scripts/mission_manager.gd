@@ -808,6 +808,7 @@ func open_interactable(target: Node3D) -> void:
 
 
 func open_animal_rental(staff: Node3D) -> void:
+	job_selector.visible = false
 	selected_animal_staff = staff
 	var wallet_ready := _refresh_wallet_cache()
 	selected_activity_kind = "animal_rental"
@@ -920,6 +921,7 @@ func _on_job_selected(index: int) -> void:
 		accept_button.disabled = false
 
 func open_building(building: Node3D) -> void:
+	job_selector.visible = false
 	if not is_instance_valid(building) or building.is_queued_for_deletion() or mission_running or job_running:
 		return
 	animal_selector.visible = false
@@ -985,6 +987,8 @@ func open_building_activities(building: Node3D) -> void:
 	panel.visible = true
 
 func _close_interaction_panel() -> void:
+	job_selector.visible = false
+	job_delivery_button.visible = false if not job_running else job_delivery_button.visible
 	accept_button.visible = true
 	interior_preview_active = false
 	interior_preview_building = null
