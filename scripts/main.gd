@@ -1040,7 +1040,7 @@ func _create_city() -> void:
 	# خطوط إرشادية على جزأي الطريق المحيط بالميدان.
 	for side in [-1.0, 1.0]:
 		for i in range(4):
-			var mark_x := side * (28.0 + float(i) * 18.0)
+			var mark_x: float = side * (28.0 + float(i) * 18.0)
 			_create_box(self, "RoadMark_X_%s_%d" % [str(side), i], Vector3(3, 0.025, 0.16), Vector3(mark_x, 0.06, -45), Color(0.92, 0.86, 0.62))
 
 func _create_mobile_hud() -> void:
