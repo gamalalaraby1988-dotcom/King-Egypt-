@@ -54,38 +54,52 @@ function fromBase64(value: string): Uint8Array {
   return Uint8Array.from(binary, (char) => char.charCodeAt(0));
 }
 
-// Rejection sampling avoids modulo bias for both weighted reels and the 3x3 collection grid.
-function secureIntegerBelow(maxExclusive: number): number {
-  const range = 0x1_0000_0000;
-  const limit = Math.floor(range / maxExclusive) * maxExclusive;
-  const buffer = new Uint32Array(1);
-  do {
-    crypto.getRandomValues(buffer);
-  } while (buffer[0] >= limit);
-  return buffer[0] % maxExclusive;
-}
-
-function randomWeightedSymbol(weights: number[]): number {
-  const draw = secureIntegerBelow(10000);
-  let cumulative = 0;
-  for (let index = 0; index < weights.length; index++) {
-    cumulative += weights[index];
-    if (draw < cumulative) return index;
-  }
-  throw new Error("invalid_symbol_weights");
-}
-
-function createServerOutcome(machineId: string): { reelSymbols: number[]; collectionSymbols: number[] } {
+// Deterministic HMAC-based pseudorandom stream makes a retried event reproduce
+// exactly the same server outcome, while remaining unpredictable without the server secret.
+async function createServerOutcome(
+  machineId: string,
+  hmacKey: CryptoKey,
+  canonicalIntent: string,
+): Promise<{ reelSymbols: number[]; collectionSymbols: number[] }> {
   const weights = MACHINE_WEIGHTS[machineId];
   if (!weights || weights.reduce((sum, value) => sum + value, 0) !== 10000) {
     throw new Error("machine_rules_invalid");
   }
-  return {
-    reelSymbols: [randomWeightedSymbol(weights), randomWeightedSymbol(weights), randomWeightedSymbol(weights)],
-    collectionSymbols: Array.from({ length: 9 }, () => secureIntegerBelow(5)),
-  };
-}
+  let counter = 0;
+  let block = new Uint8Array(0);
+  let offset = 0;
+  const encoder = new TextEncoder();
 
+  async function integerBelow(maxExclusive: number): Promise<number> {
+    const range = 0x1_0000_0000;
+    const limit = Math.floor(range / maxExclusive) * maxExclusive;
+    while (true) {
+      if (offset + 4 > block.length) {
+        const input = encoder.encode(`${canonicalIntent}|slot-outcome-v1|${counter++}`);
+        block = new Uint8Array(await crypto.subtle.sign("HMAC", hmacKey, input));
+        offset = 0;
+      }
+      const value = new DataView(block.buffer, block.byteOffset + offset, 4).getUint32(0, false);
+      offset += 4;
+      if (value < limit) return value % maxExclusive;
+    }
+  }
+
+  async function weightedSymbol(): Promise<number> {
+    const draw = await integerBelow(10000);
+    let cumulative = 0;
+    for (let index = 0; index < weights.length; index++) {
+      cumulative += weights[index];
+      if (draw < cumulative) return index;
+    }
+    throw new Error("invalid_symbol_weights");
+  }
+
+  const reelSymbols = [await weightedSymbol(), await weightedSymbol(), await weightedSymbol()];
+  const collectionSymbols: number[] = [];
+  for (let index = 0; index < 9; index++) collectionSymbols.push(await integerBelow(5));
+  return { reelSymbols, collectionSymbols };
+}
 Deno.serve(async (req: Request) => {
   if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
   const contentType = (req.headers.get("Content-Type") ?? "").split(";")[0].trim().toLowerCase();
@@ -149,7 +163,7 @@ Deno.serve(async (req: Request) => {
   try {
     const secretBytes = fromBase64(hmacSecretB64);
     if (secretBytes.length < 32) return json({ error: "slot_spin_not_configured" }, 503);
-    hmacKey = await crypto.subtle.importKey("raw", secretBytes, { name: "HMAC", hash: "SHA-256" }, false, ["verify"]);
+    hmacKey = await crypto.subtle.importKey("raw", secretBytes, { name: "HMAC", hash: "SHA-256" }, false, ["verify", "sign"]);
   } catch {
     return json({ error: "slot_spin_not_configured" }, 503);
   }
@@ -158,7 +172,7 @@ Deno.serve(async (req: Request) => {
 
   let outcome: { reelSymbols: number[]; collectionSymbols: number[] };
   try {
-    outcome = createServerOutcome(machineId);
+    outcome = await createServerOutcome(machineId, hmacKey, canonical);
   } catch {
     return json({ error: "slot_machine_rules_invalid" }, 503);
   }
