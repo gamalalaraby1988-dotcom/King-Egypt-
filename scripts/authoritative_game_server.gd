@@ -36,15 +36,7 @@ var _proof_secret_warning_shown := false
 var _daily_job_completions: Dictionary = {}
 const DAILY_JOB_SAVE_PATH := "user://king_city_daily_jobs.cfg"
 const EGYPT_UTC_OFFSET_SECONDS := 7200
-const WEEKLY_JOB_SCHEDULE := {
-	0: ["courier_delivery"],
-	1: ["city_guide"],
-	2: ["city_maintenance"],
-	3: ["courier_delivery"],
-	4: ["city_guide"],
-	5: ["courier_delivery", "city_guide", "city_maintenance"],
-	6: ["courier_delivery", "city_guide", "city_maintenance"]
-}
+const WEEKLY_JOB_SCHEDULE := {}
 
 
 func _egypt_datetime() -> Dictionary:
@@ -332,14 +324,10 @@ func submit_movement_input(sequence: int, direction: Vector3, sprint: bool) -> v
 	_sessions[peer_id] = session
 
 
-func _get_server_job_definition(job_id: String) -> Dictionary:
-	match job_id:
-		"courier_delivery":
-			return {"board": Vector3(24.0, 0.0, 4.5), "target": Vector3(24.0, 0.15, 14.0)}
-		"city_guide":
-			return {"board": Vector3(-24.0, 0.0, 4.5), "target": Vector3(-24.0, 0.15, -14.0)}
-		"city_maintenance":
-			return {"board": Vector3(4.5, 0.0, 24.0), "target": Vector3(14.0, 0.15, 24.0)}
+func _get_server_job_definition(_job_id: String) -> Dictionary:
+	# Legacy one-stop job definitions are intentionally retired. The approved
+	# multi-stop delivery workflow remains offline-only until vehicle state and
+	# hand-delivery interactions are authoritative on the server.
 	return {}
 
 
