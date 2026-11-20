@@ -1,5 +1,5 @@
 begin;
-select extensions.plan(20);
+select extensions.plan(19);
 
 insert into auth.users (id,aud,role,email,encrypted_password,email_confirmed_at)
 values ('00000000-0000-4000-8000-000000000085','authenticated','authenticated','slot-settlement-test@example.invalid','',pg_catalog.now())
