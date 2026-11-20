@@ -846,6 +846,79 @@ func use_palace_portal(portal: Node3D, actor: Node3D) -> void:
 		manager.call_deferred("_update_interaction_hud")
 
 
+func _create_interior_furnishings(root: Node3D, building_title: String) -> void:
+	# أثاث هندسي خفيف ومختلف لكل مبنى، دون صور أو خامات أو مكتبات إضافية.
+	if building_title == "المتجر":
+		for index in range(3):
+			var x := -4.2 + float(index) * 4.2
+			_create_box(root, "ShopShelf_%d" % index, Vector3(1.0, 2.5, 3.4), Vector3(x, 1.25, -0.4), Color(0.34, 0.23, 0.13), true)
+			for level in range(3):
+				_create_box(root, "ShopShelfBand_%d_%d" % [index, level], Vector3(1.08, 0.12, 3.5), Vector3(x, 0.55 + float(level) * 0.78, -0.4), Color(0.82, 0.63, 0.30))
+		_create_box(root, "ShopCheckout", Vector3(2.8, 1.0, 1.0), Vector3(0, 0.5, 3.7), Color(0.28, 0.19, 0.12), true)
+	elif building_title == "المطعم":
+		for index in range(4):
+			var x := -3.6 if index % 2 == 0 else 3.6
+			var z := -3.8 if index < 2 else 1.0
+			_create_box(root, "RestaurantTable_%d" % index, Vector3(2.0, 0.18, 1.6), Vector3(x, 1.0, z), Color(0.40, 0.24, 0.13), true)
+			_create_box(root, "RestaurantTableLeg_%d" % index, Vector3(0.22, 0.9, 0.22), Vector3(x, 0.48, z), Color(0.25, 0.18, 0.12), true)
+			for side in [-1.0, 1.0]:
+				_create_box(root, "RestaurantSeat_%d_%d" % [index, int(side)], Vector3(0.8, 0.85, 0.8), Vector3(x + side * 1.35, 0.42, z), Color(0.18, 0.31, 0.29), true)
+		_create_box(root, "RestaurantServingCounter", Vector3(4.0, 1.0, 0.9), Vector3(0, 0.5, -5.1), Color(0.32, 0.19, 0.12), true)
+	elif building_title == "مركز التوظيف":
+		for index in range(3):
+			var x := -4.0 + float(index) * 4.0
+			_create_box(root, "EmploymentDesk_%d" % index, Vector3(2.6, 0.95, 1.1), Vector3(x, 0.48, -2.5), Color(0.31, 0.22, 0.14), true)
+			_create_box(root, "EmploymentScreen_%d" % index, Vector3(1.0, 0.8, 0.12), Vector3(x, 1.35, -2.9), Color(0.12, 0.29, 0.31))
+			_create_box(root, "EmploymentChair_%d" % index, Vector3(0.9, 0.85, 0.9), Vector3(x, 0.42, -0.7), Color(0.20, 0.29, 0.38), true)
+		_create_box(root, "EmploymentNoticeBoard", Vector3(4.5, 2.0, 0.18), Vector3(0, 2.4, -6.65), Color(0.16, 0.27, 0.27))
+	else:
+		_create_box(root, "GenericWaitingBench", Vector3(3.2, 0.55, 0.8), Vector3(0, 0.28, 2.5), Color(0.34, 0.25, 0.16), true)
+
+
+func _create_interior_staff(root: Node3D, building_title: String) -> void:
+	# موظف محلي داخل كل مبنى؛ يستخدم نظام التفاعل الحالي دون إنشاء نظام مكافآت جديد.
+	var staff := Node3D.new()
+	staff.name = "InteriorServiceStaff"
+	staff.set_script(load("res://scripts/service_npc.gd"))
+	staff.set("character_name", "صاحب المتجر" if building_title == "المتجر" else "موظف المطعم" if building_title == "المطعم" else "موظف مركز التوظيف")
+	staff.set("role_title", "صاحب محل" if building_title == "المتجر" else "موظف مطعم" if building_title == "المطعم" else "مسؤول التوظيف")
+	staff.set("name_key", "interior_shop_staff" if building_title == "المتجر" else "interior_restaurant_staff" if building_title == "المطعم" else "interior_employment_staff")
+	staff.set("role_key", "interior_shop_role" if building_title == "المتجر" else "interior_restaurant_role" if building_title == "المطعم" else "interior_employment_role")
+	staff.set("interaction_key", "interior_shop_dialogue" if building_title == "المتجر" else "interior_restaurant_dialogue" if building_title == "المطعم" else "interior_employment_dialogue")
+	staff.set("interaction_radius", 4.8)
+	staff.position = Vector3(0, 0, -0.7)
+	root.add_child(staff)
+
+func return_from_building_interior() -> void:
+	if interior_transition_busy or not is_instance_valid(interior_root):
+		return
+	interior_transition_busy = true
+	var body := interior_player
+	if is_instance_valid(body) and not body.is_queued_for_deletion():
+		body.set_physics_process(false)
+	_show_interior_loading(false, "interior_return_loading")
+	await get_tree().create_timer(0.65).timeout
+	if not is_inside_tree():
+		return
+	# استعد المدينة حتى لو تعذر استعادة اللاعب؛ لا تترك العالم مخفيًا أو الانتقال مقفولًا.
+	_set_city_world_hidden(false)
+	if is_instance_valid(body) and not body.is_queued_for_deletion():
+		body.global_transform = interior_return_transform
+		body.velocity = Vector3.ZERO
+		body.set_physics_process(true)
+	if is_instance_valid(interior_root):
+		interior_root.queue_free()
+	interior_root = null
+	interior_player = null
+	interior_transition_busy = false
+	_set_palace_navigation_visible(false)
+	_hide_interior_loading()
+	var manager := get_node_or_null("MissionManager")
+	if is_instance_valid(manager) and manager.has_method("_update_interaction_target"):
+		manager._update_interaction_target()
+		manager._update_interaction_hud()
+
+
 func _material(color: Color) -> StandardMaterial3D:
 	var material := StandardMaterial3D.new()
 	material.albedo_color = color
