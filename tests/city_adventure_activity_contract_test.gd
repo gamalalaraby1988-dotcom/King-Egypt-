@@ -6,6 +6,7 @@ func _initialize() -> void:
 func _run_city_adventure_contract() -> void:
 	var main_source := FileAccess.get_file_as_string("res://scripts/main.gd")
 	var manager_source := FileAccess.get_file_as_string("res://scripts/mission_manager.gd")
+	var city_layout_source := FileAccess.get_file_as_string("res://scripts/approved_city_layout.gd")
 	var server_source := FileAccess.get_file_as_string("res://scripts/authoritative_game_server.gd")
 	var expected_ids := [
 		"city_adventure_rescue",
@@ -22,6 +23,23 @@ func _run_city_adventure_contract() -> void:
 		push_error("Adventure entry interaction must remain at the existing adventure_center building.")
 		quit(1)
 		return
+	if not city_layout_source.contains('["adventure_center","مركز المغامرات",Vector3(-75,0,58)') or not city_layout_source.contains("d * 0.5 + 0.09"):
+		push_error("Adventure hub anchor must line up with the entrance of the existing adventure center.")
+		quit(1)
+		return
+	if not main_source.contains("for road_z in [-15.0, 15.0, 45.0]") or not main_source.contains('Vector3(0, 0.006, road_z), side_road_color'):
+		push_error("Survival race must stay on the existing east-west street at z=45.")
+		quit(1)
+		return
+	if not manager_source.contains("Vector3(-60.0, 0.15, 45.0)") or not manager_source.contains("Vector3(60.0, 0.15, 45.0)"):
+		push_error("Survival race checkpoints must remain within the existing z=45 road corridor.")
+		quit(1)
+		return
+	for existing_entrance in ['["fire_rescue","مركز الإطفاء والإنقاذ",Vector3(-75,0,15)', '["police_station","مركز الشرطة",Vector3(-75,0,-5)', '["supermarket","السوبر ماركت",Vector3(-30,0,-30)', '["cinema","السينما",Vector3(60,0,30)']:
+		if not city_layout_source.contains(existing_entrance):
+			push_error("Adventure checkpoint references a building that is missing from the approved city layout.")
+			quit(1)
+			return
 	var hub_start := main_source.find("func _create_adventure_hub_interaction()")
 	var hub_end := main_source.find("func _add_functional_building(", hub_start)
 	if hub_start < 0 or hub_end <= hub_start:
