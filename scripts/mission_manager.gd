@@ -90,13 +90,16 @@ var survival_time_remaining := 0.0
 var adventure_treasure_visual: Node3D
 var rescue_interaction_button: Button
 var rescue_citizen_actor: Node3D
+var message_puzzle_input: LineEdit
+var message_puzzle_submit_button: Button
+var message_puzzle_ready := false
 var rescue_population: Node
 const SURVIVAL_PREPARATION_SECONDS := 10.0
 const SURVIVAL_DURATION_SECONDS := 60.0
 const CITY_ADVENTURES := {
 	"city_adventure_rescue": {"title": "مهمة الإنقاذ", "description": "اتجه إلى مركز الإنقاذ ثم إلى مركز الشرطة لإتمام المهمة."},
 	"city_adventure_treasure": {"title": "الكنز المفقود", "description": "اتبع الأدلة بين مواقع المدينة الموجودة حتى تصل إلى الهدف."},
-	"city_adventure_message": {"title": "الرسالة الغامضة", "description": "اجمع أجزاء الرسالة من نقاط المدينة ثم أكمل فك الشفرة."},
+	"city_adventure_message": {"title": "الرسالة الغامضة", "description": "اجمع الأدلة الثلاثة من مواقع المدينة، ثم حل الشفرة عند نقطة النهاية."},
 	"city_adventure_survival": {"title": "سباق النجاة", "description": "اعبر نقاط المسار المحددة في شوارع المدينة بالترتيب."}
 }
 const CITY_ADVENTURE_STAGES := {
@@ -1135,6 +1138,7 @@ func _accept_adventure() -> void:
 		status_label.text = "المغامرة المختارة غير متاحة."
 		return
 	selected_adventure_id = adventure_id
+	_set_message_puzzle_visible(false)
 	_hide_adventure_treasure()
 	active_mission.set("server_activity_id", adventure_id)
 	adventure_stage_index = 0
@@ -1209,6 +1213,12 @@ func _advance_local_adventure_stage() -> void:
 		return
 	adventure_stage_index += 1
 	if adventure_stage_index >= stages.size():
+		if selected_adventure_id == "city_adventure_message":
+			adventure_stage_index = stages.size() - 1
+			_set_message_puzzle_visible(true)
+			description_label.text = "الأدلة التي جمعتها: مجرى الحياة في مصر، يبدأ اسمه بحرف النون، وينتهي باللام. ما الكلمة المقصودة؟"
+			status_label.text = "وصلت إلى نقطة فك الشفرة. اكتب الإجابة لإكمال المغامرة."
+			return
 		_clear_rescue_citizen()
 		_hide_adventure_treasure()
 		_complete_active_mission()
@@ -1218,7 +1228,15 @@ func _advance_local_adventure_stage() -> void:
 	if selected_adventure_id == "city_adventure_treasure" and adventure_stage_index == stages.size() - 1:
 		_show_adventure_treasure()
 	var adventure: Dictionary = CITY_ADVENTURES.get(selected_adventure_id, {})
-	description_label.text = "%s\nالمرحلة %d من %d" % [str(adventure.get("description", "")), adventure_stage_index + 1, stages.size()]
+	if selected_adventure_id == "city_adventure_message":
+		var clues := [
+			"الدليل الأول: ابحث عن مجرى الحياة الذي يمر في مصر.",
+			"الدليل الثاني: يبدأ اسم هذا المجرى بحرف النون.",
+			"الدليل الثالث: ينتهي الاسم بحرف اللام."
+		]
+		description_label.text = "%s\n%s" % [str(adventure.get("description", "")), clues[mini(adventure_stage_index - 1, clues.size() - 1)]]
+	else:
+		description_label.text = "%s\nالمرحلة %d من %d" % [str(adventure.get("description", "")), adventure_stage_index + 1, stages.size()]
 	status_label.text = "أحسنت! انتقل إلى نقطة المغامرة التالية."
 
 
@@ -1232,7 +1250,19 @@ func _on_server_mission_stage_updated(mission_id: String, server_target: Vector3
 	target_marker.global_position = active_target
 	if mission_id == "city_adventure_treasure" and stage_number == stage_count:
 		_show_adventure_treasure()
-	description_label.text = "%s\nالمرحلة %d من %d" % [str(CITY_ADVENTURES.get(mission_id, {}).get("description", "")), stage_number, stage_count]
+	if mission_id == "city_adventure_message":
+		if stage_number == stage_count:
+			_set_message_puzzle_visible(true)
+			description_label.text = "الأدلة التي جمعتها: مجرى الحياة في مصر، يبدأ اسمه بحرف النون، وينتهي باللام. ما الكلمة المقصودة؟"
+		else:
+			var clues := [
+				"الدليل الأول: ابحث عن مجرى الحياة الذي يمر في مصر.",
+				"الدليل الثاني: يبدأ اسم هذا المجرى بحرف النون.",
+				"الدليل الثالث: ينتهي الاسم بحرف اللام."
+			]
+			description_label.text = "%s\n%s" % [str(CITY_ADVENTURES.get(mission_id, {}).get("description", "")), clues[mini(stage_number - 1, clues.size() - 1)]]
+	else:
+		description_label.text = "%s\nالمرحلة %d من %d" % [str(CITY_ADVENTURES.get(mission_id, {}).get("description", "")), stage_number, stage_count]
 	status_label.text = message
 
 
@@ -1306,6 +1336,7 @@ func _on_server_mission_failed(mission_id: String, message: String) -> void:
 		return
 	mission_running = false
 	survival_time_remaining = 0.0
+	_set_message_puzzle_visible(false)
 	_clear_rescue_citizen()
 	target_marker.visible = false
 	status_label.text = message
@@ -1324,6 +1355,7 @@ func _on_server_mission_completed(mission_id: String) -> void:
 	mission_running = false
 	survival_time_remaining = 0.0
 	survival_prep_remaining = 0.0
+	_set_message_puzzle_visible(false)
 	_clear_rescue_citizen()
 	_hide_adventure_treasure()
 	target_marker.visible = false
@@ -1567,6 +1599,7 @@ func _complete_active_mission() -> void:
 		achievement_manager.record_mission_completed(key)
 	mission_running = false
 	survival_time_remaining = 0.0
+	_set_message_puzzle_visible(false)
 	_hide_adventure_treasure()
 	target_marker.visible = false
 	status_label.text = "عثرت على الكنز وأكملت المغامرة! لا توجد مكافأة مفعلة." if selected_adventure_id == "city_adventure_treasure" else ("اكتملت المغامرة! تم تسجيلها محليًا دون مكافأة." if selected_activity_kind == "adventure" else "اكتملت المهمة! تم حفظ المكافأة.")
@@ -1842,6 +1875,36 @@ func _cancel_active_navigation() -> void:
 	panel.visible = true
 	_update_navigation_hud()
 
+func _set_message_puzzle_visible(visible: bool) -> void:
+	message_puzzle_ready = visible
+	if is_instance_valid(message_puzzle_input):
+		message_puzzle_input.visible = visible
+		if not visible:
+			message_puzzle_input.text = ""
+	if is_instance_valid(message_puzzle_submit_button):
+		message_puzzle_submit_button.visible = visible
+
+
+func _submit_message_puzzle_answer() -> void:
+	if not mission_running or selected_adventure_id != "city_adventure_message" or not message_puzzle_ready or not is_instance_valid(message_puzzle_input):
+		return
+	var answer := message_puzzle_input.text.strip_edges()
+	if answer.is_empty():
+		status_label.text = "اكتب إجابتك أولًا."
+		return
+	message_puzzle_submit_button.disabled = true
+	if GameModeManager.is_online_ready():
+		AuthoritativeGameServer.request_submit_message_puzzle_answer.rpc_id(1, answer)
+	else:
+		var normalized_answer := answer.replace(" ", "").replace("ـ", "")
+		if normalized_answer == "النيل":
+			_set_message_puzzle_visible(false)
+			_complete_active_mission()
+		else:
+			status_label.text = "الإجابة غير صحيحة. راجع الأدلة وحاول مرة أخرى."
+	message_puzzle_submit_button.disabled = false
+
+
 func _clear_rescue_citizen() -> void:
 	if is_instance_valid(rescue_population) and is_instance_valid(rescue_citizen_actor) and rescue_population.has_method("set_rescue_citizen"):
 		rescue_population.call("set_rescue_citizen", rescue_citizen_actor, false)
@@ -2108,6 +2171,17 @@ func _build_ui() -> void:
 	rescue_interaction_button.visible = false
 	rescue_interaction_button.pressed.connect(_interact_with_rescue_citizen)
 	content.add_child(rescue_interaction_button)
+	message_puzzle_input = LineEdit.new()
+	message_puzzle_input.name = "MysteryMessageAnswer"
+	message_puzzle_input.placeholder_text = "اكتب حل الشفرة هنا"
+	message_puzzle_input.visible = false
+	content.add_child(message_puzzle_input)
+	message_puzzle_submit_button = Button.new()
+	message_puzzle_submit_button.name = "SubmitMysteryMessageAnswer"
+	message_puzzle_submit_button.text = "إرسال الحل"
+	message_puzzle_submit_button.visible = false
+	message_puzzle_submit_button.pressed.connect(_submit_message_puzzle_answer)
+	content.add_child(message_puzzle_submit_button)
 	accept_button = Button.new()
 	accept_button.text = "بدء المهمة"
 	accept_button.pressed.connect(_accept_selected_activity)
