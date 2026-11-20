@@ -58,6 +58,14 @@ func _run_slot_rules_tests() -> void:
 		push_error("Exactly two matching symbols must pay 0.1x.")
 		quit(1)
 		return
+	if rules_script.get_gross_return_chips(19, 1) != 1 or rules_script.get_gross_return_chips(29, 1) != 2:
+		push_error("Fractional 0.1x chip returns must round down to whole chips.")
+		quit(1)
+		return
+	if rules_script.get_gross_return_chips(10, 0) != 0 or rules_script.get_gross_return_chips(9, 1) != 0:
+		push_error("Zero returns and below-minimum wagers must not create chip payouts.")
+		quit(1)
+		return
 	if rules_script.get_payout_multiplier_tenths([0, 1, 2]) != 0:
 		push_error("No matching symbols must pay zero.")
 		quit(1)
