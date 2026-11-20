@@ -1569,6 +1569,9 @@ func _reload_scene_for_account_profile() -> void:
 	get_tree().reload_current_scene()
 
 func _on_player_account_session_expired() -> void:
+	# A session may expire while the scene is being reloaded for an account switch.
+	# Always release the save guard so the selected account profile remains usable offline.
+	ProfileConfigStore.complete_account_switch()
 	PlayerSyncClient.clear_session_access_token()
 	if is_instance_valid(player_account_button):
 		player_account_button.text = "حساب اللاعب - تسجيل الدخول وحفظ التقدم"
