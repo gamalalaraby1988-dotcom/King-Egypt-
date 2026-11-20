@@ -1,7 +1,7 @@
 extends Node3D
-## توزيع 50 شخصية افتراضية فقط في نقاط المدينة.
-## يعاد استخدام AvatarVisual نفسه؛ لا توجد مجسمات أو خامات شخصية جديدة.
-## للحفاظ على أداء Android لا تُنشأ إلا الشخصيات الأقرب للاعب (بحد أقصى 18).
+## 50 شخصية أساسية يمكن إنشاء نسخ بصرية إضافية منها في نقاط مستقلة.
+## كل نسخة تعيد استخدام AvatarVisual نفسه ولا تنشئ خامات أو مجسمات جديدة.
+## يظل حد المجسمات النشطة قريبًا من اللاعب محدودًا لحماية أداء Android.
 
 const AVATAR_SCENE: PackedScene = preload("res://scenes/characters/avatar_visual.tscn")
 const MAX_ACTIVE_VISUALS_OFFLINE := 18
@@ -38,6 +38,30 @@ const BASE_SPAWNS: Array[Vector3] = [
 	Vector3(91, 0, 39), Vector3(105, 0, 31), Vector3(91, 0, 18)
 ]
 
+## نقاط نسخ إضافية. أضف Vector3 جديدًا هنا لتوزيع نسخة في مكان آخر.
+## source هو رقم الشخصية الأساسية من 1 إلى 50 التي ستُنسخ.
+const COPY_SPAWNS: Array[Dictionary] = [
+	{"position": Vector3(-72, 0, -48), "source": 1},
+	{"position": Vector3(-48, 0, -48), "source": 2},
+	{"position": Vector3(48, 0, -48), "source": 3},
+	{"position": Vector3(72, 0, -48), "source": 4},
+	{"position": Vector3(-72, 0, -22), "source": 5},
+	{"position": Vector3(72, 0, -22), "source": 6},
+	{"position": Vector3(-72, 0, 25), "source": 7},
+	{"position": Vector3(72, 0, 25), "source": 8},
+	{"position": Vector3(-52, 0, 18), "source": 9},
+	{"position": Vector3(52, 0, 18), "source": 10},
+	{"position": Vector3(-24, 0, 82), "source": 11},
+	{"position": Vector3(24, 0, 82), "source": 12},
+	{"position": Vector3(-42, 0, 95), "source": 13},
+	{"position": Vector3(42, 0, 95), "source": 14},
+	{"position": Vector3(-90, 0, 60), "source": 15},
+	{"position": Vector3(90, 0, 82), "source": 16},
+	{"position": Vector3(96, 0, 8), "source": 17},
+	{"position": Vector3(112, 0, 60), "source": 18},
+	{"position": Vector3(0, 0, -5), "source": 19},
+	{"position": Vector3(0, 0, 58), "source": 20}
+]
 
 var _spawn_records: Array[Dictionary] = []
 var _active_visuals: Dictionary = {}
@@ -62,6 +86,17 @@ func _build_spawn_records() -> void:
 			"is_copy": false,
 			"wander": 0.0 if i % 3 == 0 else 1.35,
 			"phase": float(i) * 1.71
+		})
+	for i in range(COPY_SPAWNS.size()):
+		var copy: Dictionary = COPY_SPAWNS[i]
+		var source_index := clampi(int(copy.get("source", 1)) - 1, 0, BASE_SPAWNS.size() - 1)
+		_spawn_records.append({
+			"id": "citizen_copy_%03d" % (i + 1),
+			"position": copy["position"],
+			"source": source_index,
+			"is_copy": true,
+			"wander": 0.0 if i % 4 == 0 else 1.1,
+			"phase": float(i + BASE_SPAWNS.size()) * 1.37
 		})
 
 func _process(delta: float) -> void:
