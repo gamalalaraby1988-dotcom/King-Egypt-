@@ -115,13 +115,13 @@ func _run_arcade_machine_tests() -> void:
 			quit(1)
 			return
 	var machine_source := FileAccess.get_file_as_string("res://scripts/arcade_slot_machine.gd")
-	if not machine_source.contains("register_arcade_machine(machine_id, zone_id, self, self)") or not machine_source.contains("request_start_arcade_session(machine_id, \"solo\")") or not machine_source.contains("request_arcade_slot_spin(\"paid\", MIN_BET_CHIPS)"):
+	if not machine_source.contains("register_arcade_machine(machine_id, zone_id, self, self)") or not machine_source.contains("request_start_arcade_session(machine_id, \"solo\")") or not machine_source.contains("request_arcade_slot_spin(\"auto\", MIN_BET_CHIPS)"):
 		push_error("Slot machine must register as a trusted controller and request server sessions/spins.")
 		machine.queue_free()
 		quit(1)
 		return
 	var server_source := FileAccess.get_file_as_string("res://scripts/authoritative_game_server.gd")
-	if not server_source.contains("KING_CITY_SLOT_API_BASE_URL") or not server_source.contains("KING_CITY_SLOT_PUBLISHABLE_KEY"):
+	if not server_source.contains("KING_CITY_SLOT_API_BASE_URL") or not server_source.contains("KING_CITY_SLOT_PUBLISHABLE_KEY") or not server_source.contains("[\"paid\", \"free\", \"auto\"]"):
 		push_error("Slot settlement must use explicit environment configuration, not production account settings.")
 		machine.queue_free()
 		quit(1)
