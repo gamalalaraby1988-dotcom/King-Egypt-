@@ -207,7 +207,11 @@ func _update_social_interactions(delta: float) -> void:
 		if float(state["remaining"]) <= 0.0:
 			_social_actor_states.erase(actor_id)
 	for pair_key in _social_pair_cooldowns.keys():
-		_social_pair_cooldowns[pair_key] = maxf(0.0, float(_social_pair_cooldowns[pair_key]) - delta)
+		var cooldown_remaining := maxf(0.0, float(_social_pair_cooldowns[pair_key]) - delta)
+		if cooldown_remaining <= 0.0:
+			_social_pair_cooldowns.erase(pair_key)
+		else:
+			_social_pair_cooldowns[pair_key] = cooldown_remaining
 	_social_poll_elapsed += delta
 	if _social_poll_elapsed < SOCIAL_POLL_INTERVAL:
 		return
