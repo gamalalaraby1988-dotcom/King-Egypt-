@@ -40,6 +40,26 @@ func _run_arcade_machine_tests() -> void:
 		quit(1)
 		return
 
+	if spin_button.text != "SPIN":
+		push_error("Manual SPIN mode must be the default visual state.")
+		machine.queue_free()
+		quit(1)
+		return
+	var spin_style := spin_button.get_theme_stylebox("normal") as StyleBoxFlat
+	if spin_style == null or spin_style.border_color.g < spin_style.border_color.r:
+		push_error("Manual SPIN mode must use green styling.")
+		machine.queue_free()
+		quit(1)
+		return
+	machine.call("set_auto_play_mode_visual", true)
+	var auto_style := spin_button.get_theme_stylebox("normal") as StyleBoxFlat
+	if spin_button.text != "AUTO" or auto_style == null or auto_style.border_color.r < auto_style.border_color.g:
+		push_error("AUTO mode must use red styling.")
+		machine.queue_free()
+		quit(1)
+		return
+	machine.call("set_auto_play_mode_visual", false)
+
 	if not machine.has_method("play_server_result"):
 		push_error("Trusted result presentation entry point is missing.")
 		machine.queue_free()
