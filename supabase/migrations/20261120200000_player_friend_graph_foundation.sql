@@ -64,7 +64,7 @@ declare
     v_high uuid;
 begin
     if v_me is null then return 'authentication_required'; end if;
-    if pg_catalog.upper(pg_catalog.coalesce(p_player_code, '')) !~ '^[A-F0-9]{10}$' then
+    if pg_catalog.upper(coalesce(p_player_code, '')) !~ '^[A-F0-9]{10}$' then
         return 'invalid_player_code';
     end if;
     select p.user_id into v_target
@@ -174,7 +174,7 @@ as $function$
     select r.request_id,
            case when r.requester_user_id = auth.uid() then 'outgoing' else 'incoming' end,
            p.player_code,
-           pg_catalog.left(pg_catalog.coalesce(p.display_name, ''), 24),
+           pg_catalog.left(coalesce(p.display_name, ''), 24),
            r.created_at
     from private.friend_requests r
     join public.player_profiles p
@@ -193,7 +193,7 @@ security definer
 set search_path = ''
 as $function$
     select p.player_code,
-           pg_catalog.left(pg_catalog.coalesce(p.display_name, ''), 24),
+           pg_catalog.left(coalesce(p.display_name, ''), 24),
            f.created_at
     from private.friendships f
     join public.player_profiles p
@@ -215,7 +215,7 @@ declare
     v_high uuid;
 begin
     if v_me is null then return 'authentication_required'; end if;
-    if pg_catalog.upper(pg_catalog.coalesce(p_player_code, '')) !~ '^[A-F0-9]{10}$' then
+    if pg_catalog.upper(coalesce(p_player_code, '')) !~ '^[A-F0-9]{10}$' then
         return 'invalid_player_code';
     end if;
     select p.user_id into v_target from public.player_profiles p
@@ -247,7 +247,7 @@ declare
     v_high uuid;
 begin
     if v_me is null then return 'authentication_required'; end if;
-    if pg_catalog.upper(pg_catalog.coalesce(p_player_code, '')) !~ '^[A-F0-9]{10}$' then
+    if pg_catalog.upper(coalesce(p_player_code, '')) !~ '^[A-F0-9]{10}$' then
         return 'invalid_player_code';
     end if;
     select p.user_id into v_target from public.player_profiles p
@@ -284,7 +284,7 @@ declare
     v_target uuid;
 begin
     if v_me is null then return 'authentication_required'; end if;
-    if pg_catalog.upper(pg_catalog.coalesce(p_player_code, '')) !~ '^[A-F0-9]{10}$' then
+    if pg_catalog.upper(coalesce(p_player_code, '')) !~ '^[A-F0-9]{10}$' then
         return 'invalid_player_code';
     end if;
     select p.user_id into v_target from public.player_profiles p
@@ -305,7 +305,7 @@ security definer
 set search_path = ''
 as $function$
     select p.player_code,
-           pg_catalog.left(pg_catalog.coalesce(p.display_name, ''), 24),
+           pg_catalog.left(coalesce(p.display_name, ''), 24),
            b.created_at
     from private.player_blocks b
     join public.player_profiles p on p.user_id = b.blocked_user_id
