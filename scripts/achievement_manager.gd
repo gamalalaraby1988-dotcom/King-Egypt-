@@ -122,11 +122,10 @@ func _save_state() -> void:
 	cfg.set_value("achievements", "walked_meters", walked_meters)
 	cfg.set_value("achievements", "totals", totals)
 	cfg.set_value("achievements", "unlocked", unlocked)
-	var error := cfg.save(_save_path())
-	if error != OK:
-		push_warning("تعذر حفظ الإنجازات: %s" % error)
-	else:
-		last_saved_walk_meters = walked_meters
+	if not ProfileConfigStore.save_config_snapshot(cfg, _save_path(), _save_path() + ".tmp", _save_path() + ".backup"):
+		push_warning("تعذر حفظ الإنجازات عبر الحفظ الذري؛ لم يتم اعتماد التقدم الجديد.")
+		return
+	last_saved_walk_meters = walked_meters
 		if is_instance_valid(PlayerSyncClient):
 			PlayerSyncClient.enqueue_progress_observation(
 				"achievement_progress_observed",
