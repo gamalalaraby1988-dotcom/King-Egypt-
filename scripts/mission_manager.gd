@@ -603,7 +603,10 @@ func _process(_delta: float) -> void:
 			status_label.text = "الوظيفة Online: اقترب من الهدف. المتبقي %.1f متر" % server_job_distance
 		elif mission_running:
 			var server_mission_distance := Vector2(player.global_position.x, player.global_position.z).distance_to(Vector2(active_target.x, active_target.z))
-			status_label.text = "المهمة Online: اقترب من الهدف. المتبقي %.1f متر" % server_mission_distance
+			if selected_adventure_id == "city_adventure_survival":
+				status_label.text = "سباق النجاة: %d ثانية متبقية | %.1f متر للهدف" % [ceili(survival_time_remaining), server_mission_distance]
+			else:
+				status_label.text = "المهمة Online: اقترب من الهدف. المتبقي %.1f متر" % server_mission_distance
 		_update_navigation_hud()
 		return
 	if navigation_arrival_remaining > 0.0:
@@ -671,7 +674,10 @@ func _process(_delta: float) -> void:
 		panel.visible = true
 	if mission_running:
 		var distance_to_target := Vector2(player.global_position.x, player.global_position.z).distance_to(Vector2(active_target.x, active_target.z))
-		status_label.text = "الهدف: اذهب إلى علامة المهمة. المسافة المتبقية: %.1f متر" % distance_to_target
+		if selected_activity_kind == "adventure" and selected_adventure_id == "city_adventure_survival":
+			status_label.text = "سباق النجاة: %d ثانية متبقية | %.1f متر للهدف" % [ceili(survival_time_remaining), distance_to_target]
+		else:
+			status_label.text = "الهدف: اذهب إلى علامة المهمة. المسافة المتبقية: %.1f متر" % distance_to_target
 		if distance_to_target <= 2.2:
 			if selected_activity_kind == "adventure":
 				_advance_local_adventure_stage()
