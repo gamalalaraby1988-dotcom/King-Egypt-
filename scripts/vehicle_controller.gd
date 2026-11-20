@@ -72,6 +72,6 @@ func _try_step_up(delta: float) -> void:
 	var landing := KinematicCollision3D.new()
 	if not test_move(raised, horizontal_motion + Vector3.DOWN * (max_step_height + 0.16), landing):
 		return
-	if landing.get_angle(0) > deg_to_rad(50.0):
+	if landing.get_normal(0).angle_to(Vector3.UP) > deg_to_rad(50.0):
 		return
 	global_position.y += max_step_height
