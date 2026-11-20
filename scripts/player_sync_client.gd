@@ -454,10 +454,12 @@ func flush_pending() -> void:
 	for stored_event in _events:
 		if str(stored_event.get("owner_user_id", "")) != _session_user_id:
 			continue
+		var payload_value: Variant = stored_event.get("payload", {})
+		var safe_payload: Dictionary = payload_value.duplicate(true) if payload_value is Dictionary else {}
 		var event := {
 			"event_id": str(stored_event.get("event_id", "")),
 			"event_type": str(stored_event.get("event_type", "")),
-			"payload": stored_event.get("payload", {}).duplicate(true) if stored_event.get("payload", {}) is Dictionary else {}
+			"payload": safe_payload
 		}
 		batch.append(event)
 		_pending_event_ids.append(str(event.get("event_id", "")))
