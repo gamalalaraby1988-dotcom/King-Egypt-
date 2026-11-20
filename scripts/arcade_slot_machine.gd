@@ -217,7 +217,7 @@ func _on_enter_pressed() -> void:
 	if player.has_method("set_arcade_seated"):
 		player.call("set_arcade_seated", true)
 	var target_position := _seat_anchor.global_position
-	var target_rotation := global_rotation.y + PI
+	var target_rotation := global_rotation.y
 	if _transition_tween and _transition_tween.is_running():
 		_transition_tween.kill()
 	_transition_tween = create_tween()
