@@ -3,8 +3,10 @@ extends Node
 
 signal language_changed
 
-const SAVE_PATH := "user://kings_city_profile.cfg"
 const ProfileConfigStore = preload("res://scripts/profile_config_store.gd")
+
+func _save_path() -> String:
+	return ProfileConfigStore.get_active_profile_path()
 var language_mode: String = "auto"
 
 const TEXTS := {
@@ -168,7 +170,7 @@ const TEXTS := {
 
 func _ready() -> void:
 	var config := ConfigFile.new()
-	if config.load(SAVE_PATH) == OK:
+	if config.load(_save_path()) == OK:
 		language_mode = str(config.get_value("settings", "language", "auto"))
 	if not ["auto", "ar", "en"].has(language_mode):
 		language_mode = "auto"
@@ -188,7 +190,7 @@ func set_language(mode: String) -> void:
 		mode = "auto"
 	if language_mode == mode:
 		return
-	if not ProfileConfigStore.save_sections(SAVE_PATH, {"settings": {"language": mode}}):
+	if not ProfileConfigStore.save_sections(_save_path(), {"settings": {"language": mode}}):
 		push_warning("تعذر حفظ إعداد اللغة؛ لم يتم استبدال بيانات اللاعب.")
 		return
 	language_mode = mode
