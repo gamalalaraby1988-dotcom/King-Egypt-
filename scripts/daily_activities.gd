@@ -171,6 +171,8 @@ func _load_state() -> void:
 	walked_meters = maxf(0.0, saved_walked) if is_finite(saved_walked) else 0.0
 
 func _save_state() -> bool:
+	if ProfileConfigStore.is_account_switch_in_progress():
+		return false
 	var cfg := ConfigFile.new()
 	var load_error := cfg.load(_save_path())
 	if load_error != OK and FileAccess.file_exists(_save_path()):
