@@ -14,6 +14,7 @@ var _seat_anchor: Marker3D
 var _exit_anchor: Marker3D
 var _enter_button: Button
 var _spin_button: Button
+var _auto_button: Button
 var _exit_button: Button
 var _status_label: Label
 var _balance_label: Label
@@ -132,69 +133,143 @@ func _build_touch_controls() -> void:
 	layer.name = "SlotMachineTouchLayer"
 	layer.layer = 32
 	add_child(layer)
+
 	var panel := PanelContainer.new()
 	panel.name = "SlotMachineControls"
-	panel.anchor_left = 1.0
-	panel.anchor_right = 1.0
+	panel.anchor_left = 0.5
+	panel.anchor_right = 0.5
 	panel.anchor_top = 1.0
 	panel.anchor_bottom = 1.0
-	panel.offset_left = -304
-	panel.offset_right = -10
+	panel.offset_left = -350
+	panel.offset_right = 350
 	panel.offset_top = -286
-	panel.offset_bottom = -10
+	panel.offset_bottom = -12
+	panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	panel.visible = false
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.035, 0.045, 0.06, 0.96)
-	style.border_color = accent_color
-	style.set_border_width_all(2)
-	style.set_corner_radius_all(12)
-	style.set_content_margin_all(10)
-	panel.add_theme_stylebox_override("panel", style)
+	var panel_style := StyleBoxFlat.new()
+	panel_style.bg_color = Color(0.018, 0.035, 0.065, 0.97)
+	panel_style.border_color = accent_color
+	panel_style.set_border_width_all(2)
+	panel_style.set_corner_radius_all(16)
+	panel_style.set_content_margin_all(12)
+	panel.add_theme_stylebox_override("panel", panel_style)
 	layer.add_child(panel)
+
 	var content := VBoxContainer.new()
-	content.add_theme_constant_override("separation", 6)
+	content.add_theme_constant_override("separation", 9)
 	panel.add_child(content)
+
+	var header := HBoxContainer.new()
+	header.add_theme_constant_override("separation", 8)
+	content.add_child(header)
+	var brand := Label.new()
+	brand.name = "KingOfEgyptBrand"
+	brand.text = "KING OF EGYPT CITY"
+	brand.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	brand.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	brand.add_theme_font_size_override("font_size", 19)
+	brand.add_theme_color_override("font_color", Color(1.0, 0.82, 0.38))
+	header.add_child(brand)
 	_status_label = Label.new()
-	_status_label.text = machine_title
+	_status_label.name = "MachineStatus"
+	_status_label.text = machine_title.to_upper()
 	_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_status_label.add_theme_font_size_override("font_size", 12)
+	_status_label.add_theme_color_override("font_color", Color(0.70, 0.82, 0.96))
 	content.add_child(_status_label)
-	_balance_label = _make_account_line(content, "BALANCE", "غير متصل")
-	_bet_label = _make_account_line(content, "BET", str(MIN_BET_CHIPS) + " رقائق")
-	_win_label = _make_account_line(content, "WIN", "—")
-	var bet_controls := HBoxContainer.new()
-	bet_controls.add_theme_constant_override("separation", 5)
-	content.add_child(bet_controls)
-	_decrease_bet_button = _make_blue_button("−")
-	_decrease_bet_button.name = "DecreaseBetButton"
-	_decrease_bet_button.disabled = true
-	bet_controls.add_child(_decrease_bet_button)
-	_increase_bet_button = _make_blue_button("+")
-	_increase_bet_button.name = "IncreaseBetButton"
-	_increase_bet_button.disabled = true
-	bet_controls.add_child(_increase_bet_button)
-	_max_bet_button = _make_blue_button("MAX")
-	_max_bet_button.name = "MaxBetButton"
-	_max_bet_button.disabled = true
-	bet_controls.add_child(_max_bet_button)
+
+	var account_row := HBoxContainer.new()
+	account_row.add_theme_constant_override("separation", 8)
+	content.add_child(account_row)
+	_balance_label = _make_account_card(account_row, "BALANCE", "غير متصل", "BalanceValue")
+	_bet_label = _make_account_card(account_row, "BET", str(MIN_BET_CHIPS) + " رقائق", "BetValue")
+	_win_label = _make_account_card(account_row, "WIN", "—", "WinValue")
+
 	var minimum_note := Label.new()
 	minimum_note.name = "MinimumBetNote"
-	minimum_note.text = "أقل رهان: 10 رقائق"
+	minimum_note.text = "الحد الأدنى للرهان: 10 رقائق"
 	minimum_note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	minimum_note.add_theme_color_override("font_color", Color(0.55, 0.78, 1.0))
+	minimum_note.add_theme_font_size_override("font_size", 12)
+	minimum_note.add_theme_color_override("font_color", Color(0.58, 0.78, 1.0))
 	content.add_child(minimum_note)
-	_enter_button = _make_button("✋ اجلس أمام الماكينة", _on_enter_pressed)
-	_enter_button.modulate = Color(0.55, 0.78, 1.0)
-	content.add_child(_enter_button)
-	_spin_button = _make_button("SPIN — قريبًا", _on_spin_pressed)
+
+	var action_row := HBoxContainer.new()
+	action_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	action_row.add_theme_constant_override("separation", 7)
+	content.add_child(action_row)
+
+	_exit_button = _make_button("🚪 مغادرة المقعد", _on_exit_pressed)
+	_exit_button.name = "LeaveSeatButton"
+	_exit_button.custom_minimum_size = Vector2(132, 44)
+	_style_action_button(_exit_button, Color(0.025, 0.10, 0.23), Color(0.12, 0.38, 0.68))
+	action_row.add_child(_exit_button)
+
+	_decrease_bet_button = _make_blue_button("−")
+	_decrease_bet_button.name = "DecreaseBetButton"
+	_decrease_bet_button.custom_minimum_size = Vector2(48, 44)
+	_decrease_bet_button.disabled = true
+	action_row.add_child(_decrease_bet_button)
+	_increase_bet_button = _make_blue_button("+")
+	_increase_bet_button.name = "IncreaseBetButton"
+	_increase_bet_button.custom_minimum_size = Vector2(48, 44)
+	_increase_bet_button.disabled = true
+	action_row.add_child(_increase_bet_button)
+	_max_bet_button = _make_blue_button("MAX")
+	_max_bet_button.name = "MaxBetButton"
+	_max_bet_button.custom_minimum_size = Vector2(66, 44)
+	_max_bet_button.disabled = true
+	action_row.add_child(_max_bet_button)
+
+	_spin_button = _make_button("SPIN", _on_spin_pressed)
 	_spin_button.name = "SpinButton"
+	_spin_button.custom_minimum_size = Vector2(126, 50)
 	_spin_button.disabled = true
 	_spin_button.tooltip_text = "يتاح بعد اكتمال لعبة السلوت والتحقق الخادمي من النتيجة."
-	content.add_child(_spin_button)
-	_apply_spin_mode_visual(false)
-	_exit_button = _make_button("🚪 خروج من المقعد", _on_exit_pressed)
-	content.add_child(_exit_button)
-	panel.set_meta("controls_content", content)
+	_style_action_button(_spin_button, Color(0.025, 0.20, 0.075), Color(0.12, 0.78, 0.30))
+	action_row.add_child(_spin_button)
+
+	_auto_button = _make_button("AUTO", _on_auto_pressed)
+	_auto_button.name = "AutoButton"
+	_auto_button.custom_minimum_size = Vector2(82, 44)
+	_auto_button.disabled = true
+	_auto_button.tooltip_text = "اللعب التلقائي غير متاح قبل ربط المتحكم الخادمي."
+	_style_action_button(_auto_button, Color(0.24, 0.025, 0.025), Color(0.88, 0.12, 0.12))
+	action_row.add_child(_auto_button)
+
+	_enter_button = _make_button("✋ اجلس أمام الماكينة", _on_enter_pressed)
+	_enter_button.custom_minimum_size = Vector2(220, 44)
+	_style_action_button(_enter_button, Color(0.025, 0.10, 0.23), Color(0.25, 0.58, 0.92))
+	content.add_child(_enter_button)
 	_set_nearby_controls(false)
+
+func _make_account_card(parent: HBoxContainer, caption: String, initial_value: String, node_name: String) -> Label:
+	var card := PanelContainer.new()
+	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var card_style := StyleBoxFlat.new()
+	card_style.bg_color = Color(0.035, 0.075, 0.12, 0.98)
+	card_style.border_color = accent_color.darkened(0.12)
+	card_style.set_border_width_all(1)
+	card_style.set_corner_radius_all(9)
+	card_style.set_content_margin_all(7)
+	card.add_theme_stylebox_override("panel", card_style)
+	parent.add_child(card)
+	var label := Label.new()
+	label.name = node_name
+	label.text = caption + "\\n" + initial_value
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.add_theme_font_size_override("font_size", 15)
+	label.add_theme_color_override("font_color", Color(1.0, 0.88, 0.62))
+	card.add_child(label)
+	return label
+
+func _style_action_button(button: Button, background: Color, border: Color) -> void:
+	button.add_theme_stylebox_override("normal", _make_spin_style(background, border))
+	button.add_theme_stylebox_override("hover", _make_spin_style(background.lightened(0.12), border.lightened(0.12)))
+	button.add_theme_stylebox_override("pressed", _make_spin_style(background.darkened(0.12), border))
+	button.add_theme_stylebox_override("disabled", _make_spin_style(background, border.darkened(0.30)))
+	button.add_theme_color_override("font_color", Color(0.92, 0.96, 1.0))
+	button.add_theme_color_override("font_disabled_color", Color(0.48, 0.58, 0.68))
 
 func _make_account_line(parent: VBoxContainer, caption: String, initial_value: String) -> Label:
 	var line := Label.new()
@@ -238,23 +313,24 @@ func _make_spin_style(background: Color, border: Color) -> StyleBoxFlat:
 	return style
 
 func _apply_spin_mode_visual(auto_mode: bool) -> void:
-	if not is_instance_valid(_spin_button):
-		return
-	var active_color := Color(0.12, 0.78, 0.30) if not auto_mode else Color(0.88, 0.12, 0.12)
-	var dark_color := Color(0.025, 0.20, 0.075) if not auto_mode else Color(0.24, 0.025, 0.025)
-	_spin_button.text = "AUTO" if auto_mode else "SPIN"
-	_spin_button.add_theme_stylebox_override("normal", _make_spin_style(dark_color, active_color))
-	_spin_button.add_theme_stylebox_override("hover", _make_spin_style(dark_color.lightened(0.12), active_color.lightened(0.12)))
-	_spin_button.add_theme_stylebox_override("pressed", _make_spin_style(dark_color.darkened(0.12), active_color))
-	_spin_button.add_theme_stylebox_override("disabled", _make_spin_style(dark_color, active_color))
-	_spin_button.add_theme_color_override("font_color", active_color.lightened(0.35))
-	_spin_button.add_theme_color_override("font_hover_color", Color.WHITE)
-	_spin_button.add_theme_color_override("font_pressed_color", Color.WHITE)
-	_spin_button.add_theme_color_override("font_disabled_color", active_color.lightened(0.35))
+	# حالة العرض فقط؛ لا يبدأ هذا التبديل جولات أو يخصم رقائق.
+	if is_instance_valid(_spin_button):
+		_style_action_button(_spin_button, Color(0.025, 0.20, 0.075), Color(0.12, 0.78, 0.30))
+		_spin_button.text = "SPIN"
+	if is_instance_valid(_auto_button):
+		_style_action_button(_auto_button, Color(0.24, 0.025, 0.025), Color(0.88, 0.12, 0.12))
+		_auto_button.text = "AUTO" if auto_mode else "AUTO"
 
 func set_auto_play_mode_visual(auto_mode: bool) -> void:
-	# Visual state only: this does not start or stop rounds; the trusted server controller must own auto-play.
+	# Visual state only: trusted server controller must own auto-play.
 	_apply_spin_mode_visual(auto_mode)
+	if is_instance_valid(_status_label):
+		_status_label.text = "وضع AUTO (عرض فقط)" if auto_mode else machine_title.to_upper()
+
+func _on_auto_pressed() -> void:
+	# Auto-play remains unavailable until the authoritative server controller is connected.
+	if is_instance_valid(_status_label):
+		_status_label.text = "اللعب التلقائي غير متاح حاليًا."
 
 func _set_nearby_controls(visible_now: bool) -> void:
 	var panel := get_node_or_null("SlotMachineTouchLayer/SlotMachineControls") as PanelContainer
@@ -265,6 +341,8 @@ func _set_nearby_controls(visible_now: bool) -> void:
 		_enter_button.visible = visible_now
 	if is_instance_valid(_spin_button):
 		_spin_button.visible = false
+	if is_instance_valid(_auto_button):
+		_auto_button.visible = false
 	if is_instance_valid(_exit_button):
 		_exit_button.visible = false
 
@@ -275,6 +353,7 @@ func _set_seated_controls(seated: bool) -> void:
 	panel.visible = seated
 	_enter_button.visible = false
 	_spin_button.visible = seated
+	_auto_button.visible = seated
 	_exit_button.visible = seated
 	if is_instance_valid(_status_label):
 		_status_label.text = "أنت جالس أمام " + machine_title if seated else machine_title
