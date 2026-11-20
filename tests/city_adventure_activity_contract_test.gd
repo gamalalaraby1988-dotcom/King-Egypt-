@@ -79,5 +79,17 @@ func _run_city_adventure_contract() -> void:
 		push_error("Rescue must reuse an existing city resident and its wave animation.")
 		quit(1)
 		return
+	if not manager_source.contains("func _submit_message_puzzle_answer()") or not manager_source.contains("MysteryMessageAnswer") or not manager_source.contains("SubmitMysteryMessageAnswer"):
+		push_error("Mystery message must expose an answer input and explicit submit interaction.")
+		quit(1)
+		return
+	if not manager_source.contains("الدليل الأول:") or not manager_source.contains("الدليل الثاني:") or not manager_source.contains("الدليل الثالث:") or not manager_source.contains('normalized_answer == "النيل"'):
+		push_error("Mystery message must reveal three clues and validate the decoded answer.")
+		quit(1)
+		return
+	if not server_source.contains("func request_submit_message_puzzle_answer(answer: String)") or not server_source.contains('normalized_answer != "النيل"') or not server_source.contains('"puzzle_ready"'):
+		push_error("Online mystery answer must be validated by the server after all checkpoints.")
+		quit(1)
+		return
 	print("City adventure activity contract checks passed.")
 	quit(0)
