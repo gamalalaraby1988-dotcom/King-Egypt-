@@ -143,12 +143,18 @@ func _run() -> void:
 
 	# WalletManager's full-snapshot path also uses the shared atomic writer.
 	after_language.set_value("profile", "mission_progress_test", 3)
+	after_language.set_value("achievements", "walked_meters", 125.0)
+	after_language.set_value("daily", "day", "2026-11-21")
+	after_language.set_value("daily", "claimed", true)
 	if not Store.save_config_snapshot(after_language, TEST_PATH, TEMP_PATH, BACKUP_PATH):
 		_fail("Shared atomic snapshot writer rejected a valid wallet/progression snapshot.")
 		return
 	var after_snapshot := ConfigFile.new()
 	if after_snapshot.load(TEST_PATH) != OK or int(after_snapshot.get_value("profile", "mission_progress_test", -1)) != 3:
 		_fail("Shared atomic snapshot writer did not persist progression data.")
+		return
+	if float(after_snapshot.get_value("achievements", "walked_meters", -1.0)) != 125.0 or str(after_snapshot.get_value("daily", "day", "")) != "2026-11-21" or not bool(after_snapshot.get_value("daily", "claimed", false)):
+		_fail("Shared atomic snapshot writer did not persist achievements or daily activity data.")
 		return
 	if int(after_snapshot.get_value("wallet", "balances", {}).get("money", -1)) != 925 or not after_snapshot.get_value("wallet", "receipts", {}).has("purchase_vehicle_elantra"):
 		_fail("Shared atomic snapshot writer lost wallet balances or receipts.")
