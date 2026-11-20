@@ -33,6 +33,34 @@ func _run_arcade_machine_tests() -> void:
 			return
 
 	var controls := machine.get_node("SlotMachineTouchLayer/SlotMachineControls")
+	for required_control in ["BalanceValue", "BetValue", "WinValue", "DecreaseBetButton", "IncreaseBetButton", "MaxBetButton", "MinimumBetNote"]:
+		if controls.find_child(required_control, true, false) == null:
+			push_error("Missing chip/bet display control: " + required_control)
+			machine.queue_free()
+			quit(1)
+			return
+	var bet_label := controls.find_child("BetValue", true, false) as Label
+	var minimum_note := controls.find_child("MinimumBetNote", true, false) as Label
+	if bet_label == null or not bet_label.text.contains("10") or minimum_note == null or not minimum_note.text.contains("10"):
+		push_error("The displayed minimum bet must be 10 game chips.")
+		machine.queue_free()
+		quit(1)
+		return
+	for control_name in ["DecreaseBetButton", "IncreaseBetButton", "MaxBetButton"]:
+		var bet_button := controls.find_child(control_name, true, false) as Button
+		if bet_button == null or not bet_button.disabled:
+			push_error("Bet controls must remain disabled until server authority is connected.")
+			machine.queue_free()
+			quit(1)
+			return
+	var blue_button := controls.find_child("IncreaseBetButton", true, false) as Button
+	var blue_style := blue_button.get_theme_stylebox("normal") as StyleBoxFlat
+	if blue_style == null or blue_style.border_color.b < blue_style.border_color.r:
+		push_error("Bet adjustment controls must use blue styling.")
+		machine.queue_free()
+		quit(1)
+		return
+
 	var spin_button := controls.find_child("SpinButton", true, false) as Button
 	if spin_button == null or not spin_button.disabled:
 		push_error("Spin must remain disabled until a trusted game controller is connected.")
