@@ -1281,7 +1281,7 @@ func _create_pyramids_area() -> void:
 	add_child(pyramids)
 
 
-# اختيار وضع اللعب وبوابة PIN محلية لحساب المؤسس الموثق.
+# اختيار وضع اللعب مع تسجيل دخول Google والتحقق الخادمي من هوية المؤسس.
 var mode_selection_layer: CanvasLayer
 var mode_selection_panel: PanelContainer
 var mode_status_label: Label
