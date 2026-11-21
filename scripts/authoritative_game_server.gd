@@ -1148,11 +1148,15 @@ func _request_walk_progress(peer_id: int, action: String) -> void:
 		return
 	var session: Dictionary = _sessions[peer_id]
 	var user_id := str(session.get("user_id", ""))
-	if user_id.is_empty() or _proof_hmac_secret.size() < 32:
+	if user_id.is_empty():
+		return
+	if _proof_hmac_secret.size() < 32:
+		session["walk_retry_after_usec"] = Time.get_ticks_usec() + 60000000
 		return
 	var base_url := str(ProjectSettings.get_setting("founder/auth/api_base_url", "")).strip_edges().trim_suffix("/")
 	var publishable_key := str(ProjectSettings.get_setting("founder/auth/publishable_key", "")).strip_edges()
 	if not base_url.begins_with("https://") or publishable_key.is_empty():
+		session["walk_retry_after_usec"] = Time.get_ticks_usec() + 30000000
 		return
 
 	var issued_at := int(Time.get_unix_time_from_system())
@@ -1257,6 +1261,7 @@ func _on_walk_progress_completed(result: int, response_code: int, _headers: Pack
 			session["walk_pending_event_expires_at"] = 0
 		if bool(parsed.get("achievement_unlocked", false)):
 			session["first_steps_recorded"] = true
+			session["walk_pending_meters"] = 0.0
 			if multiplayer.get_peers().has(peer_id):
 				rpc_id(peer_id, "receive_server_activity_progress_recorded", "achievement", "first_steps", false)
 	session["walk_retry_after_usec"] = 0
@@ -1492,12 +1497,13 @@ func _physics_process(delta: float) -> void:
 		body.move_and_slide()
 		if direction.length() > 0.1:
 			body.rotation.y = atan2(direction.x, direction.z)
-		if bool(session.get("walk_progress_ready", false)) and was_grounded and body.is_on_floor() and direction.length() > 0.1 and not outside_city:
+		if bool(session.get("walk_progress_ready", false)) and not bool(session.get("first_steps_recorded", false)) and was_grounded and body.is_on_floor() and direction.length() > 0.1 and not outside_city:
 			var verified_step := Vector2(body.global_position.x - movement_start_position.x, body.global_position.z - movement_start_position.z).length()
 			var maximum_step := RUN_SPEED * safe_delta + 0.12
 			if is_finite(verified_step) and verified_step > 0.0 and verified_step <= maximum_step:
-				session["walk_pending_meters"] = float(session.get("walk_pending_meters", 0.0)) + verified_step
-		if float(session.get("walk_pending_meters", 0.0)) >= 5.0 and not bool(session.get("walk_request_active", false)) and now_usec >= int(session.get("walk_retry_after_usec", 0)):
+				var remaining_distance := maxf(0.0, 100.0 - float(session.get("walk_distance_meters", 0.0)) - float(session.get("walk_pending_meters", 0.0)))
+				session["walk_pending_meters"] = float(session.get("walk_pending_meters", 0.0)) + minf(verified_step, remaining_distance)
+		if float(session.get("walk_pending_meters", 0.0)) >= 1.0 and not bool(session.get("walk_request_active", false)) and now_usec >= int(session.get("walk_retry_after_usec", 0)):
 			_request_walk_progress(peer_id, "record")
 		session["velocity"] = body.velocity
 		session = _evaluate_server_objective_zones(peer_id, session, body)
