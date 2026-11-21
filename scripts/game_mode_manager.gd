@@ -51,6 +51,7 @@ func connect_online(address: String, port: int = 2456) -> void:
 		current_mode = Mode.UNSELECTED
 		connection_state = "connection_failed"
 		status_changed.emit("تعذر بدء اتصال WSS الآمن: %s" % error_string(error))
+		online_disconnected.emit()
 		return
 
 	multiplayer.multiplayer_peer = peer
@@ -115,6 +116,7 @@ func _on_connection_failed() -> void:
 	connection_state = "connection_failed"
 	mode_changed.emit(current_mode)
 	status_changed.emit("فشل الاتصال. لم يتم الدخول إلى Online؛ يمكنك اختيار Offline أو المحاولة لاحقًا.")
+	online_disconnected.emit()
 
 
 func _on_server_disconnected() -> void:

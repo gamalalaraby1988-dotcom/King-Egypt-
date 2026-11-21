@@ -49,6 +49,15 @@ var _arcade_sessions: Dictionary = {}
 var _peer_arcade_sessions: Dictionary = {}
 var _pending_slot_spins: Dictionary = {}
 var _closed_arcade_sessions: Dictionary = {}
+var _city_directory_url := ""
+var _city_directory_server_id := ""
+var _city_directory_region := ""
+var _city_directory_endpoint := ""
+var _city_directory_hmac_key := PackedByteArray()
+var _city_directory_enabled := false
+var _city_directory_registered := false
+var _city_directory_next_heartbeat_usec := 0
+var _city_directory_requests: Array[HTTPRequest] = []
 const ARCADE_ZONE_IDS := [
 	"european_vip_casino",
 	"civilization_ship",
@@ -106,6 +115,7 @@ func _ready() -> void:
 		var secret_b64 := OS.get_environment("KING_CITY_PROOF_HMAC_SECRET_B64").strip_edges()
 		if not secret_b64.is_empty():
 			_proof_hmac_secret = Marshalls.base64_to_raw(secret_b64)
+		_configure_city_session_directory()
 		call_deferred("start_dedicated_server")
 
 
@@ -148,6 +158,196 @@ func start_dedicated_server() -> void:
 	print("KING OF EGYPT CITY authoritative WSS server listening on TCP port %d." % port)
 
 
+func _configure_city_session_directory() -> void:
+	var base_url := str(ProjectSettings.get_setting("founder/auth/api_base_url", "")).strip_edges().trim_suffix("/")
+	_city_directory_url = OS.get_environment("KING_CITY_SESSION_DIRECTORY_URL").strip_edges()
+	if _city_directory_url.is_empty() and base_url.begins_with("https://"):
+		_city_directory_url = base_url + "/functions/v1/city-session-directory"
+	_city_directory_server_id = OS.get_environment("KING_CITY_SESSION_SERVER_ID").strip_edges()
+	_city_directory_region = OS.get_environment("KING_CITY_SESSION_REGION").strip_edges().to_lower()
+	_city_directory_endpoint = OS.get_environment("KING_CITY_SESSION_ENDPOINT").strip_edges()
+	_city_directory_hmac_key = Marshalls.base64_to_raw(OS.get_environment("KING_CITY_SESSION_DIRECTORY_HMAC_SECRET_B64").strip_edges())
+	var id_regex := RegEx.new()
+	id_regex.compile("^[A-Za-z0-9][A-Za-z0-9_-]{2,63}$")
+	var region_regex := RegEx.new()
+	region_regex.compile("^[a-z0-9][a-z0-9-]{1,31}$")
+	var valid := _city_directory_url.begins_with("https://") and id_regex.search(_city_directory_server_id) != null
+	valid = valid and region_regex.search(_city_directory_region) != null
+	valid = valid and _city_directory_endpoint.begins_with("wss://") and _city_directory_hmac_key.size() >= 32
+	_city_directory_enabled = valid
+	if not valid:
+		push_warning("City session directory is not configured; legacy direct WSS mode remains available.")
+		return
+	print("Trusted city session directory configuration loaded for server %s." % _city_directory_server_id)
+
+
+func _city_directory_uuid() -> String:
+	var bytes := Crypto.new().generate_random_bytes(16)
+	if bytes.size() != 16:
+		return ""
+	bytes[6] = (int(bytes[6]) & 15) | 64
+	bytes[8] = (int(bytes[8]) & 63) | 128
+	var hex := bytes.hex_encode()
+	return "%s-%s-%s-%s-%s" % [hex.substr(0, 8), hex.substr(8, 4), hex.substr(12, 4), hex.substr(16, 4), hex.substr(20, 12)]
+
+
+func _send_city_directory_server_action(payload: Dictionary, callback: Callable = Callable()) -> void:
+	if not _city_directory_enabled:
+		return
+	var raw_body := JSON.stringify(payload)
+	var timestamp := str(int(Time.get_unix_time_from_system()))
+	var nonce := _city_directory_uuid()
+	if nonce.is_empty():
+		push_warning("Could not generate a city directory request nonce.")
+		return
+	var signer := HMACContext.new()
+	if signer.start(HashingContext.HASH_SHA256, _city_directory_hmac_key) != OK:
+		push_warning("Could not initialize city directory HMAC signing.")
+		return
+	if signer.update((timestamp + "\n" + nonce + "\n" + raw_body).to_utf8_buffer()) != OK:
+		push_warning("Could not prepare city directory HMAC signing.")
+		return
+	var signature := signer.finish().hex_encode()
+	var request := HTTPRequest.new()
+	request.timeout = 8.0
+	add_child(request)
+	_city_directory_requests.append(request)
+	request.request_completed.connect(_on_city_directory_request_completed.bind(request, callback))
+	var headers := PackedStringArray([
+		"Content-Type: application/json",
+		"apikey: " + str(ProjectSettings.get_setting("founder/auth/publishable_key", "")),
+		"x-king-city-timestamp: " + timestamp,
+		"x-king-city-nonce: " + nonce,
+		"x-king-city-signature: " + signature
+	])
+	var error := request.request(_city_directory_url, headers, HTTPClient.METHOD_POST, raw_body)
+	if error != OK:
+		_city_directory_requests.erase(request)
+		request.queue_free()
+		if callback.is_valid():
+			callback.call(-1, 0, PackedByteArray())
+
+
+func _on_city_directory_request_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray, request: HTTPRequest, callback: Callable) -> void:
+	_city_directory_requests.erase(request)
+	if is_instance_valid(request):
+		request.queue_free()
+	if callback.is_valid():
+		callback.call(result, response_code, body)
+
+
+func _register_city_session_server() -> void:
+	if not _city_directory_enabled or _city_directory_registered:
+		return
+	var capacity := clampi(int(OS.get_environment("KING_CITY_SESSION_CAPACITY")) if not OS.get_environment("KING_CITY_SESSION_CAPACITY").is_empty() else MAX_PLAYERS, 1, MAX_PLAYERS)
+	_city_directory_next_heartbeat_usec = Time.get_ticks_usec() + 20000000
+	var payload := {
+		"action": "server_register",
+		"server_id": _city_directory_server_id,
+		"region": _city_directory_region,
+		"endpoint": _city_directory_endpoint,
+		"capacity": capacity,
+		"connected_players": 0
+	}
+	_send_city_directory_server_action(payload, _on_city_session_server_registered)
+
+
+func _on_city_session_server_registered(result: int, response_code: int, body: PackedByteArray) -> void:
+	var parsed: Variant = JSON.parse_string(body.get_string_from_utf8())
+	if result == HTTPRequest.RESULT_SUCCESS and response_code == 200 and parsed is Dictionary and str(parsed.get("status", "")) == "registered":
+		_city_directory_registered = true
+		_city_directory_next_heartbeat_usec = Time.get_ticks_usec() + 20000000
+		print("Trusted city session directory registered server %s." % _city_directory_server_id)
+		return
+	_city_directory_next_heartbeat_usec = Time.get_ticks_usec() + 20000000
+	push_warning("City session server registration failed; retry scheduled.")
+
+
+func _city_session_connected_player_count() -> int:
+	var count := 0
+	for session_variant in _sessions.values():
+		if bool((session_variant as Dictionary).get("authenticated", false)):
+			count += 1
+	return count
+
+
+func _send_city_session_heartbeat() -> void:
+	if not _city_directory_enabled:
+		return
+	_city_directory_next_heartbeat_usec = Time.get_ticks_usec() + 20000000
+	var payload := {
+		"action": "server_heartbeat",
+		"server_id": _city_directory_server_id,
+		"connected_players": _city_session_connected_player_count()
+	}
+	_send_city_directory_server_action(payload, _on_city_session_heartbeat_completed)
+
+
+func _on_city_session_heartbeat_completed(result: int, response_code: int, body: PackedByteArray) -> void:
+	var parsed: Variant = JSON.parse_string(body.get_string_from_utf8())
+	if result != HTTPRequest.RESULT_SUCCESS or response_code != 200 or not (parsed is Dictionary) or str(parsed.get("status", "")) != "heartbeat_accepted":
+		push_warning("City session heartbeat was not accepted; the directory lease will expire unless a retry succeeds.")
+	_city_directory_next_heartbeat_usec = Time.get_ticks_usec() + 20000000
+
+
+func _on_city_reservation_confirmed(result: int, response_code: int, body: PackedByteArray, peer_id: int, user_id: String, reservation_id: String) -> void:
+	var parsed: Variant = JSON.parse_string(body.get_string_from_utf8())
+	if not _sessions.has(peer_id):
+		_release_city_reservation_from_server(user_id, reservation_id)
+		return
+	var session: Dictionary = _sessions[peer_id]
+	if bool(session.get("authenticated", false)) or str(session.get("reservation_id", "")) != reservation_id:
+		_release_city_reservation_from_server(user_id, reservation_id)
+		return
+	if result != HTTPRequest.RESULT_SUCCESS or response_code != 200 or not (parsed is Dictionary) or str(parsed.get("status", "")) != "connected":
+		_reject_peer(peer_id, "تعذر تأكيد حجز جلسة المدينة؛ حاول الدخول مرة أخرى.")
+		return
+	_complete_player_authentication(peer_id, user_id, reservation_id)
+
+
+func _release_city_reservation_from_server(user_id: String, reservation_id: String) -> void:
+	if not _city_directory_enabled or user_id.is_empty() or reservation_id.is_empty():
+		return
+	_send_city_directory_server_action({
+		"action": "server_player_disconnected",
+		"server_id": _city_directory_server_id,
+		"user_id": user_id,
+		"reservation_id": reservation_id
+	})
+
+
+func _complete_player_authentication(peer_id: int, user_id: String, reservation_id: String) -> void:
+	if not _sessions.has(peer_id) or bool(_sessions[peer_id].get("authenticated", false)):
+		return
+	var body_node := CharacterBody3D.new()
+	body_node.name = "AuthoritativePlayer_%d" % peer_id
+	body_node.collision_layer = 2
+	body_node.collision_mask = 1
+	body_node.position = SPAWN_POSITION
+	body_node.floor_snap_length = 0.25
+	var collision := CollisionShape3D.new()
+	var capsule := CapsuleShape3D.new()
+	capsule.radius = 0.42
+	capsule.height = 1.8
+	collision.shape = capsule
+	body_node.add_child(collision)
+	var world_root := get_tree().current_scene
+	if not is_instance_valid(world_root):
+		_reject_peer(peer_id, "عالم المدينة غير جاهز على الخادم.")
+		return
+	world_root.add_child(body_node)
+	_sessions[peer_id]["authenticated"] = true
+	_sessions[peer_id]["user_id"] = user_id
+	_sessions[peer_id]["reservation_id"] = reservation_id
+	_sessions[peer_id]["body"] = body_node
+	_sessions[peer_id]["last_auth_usec"] = Time.get_ticks_usec()
+	_request_walk_progress(peer_id, "lookup")
+	rpc_id(peer_id, "receive_authentication_result", true, "تم التحقق من الحساب وتأكيد حجز جلسة المدينة.")
+	if _city_directory_enabled:
+		_send_city_session_heartbeat()
+	print("Authenticated game peer %d." % peer_id)
+
+
 func clear_client_session() -> void:
 	_client_authenticated = false
 
@@ -156,6 +356,11 @@ func _process(_delta: float) -> void:
 	if not multiplayer.is_server():
 		return
 	var now_usec := Time.get_ticks_usec()
+	if _city_directory_enabled and now_usec >= _city_directory_next_heartbeat_usec:
+		if _city_directory_registered:
+			_send_city_session_heartbeat()
+		else:
+			_register_city_session_server()
 	for peer_id_variant in _sessions.keys():
 		var peer_id := int(peer_id_variant)
 		var session: Dictionary = _sessions[peer_id]
@@ -166,12 +371,16 @@ func _process(_delta: float) -> void:
 
 
 func _on_peer_connected(peer_id: int) -> void:
+	if _city_directory_enabled and not _city_directory_registered:
+		multiplayer.multiplayer_peer.disconnect_peer(peer_id)
+		return
 	if _sessions.size() >= MAX_PLAYERS:
 		multiplayer.multiplayer_peer.disconnect_peer(peer_id)
 		return
 	_sessions[peer_id] = {
 		"authenticated": false,
 		"user_id": "",
+		"reservation_id": "",
 		"instance_id": "city-main",
 		"body": null,
 		"direction": Vector3.ZERO,
@@ -218,6 +427,16 @@ func _on_peer_disconnected(peer_id: int) -> void:
 	_pending_mission_progress_lookups.erase(peer_id)
 	_abort_peer_arcade_session(peer_id, "انقطع اتصال أحد المشاركين؛ أُغلقت الجلسة دون نتيجة أو مكافأة.")
 	var session: Dictionary = _sessions.get(peer_id, {})
+	if _city_directory_enabled and bool(session.get("authenticated", false)):
+		var reservation_id := str(session.get("reservation_id", ""))
+		var user_id := str(session.get("user_id", ""))
+		if not reservation_id.is_empty() and not user_id.is_empty():
+			_send_city_directory_server_action({
+				"action": "server_player_disconnected",
+				"server_id": _city_directory_server_id,
+				"user_id": user_id,
+				"reservation_id": reservation_id
+			})
 	var body := session.get("body") as CharacterBody3D
 	if is_instance_valid(body):
 		body.queue_free()
@@ -230,12 +449,24 @@ func _on_peer_disconnected(peer_id: int) -> void:
 
 
 @rpc("any_peer", "call_remote", "reliable")
-func authenticate_player(access_token: String) -> void:
+func authenticate_player(access_token: String, reservation_id: String = "") -> void:
 	if not multiplayer.is_server():
 		return
 	var peer_id := multiplayer.get_remote_sender_id()
 	if not _sessions.has(peer_id) or _auth_requests.has(peer_id):
 		return
+	if _city_directory_enabled:
+		var reservation_regex := RegEx.new()
+		reservation_regex.compile("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$")
+		if reservation_regex.search(reservation_id) == null:
+			_reject_peer(peer_id, "حجز جلسة المدينة غير صالح أو منتهي.")
+			return
+		if bool(_sessions[peer_id].get("authenticated", false)):
+			if str(_sessions[peer_id].get("reservation_id", "")) != reservation_id:
+				_reject_peer(peer_id, "لا يمكن تغيير حجز الجلسة أثناء الاتصال.")
+				return
+		else:
+			_sessions[peer_id]["reservation_id"] = reservation_id
 	if access_token.length() < 40 or access_token.length() > 8192:
 		_reject_peer(peer_id, "رمز جلسة الحساب غير صالح.")
 		return
@@ -288,31 +519,16 @@ func _on_auth_request_completed(result: int, response_code: int, _headers: Packe
 		_sessions[peer_id]["last_auth_usec"] = Time.get_ticks_usec()
 		rpc_id(peer_id, "receive_authentication_result", true, "تم تجديد التحقق من حساب اللاعب.")
 		return
-	var body_node := CharacterBody3D.new()
-	body_node.name = "AuthoritativePlayer_%d" % peer_id
-	# Players collide with world geometry only, never with other players or vehicles.
-	body_node.collision_layer = 2
-	body_node.collision_mask = 1
-	body_node.position = SPAWN_POSITION
-	body_node.floor_snap_length = 0.25
-	var collision := CollisionShape3D.new()
-	var capsule := CapsuleShape3D.new()
-	capsule.radius = 0.42
-	capsule.height = 1.8
-	collision.shape = capsule
-	body_node.add_child(collision)
-	var world_root := get_tree().current_scene
-	if not is_instance_valid(world_root):
-		_reject_peer(peer_id, "عالم المدينة غير جاهز على الخادم.")
+	var reservation_id := str(_sessions[peer_id].get("reservation_id", ""))
+	if _city_directory_enabled:
+		_send_city_directory_server_action({
+			"action": "server_player_connected",
+			"server_id": _city_directory_server_id,
+			"user_id": user_id,
+			"reservation_id": reservation_id
+		}, _on_city_reservation_confirmed.bind(peer_id, user_id, reservation_id))
 		return
-	world_root.add_child(body_node)
-	_sessions[peer_id]["authenticated"] = true
-	_sessions[peer_id]["user_id"] = user_id
-	_sessions[peer_id]["body"] = body_node
-	_sessions[peer_id]["last_auth_usec"] = Time.get_ticks_usec()
-	_request_walk_progress(peer_id, "lookup")
-	rpc_id(peer_id, "receive_authentication_result", true, "تم التحقق من حساب اللاعب.")
-	print("Authenticated game peer %d." % peer_id)
+	_complete_player_authentication(peer_id, user_id, reservation_id)
 
 
 func _reject_peer(peer_id: int, reason: String) -> void:
