@@ -356,7 +356,7 @@ func _process(_delta: float) -> void:
 	if not multiplayer.is_server():
 		return
 	var now_usec := Time.get_ticks_usec()
-	if _city_directory_enabled and now_usec >= _city_directory_next_heartbeat_usec:
+	if _city_directory_enabled and _server_peer != null and now_usec >= _city_directory_next_heartbeat_usec:
 		if _city_directory_registered:
 			_send_city_session_heartbeat()
 		else:

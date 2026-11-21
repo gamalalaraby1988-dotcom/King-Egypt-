@@ -10,6 +10,7 @@ func _initialize() -> void:
 	_expect(server_source.contains("HMACContext.new()"), "server signs directory requests with HMAC")
 	_expect(server_source.contains('"action": "server_register"'), "dedicated server registers itself")
 	_expect(server_source.contains('"action": "server_heartbeat"'), "dedicated server sends heartbeat")
+	_expect(server_source.contains("if _city_directory_enabled and _server_peer != null and now_usec >= _city_directory_next_heartbeat_usec:"), "directory registration and heartbeat wait until the secure WSS listener starts")
 	_expect(server_source.contains('"action": "server_player_connected"'), "server confirms the reservation after account verification")
 	_expect(server_source.contains('"action": "server_player_disconnected"'), "server releases a connected reservation on disconnect")
 	_expect(server_source.contains('if _city_directory_enabled and not _city_directory_registered:'), "directory-enabled server rejects players before registration")
