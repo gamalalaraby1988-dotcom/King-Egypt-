@@ -62,6 +62,8 @@ func play_emote(emote_id: String) -> bool:
 	_active_emote = emote_id
 	_emote_remaining = float(durations[emote_id])
 	_update_avatar_animation(_active_emote, 0.0)
+	if GameModeManager.is_online_ready():
+		AuthoritativeGameServer.send_player_emote(emote_id)
 	return true
 
 
