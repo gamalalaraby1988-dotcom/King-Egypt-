@@ -1555,6 +1555,8 @@ func _on_remote_players_received(players: Array) -> void:
 		var player_position: Variant = player_data.get("position", null)
 		var player_rotation: Variant = player_data.get("rotation_y", 0.0)
 		var player_velocity: Variant = player_data.get("velocity", null)
+		var active_emote := str(player_data.get("active_emote", ""))
+		var emote_remaining := float(player_data.get("emote_remaining", 0.0))
 		if peer_id <= 0 or peer_id == multiplayer.get_unique_id():
 			continue
 		if not (player_position is Vector3) or not (player_velocity is Vector3):
@@ -1568,7 +1570,7 @@ func _on_remote_players_received(players: Array) -> void:
 			remote_view.name = "RemotePlayer_%d" % peer_id
 			add_child(remote_view)
 			_remote_player_views[peer_id] = remote_view
-		remote_view.call("apply_snapshot", player_position, float(player_rotation), player_velocity)
+		remote_view.call("apply_snapshot", player_position, float(player_rotation), player_velocity, active_emote, emote_remaining)
 	for peer_id_variant in _remote_player_views.keys():
 		var peer_id := int(peer_id_variant)
 		if not active_peer_ids.has(peer_id):
