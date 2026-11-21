@@ -8,6 +8,8 @@ const EXPLORER_MIGRATION_PATH := "res://supabase/migrations/20261121150000_recor
 const REWARD_MIGRATION_PATH := "res://supabase/migrations/20261121132105_server_verified_player_progress.sql"
 const UNIQUENESS_MIGRATION_PATH := "res://supabase/migrations/20261121140213_prevent_duplicate_verified_activity_completions.sql"
 const LOOKUP_EDGE_PATH := "res://supabase/functions/game-progress-lookup/index.ts"
+const WALK_MIGRATION_PATH := "res://supabase/migrations/20261121160000_server_verified_walk_distance.sql"
+const WALK_EDGE_PATH := "res://supabase/functions/game-walk-progress/index.ts"
 
 
 func _read(path: String) -> String:
@@ -33,7 +35,9 @@ func _initialize() -> void:
 	var migration := _read(REWARD_MIGRATION_PATH)
 	var uniqueness_migration := _read(UNIQUENESS_MIGRATION_PATH)
 	var lookup_edge := _read(LOOKUP_EDGE_PATH)
-	if client.is_empty() or server.is_empty() or mission.is_empty() or achievement.is_empty() or explorer_migration.is_empty() or migration.is_empty() or uniqueness_migration.is_empty() or lookup_edge.is_empty():
+	var walk_migration := _read(WALK_MIGRATION_PATH)
+	var walk_edge := _read(WALK_EDGE_PATH)
+	if client.is_empty() or server.is_empty() or mission.is_empty() or achievement.is_empty() or explorer_migration.is_empty() or migration.is_empty() or uniqueness_migration.is_empty() or lookup_edge.is_empty() or walk_migration.is_empty() or walk_edge.is_empty():
 		push_error("Server verified progress contract test failed: a required source file is missing.")
 		quit(1)
 		return
@@ -65,7 +69,19 @@ func _initialize() -> void:
 		_require(uniqueness_migration, "player_verified_activity_progress_one_time_idx", "one-time activities must be unique per player at the database level"),
 		_require(uniqueness_migration, "pg_advisory_xact_lock", "concurrent completion attempts must be serialized by account and activity"),
 		_require(migration, "get_player_verified_activity_progress", "only the authenticated player's verified progress may be read"),
-		_require(explorer_migration, "achievement_proof_id", "Explorer reward proof must be returned only from the server recorder")
+		_require(explorer_migration, "achievement_proof_id", "Explorer reward proof must be returned only from the server recorder"),
+		_require(server, "/functions/v1/game-walk-progress", "dedicated server must persist signed walking distance through the walk progress endpoint"),
+		_require(server, "walk_pending_event_id", "walking retries must reuse the same idempotency event id"),
+		_require(server, "RUN_SPEED * safe_delta + 0.12", "walking distance must be bounded by authoritative server movement speed"),
+		_require(server, "_walk_signature_message", "walking updates and lookups must be signed by the dedicated server"),
+		_require(client, '"walk_distance"', "client must accept only the dedicated verified walk-distance snapshot"),
+		_require(achievement, "server_verified_walk_meters", "Online First Steps progress must use server-saved distance"),
+		_require(walk_migration, "player_verified_walk_distance_events", "walking increments must persist in a dedicated append-only table"),
+		_require(walk_migration, "p_distance_meters > 5.000", "database must cap each walking increment"),
+		_require(walk_migration, "'first_steps'", "the one-hundred-meter milestone must create First Steps"),
+		_require(walk_edge, "invalid_server_signature", "walk progress endpoint must verify dedicated-server HMAC"),
+		_require(walk_edge, "distance.toFixed(3)", "walk progress HMAC must bind the exact millimeter distance"),
+		_require(walk_edge, "get_server_verified_walk_distance", "server must restore cumulative distance from the durable account ledger")
 	]
 	for passed in checks:
 		if not passed:
