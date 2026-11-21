@@ -1,6 +1,7 @@
 extends Node3D
 
 const ProfileConfigStore = preload("res://scripts/profile_config_store.gd")
+const RemotePlayerVisual = preload("res://scripts/remote_player_visual.gd")
 
 @export var city_half_size: int = 3
 @export var block_spacing: float = 24.0
@@ -27,6 +28,7 @@ var _vehicle_key_was_down := false
 var _player_saved_collision_layer := 1
 var _player_saved_collision_mask := 1
 var _last_safe_player_position := Vector3(0.0, 1.0, -42.0)
+var _remote_player_views: Dictionary = {}
 const PLAYER_RECOVERY_FALL_LIMIT := -3.0
 const CITY_SAFE_X_LIMIT := 155.0
 const CITY_SAFE_Z_MIN := -340.0
@@ -73,6 +75,7 @@ func _ready() -> void:
 	GameModeManager.status_changed.connect(_on_mode_status_changed)
 	GameModeManager.online_connected.connect(_on_mode_connected)
 	AuthoritativeGameServer.authentication_completed.connect(_on_player_server_authenticated)
+	AuthoritativeGameServer.remote_players_received.connect(_on_remote_players_received)
 	GameModeManager.online_disconnected.connect(_on_mode_disconnected)
 
 
@@ -1540,6 +1543,49 @@ func _on_player_access_token_changed(access_token: String) -> void:
 		AuthoritativeGameServer.authenticate_player.rpc_id(1, access_token)
 
 
+func _on_remote_players_received(players: Array) -> void:
+	if not GameModeManager.is_online_ready():
+		return
+	var active_peer_ids: Dictionary = {}
+	for player_variant in players:
+		if not (player_variant is Dictionary):
+			continue
+		var player_data: Dictionary = player_variant
+		var peer_id := int(player_data.get("peer_id", 0))
+		var player_position: Variant = player_data.get("position", null)
+		var player_rotation: Variant = player_data.get("rotation_y", 0.0)
+		var player_velocity: Variant = player_data.get("velocity", null)
+		if peer_id <= 0 or peer_id == multiplayer.get_unique_id():
+			continue
+		if not (player_position is Vector3) or not (player_velocity is Vector3):
+			continue
+		if not (player_rotation is float or player_rotation is int):
+			continue
+		active_peer_ids[peer_id] = true
+		var remote_view: Node3D = _remote_player_views.get(peer_id) as Node3D
+		if not is_instance_valid(remote_view):
+			remote_view = RemotePlayerVisual.new() as Node3D
+			remote_view.name = "RemotePlayer_%d" % peer_id
+			add_child(remote_view)
+			_remote_player_views[peer_id] = remote_view
+		remote_view.call("apply_snapshot", player_position, float(player_rotation), player_velocity)
+	for peer_id_variant in _remote_player_views.keys():
+		var peer_id := int(peer_id_variant)
+		if not active_peer_ids.has(peer_id):
+			var stale_view := _remote_player_views[peer_id] as Node3D
+			if is_instance_valid(stale_view):
+				stale_view.queue_free()
+			_remote_player_views.erase(peer_id)
+
+
+func _clear_remote_player_views() -> void:
+	for remote_view_variant in _remote_player_views.values():
+		var remote_view := remote_view_variant as Node3D
+		if is_instance_valid(remote_view):
+			remote_view.queue_free()
+	_remote_player_views.clear()
+
+
 func _on_player_server_authenticated(success: bool, message: String) -> void:
 	_on_mode_status_changed(message)
 	if success and GameModeManager.confirm_online_authentication():
@@ -1548,6 +1594,7 @@ func _on_player_server_authenticated(success: bool, message: String) -> void:
 		GameModeManager.disconnect_online()
 
 func _on_mode_disconnected() -> void:
+	_clear_remote_player_views()
 	# أعد نافذة اختيار الوضع بعد فقد الخادم، ولا تحوّل الجلسة تلقائيًا إلى Offline.
 	var player := get_node_or_null("Player")
 	if is_instance_valid(player):
