@@ -4,6 +4,7 @@ const CLIENT_PATH := "res://scripts/player_sync_client.gd"
 const SERVER_PATH := "res://scripts/authoritative_game_server.gd"
 const MISSION_PATH := "res://scripts/mission_manager.gd"
 const REWARD_MIGRATION_PATH := "res://supabase/migrations/20261121132105_server_verified_player_progress.sql"
+const UNIQUENESS_MIGRATION_PATH := "res://supabase/migrations/20261121140213_prevent_duplicate_verified_activity_completions.sql"
 const LOOKUP_EDGE_PATH := "res://supabase/functions/game-progress-lookup/index.ts"
 
 
@@ -26,8 +27,9 @@ func _initialize() -> void:
 	var server := _read(SERVER_PATH)
 	var mission := _read(MISSION_PATH)
 	var migration := _read(REWARD_MIGRATION_PATH)
+	var uniqueness_migration := _read(UNIQUENESS_MIGRATION_PATH)
 	var lookup_edge := _read(LOOKUP_EDGE_PATH)
-	if client.is_empty() or server.is_empty() or mission.is_empty() or migration.is_empty() or lookup_edge.is_empty():
+	if client.is_empty() or server.is_empty() or mission.is_empty() or migration.is_empty() or uniqueness_migration.is_empty() or lookup_edge.is_empty():
 		push_error("Server verified progress contract test failed: a required source file is missing.")
 		quit(1)
 		return
@@ -47,8 +49,8 @@ func _initialize() -> void:
 		_require(lookup_edge, 'invalid_server_signature', "lookup endpoint must verify the dedicated server HMAC"),
 		_require(server, '_issue_activity_proof(peer_id, str(session.get("user_id", "")), "mission", completed_mission_id)', "server-completed adventures and missions must enter the proof-verified progress path"),
 		_require(migration, "reward_eligible_at_completion", "reward eligibility must be frozen at the moment the server completion is recorded"),
-		_require(migration, "player_verified_activity_progress_one_time_idx", "one-time activities must be unique per player at the database level"),
-		_require(migration, "pg_advisory_xact_lock", "concurrent completion attempts must be serialized by account and activity"),
+		_require(uniqueness_migration, "player_verified_activity_progress_one_time_idx", "one-time activities must be unique per player at the database level"),
+		_require(uniqueness_migration, "pg_advisory_xact_lock", "concurrent completion attempts must be serialized by account and activity"),
 		_require(migration, "get_player_verified_activity_progress", "only the authenticated player's verified progress may be read")
 	]
 	for passed in checks:
