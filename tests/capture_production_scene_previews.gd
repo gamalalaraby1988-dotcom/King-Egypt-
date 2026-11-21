@@ -14,8 +14,9 @@ func _capture_previews() -> void:
 		return
 
 	root.size = Vector2i(1600, 900)
-	current_scene = packed.instantiate()
-	root.add_child(current_scene)
+	var production_scene := packed.instantiate()
+	root.add_child(production_scene)
+	current_scene = production_scene
 	await process_frame
 	for _frame in range(12):
 		await process_frame
