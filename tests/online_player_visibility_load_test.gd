@@ -7,9 +7,13 @@ var _failed := 0
 func _initialize() -> void:
 	var server := SERVER_SCRIPT.new() as Node
 	root.add_child(server)
+	server.set_process(false)
+	server.set_physics_process(false)
+	await process_frame
 	for player_count in [5, 10, 20]:
 		var sessions := _make_sessions(server, player_count, "city-main", 2.0)
 		server.set("_sessions", sessions)
+		await process_frame
 		var snapshots: Dictionary = server.call("_build_remote_player_snapshots")
 		_expect(snapshots.size() == player_count, "%d players each receive a visibility snapshot" % player_count)
 		var expected_total: int = int(player_count) * (int(player_count) - 1)
@@ -29,6 +33,7 @@ func _initialize() -> void:
 	isolated_sessions[100] = unauthenticated
 	isolated_sessions[101] = _make_player_session(server, 101, "city-main", Vector3(250.0, 1.0, 0.0))
 	server.set("_sessions", isolated_sessions)
+	await process_frame
 	var filtered: Dictionary = server.call("_build_remote_player_snapshots")
 	_expect(filtered.size() == 7, "every authenticated peer with a valid body gets a snapshot, including empty visibility sets")
 	for peer_id_variant in filtered.keys():
