@@ -208,6 +208,14 @@ func _on_verified_activity_progress_completed(result: int, response_code: int, _
 			return
 		var kind := str(item.get("activity_kind", ""))
 		var activity_id := str(item.get("activity_id", ""))
+		if kind == "walk_distance":
+			var distance_value: Variant = item.get("distance_meters", -1.0)
+			var distance_meters := float(distance_value) if typeof(distance_value) in [TYPE_INT, TYPE_FLOAT] else -1.0
+			if activity_id != "first_steps" or typeof(distance_value) not in [TYPE_INT, TYPE_FLOAT] or not is_finite(distance_meters) or distance_meters < 0.0 or distance_meters > 100000000.0:
+				verified_activity_progress_finished.emit(false, "مسافة المشي الموثقة خارج الحدود.")
+				return
+			clean_activities.append({"activity_kind": "walk_distance", "activity_id": "first_steps", "distance_meters": distance_meters})
+			continue
 		var event_id := str(item.get("server_event_id", ""))
 		var verified_at := str(item.get("verified_at", ""))
 		if not ["mission", "job", "achievement", "daily_claim"].has(kind) or activity_pattern.search(activity_id) == null or uuid_pattern.search(event_id) == null or verified_at.is_empty():
