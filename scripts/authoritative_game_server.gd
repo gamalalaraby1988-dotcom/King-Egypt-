@@ -179,6 +179,9 @@ func _on_peer_connected(peer_id: int) -> void:
 		"velocity": Vector3.ZERO,
 		"last_sequence": -1,
 		"last_input_usec": 0,
+		"last_emote_usec": 0,
+		"active_emote": "",
+		"emote_until_usec": 0,
 		"last_safe_position": SPAWN_POSITION,
 		"input_window_usec": Time.get_ticks_usec(),
 		"input_count": 0,
@@ -367,6 +370,34 @@ func send_movement_input(world_direction: Vector3, sprint: bool) -> void:
 		direction = direction.normalized()
 	_input_sequence += 1
 	submit_movement_input.rpc_id(1, _input_sequence, direction, sprint)
+
+
+func send_player_emote(emote_id: String) -> void:
+	if _is_dedicated_server or not is_authenticated():
+		return
+	if not ["clap", "dance", "cry", "wave", "heart"].has(emote_id):
+		return
+	submit_player_emote.rpc_id(1, emote_id)
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func submit_player_emote(emote_id: String) -> void:
+	if not multiplayer.is_server():
+		return
+	var peer_id := multiplayer.get_remote_sender_id()
+	if not _sessions.has(peer_id) or not bool(_sessions[peer_id].get("authenticated", false)):
+		return
+	var durations := {"clap": 2.4, "dance": 4.0, "cry": 3.0, "wave": 2.2, "heart": 2.6}
+	if not durations.has(emote_id):
+		return
+	var session: Dictionary = _sessions[peer_id]
+	var now_usec := Time.get_ticks_usec()
+	if now_usec - int(session.get("last_emote_usec", 0)) < 500000:
+		return
+	session["last_emote_usec"] = now_usec
+	session["active_emote"] = emote_id
+	session["emote_until_usec"] = now_usec + int(float(durations[emote_id]) * 1000000.0)
+	_sessions[peer_id] = session
 
 
 @rpc("any_peer", "call_remote", "unreliable_ordered")
@@ -1480,6 +1511,8 @@ func _physics_process(delta: float) -> void:
 			session["sprint"] = false
 		elif body.is_on_floor() and current_position.y > -0.25:
 			session["last_safe_position"] = current_position
+		if now_usec >= int(session.get("emote_until_usec", 0)):
+			session["active_emote"] = ""
 		var direction: Vector3 = session.get("direction", Vector3.ZERO)
 		var last_input_usec := int(session.get("last_input_usec", 0))
 		if Time.get_ticks_usec() - last_input_usec > 250000:
@@ -1599,7 +1632,9 @@ func _build_remote_player_snapshots() -> Dictionary:
 			"peer_id": source_peer,
 			"position": source_body.global_position,
 			"rotation_y": source_body.rotation.y,
-			"velocity": source_body.velocity
+			"velocity": source_body.velocity,
+			"active_emote": str(source_session.get("active_emote", "")),
+			"emote_remaining": maxf(0.0, float(int(source_session.get("emote_until_usec", 0)) - Time.get_ticks_usec()) / 1000000.0)
 		})
 		bodies_by_peer[source_peer] = source_body
 
@@ -1647,6 +1682,8 @@ func receive_remote_players(players: Array) -> void:
 		var position_variant: Variant = player.get("position", null)
 		var rotation_variant: Variant = player.get("rotation_y", 0.0)
 		var velocity_variant: Variant = player.get("velocity", null)
+		var emote_variant: Variant = player.get("active_emote", "")
+		var emote_remaining_variant: Variant = player.get("emote_remaining", 0.0)
 		if not (peer_id_variant is int) or int(peer_id_variant) <= 0 or int(peer_id_variant) == multiplayer.get_unique_id():
 			continue
 		if seen_peer_ids.has(int(peer_id_variant)) or not (position_variant is Vector3) or not (velocity_variant is Vector3):
@@ -1660,12 +1697,18 @@ func receive_remote_players(players: Array) -> void:
 			continue
 		if not is_finite(remote_velocity.x) or not is_finite(remote_velocity.y) or not is_finite(remote_velocity.z) or not is_finite(remote_rotation):
 			continue
+		var safe_emote := str(emote_variant) if emote_variant is String and ["clap", "dance", "cry", "wave", "heart"].has(str(emote_variant)) else ""
+		var safe_emote_remaining := clampf(float(emote_remaining_variant), 0.0, 4.0) if emote_remaining_variant is float or emote_remaining_variant is int else 0.0
+		if safe_emote_remaining <= 0.0:
+			safe_emote = ""
 		seen_peer_ids[int(peer_id_variant)] = true
 		safe_players.append({
 			"peer_id": int(peer_id_variant),
 			"position": remote_position,
 			"rotation_y": remote_rotation,
-			"velocity": remote_velocity
+			"velocity": remote_velocity,
+			"active_emote": safe_emote,
+			"emote_remaining": safe_emote_remaining
 		})
 		if safe_players.size() >= MAX_PLAYERS - 1:
 			break
