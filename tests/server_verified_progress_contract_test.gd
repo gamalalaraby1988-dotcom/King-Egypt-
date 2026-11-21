@@ -75,6 +75,7 @@ func _initialize() -> void:
 		_require(server, "RUN_SPEED * safe_delta + 0.12", "walking distance must be bounded by authoritative server movement speed"),
 		_require(server, "_walk_signature_message", "walking updates and lookups must be signed by the dedicated server"),
 		_require(client, '"walk_distance"', "client must accept only the dedicated verified walk-distance snapshot"),
+		_require(client, 'verified_activity_progress_received.emit([], "موثّق من خادم اللعبة")', "verified achievement display must clear on logout and account switch"),
 		_require(achievement, "server_verified_walk_meters", "Online First Steps progress must use server-saved distance"),
 		_require(walk_migration, "player_verified_walk_distance_events", "walking increments must persist in a dedicated append-only table"),
 		_require(walk_migration, "p_distance_meters > 5.000", "database must cap each walking increment"),
