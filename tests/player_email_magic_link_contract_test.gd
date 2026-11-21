@@ -10,8 +10,8 @@ func _initialize() -> void:
 	var export_plugin := FileAccess.get_file_as_string("res://addons/founder_secure_storage/export_plugin.gd")
 	var export_preset := FileAccess.get_file_as_string("res://export_presets.cfg")
 
-	_check(player_auth.contains('provider=google'), "Sign-in must start with Google OAuth.");
-	_check(player_auth.contains('"code_challenge_method": "s256"'), "Google OAuth must use PKCE.")
+	_check(player_auth.contains("provider=google") and player_auth.contains("OS.shell_open(authorize_url)"), "Sign-in must open the Google OAuth page.");
+	_check(player_auth.contains("code_challenge_method=s256") and player_auth.contains("code_challenge="), "Google OAuth must use PKCE.")
 	_check(player_auth.contains('kingofegyptcity://auth-callback'), "Google OAuth must use the registered Android callback URI.")
 	_check(player_auth.contains('"/auth/v1/token?grant_type=pkce"'), "Google callbacks must exchange the PKCE authorization code.")
 	_check(player_auth.contains('getPendingAuthLink') and player_auth.contains('clearPendingAuthLink'), "Google OAuth must consume and clear Android callback links.")
@@ -26,7 +26,7 @@ func _initialize() -> void:
 	_check(export_preset.contains("gradle_build/use_gradle_build=true") and export_preset.contains("permissions/internet=true"), "Android export must use Gradle plugins and Internet permission.")
 
 	if _failed:
-		push_error("Player email Google OAuth contract tests failed: %d" % _failed)
+		push_error("Google OAuth contract tests failed: %d" % _failed)
 		quit(1)
 		return
 	print("Google OAuth contract tests passed.")
