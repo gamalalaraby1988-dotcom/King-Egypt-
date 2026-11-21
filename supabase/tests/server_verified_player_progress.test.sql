@@ -1,5 +1,5 @@
 begin;
-select extensions.plan(46);
+select extensions.plan(41);
 
 insert into auth.users (id,aud,role,email,encrypted_password,email_confirmed_at)
 values
@@ -13,8 +13,7 @@ insert into private.player_activity_reward_catalog (
 ) values
 ('mission','mission.progress_only_test',0,0,0,false),
 ('mission','mission.progress_reward_test',25,1,5,true),
-('achievement','explorer',250,5,0,false),
-('achievement','first_steps',100,0,0,false)
+('achievement','explorer',250,5,0,false)
 on conflict (activity_kind,activity_id) do update
 set reward_cash=excluded.reward_cash,
     reward_chips=excluded.reward_chips,
@@ -190,33 +189,6 @@ select public.record_server_verified_activity_progress(
 
 select extensions.is((select result->>'achievement_unlocked' from unapproved_mission_result),'false','unapproved missions do not count toward Explorer');
 
-create temporary table first_steps_result on commit drop as
-select public.record_server_verified_activity_progress(
-    '00000000-0000-4000-8000-000000000061',
-    'achievement','first_steps',
-    '60000000-0000-4000-8000-000000000031',
-    pg_catalog.repeat('08',32),pg_catalog.now(),pg_catalog.now()+interval '5 minutes'
-) as result;
-
-select extensions.is((select result->>'progress_recorded' from first_steps_result),'true','server movement achievement can be persisted independently of rewards');
-select extensions.is((select result->>'reward_eligible' from first_steps_result),'false','first-steps reward eligibility remains disabled');
-select extensions.is((select result->>'proof_id' from first_steps_result),null::text,'first-steps progress does not create a reward proof while disabled');
-select extensions.is(
-    (public.record_server_verified_activity_progress(
-        '00000000-0000-4000-8000-000000000061',
-        'achievement','first_steps',
-        '60000000-0000-4000-8000-000000000031',
-        pg_catalog.repeat('08',32),
-        (select verified_at from private.player_verified_activity_progress where server_event_id='60000000-0000-4000-8000-000000000031'),
-        (select verified_at from private.player_verified_activity_progress where server_event_id='60000000-0000-4000-8000-000000000031')+interval '5 minutes'
-    )->>'duplicate'),
-    'true','first-steps unlock is idempotent across repeated server submissions'
-);
-select extensions.is(
-    (select count(*)::integer from private.player_verified_activity_progress where user_id='00000000-0000-4000-8000-000000000061' and activity_kind='achievement' and activity_id='first_steps'),
-    1,'first-steps achievement is stored once per account'
-);
-
 create temporary table explorer_shop_result on commit drop as
 select public.record_server_verified_activity_progress(
     '00000000-0000-4000-8000-000000000061',
@@ -298,7 +270,7 @@ select pg_catalog.set_config('request.jwt.claim.sub','00000000-0000-4000-8000-00
 
 select extensions.is(
     pg_catalog.jsonb_array_length(public.get_player_verified_activity_progress()->'activities'),
-    10,'player can retrieve their own verified progress including first-steps, Explorer and replayable adventures'
+    9,'player can retrieve their own verified progress including Explorer and replayable adventures'
 );
 select pg_catalog.set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000062',true);
 select extensions.is(
