@@ -55,12 +55,30 @@ func _building(parent: Node3D, id: String, title: String, at: Vector3, footprint
 	parent.add_child(root)
 	var w := footprint.x
 	var d := footprint.y
-	_box(root, "MainFacade", Vector3(w, height, d), Vector3(0, height * 0.5, 0), IVORY)
-	_box(root, "GroundPlinth", Vector3(w + 0.8, 0.7, d + 0.8), Vector3(0, 0.35, 0), SAND)
+	var door_width := maxf(1.5, w * 0.18)
+	var wall_depth := 0.35
+	var half_w := w * 0.5
+	var half_d := d * 0.5
+	var side_width := (w - door_width) * 0.5
+	# Build a hollow facade shell with a real visible doorway instead of a solid
+	# cuboid that visually seals the entrance despite the collision opening.
+	_box(root, "LeftFacade", Vector3(wall_depth, height, d), Vector3(-half_w + wall_depth * 0.5, height * 0.5, 0), IVORY)
+	_box(root, "RightFacade", Vector3(wall_depth, height, d), Vector3(half_w - wall_depth * 0.5, height * 0.5, 0), IVORY)
+	_box(root, "RearFacade", Vector3(w, height, wall_depth), Vector3(0, height * 0.5, -half_d + wall_depth * 0.5), IVORY)
+	_box(root, "FrontLeftFacade", Vector3(side_width, height, wall_depth), Vector3(-(door_width + side_width) * 0.5, height * 0.5, half_d - wall_depth * 0.5), IVORY)
+	_box(root, "FrontRightFacade", Vector3(side_width, height, wall_depth), Vector3((door_width + side_width) * 0.5, height * 0.5, half_d - wall_depth * 0.5), IVORY)
+	_box(root, "FrontDoorLintel", Vector3(door_width, height - 2.8, wall_depth), Vector3(0, 2.8 + (height - 2.8) * 0.5, half_d - wall_depth * 0.5), IVORY)
+	# Split the raised plinth too, keeping the doorway threshold visually open.
+	var plinth_side_width := (w + 0.8 - door_width) * 0.5
+	_box(root, "LeftGroundPlinth", Vector3(0.8, 0.7, d + 0.8), Vector3(-w * 0.5, 0.35, 0), SAND)
+	_box(root, "RightGroundPlinth", Vector3(0.8, 0.7, d + 0.8), Vector3(w * 0.5, 0.35, 0), SAND)
+	_box(root, "RearGroundPlinth", Vector3(w, 0.7, 0.8), Vector3(0, 0.35, -half_d), SAND)
+	_box(root, "FrontLeftGroundPlinth", Vector3(plinth_side_width, 0.7, 0.8), Vector3(-(door_width + plinth_side_width) * 0.5, 0.35, half_d), SAND)
+	_box(root, "FrontRightGroundPlinth", Vector3(plinth_side_width, 0.7, 0.8), Vector3((door_width + plinth_side_width) * 0.5, 0.35, half_d), SAND)
 	_box(root, "RoofCornice", Vector3(w + 0.5, 0.35, d + 0.5), Vector3(0, height + 0.12, 0), accent)
-	_box(root, "Entrance", Vector3(maxf(1.5, w * 0.18), 2.8, 0.16), Vector3(0, 1.4, d * 0.5 + 0.09), DARK)
-	_add_pharaonic_door_band(root, maxf(1.5, w * 0.18), d * 0.5 + 0.205)
-	_add_building_collision_shell(root, footprint, height, maxf(1.5, w * 0.18))
+	_box(root, "Entrance", Vector3(door_width, 2.8, 0.16), Vector3(0, 1.4, half_d + 0.09), DARK)
+	_add_pharaonic_door_band(root, door_width, half_d + 0.205)
+	_add_building_collision_shell(root, footprint, height, door_width)
 	for side in [-1.0, 1.0]:
 		_box(root, "FrontColumn", Vector3(0.38, minf(height - 0.8, 5.0), 0.42), Vector3(side * w * 0.34, minf(height - 0.8, 5.0) * 0.5, d * 0.5 + 0.25), accent)
 	_add_building_facade_details(root, footprint, height, accent)
