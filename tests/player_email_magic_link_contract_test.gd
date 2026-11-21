@@ -1,5 +1,7 @@
 extends SceneTree
 
+var _failed := 0
+
 func _initialize() -> void:
 	var player_auth := FileAccess.get_file_as_string("res://scripts/player_account_auth_client.gd")
 	var founder_auth := FileAccess.get_file_as_string("res://scripts/founder_auth_client.gd")
@@ -28,8 +30,6 @@ func _initialize() -> void:
 		return
 	print("Player email magic-link contract tests passed.")
 	quit(0)
-
-var _failed := 0
 
 func _check(condition: bool, message: String) -> void:
 	if condition:
