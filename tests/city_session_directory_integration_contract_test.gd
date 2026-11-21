@@ -4,6 +4,7 @@ func _initialize() -> void:
 	var server_source := FileAccess.get_file_as_string("res://scripts/authoritative_game_server.gd")
 	var main_source := FileAccess.get_file_as_string("res://scripts/main.gd")
 	var docs_source := FileAccess.get_file_as_string("res://docs/CITY_SESSION_DIRECTORY_AR.md")
+	var project_source := FileAccess.get_file_as_string("res://project.godot")
 	_expect(server_source.contains("KING_CITY_SESSION_DIRECTORY_HMAC_SECRET_B64"), "server HMAC key comes from a server environment variable")
 	_expect(server_source.contains("HMACContext.new()"), "server signs directory requests with HMAC")
 	_expect(server_source.contains('"action": "server_register"'), "dedicated server registers itself")
@@ -17,6 +18,8 @@ func _initialize() -> void:
 	_expect(main_source.contains('"Authorization: Bearer " + access_token'), "matchmaking request uses the player's access token")
 	_expect(main_source.contains('GameModeManager.connect_online(endpoint, 2456)'), "client connects to the assigned WSS endpoint")
 	_expect(main_source.contains('authenticate_player.rpc_id(1, access_token, _pending_city_reservation_id)'), "client forwards the reservation id to the game server")
+	_expect(main_source.contains('authenticate_player.rpc_id(1, access_token, _pending_city_reservation_id)'), "token refresh preserves the active reservation id")
+	_expect(project_source.contains("online/session_directory_enabled=false"), "matchmaking is explicitly disabled in the default project settings")
 	_expect(docs_source.contains("لا يوجد نشر على Supabase الإنتاجي"), "documentation states that production was not deployed")
 	_expect(not server_source.contains("SUPABASE_SERVICE_ROLE_KEY"), "server does not embed a Supabase service role key")
 	if _failed:
