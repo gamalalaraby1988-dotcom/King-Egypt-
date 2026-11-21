@@ -302,19 +302,19 @@ select extensions.is(
     'true','replaying the same walk event does not add distance twice'
 );
 select extensions.throws_ok(
-    $select public.record_server_verified_walk_distance(
+    $$select public.record_server_verified_walk_distance(
         '00000000-0000-4000-8000-000000000061',
         '60000000-0000-4000-8000-000000000031',
         4.000,repeat('a1',32),now(),now()+interval '5 minutes'
-    )$,
+    )$$,
     '23505','server_walk_event_conflict','reusing a walk event id with different distance is rejected'
 );
 select extensions.throws_ok(
-    $select public.record_server_verified_walk_distance(
+    $$select public.record_server_verified_walk_distance(
         '00000000-0000-4000-8000-000000000061',
         '60000000-0000-4000-8000-000000000032',
         5.001,repeat('a2',32),now(),now()+interval '5 minutes'
-    )$,
+    )$$,
     '22023','invalid_server_walk_progress_payload','a single walk increment cannot exceed five meters'
 );
 
