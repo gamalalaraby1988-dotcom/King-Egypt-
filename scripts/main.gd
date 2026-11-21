@@ -1344,6 +1344,8 @@ func _create_mode_selection_ui() -> void:
 	player_account_button.custom_minimum_size.y = 40
 	player_account_button.pressed.connect(_on_google_sign_in_pressed)
 	content.add_child(player_account_button)
+	if PlayerAccountAuthClient.has_active_session():
+		player_account_button.text = "Google - الحساب متصل"
 
 	founder_pin_gate = VBoxContainer.new()
 	founder_pin_gate.add_theme_constant_override("separation", 8)
