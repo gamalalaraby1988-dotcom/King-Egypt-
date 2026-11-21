@@ -1,5 +1,5 @@
 begin;
-select extensions.plan(58);
+select extensions.plan(59);
 
 insert into auth.users (id,aud,role,email,encrypted_password,email_confirmed_at)
 values
@@ -372,7 +372,12 @@ select pg_catalog.set_config('request.jwt.claim.sub','00000000-0000-4000-8000-00
 
 select extensions.is(
     pg_catalog.jsonb_array_length(public.get_player_verified_activity_progress()->'activities'),
-    9,'player can retrieve their own verified progress including Explorer and replayable adventures'
+    11,'player can retrieve their own verified progress including First Steps, walk distance, Explorer and adventures'
+);
+select extensions.is(
+    (select (item->>'distance_meters')::numeric from pg_catalog.jsonb_array_elements(public.get_player_verified_activity_progress()->'activities') item where item->>'activity_kind'='walk_distance' and item->>'activity_id'='first_steps'),
+    100.000::numeric,
+    'authenticated player can read only their own verified cumulative walk distance'
 );
 select pg_catalog.set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000062',true);
 select extensions.is(
