@@ -1342,7 +1342,7 @@ func _create_mode_selection_ui() -> void:
 	player_account_email_input.name = "PlayerAccountEmailInput"
 	player_account_email_input.placeholder_text = "البريد الإلكتروني"
 	player_account_email_input.custom_minimum_size.y = 40
-	player_account_email_input.keyboard_type = LineEdit.KEYBOARD_TYPE_EMAIL_ADDRESS
+	player_account_email_input.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_EMAIL_ADDRESS
 	content.add_child(player_account_email_input)
 
 	player_account_password_input = LineEdit.new()
