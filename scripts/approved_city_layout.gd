@@ -592,15 +592,15 @@ func _build_royal_gate_and_square() -> void:
 
 
 func _build_main_street_wall_ads() -> void:
-	# Reuse the single founder portrait asset on selected building side-walls
-	# along the main boulevards. No duplicate image files are created.
+	# Founder identity is painted directly onto selected side facades like a permanent wall mural.
+	# There is no signboard, backing slab, frame, or raised border.
 	var portrait_path := "res://assets/founder/founder_portrait.jpg"
 	if not ResourceLoader.exists(portrait_path):
-		push_warning("تعذر تحميل صورة إعلانات الشوارع: " + portrait_path)
+		push_warning("تعذر تحميل صورة جدارية المؤسس: " + portrait_path)
 		return
 	var portrait_texture := load(portrait_path) as Texture2D
 	if portrait_texture == null:
-		push_warning("ملف صورة المؤسس ليس Texture2D صالحاً للإعلانات.")
+		push_warning("ملف صورة المؤسس ليس Texture2D صالحاً للجدارية.")
 		return
 
 	var targets := [
@@ -622,6 +622,8 @@ func _build_main_street_wall_ads() -> void:
 	portrait_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	portrait_material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR
 	portrait_material.cull_mode = BaseMaterial3D.CULL_DISABLED
+	portrait_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
+	portrait_material.alpha_scissor_threshold = 0.05
 
 	for index in range(targets.size()):
 		var spec: Dictionary = targets[index]
@@ -630,53 +632,46 @@ func _build_main_street_wall_ads() -> void:
 			continue
 		var side := float(spec["side"])
 		var width := float(spec["width"])
-		var mount := Node3D.new()
-		mount.name = "FounderWallAd_" + str(spec["id"])
-		# Seat the backing slightly into the side facade so it reads as wall-mounted,
-		# while keeping its full face clear of the facade geometry.
-		mount.position = Vector3(side * (width * 0.5 + 0.04), 4.75, 0.0)
-		mount.rotation.y = PI * 0.5 if side > 0.0 else -PI * 0.5
-		mount.add_to_group("main_street_wall_advertisements")
-		building.add_child(mount)
+		var mural := Node3D.new()
+		mural.name = "FounderWallMural_" + str(spec["id"])
+		# The image and lettering sit almost flush to the plaster facade, with no projecting frame.
+		mural.position = Vector3(side * (width * 0.5 + 0.012), 4.75, 0.0)
+		mural.rotation.y = PI * 0.5 if side > 0.0 else -PI * 0.5
+		mural.add_to_group("main_street_wall_advertisements")
+		building.add_child(mural)
 
-		# A wider, layered royal panel remains centered in the clear wall bay, away from the side windows.
-		_box(mount, "AdBlackBacking", Vector3(3.15, 2.55, 0.20), Vector3.ZERO, DARK)
-		_box(mount, "AdGoldTopTrim", Vector3(3.24, 0.11, 0.22), Vector3(0.0, 1.30, 0.03), GOLD)
-		_box(mount, "AdGoldBottomTrim", Vector3(2.90, 0.09, 0.18), Vector3(0.0, -1.30, 0.03), GOLD)
-		_box(mount, "AdGoldLeftTrim", Vector3(0.11, 2.55, 0.22), Vector3(-1.565, 0.0, 0.03), GOLD)
-		_box(mount, "AdGoldRightTrim", Vector3(0.09, 2.35, 0.18), Vector3(1.565, 0.0, 0.03), GOLD)
+		var portrait := MeshInstance3D.new()
+		portrait.name = "FounderPortraitWallPrint"
+		var portrait_mesh := QuadMesh.new()
+		portrait_mesh.size = Vector2(2.75, 1.42)
+		portrait.mesh = portrait_mesh
+		portrait.position = Vector3(0.0, 0.43, 0.19)
+		portrait.material_override = portrait_material
+		portrait.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		mural.add_child(portrait)
 
-		var poster := MeshInstance3D.new()
-		poster.name = "FounderPortraitPoster"
-		var poster_mesh := QuadMesh.new()
-		poster_mesh.size = Vector2(2.78, 1.34)
-		poster.mesh = poster_mesh
-		poster.position = Vector3(0.0, 0.32, 0.13)
-		poster.material_override = portrait_material
-		poster.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		mount.add_child(poster)
-
+		# Gold lettering is applied directly to the wall below the portrait, like painted signage.
 		var name_label := Label3D.new()
-		name_label.name = "FounderAdName"
+		name_label.name = "FounderMuralName"
 		name_label.text = "GAMAL ALARABY"
-		name_label.position = Vector3(0.0, -0.76, 0.15)
-		name_label.font_size = 30
+		name_label.position = Vector3(0.0, -0.57, 0.19)
+		name_label.font_size = 32
 		name_label.pixel_size = 0.008
-		name_label.modulate = Color(1.0, 0.82, 0.42)
-		name_label.outline_size = 5
+		name_label.modulate = Color(0.82, 0.57, 0.23)
+		name_label.outline_size = 2
 		name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		mount.add_child(name_label)
+		mural.add_child(name_label)
 
 		var title_label := Label3D.new()
-		title_label.name = "FounderAdTitle"
+		title_label.name = "FounderMuralTitle"
 		title_label.text = "FOUNDER OF KING OF EGYPT CITY"
-		title_label.position = Vector3(0.0, -1.08, 0.15)
+		title_label.position = Vector3(0.0, -0.88, 0.19)
 		title_label.font_size = 13
 		title_label.pixel_size = 0.008
-		title_label.modulate = Color(1.0, 0.88, 0.62)
-		title_label.outline_size = 3
+		title_label.modulate = Color(0.68, 0.48, 0.24)
+		title_label.outline_size = 1
 		title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		mount.add_child(title_label)
+		mural.add_child(title_label)
 
 
 func _tree(parent: Node3D, label: String, at: Vector3, scale_factor: float = 1.0) -> void:
