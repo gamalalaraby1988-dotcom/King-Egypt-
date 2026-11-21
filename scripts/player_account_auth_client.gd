@@ -1,5 +1,5 @@
 extends Node
-## General player email-OTP authentication. Separate from FounderAuthClient and its identity.
+## Google OAuth PKCE authentication for the player account. Founder checks reuse this exact session.
 signal request_finished(success: bool, message: String)
 signal account_authenticated(user_id: String, email: String)
 signal session_access_token_changed(access_token: String)
@@ -9,11 +9,9 @@ signal player_profile_failed(message: String)
 
 const API_BASE_SETTING := "founder/auth/api_base_url"
 const PUBLISHABLE_KEY_SETTING := "founder/auth/publishable_key"
-const OTP_PATH := "/auth/v1/otp"
-const VERIFY_PATH := "/auth/v1/verify"
 const PKCE_TOKEN_PATH := "/auth/v1/token?grant_type=pkce"
 const REFRESH_PATH := "/auth/v1/token?grant_type=refresh_token"
-const MAGIC_LINK_REDIRECT_URI := "kingofegyptcity://auth-callback"
+const GOOGLE_REDIRECT_URI := "kingofegyptcity://auth-callback"
 const PKCE_VERIFIER_ALIAS := "king_of_egypt_city.player.magic_link_verifier.v1"
 const DEEP_LINK_PLUGIN_SINGLETON := "FounderSecureStorage"
 const PROFILE_PATH := "/rest/v1/player_profiles"
@@ -26,7 +24,6 @@ var _pending_action := ""
 var _profile_action := ""
 var _profile_request_access_token := ""
 var _profile_request_user_id := ""
-var _pending_email := ""
 var _access_token := ""
 var _refresh_token := ""
 var _expires_at := 0
@@ -52,7 +49,7 @@ func _process(delta: float) -> void:
 	if pending_link.is_empty():
 		return
 	plugin.call("clearPendingAuthLink")
-	_handle_magic_link_callback(pending_link)
+	_handle_google_oauth_callback(pending_link)
 
 func _ready() -> void:
 	_auth_http = HTTPRequest.new()
@@ -122,13 +119,13 @@ func request_google_sign_in() -> bool:
 		_pending_code_verifier = ""
 		request_finished.emit(false, "التخزين الآمن في Android غير متاح؛ لم يتم فتح Google.")
 		return false
-	var redirect_query := "?provider=google&redirect_to=" + MAGIC_LINK_REDIRECT_URI.uri_encode()
+	var redirect_query := "?provider=google&redirect_to=" + GOOGLE_REDIRECT_URI.uri_encode()
 	redirect_query += "&code_challenge=" + challenge.uri_encode()
 	redirect_query += "&code_challenge_method=s256"
 	var authorize_url := _api_base_url() + "/auth/v1/authorize" + redirect_query
 	var open_error := OS.shell_open(authorize_url)
 	if open_error != OK:
-		_clear_pending_magic_link()
+		_clear_pending_oauth()
 		request_finished.emit(false, "تعذر فتح صفحة تسجيل الدخول باستخدام Google.")
 		return false
 	request_finished.emit(true, "اختر حساب Google المرتبط بشخصيتك الأصلية، ثم عُد إلى اللعبة.")
@@ -143,7 +140,7 @@ func _android_deep_link_ready() -> bool:
 func _base64url(value: PackedByteArray) -> String:
 	return Marshalls.raw_to_base64(value).replace("+", "-").replace("/", "_").trim_suffix("=")
 
-func _handle_magic_link_callback(link: String) -> void:
+func _handle_google_oauth_callback(link: String) -> void:
 	if not link.begins_with(MAGIC_LINK_REDIRECT_URI):
 		return
 	var auth_code := _url_parameter(link, "code")
@@ -173,12 +170,11 @@ func _url_parameter(url: String, key: String) -> String:
 			return parts[1].uri_decode()
 	return ""
 
-func _clear_pending_magic_link() -> void:
+func _clear_pending_oauth() -> void:
 	var storage := _secure_storage()
 	if storage != null and storage.has_method("delete_secret"):
 		storage.call("delete_secret", PKCE_VERIFIER_ALIAS)
 	_pending_code_verifier = ""
-	_pending_email = ""
 
 func _api_base_url() -> String:
 	return str(ProjectSettings.get_setting(API_BASE_SETTING, "")).strip_edges().trim_suffix("/")
