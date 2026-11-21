@@ -76,7 +76,7 @@ func _building(parent: Node3D, id: String, title: String, at: Vector3, footprint
 	_box(root, "FrontLeftGroundPlinth", Vector3(plinth_side_width, 0.7, 0.8), Vector3(-(door_width + plinth_side_width) * 0.5, 0.35, half_d), SAND)
 	_box(root, "FrontRightGroundPlinth", Vector3(plinth_side_width, 0.7, 0.8), Vector3((door_width + plinth_side_width) * 0.5, 0.35, half_d), SAND)
 	_box(root, "RoofCornice", Vector3(w + 0.5, 0.35, d + 0.5), Vector3(0, height + 0.12, 0), accent)
-	_box(root, "Entrance", Vector3(door_width, 2.8, 0.16), Vector3(0, 1.4, half_d + 0.09), DARK)
+	_box(root, "Entrance", Vector3(door_width, 2.8, 0.16), Vector3(0, 1.4, d * 0.5 + 0.09), DARK)
 	_add_pharaonic_door_band(root, door_width, half_d + 0.205)
 	_add_building_collision_shell(root, footprint, height, door_width)
 	for side in [-1.0, 1.0]:
