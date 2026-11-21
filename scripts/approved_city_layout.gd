@@ -639,6 +639,9 @@ func _build_main_street_wall_ads() -> void:
 		sandstone_wall.albedo_color = Color(0.72, 0.61, 0.46)
 		sandstone_wall.roughness = 0.96
 		sandstone_wall.metallic = 0.0
+		# Keep the sandstone hue stable in the low-light production preview and
+		# under mobile day/night ambient changes; the wall remains matte and non-metallic.
+		sandstone_wall.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 		sandstone_wall.specular_mode = BaseMaterial3D.SPECULAR_DISABLED
 		for facade_name in ["LeftFacade", "RightFacade", "RearFacade", "FrontLeftFacade", "FrontRightFacade", "FrontDoorLintel"]:
 			var facade_piece := building.get_node_or_null(facade_name) as MeshInstance3D
