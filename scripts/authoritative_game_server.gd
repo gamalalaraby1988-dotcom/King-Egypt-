@@ -240,6 +240,7 @@ func _register_city_session_server() -> void:
 	if not _city_directory_enabled or _city_directory_registered:
 		return
 	var capacity := clampi(int(OS.get_environment("KING_CITY_SESSION_CAPACITY")) if not OS.get_environment("KING_CITY_SESSION_CAPACITY").is_empty() else MAX_PLAYERS, 1, MAX_PLAYERS)
+	_city_directory_next_heartbeat_usec = Time.get_ticks_usec() + 20000000
 	var payload := {
 		"action": "server_register",
 		"server_id": _city_directory_server_id,
@@ -273,6 +274,7 @@ func _city_session_connected_player_count() -> int:
 func _send_city_session_heartbeat() -> void:
 	if not _city_directory_enabled:
 		return
+	_city_directory_next_heartbeat_usec = Time.get_ticks_usec() + 20000000
 	var payload := {
 		"action": "server_heartbeat",
 		"server_id": _city_directory_server_id,
