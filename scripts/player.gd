@@ -175,7 +175,7 @@ func _process_online_input() -> void:
 		input_vector = mobile_move
 	if sitting and input_vector.length() > 0.08:
 		sitting = false
-		AuthoritativeGameServer.send_player_sit(false)
+		_sync_sitting_state()
 	if sitting:
 		input_vector = Vector2.ZERO
 	var direction := Vector3(input_vector.x, 0.0, input_vector.y)
@@ -267,6 +267,7 @@ func sit_at_position(world_position: Vector3, facing_y: float = 0.0) -> bool:
 	mobile_move = Vector2.ZERO
 	mobile_sprint = false
 	sitting = true
+	_sync_sitting_state()
 	return true
 
 func set_arcade_seated(enabled: bool) -> void:
@@ -278,10 +279,12 @@ func set_arcade_seated(enabled: bool) -> void:
 		mobile_sprint = false
 		sitting = true
 		velocity = Vector3.ZERO
+		_sync_sitting_state()
 
 func end_arcade_seat(world_position: Vector3, facing_y: float = 0.0) -> void:
 	arcade_seated = false
 	sitting = false
+	_sync_sitting_state()
 	global_position = world_position
 	rotation.y = facing_y
 	velocity = Vector3.ZERO
@@ -302,6 +305,9 @@ func toggle_sit() -> void:
 	if sitting:
 		mobile_move = Vector2.ZERO
 		mobile_sprint = false
+	_sync_sitting_state()
+
+func _sync_sitting_state() -> void:
 	if GameModeManager.is_online_ready():
 		AuthoritativeGameServer.send_player_sit(sitting)
 
