@@ -95,6 +95,7 @@ func set_session_access_token(access_token: String, user_id: String) -> void:
 	var next_user_id := user_id.strip_edges()
 	if not _session_user_id.is_empty() and _session_user_id != next_user_id:
 		_verified_activity_progress.clear()
+		verified_activity_progress_received.emit([], "موثّق من خادم اللعبة")
 	_access_token = access_token.strip_edges()
 	_session_user_id = next_user_id
 	if _access_token.is_empty() or _session_user_id.is_empty():
@@ -123,6 +124,7 @@ func clear_session_access_token() -> void:
 	_verified_progress_request_token = ""
 	_verified_progress_request_user_id = ""
 	_verified_activity_progress.clear()
+	verified_activity_progress_received.emit([], "موثّق من خادم اللعبة")
 	_reward_claim_active = false
 	_reward_claim_token = ""
 	_reward_claim_user_id = ""
