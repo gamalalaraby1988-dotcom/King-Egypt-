@@ -59,6 +59,7 @@ func _apply_cycle() -> void:
 	_environment.fog_light_color = Color(0.10, 0.16, 0.28, 1.0).lerp(Color(0.86, 0.62, 0.43, 1.0), maxf(daylight, twilight * 0.72))
 	_environment.fog_density = lerpf(0.00165, 0.0012, daylight)
 
-	_directional_light.look_at(-sun_direction, Vector3.FORWARD)
+	var light_up := Vector3.FORWARD if absf(sun_direction.dot(Vector3.UP)) > 0.96 else Vector3.UP
+	_directional_light.look_at(-sun_direction, light_up)
 	_directional_light.light_color = Color(1.0, 0.48, 0.30, 1.0).lerp(Color(1.0, 0.84, 0.68, 1.0), daylight)
 	_directional_light.light_energy = lerpf(0.035, 1.15, daylight) + twilight * 0.12
