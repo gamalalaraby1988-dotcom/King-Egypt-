@@ -293,11 +293,27 @@ func _on_city_session_heartbeat_completed(result: int, response_code: int, body:
 func _on_city_reservation_confirmed(result: int, response_code: int, body: PackedByteArray, peer_id: int, user_id: String, reservation_id: String) -> void:
 	var parsed: Variant = JSON.parse_string(body.get_string_from_utf8())
 	if not _sessions.has(peer_id):
+		_release_city_reservation_from_server(user_id, reservation_id)
+		return
+	var session: Dictionary = _sessions[peer_id]
+	if bool(session.get("authenticated", false)) or str(session.get("reservation_id", "")) != reservation_id:
+		_release_city_reservation_from_server(user_id, reservation_id)
 		return
 	if result != HTTPRequest.RESULT_SUCCESS or response_code != 200 or not (parsed is Dictionary) or str(parsed.get("status", "")) != "connected":
 		_reject_peer(peer_id, "تعذر تأكيد حجز جلسة المدينة؛ حاول الدخول مرة أخرى.")
 		return
 	_complete_player_authentication(peer_id, user_id, reservation_id)
+
+
+func _release_city_reservation_from_server(user_id: String, reservation_id: String) -> void:
+	if not _city_directory_enabled or user_id.is_empty() or reservation_id.is_empty():
+		return
+	_send_city_directory_server_action({
+		"action": "server_player_disconnected",
+		"server_id": _city_directory_server_id,
+		"user_id": user_id,
+		"reservation_id": reservation_id
+	})
 
 
 func _complete_player_authentication(peer_id: int, user_id: String, reservation_id: String) -> void:
