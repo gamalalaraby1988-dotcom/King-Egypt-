@@ -1292,12 +1292,9 @@ var founder_pin_button: Button
 var founder_pin_gate: VBoxContainer
 var game_mode_controls: VBoxContainer
 var founder_email_gate: VBoxContainer
-var founder_email_input: LineEdit
-var founder_email_code_input: LineEdit
-var founder_email_verified := false
+var founder_verify_account_button: Button
 var player_account_window: Window
 var player_account_email_input: LineEdit
-var player_account_code_input: LineEdit
 var player_account_status_label: Label
 var player_account_button: Button
 var player_account_profile_label: Label
@@ -1314,12 +1311,6 @@ func _create_mode_selection_ui() -> void:
 	mode_selection_layer.layer = 100
 	add_child(mode_selection_layer)
 	# Connect auth lifecycle even when the founder identity is already cached locally.
-	FounderAuthClient.request_finished.connect(_on_founder_auth_request_finished)
-	FounderAuthClient.email_verified.connect(_on_founder_email_verified)
-	FounderAuthClient.auth_session_received.connect(_on_founder_auth_session_received)
-	FounderAuthClient.auth_session_refreshed.connect(_on_founder_auth_session_refreshed)
-	FounderAuthClient.auth_session_restored.connect(_on_founder_auth_session_restored)
-	FounderAuthClient.auth_session_expired.connect(_on_founder_auth_session_expired)
 	FounderAuthClient.founder_entitlement_received.connect(_on_founder_entitlement_received)
 	FounderAuthClient.founder_entitlement_failed.connect(_on_founder_entitlement_failed)
 	PlayerAccountAuthClient.request_finished.connect(_on_player_account_request_finished)
@@ -1406,28 +1397,19 @@ func _create_mode_selection_ui() -> void:
 		founder_email_gate.add_theme_constant_override("separation", 7)
 		content.add_child(founder_email_gate)
 		var email_heading := Label.new()
-		email_heading.text = "التحقق من بريد حساب المؤسس"
+		email_heading.text = "اعتماد حساب المؤسس"
 		email_heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		founder_email_gate.add_child(email_heading)
-		founder_email_input = LineEdit.new()
-		founder_email_input.placeholder_text = "البريد الإلكتروني"
-		founder_email_input.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_EMAIL_ADDRESS
-		founder_email_gate.add_child(founder_email_input)
-		var send_code_button := Button.new()
-		send_code_button.text = "إرسال رمز التحقق"
-		send_code_button.custom_minimum_size.y = 40
-		send_code_button.pressed.connect(_on_founder_send_code)
-		founder_email_gate.add_child(send_code_button)
-		founder_email_code_input = LineEdit.new()
-		founder_email_code_input.placeholder_text = "رمز البريد المكوّن من 6 أرقام"
-		founder_email_code_input.max_length = 6
-		founder_email_code_input.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_NUMBER
-		founder_email_gate.add_child(founder_email_code_input)
-		var verify_code_button := Button.new()
-		verify_code_button.text = "تأكيد البريد"
-		verify_code_button.custom_minimum_size.y = 40
-		verify_code_button.pressed.connect(_on_founder_verify_code)
-		founder_email_gate.add_child(verify_code_button)
+		var founder_account_note := Label.new()
+		founder_account_note.text = "استخدم حساب اللاعب نفسه المرتبط بالشخصية الأصلية؛ لن يتم إنشاء حساب أو شخصية بديلة."
+		founder_account_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		founder_account_note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		founder_email_gate.add_child(founder_account_note)
+		founder_verify_account_button = Button.new()
+		founder_verify_account_button.text = "التحقق من صلاحية المؤسس بالحساب الحالي"
+		founder_verify_account_button.custom_minimum_size.y = 42
+		founder_verify_account_button.pressed.connect(_on_founder_verify_current_player_account)
+		founder_email_gate.add_child(founder_verify_account_button)
 
 	game_mode_controls = VBoxContainer.new()
 	game_mode_controls.add_theme_constant_override("separation", 8)
@@ -1471,7 +1453,7 @@ func _create_player_account_window() -> void:
 	content.add_child(heading)
 
 	player_account_status_label = Label.new()
-	player_account_status_label.text = "سجّل ببريدك لحفظ هوية اللاعب والتقدم بين الأجهزة."
+	player_account_status_label.text = "أدخل بريد حسابك الحالي، ثم افتح رابط الدخول في الرسالة للعودة إلى اللعبة تلقائيًا."
 	player_account_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	player_account_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	content.add_child(player_account_status_label)
@@ -1482,22 +1464,10 @@ func _create_player_account_window() -> void:
 	content.add_child(player_account_email_input)
 
 	var send_button := Button.new()
-	send_button.text = "إنشاء حساب / إرسال رمز الدخول"
+	send_button.text = "إرسال رابط الدخول إلى البريد"
 	send_button.custom_minimum_size.y = 42
 	send_button.pressed.connect(_on_player_account_send_code)
 	content.add_child(send_button)
-
-	player_account_code_input = LineEdit.new()
-	player_account_code_input.placeholder_text = "رمز التحقق المكوّن من 6 أرقام"
-	player_account_code_input.max_length = 6
-	player_account_code_input.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_NUMBER
-	content.add_child(player_account_code_input)
-
-	var verify_button := Button.new()
-	verify_button.text = "تأكيد الرمز وتسجيل الدخول"
-	verify_button.custom_minimum_size.y = 42
-	verify_button.pressed.connect(_on_player_account_verify_code)
-	content.add_child(verify_button)
 
 	player_account_profile_label = Label.new()
 	player_account_profile_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -1522,16 +1492,9 @@ func _open_player_account_window() -> void:
 func _on_player_account_send_code() -> void:
 	if not is_instance_valid(player_account_email_input):
 		return
-	player_account_status_label.text = "جارٍ إرسال رمز الدخول..."
-	if not PlayerAccountAuthClient.request_email_code(player_account_email_input.text):
-		player_account_status_label.text = "تعذر بدء طلب الرمز. راجع البريد والإعدادات."
-
-func _on_player_account_verify_code() -> void:
-	if not is_instance_valid(player_account_email_input) or not is_instance_valid(player_account_code_input):
-		return
-	player_account_status_label.text = "جارٍ التحقق من الرمز..."
-	if not PlayerAccountAuthClient.verify_email_code(player_account_email_input.text, player_account_code_input.text):
-		player_account_status_label.text = "تعذر بدء التحقق. راجع البريد والرمز."
+	player_account_status_label.text = "جارٍ إرسال رابط الدخول..."
+	if not PlayerAccountAuthClient.request_email_magic_link(player_account_email_input.text):
+		player_account_status_label.text = "تعذر إرسال رابط الدخول. راجع البريد وإعدادات الاتصال."
 
 func _on_player_account_request_finished(success: bool, message: String) -> void:
 	if is_instance_valid(player_account_status_label):
@@ -1558,6 +1521,15 @@ func _on_player_account_access_token_changed(access_token: String) -> void:
 			return
 	WalletManager.initialize_wallet()
 	PlayerSyncClient.set_session_access_token(access_token, account_id)
+	if FounderIdentityManager.is_founder:
+		if FounderIdentityManager.founder_subject_id != account_id:
+			FounderIdentityManager.clear_entitlement()
+			if is_instance_valid(founder_pin_gate):
+				founder_pin_gate.visible = false
+			if is_instance_valid(founder_email_gate):
+				founder_email_gate.visible = true
+		else:
+			FounderAuthClient.request_founder_entitlement_with_access_token(access_token)
 	if account_changed:
 		call_deferred("_reload_scene_for_account_profile")
 	else:
@@ -1589,49 +1561,22 @@ func _on_player_profile_failed(message: String) -> void:
 	if is_instance_valid(player_account_profile_label):
 		player_account_profile_label.text = message
 
-func _on_founder_send_code() -> void:
-	if not is_instance_valid(founder_email_input):
+func _on_founder_verify_current_player_account() -> void:
+	if not PlayerAccountAuthClient.has_active_session():
+		if is_instance_valid(mode_status_label):
+			mode_status_label.text = "سجّل الدخول إلى حساب اللاعب أولًا، ثم أعد التحقق من صلاحية المؤسس."
+		_open_player_account_window()
 		return
-	mode_status_label.text = "جارٍ طلب رمز التحقق..."
-	if not FounderAuthClient.request_email_code(founder_email_input.text):
-		mode_status_label.text = "تعذر بدء طلب الرمز. راجع البريد والإعدادات."
-
-func _on_founder_verify_code() -> void:
-	if not is_instance_valid(founder_email_input) or not is_instance_valid(founder_email_code_input):
-		return
-	mode_status_label.text = "جارٍ التحقق من الرمز..."
-	if not FounderAuthClient.verify_email_code(founder_email_input.text, founder_email_code_input.text):
-		mode_status_label.text = "تعذر بدء التحقق. راجع البريد والرمز."
-
-func _on_founder_auth_request_finished(success: bool, message: String) -> void:
 	if is_instance_valid(mode_status_label):
-		mode_status_label.text = message
-
-func _on_founder_email_verified(_user_id: String, verified_email: String) -> void:
-	founder_email_verified = true
-	if is_instance_valid(mode_status_label):
-		mode_status_label.text = "تم تأكيد ملكية البريد %s. تفعيل حساب المؤسس ينتظر اعتماد التذكرة الخادمية." % verified_email
-
-func _on_founder_auth_session_expired() -> void:
-	# انتهاء جلسة المؤسس لا يمس جلسة حساب اللاعب المستقلة أو رمز مزامنته.
-	if FounderIdentityManager.is_founder and is_instance_valid(mode_status_label):
-		mode_status_label.text = "انتهت جلسة الاتصال الآمنة. أعد التحقق من بريد المؤسس للعمليات Online؛ تذكرة Offline الصالحة لا تتأثر."
-
-
-func _on_founder_auth_session_received(access_token: String, _refresh_token: String) -> void:
-	# Founder session remains isolated; player sync uses PlayerAccountAuthClient only.
-	pass
-
-
-func _on_founder_auth_session_refreshed(_access_token: String) -> void:
-	pass
-
-
-func _on_founder_auth_session_restored(_access_token: String) -> void:
-	# Revalidate the founder entitlement after a persisted Auth session is recovered.
-	FounderAuthClient.request_founder_entitlement_for_active_session()
+		mode_status_label.text = "جارٍ التحقق من صلاحية المؤسس باستخدام جلسة حساب اللاعب نفسها..."
+	if not FounderAuthClient.request_founder_entitlement_with_access_token(PlayerAccountAuthClient.get_access_token()):
+		_on_founder_entitlement_failed("تعذر بدء التحقق من حساب المؤسس.")
 
 func _on_founder_entitlement_received(payload: String, signature_base64: String) -> void:
+	var parsed_claims: Variant = JSON.parse_string(payload)
+	if not (parsed_claims is Dictionary) or str(parsed_claims.get("subject_id", "")) != PlayerAccountAuthClient.get_user_id():
+		_on_founder_entitlement_failed("التذكرة لا تخص حساب اللاعب الحالي.")
+		return
 	if not FounderIdentityManager.accept_signed_entitlement(payload, signature_base64):
 		_on_founder_entitlement_failed("رفض الجهاز التذكرة الموقعة أو تعذر حفظها بأمان.")
 		return
