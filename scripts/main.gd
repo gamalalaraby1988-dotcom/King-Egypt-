@@ -1453,8 +1453,6 @@ func _on_founder_entitlement_received(payload: String, signature_base64: String)
 		mode_status_label.text = "تم التعرف على حساب المؤسس تلقائيًا من Google. يمكنك المتابعة."
 
 func _on_founder_entitlement_failed(message: String) -> void:
-	if is_instance_valid():
-		.visible = false
 	if is_instance_valid(game_mode_controls):
 		game_mode_controls.visible = true
 	if is_instance_valid(mode_status_label):
