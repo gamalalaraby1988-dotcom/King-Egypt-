@@ -1137,6 +1137,131 @@ func receive_arcade_session_state(session_id: String, state: String, machine_id:
 
 
 
+func _walk_signature_message(action: String, user_id: String, issued_at: int, event_id: String = "", distance_meters: float = 0.0, expires_at: int = 0) -> String:
+	if action == "lookup":
+		return "v1|walk|lookup|%s|%d" % [user_id, issued_at]
+	return "v1|walk|record|%s|%s|%.3f|%d|%d" % [user_id, event_id, distance_meters, issued_at, expires_at]
+
+
+func _request_walk_progress(peer_id: int, action: String) -> void:
+	if not multiplayer.is_server() or not _sessions.has(peer_id) or _walk_progress_requests.has(peer_id):
+		return
+	var session: Dictionary = _sessions[peer_id]
+	var user_id := str(session.get("user_id", ""))
+	if user_id.is_empty() or _proof_hmac_secret.size() < 32:
+		return
+	var base_url := str(ProjectSettings.get_setting("founder/auth/api_base_url", "")).strip_edges().trim_suffix("/")
+	var publishable_key := str(ProjectSettings.get_setting("founder/auth/publishable_key", "")).strip_edges()
+	if not base_url.begins_with("https://") or publishable_key.is_empty():
+		return
+
+	var issued_at := int(Time.get_unix_time_from_system())
+	var event_id := ""
+	var distance_meters := 0.0
+	var expires_at := 0
+	if action == "record":
+		event_id = str(session.get("walk_pending_event_id", ""))
+		if event_id.is_empty():
+			distance_meters = floorf(minf(float(session.get("walk_pending_meters", 0.0)), 5.0) * 1000.0) / 1000.0
+			if distance_meters <= 0.0:
+				return
+			event_id = _new_server_event_uuid()
+			if event_id.is_empty():
+				return
+			expires_at = issued_at + 300
+			session["walk_pending_event_id"] = event_id
+			session["walk_pending_event_meters"] = distance_meters
+			session["walk_pending_event_issued_at"] = issued_at
+			session["walk_pending_event_expires_at"] = expires_at
+		else:
+			distance_meters = float(session.get("walk_pending_event_meters", 0.0))
+			issued_at = int(session.get("walk_pending_event_issued_at", 0))
+			expires_at = int(session.get("walk_pending_event_expires_at", 0))
+			if expires_at < int(Time.get_unix_time_from_system()):
+				# Expired unconfirmed batch is discarded rather than replayed with a new event id.
+				session["walk_pending_meters"] = maxf(0.0, float(session.get("walk_pending_meters", 0.0)) - distance_meters)
+				session["walk_pending_event_id"] = ""
+				session["walk_pending_event_meters"] = 0.0
+				session["walk_pending_event_issued_at"] = 0
+				session["walk_pending_event_expires_at"] = 0
+				session["walk_retry_after_usec"] = Time.get_ticks_usec() + 5000000
+				return
+
+	var canonical := _walk_signature_message(action, user_id, issued_at, event_id, distance_meters, expires_at)
+	var hmac_context := HMACContext.new()
+	if hmac_context.start(HashingContext.HASH_SHA256, _proof_hmac_secret) != OK or hmac_context.update(canonical.to_utf8_buffer()) != OK:
+		session["walk_retry_after_usec"] = Time.get_ticks_usec() + 5000000
+		return
+	var payload: Dictionary = {
+		"action": action,
+		"user_id": user_id,
+		"issued_at": issued_at,
+		"signature_hex": hmac_context.finish().hex_encode()
+	}
+	if action == "record":
+		payload["server_event_id"] = event_id
+		payload["distance_meters"] = distance_meters
+		payload["expires_at"] = expires_at
+
+	var request := HTTPRequest.new()
+	request.name = "WalkProgressHTTPRequest_%d" % peer_id
+	request.timeout = 10.0
+	add_child(request)
+	request.request_completed.connect(_on_walk_progress_completed.bind(peer_id, user_id, action, event_id, distance_meters))
+	var headers := PackedStringArray([
+		"Content-Type: application/json",
+		"Accept: application/json",
+		"apikey: " + publishable_key
+	])
+	var error := request.request(base_url + "/functions/v1/game-walk-progress", headers, HTTPClient.METHOD_POST, JSON.stringify(payload))
+	if error != OK:
+		request.queue_free()
+		session["walk_retry_after_usec"] = Time.get_ticks_usec() + 5000000
+		return
+	session["walk_request_active"] = true
+	_walk_progress_requests[peer_id] = request
+
+
+func _on_walk_progress_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray, peer_id: int, user_id: String, action: String, event_id: String, distance_meters: float) -> void:
+	var request := _walk_progress_requests.get(peer_id) as HTTPRequest
+	_walk_progress_requests.erase(peer_id)
+	if is_instance_valid(request):
+		request.queue_free()
+	if not _sessions.has(peer_id):
+		return
+	var session: Dictionary = _sessions[peer_id]
+	if str(session.get("user_id", "")) != user_id:
+		return
+	session["walk_request_active"] = false
+	if result != HTTPRequest.RESULT_SUCCESS or response_code < 200 or response_code >= 300:
+		session["walk_retry_after_usec"] = Time.get_ticks_usec() + 5000000
+		return
+	var parsed: Variant = JSON.parse_string(body.get_string_from_utf8())
+	if not (parsed is Dictionary) or not bool(parsed.get("verified", false)):
+		session["walk_retry_after_usec"] = Time.get_ticks_usec() + 5000000
+		return
+	var total_meters := float(parsed.get("total_meters", -1.0))
+	if not is_finite(total_meters) or total_meters < 0.0 or total_meters > 100000000.0:
+		session["walk_retry_after_usec"] = Time.get_ticks_usec() + 5000000
+		return
+	session["walk_distance_meters"] = maxf(float(session.get("walk_distance_meters", 0.0)), total_meters)
+	if action == "lookup":
+		session["walk_progress_ready"] = true
+		session["first_steps_recorded"] = total_meters >= 100.0
+	else:
+		if bool(parsed.get("recorded", false)) and str(session.get("walk_pending_event_id", "")) == event_id:
+			session["walk_pending_meters"] = maxf(0.0, float(session.get("walk_pending_meters", 0.0)) - distance_meters)
+			session["walk_pending_event_id"] = ""
+			session["walk_pending_event_meters"] = 0.0
+			session["walk_pending_event_issued_at"] = 0
+			session["walk_pending_event_expires_at"] = 0
+		if bool(parsed.get("achievement_unlocked", false)):
+			session["first_steps_recorded"] = true
+			if multiplayer.get_peers().has(peer_id):
+				rpc_id(peer_id, "receive_server_activity_progress_recorded", "achievement", "first_steps", false)
+	session["walk_retry_after_usec"] = 0
+
+
 func _notify_proof_issue_failed(peer_id: int, activity_kind: String, activity_id: String, message: String) -> void:
 	if _sessions.has(peer_id) and multiplayer.get_peers().has(peer_id):
 		rpc_id(peer_id, "receive_server_activity_proof_failed", activity_kind, activity_id, message)
