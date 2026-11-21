@@ -12,6 +12,8 @@ var last_position := Vector3.ZERO
 var totals: Dictionary = {"jobs": 0, "missions": 0, "daily_claims": 0}
 var unlocked: Dictionary = {}
 var server_verified_building_missions: Dictionary = {}
+var server_verified_achievements: Dictionary = {}
+var server_verified_walk_meters := 0.0
 var _last_online_ready := false
 var definitions: Array[Dictionary] = [
 	{"id":"first_steps", "title":"أول خطواتك", "description":"امشِ أو اجرِ لمسافة 100 متر", "kind":"walk", "target":100, "money":100, "chips":0},
@@ -201,14 +203,22 @@ func _on_verified_activity_progress_received(activities: Array, trust_label: Str
 	if trust_label != "موثّق من خادم اللعبة":
 		return
 	var verified: Dictionary = {}
+	var verified_achievements: Dictionary = {}
+	var verified_walk_meters := 0.0
 	for item in activities:
 		if not (item is Dictionary):
 			continue
-		if str(item.get("activity_kind", "")) == "mission":
-			var mission_id := str(item.get("activity_id", ""))
-			if SERVER_VERIFIED_BUILDING_MISSION_IDS.has(mission_id):
-				verified[mission_id] = true
+		var activity_kind := str(item.get("activity_kind", ""))
+		var activity_id := str(item.get("activity_id", ""))
+		if activity_kind == "mission" and SERVER_VERIFIED_BUILDING_MISSION_IDS.has(activity_id):
+			verified[activity_id] = true
+		elif activity_kind == "achievement" and activity_id == "first_steps":
+			verified_achievements[activity_id] = true
+		elif activity_kind == "walk_distance" and activity_id == "first_steps":
+			verified_walk_meters = maxf(0.0, float(item.get("distance_meters", 0.0)))
 	server_verified_building_missions = verified
+	server_verified_achievements = verified_achievements
+	server_verified_walk_meters = verified_walk_meters
 	_refresh_ui()
 
 
@@ -222,7 +232,11 @@ func _refresh_ui() -> void:
 		var done := unlocked.has(achievement_id)
 		var amount := mini(_current_value(str(item["kind"])), int(item["target"]))
 		var reward_text := "%d جنيه + %d رقائق" % [int(item["money"]), int(item["chips"])]
-		if achievement_id == "explorer" and GameModeManager.is_online_ready():
+		if achievement_id == "first_steps" and GameModeManager.is_online_ready():
+			amount = mini(int(server_verified_walk_meters), int(item["target"]))
+			done = server_verified_achievements.has("first_steps")
+			reward_text = "المكافأة الخادمية غير متاحة حاليًا" if done else "تُحتسب من مسافة محفوظة وموثقة خادميًا"
+		elif achievement_id == "explorer" and GameModeManager.is_online_ready():
 			amount = mini(server_verified_building_missions.size(), int(item["target"]))
 			done = amount >= int(item["target"])
 			reward_text = "المكافأة الخادمية غير متاحة حاليًا" if done else "تُحتسب بعد توثيق المهام الثلاث"
