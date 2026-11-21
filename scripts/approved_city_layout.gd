@@ -464,7 +464,27 @@ func _build_royal_gate_and_square() -> void:
 	# The user's portrait file must be supplied as a project asset before it can be textured.
 	_box(gate, "FounderPortraitOuterFrame", Vector3(6.6, 3.55, 0.42), Vector3(0.0, 11.15, 1.36), gold)
 	_box(gate, "FounderPortraitInnerFrame", Vector3(6.18, 3.13, 0.16), Vector3(0.0, 11.15, 1.60), dark_gold)
-	_box(gate, "FounderPortraitTextureSlot", Vector3(5.82, 2.78, 0.08), Vector3(0.0, 11.15, 1.71), black)
+	# Load the founder's uploaded portrait directly onto the reserved framed surface.
+	var founder_portrait_path := "res://assets/founder/founder_portrait.png"
+	if ResourceLoader.exists(founder_portrait_path):
+		var portrait_texture := load(founder_portrait_path) as Texture2D
+		if portrait_texture != null:
+			var portrait_surface := MeshInstance3D.new()
+			portrait_surface.name = "FounderPortraitTextureSlot"
+			var portrait_mesh := QuadMesh.new()
+			portrait_mesh.size = Vector2(5.82, 2.78)
+			portrait_surface.mesh = portrait_mesh
+			portrait_surface.position = Vector3(0.0, 11.15, 1.71)
+			var portrait_material := StandardMaterial3D.new()
+			portrait_material.albedo_texture = portrait_texture
+			portrait_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+			portrait_material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR
+			portrait_material.cull_mode = BaseMaterial3D.CULL_DISABLED
+			portrait_surface.material_override = portrait_material
+			gate.add_child(portrait_surface)
+	else:
+		push_warning("Founder portrait asset is missing: " + founder_portrait_path)
+		_box(gate, "FounderPortraitTextureSlot", Vector3(5.82, 2.78, 0.08), Vector3(0.0, 11.15, 1.71), black)
 	_box(gate, "FounderNamePlaque", Vector3(6.8, 1.05, 0.38), Vector3(0.0, 8.95, 1.38), black)
 	var founder_name := Label3D.new()
 	founder_name.name = "FounderName"
