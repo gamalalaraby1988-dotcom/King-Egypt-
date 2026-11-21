@@ -8,6 +8,7 @@ var _avatar: Node3D
 var _target_position := Vector3.ZERO
 var _target_rotation_y := 0.0
 var _has_snapshot := false
+var _motion_state := ""
 
 
 func _ready() -> void:
@@ -16,7 +17,7 @@ func _ready() -> void:
 	add_child(_avatar)
 
 
-func apply_snapshot(server_position: Vector3, server_rotation_y: float, server_velocity: Vector3) -> void:
+func apply_snapshot(server_position: Vector3, server_rotation_y: float, server_velocity: Vector3, active_emote: String = "", emote_remaining: float = 0.0) -> void:
 	if not _has_snapshot:
 		global_position = server_position
 		rotation.y = server_rotation_y
@@ -29,8 +30,10 @@ func apply_snapshot(server_position: Vector3, server_rotation_y: float, server_v
 		motion_state = "run"
 	elif planar_speed > 0.25:
 		motion_state = "walk"
-	if is_instance_valid(_avatar) and _avatar.has_method("set_motion_state"):
-		_avatar.call("set_motion_state", motion_state, planar_speed)
+	var next_state := active_emote if ["clap", "dance", "cry", "wave", "heart"].has(active_emote) and emote_remaining > 0.0 else motion_state
+	if is_instance_valid(_avatar) and _avatar.has_method("set_motion_state") and next_state != _motion_state:
+		_motion_state = next_state
+		_avatar.call("set_motion_state", next_state, planar_speed)
 
 
 func _process(delta: float) -> void:
