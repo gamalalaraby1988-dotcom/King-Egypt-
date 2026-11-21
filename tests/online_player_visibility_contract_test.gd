@@ -10,6 +10,8 @@ func _initialize() -> void:
 	_expect(server_source.contains('func receive_remote_players(players: Array)'), "client receives remote player snapshots")
 	_expect(server_source.contains('int(peer_id_variant) == multiplayer.get_unique_id()'), "client filters its own peer")
 	_expect(server_source.contains('MAX_PLAYERS - 1'), "remote snapshot is bounded by server capacity")
+	_expect(server_source.contains("MAX_PLAYER_VISIBILITY_DISTANCE := 140.0"), "nearby-only visibility range")
+	_expect(server_source.contains("distance_squared_to(remote_position)"), "server filters remote players by distance")
 	_expect(main_source.contains("AuthoritativeGameServer.remote_players_received.connect(_on_remote_players_received)"), "main scene consumes remote snapshots")
 	_expect(main_source.contains("RemotePlayerVisual.new()"), "main scene creates remote visual instances")
 	_expect(main_source.contains("_clear_remote_player_views()"), "remote visuals clear on disconnect")
