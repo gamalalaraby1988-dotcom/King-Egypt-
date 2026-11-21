@@ -1575,7 +1575,7 @@ func _on_remote_players_received(players: Array) -> void:
 			var stale_view := _remote_player_views[peer_id] as Node3D
 			if is_instance_valid(stale_view):
 				stale_view.queue_free()
-			_remote_player_views.erase(peer_id)
+				_remote_player_views.erase(peer_id)
 
 
 func _clear_remote_player_views() -> void:
