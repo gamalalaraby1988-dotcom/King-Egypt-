@@ -125,7 +125,7 @@ jobs:
             exit 1
           fi
 
-      - name: Run player email magic-link contract tests
+      - name: Run Google OAuth contract tests
         shell: bash
         run: |
           set -euo pipefail
