@@ -21,6 +21,12 @@ func _capture_previews() -> void:
 	for _frame in range(12):
 		await process_frame
 
+	# Hide only the startup mode-selection overlay for clean production-scene renders.
+	var mode_overlay := current_scene.get_node_or_null("GameModeSelection") as CanvasLayer
+	if is_instance_valid(mode_overlay):
+		mode_overlay.visible = false
+	await process_frame
+
 	var gate_ok := await _capture_view(
 		"royal_gate_preview.png",
 		Vector3(0.0, 16.0, -24.0),
