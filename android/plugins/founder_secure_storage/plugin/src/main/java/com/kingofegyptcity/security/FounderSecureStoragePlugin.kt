@@ -90,7 +90,8 @@ class FounderSecureStoragePlugin(godot: Godot) : GodotPlugin(godot) {
     @UsedByGodot
     fun getPendingAuthLink(): String {
         return try {
-            val uri = activity.intent?.data ?: return ""
+            val hostActivity = activity ?: return ""
+            val uri = hostActivity.intent?.data ?: return ""
             if (uri.scheme != "kingofegyptcity" || uri.host != "auth-callback") return ""
             uri.toString()
         } catch (_: Exception) {
@@ -103,12 +104,13 @@ class FounderSecureStoragePlugin(godot: Godot) : GodotPlugin(godot) {
     fun clearPendingAuthLink() {
         runOnHostThread {
             try {
-                val currentIntent = activity.intent
+                val hostActivity = activity ?: return@runOnHostThread
+                val currentIntent = hostActivity.intent
                 if (currentIntent?.data?.scheme == "kingofegyptcity" &&
                     currentIntent.data?.host == "auth-callback"
                 ) {
                     currentIntent.data = null
-                    activity.intent = currentIntent
+                    hostActivity.intent = currentIntent
                 }
             } catch (_: Exception) {
                 // Fail closed; the one-time Supabase authorization code is still single-use.
@@ -137,7 +139,8 @@ class FounderSecureStoragePlugin(godot: Godot) : GodotPlugin(godot) {
     }
 
     private fun secretFile(alias: String): File {
-        val directory = File(activity.filesDir, "founder_secure").apply { mkdirs() }
+        val hostActivity = activity ?: throw IllegalStateException("Godot activity is unavailable")
+        val directory = File(hostActivity.filesDir, "founder_secure").apply { mkdirs() }
         return File(directory, stableName(alias) + ".bin")
     }
 
