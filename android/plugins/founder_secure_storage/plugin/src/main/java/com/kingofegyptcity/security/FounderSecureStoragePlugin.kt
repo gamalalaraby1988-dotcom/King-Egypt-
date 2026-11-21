@@ -86,6 +86,36 @@ class FounderSecureStoragePlugin(godot: Godot) : GodotPlugin(godot) {
         }
     }
 
+    /** Returns only the app's own pending magic-link callback URI. */
+    @UsedByGodot
+    fun getPendingAuthLink(): String {
+        return try {
+            val uri = activity.intent?.data ?: return ""
+            if (uri.scheme != "kingofegyptcity" || uri.host != "auth-callback") return ""
+            uri.toString()
+        } catch (_: Exception) {
+            ""
+        }
+    }
+
+    /** Clears the consumed callback so it cannot be replayed on later resumes. */
+    @UsedByGodot
+    fun clearPendingAuthLink() {
+        runOnHostThread {
+            try {
+                val currentIntent = activity.intent
+                if (currentIntent?.data?.scheme == "kingofegyptcity" &&
+                    currentIntent.data?.host == "auth-callback"
+                ) {
+                    currentIntent.data = null
+                    activity.intent = currentIntent
+                }
+            } catch (_: Exception) {
+                // Fail closed; the one-time Supabase authorization code is still single-use.
+            }
+        }
+    }
+
     private fun getOrCreateKey(alias: String): SecretKey {
         val store = KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
         val name = keyAlias(alias)
