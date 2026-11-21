@@ -47,6 +47,8 @@ func _initialize() -> void:
 		_require(lookup_edge, 'invalid_server_signature', "lookup endpoint must verify the dedicated server HMAC"),
 		_require(server, '_issue_activity_proof(peer_id, str(session.get("user_id", "")), "mission", completed_mission_id)', "server-completed adventures and missions must enter the proof-verified progress path"),
 		_require(migration, "reward_eligible_at_completion", "reward eligibility must be frozen at the moment the server completion is recorded"),
+		_require(migration, "player_verified_activity_progress_one_time_idx", "one-time activities must be unique per player at the database level"),
+		_require(migration, "pg_advisory_xact_lock", "concurrent completion attempts must be serialized by account and activity"),
 		_require(migration, "get_player_verified_activity_progress", "only the authenticated player's verified progress may be read")
 	]
 	for passed in checks:

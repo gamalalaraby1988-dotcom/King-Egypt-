@@ -1,5 +1,5 @@
 begin;
-select extensions.plan(22);
+select extensions.plan(29);
 
 insert into auth.users (id,aud,role,email,encrypted_password,email_confirmed_at)
 values
@@ -131,6 +131,49 @@ select extensions.is(
 select extensions.is(
     public.has_player_verified_activity('00000000-0000-4000-8000-000000000062','mission','mission.progress_only_test'),
     false,'trusted game server lookup is scoped to the requested player identity'
+);
+
+
+create temporary table one_time_duplicate_result on commit drop as
+select public.record_server_verified_activity_progress(
+    '00000000-0000-4000-8000-000000000061',
+    'mission','mission.progress_reward_test',
+    '60000000-0000-4000-8000-000000000013',
+    pg_catalog.repeat('12',32),pg_catalog.now(),pg_catalog.now()+interval '5 minutes'
+) as result;
+
+select extensions.is((select result->>'duplicate' from one_time_duplicate_result),'true','a second event cannot complete a one-time activity again');
+select extensions.is((select result->>'proof_id' from one_time_duplicate_result),null::text,'a second one-time completion receives no new reward proof');
+select extensions.is(
+    (select count(*)::integer from private.player_verified_activity_progress where user_id='00000000-0000-4000-8000-000000000061' and activity_kind='mission' and activity_id='mission.progress_reward_test'),
+    1,'one-time activity ledger keeps exactly one completion per account'
+);
+select extensions.is(
+    (select count(*)::integer from private.player_activity_proofs where user_id='00000000-0000-4000-8000-000000000061' and activity_kind='mission' and activity_id='mission.progress_reward_test'),
+    1,'one-time activity cannot mint a second reward proof from another session'
+);
+
+create temporary table adventure_replay_first on commit drop as
+select public.record_server_verified_activity_progress(
+    '00000000-0000-4000-8000-000000000061',
+    'mission','city_adventure_message',
+    '60000000-0000-4000-8000-000000000014',
+    pg_catalog.repeat('34',32),pg_catalog.now(),pg_catalog.now()+interval '5 minutes'
+) as result;
+
+create temporary table adventure_replay_second on commit drop as
+select public.record_server_verified_activity_progress(
+    '00000000-0000-4000-8000-000000000061',
+    'mission','city_adventure_message',
+    '60000000-0000-4000-8000-000000000015',
+    pg_catalog.repeat('56',32),pg_catalog.now(),pg_catalog.now()+interval '5 minutes'
+) as result;
+
+select extensions.is((select result->>'duplicate' from adventure_replay_first),'false','first city adventure completion is recorded');
+select extensions.is((select result->>'duplicate' from adventure_replay_second),'false','city adventures remain replayable across sessions');
+select extensions.is(
+    (select count(*)::integer from private.player_verified_activity_progress where user_id='00000000-0000-4000-8000-000000000061' and activity_kind='mission' and activity_id='city_adventure_message'),
+    2,'replayable city adventures may keep multiple verified completions'
 );
 
 reset role;
