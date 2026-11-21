@@ -1290,24 +1290,7 @@ func _physics_process(delta: float) -> void:
 	_snapshot_elapsed += safe_delta
 	if _snapshot_elapsed >= SNAPSHOT_INTERVAL:
 		_snapshot_elapsed = 0.0
-		var snapshots_by_instance: Dictionary = {}
-		for source_peer_variant in _sessions.keys():
-			var source_peer := int(source_peer_variant)
-			var source_session: Dictionary = _sessions[source_peer]
-			if not bool(source_session.get("authenticated", false)):
-				continue
-			var source_body := source_session.get("body") as CharacterBody3D
-			if not is_instance_valid(source_body):
-				continue
-			var instance_id := str(source_session.get("instance_id", "city-main"))
-			if not snapshots_by_instance.has(instance_id):
-				snapshots_by_instance[instance_id] = []
-			(snapshots_by_instance[instance_id] as Array).append({
-				"peer_id": source_peer,
-				"position": source_body.global_position,
-				"rotation_y": source_body.rotation.y,
-				"velocity": source_body.velocity
-			})
+		var remote_snapshots_by_peer := _build_remote_player_snapshots()
 		for peer_id_variant in _sessions.keys():
 			var peer_id := int(peer_id_variant)
 			var session: Dictionary = _sessions[peer_id]
@@ -1317,17 +1300,49 @@ func _physics_process(delta: float) -> void:
 			if not is_instance_valid(body):
 				continue
 			rpc_id(peer_id, "receive_authoritative_state", body.global_position, body.rotation.y, body.velocity)
-			var instance_id := str(session.get("instance_id", "city-main"))
-			var same_instance_players: Array = snapshots_by_instance.get(instance_id, [])
-			var remote_players: Array = []
-			for player_snapshot_variant in same_instance_players:
-				var player_snapshot: Dictionary = player_snapshot_variant
-				if int(player_snapshot.get("peer_id", 0)) == peer_id:
-					continue
-				var remote_position: Vector3 = player_snapshot.get("position", Vector3.ZERO)
-				if body.global_position.distance_squared_to(remote_position) <= pow(MAX_PLAYER_VISIBILITY_DISTANCE, 2.0):
-					remote_players.append(player_snapshot)
+			var remote_players: Array = remote_snapshots_by_peer.get(peer_id, [])
 			rpc_id(peer_id, "receive_remote_players", remote_players)
+
+
+func _build_remote_player_snapshots() -> Dictionary:
+	var snapshots_by_instance: Dictionary = {}
+	var bodies_by_peer: Dictionary = {}
+	for source_peer_variant in _sessions.keys():
+		var source_peer := int(source_peer_variant)
+		var source_session: Dictionary = _sessions[source_peer]
+		if not bool(source_session.get("authenticated", false)):
+			continue
+		var source_body := source_session.get("body") as CharacterBody3D
+		if not is_instance_valid(source_body):
+			continue
+		var instance_id := str(source_session.get("instance_id", "city-main"))
+		if not snapshots_by_instance.has(instance_id):
+			snapshots_by_instance[instance_id] = []
+		(snapshots_by_instance[instance_id] as Array).append({
+			"peer_id": source_peer,
+			"position": source_body.global_position,
+			"rotation_y": source_body.rotation.y,
+			"velocity": source_body.velocity
+		})
+		bodies_by_peer[source_peer] = source_body
+
+	var snapshots_by_peer: Dictionary = {}
+	for peer_id_variant in bodies_by_peer.keys():
+		var peer_id := int(peer_id_variant)
+		var session: Dictionary = _sessions[peer_id]
+		var body := bodies_by_peer[peer_id] as CharacterBody3D
+		var instance_id := str(session.get("instance_id", "city-main"))
+		var same_instance_players: Array = snapshots_by_instance.get(instance_id, [])
+		var remote_players: Array = []
+		for player_snapshot_variant in same_instance_players:
+			var player_snapshot: Dictionary = player_snapshot_variant
+			if int(player_snapshot.get("peer_id", 0)) == peer_id:
+				continue
+			var remote_position: Vector3 = player_snapshot.get("position", Vector3.ZERO)
+			if body.global_position.distance_squared_to(remote_position) <= pow(MAX_PLAYER_VISIBILITY_DISTANCE, 2.0):
+				remote_players.append(player_snapshot)
+		snapshots_by_peer[peer_id] = remote_players
+	return snapshots_by_peer
 
 
 @rpc("authority", "call_remote", "unreliable_ordered")
