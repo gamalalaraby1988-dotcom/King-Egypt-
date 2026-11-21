@@ -30,7 +30,7 @@ func _initialize() -> void:
 	isolated_sessions[101] = _make_player_session(server, 101, "city-main", Vector3(250.0, 1.0, 0.0))
 	server.set("_sessions", isolated_sessions)
 	var filtered: Dictionary = server.call("_build_remote_player_snapshots")
-	_expect(filtered.size() == 6, "only authenticated peers with valid bodies get a snapshot")
+	_expect(filtered.size() == 7, "every authenticated peer with a valid body gets a snapshot, including empty visibility sets")
 	for peer_id_variant in filtered.keys():
 		var remote_players: Array = filtered[peer_id_variant]
 		for remote_variant in remote_players:
