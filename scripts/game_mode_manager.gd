@@ -15,7 +15,7 @@ var peer: WebSocketMultiplayerPeer
 
 
 func is_online_ready() -> bool:
-	return current_mode == Mode.ONLINE and connection_state == "connected"
+	return current_mode == Mode.ONLINE and connection_state == "authenticated"
 
 
 func select_offline() -> void:
@@ -38,7 +38,7 @@ func connect_online(address: String, port: int = 2456) -> void:
 			status_changed.emit("يجب إدخال اسم نطاق الخادم فقط أو عنوان wss:// كامل.")
 			return
 		endpoint = "wss://%s:%d" % [endpoint, port]
-	if connection_state == "connecting" or is_online_ready():
+	if connection_state in ["connecting", "transport_connected"] or is_online_ready():
 		status_changed.emit("يوجد اتصال Online قائم أو جارٍ بالفعل.")
 		return
 
@@ -91,11 +91,20 @@ func _close_active_peer() -> void:
 func _on_connected_to_server() -> void:
 	if connection_state != "connecting":
 		return
-	connection_state = "connected"
+	connection_state = "transport_connected"
+	current_mode = Mode.UNSELECTED
+	status_changed.emit("تم إنشاء اتصال WSS مشفر. جارٍ التحقق من حساب اللاعب؛ لم يبدأ Online بعد.")
+	online_connected.emit()
+
+
+func confirm_online_authentication() -> bool:
+	if peer == null or connection_state not in ["transport_connected", "authenticated"]:
+		return false
+	connection_state = "authenticated"
 	current_mode = Mode.ONLINE
 	mode_changed.emit(current_mode)
-	status_changed.emit("تم إنشاء اتصال WSS مشفر. جارٍ التحقق من حساب اللاعب.")
-	online_connected.emit()
+	status_changed.emit("تم التحقق من حساب اللاعب وبدء جلسة Online.")
+	return true
 
 
 func _on_connection_failed() -> void:
