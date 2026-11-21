@@ -514,7 +514,7 @@ func _build_royal_gate_and_square() -> void:
 		head.position = Vector3(0.0, 3.05, 0.0)
 		head.material_override = _mat(gold, 0.62)
 		guardian.add_child(head)
-		_box(guardian, "GuardianNemесHeaddress", Vector3(1.25, 1.2, 0.85), Vector3(0.0, 3.65, -0.12), dark_gold)
+		_box(guardian, "GuardianHeaddress", Vector3(1.25, 1.2, 0.85), Vector3(0.0, 3.65, -0.12), dark_gold)
 
 	# Low-cost warm emissive accents; no real-time shadows or dynamic light cost.
 	var glow_material := StandardMaterial3D.new()
