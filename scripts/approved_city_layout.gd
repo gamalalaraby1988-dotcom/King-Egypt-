@@ -465,7 +465,7 @@ func _build_royal_gate_and_square() -> void:
 	_box(gate, "FounderPortraitOuterFrame", Vector3(6.6, 3.55, 0.42), Vector3(0.0, 11.15, 1.36), gold)
 	_box(gate, "FounderPortraitInnerFrame", Vector3(6.18, 3.13, 0.16), Vector3(0.0, 11.15, 1.60), dark_gold)
 	# Load the founder's uploaded portrait directly onto the reserved framed surface.
-	var founder_portrait_path := "res://assets/founder/founder_portrait.png"
+	var founder_portrait_path := "res://assets/founder/founder_portrait.jpg"
 	if ResourceLoader.exists(founder_portrait_path):
 		var portrait_texture := load(founder_portrait_path) as Texture2D
 		if portrait_texture != null:
@@ -568,7 +568,7 @@ func _build_royal_gate_and_square() -> void:
 func _build_main_street_wall_ads() -> void:
 	# Reuse the single founder portrait asset on selected building side-walls
 	# along the main boulevards. No duplicate image files are created.
-	var portrait_path := "res://assets/founder/founder_portrait.png"
+	var portrait_path := "res://assets/founder/founder_portrait.jpg"
 	if not ResourceLoader.exists(portrait_path):
 		push_warning("تعذر تحميل صورة إعلانات الشوارع: " + portrait_path)
 		return
