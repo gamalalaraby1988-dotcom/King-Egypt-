@@ -24,6 +24,7 @@ func _initialize() -> void:
 	_check(not main_source.contains("_on_founder_verify_current_player_account"), "There must be no separate founder verification action.")
 	_check(not main_source.contains("founder_pin_gate") and not main_source.contains("_on_founder_pin_submit"), "Founder entry must not open a separate PIN login gate.")
 	_check(main_source.contains("المتابعة باستخدام Google"), "The login screen must expose the single Google sign-in button.")
+	_check(main_source.contains("# request_finished emits the precise failure reason synchronously.") and main_source.contains("if not PlayerAccountAuthClient.request_google_sign_in():\n\t\treturn"), "The Google button must preserve the precise sign-in failure message.")
 	_check(not main_source.contains("player_account_code_input") and not main_source.contains("player_account_email_input") and not main_source.contains("founder_email_gate"), "Player UI must not ask for an email or a six-digit code.")
 	_check(android_plugin.contains("getPendingAuthLink") and android_plugin.contains("clearPendingAuthLink"), "Android plugin must expose callback retrieval and clearing.")
 	_check(export_plugin.contains("android.intent.action.VIEW") and export_plugin.contains('android:scheme="kingofegyptcity"'), "Android manifest must register the app callback scheme.")
