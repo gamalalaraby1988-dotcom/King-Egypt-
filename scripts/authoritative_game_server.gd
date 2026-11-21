@@ -1727,7 +1727,7 @@ func receive_remote_players(players: Array) -> void:
 		var safe_emote_remaining := clampf(float(emote_remaining_variant), 0.0, 4.0) if emote_remaining_variant is float or emote_remaining_variant is int else 0.0
 		if safe_emote_remaining <= 0.0:
 			safe_emote = ""
-		var safe_sitting := sitting_variant if sitting_variant is bool else false
+		var safe_sitting: bool = bool(sitting_variant) if sitting_variant is bool else false
 		seen_peer_ids[int(peer_id_variant)] = true
 		safe_players.append({
 			"peer_id": int(peer_id_variant),
