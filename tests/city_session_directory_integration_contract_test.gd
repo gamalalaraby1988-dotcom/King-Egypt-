@@ -15,6 +15,8 @@ func _initialize() -> void:
 	_expect(server_source.contains('if _city_directory_enabled and not _city_directory_registered:'), "directory-enabled server rejects players before registration")
 	_expect(server_source.contains('func authenticate_player(access_token: String, reservation_id: String = "")'), "server authentication accepts the reservation id")
 	_expect(server_source.contains("لا يمكن تغيير حجز الجلسة أثناء الاتصال."), "authenticated peer cannot swap its reservation during token refresh")
+	_expect(server_source.contains('str(session.get("reservation_id", "")) != reservation_id'), "late confirmation callback cannot authenticate a peer with a different reservation")
+	_expect(server_source.contains("func _release_city_reservation_from_server(user_id: String, reservation_id: String) -> void:"), "late confirmation callback releases stale reservations through trusted server signing")
 	_expect(main_source.contains('ProjectSettings.get_setting("network/online/session_directory_enabled", false)'), "matchmaking is disabled by default")
 	_expect(main_source.contains('"action": "matchmake"'), "client requests an authenticated city reservation")
 	_expect(main_source.contains('"Authorization: Bearer " + access_token'), "matchmaking request uses the player's access token")
