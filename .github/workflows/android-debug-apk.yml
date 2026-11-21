@@ -112,7 +112,7 @@ jobs:
           export GODOT_ANDROID_KEYSTORE_DEBUG_USER="androiddebugkey"
           export GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD="android"
           /tmp/godot/Godot_v4.7.2-stable_linux.x86_64 \
-            --headless --path . \
+            --headless --path . --install-android-build-template \
             --export-debug "Android" "build/android/KING_OF_EGYPT_CITY-debug.apk"
           test -s "build/android/KING_OF_EGYPT_CITY-debug.apk"
           unzip -t "build/android/KING_OF_EGYPT_CITY-debug.apk"
