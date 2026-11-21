@@ -141,7 +141,7 @@ func _base64url(value: PackedByteArray) -> String:
 	return Marshalls.raw_to_base64(value).replace("+", "-").replace("/", "_").trim_suffix("=")
 
 func _handle_google_oauth_callback(link: String) -> void:
-	if not link.begins_with(MAGIC_LINK_REDIRECT_URI):
+	if not link.begins_with(GOOGLE_REDIRECT_URI):
 		return
 	var auth_code := _url_parameter(link, "code")
 	if auth_code.is_empty():
@@ -158,7 +158,7 @@ func _handle_google_oauth_callback(link: String) -> void:
 	_send_auth_request(PKCE_TOKEN_PATH, {
 		"auth_code": auth_code,
 		"code_verifier": _pending_code_verifier
-	}, "verify_magic_link")
+	}, "verify_google_oauth")
 
 func _url_parameter(url: String, key: String) -> String:
 	var query := url.get_slice("?", 1).get_slice("#", 0)
@@ -224,9 +224,9 @@ func _on_auth_request_completed(result: int, response_code: int, _headers: Packe
 			request_finished.emit(false, _safe_error(response))
 		return
 	match action:
-		"request_magic_link":
+		"request_google_oauth":
 			request_finished.emit(true, "تم فتح تسجيل الدخول باستخدام Google. أكمل الاختيار ثم عُد إلى اللعبة.")
-		"verify_magic_link":
+		"verify_google_oauth":
 			_accept_session_response(response, false)
 		"refresh":
 			_accept_session_response(response, _restoring)
@@ -248,7 +248,7 @@ func _accept_session_response(response: Dictionary, was_restoring: bool) -> void
 	if user_id.is_empty() or verified_email.is_empty() or confirmed_at.is_empty():
 		request_finished.emit(false, "لم يثبت الخادم ملكية البريد الإلكتروني.")
 		return
-	_clear_pending_magic_link()
+	_clear_pending_oauth()
 	_user_id = user_id
 	_email = verified_email
 	_access_token = access
