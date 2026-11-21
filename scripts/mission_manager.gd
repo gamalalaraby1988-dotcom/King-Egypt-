@@ -1430,13 +1430,15 @@ func _on_server_activity_progress_recorded(activity_kind: String, activity_id: S
 		return
 	if not ["mission", "job", "achievement"].has(activity_kind):
 		return
-	if activity_kind == "mission" and ["mission_shop", "mission_restaurant", "mission_employment"].has(activity_id):
+	if (activity_kind == "mission" and ["mission_shop", "mission_restaurant", "mission_employment"].has(activity_id)) or (activity_kind == "achievement" and activity_id == "first_steps"):
 		# Read the account's authoritative ledger after the server confirms the write.
 		PlayerSyncClient.fetch_verified_activity_progress()
 	status_label.text = "تم حفظ إنجاز %s في سجل حسابك الخادمي." % activity_id
 	description_label.text = "هذا الإنجاز موثّق من خادم اللعبة، ويمكن استعادته عند تسجيل الدخول من جهاز آخر."
 	if activity_kind == "achievement" and activity_id == "explorer":
 		description_label.text = "أكملت مهام المتجر والمطعم والتوظيف الثلاث، واعتمد الخادم إنجاز مستكشف المدينة."
+	elif activity_kind == "achievement" and activity_id == "first_steps":
+		description_label.text = "سجل الخادم مسافة مشيك التراكمية واعتمد إنجاز أول خطواتك."
 	reward_label.text = "إثبات المكافأة متاح للتحقق." if reward_eligible else "تم حفظ الإنجاز دون مكافأة؛ المكافآت ما زالت مغلقة."
 
 
