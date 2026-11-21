@@ -384,6 +384,7 @@ func _build_pyramids() -> void:
 
 func _build_royal_gate_and_square() -> void:
 	_box(self, "RoyalSquare", Vector3(46, 0.22, 30), Vector3(0, 0.03, -42), SAND)
+	_add_static_box_collision(self, "RoyalSquareWalkable", Vector3(46, 0.22, 30), Vector3(0, 0.03, -42))
 	for x in [-10.0,10.0]:
 		_box(self, "RoyalGatePillar", Vector3(2.0, 8.0, 2.0), Vector3(x, 4.0, -60), IVORY)
 		_box(self, "RoyalGateCap", Vector3(3.0, 0.55, 3.0), Vector3(x, 8.1, -60), GOLD)
