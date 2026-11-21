@@ -15,3 +15,7 @@ verify_jwt = false
 # Dedicated game server proof issuer: HMAC is verified in the function before DB insertion.
 [functions.game-proof-issuer]
 verify_jwt = false
+
+# Dedicated server signs each bounded walking increment; the Edge Function verifies HMAC.
+[functions.game-walk-progress]
+verify_jwt = false

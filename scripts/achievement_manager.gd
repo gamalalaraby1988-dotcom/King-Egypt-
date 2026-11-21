@@ -2,6 +2,7 @@ extends Node
 ## إنجازات دائمة محليًا مرتبطة بالتجول والوظائف والمهام والأنشطة اليومية.
 
 const ProfileConfigStore = preload("res://scripts/profile_config_store.gd")
+const SERVER_VERIFIED_BUILDING_MISSION_IDS := ["mission_shop", "mission_restaurant", "mission_employment"]
 
 var player: Node3D
 var mission_manager: Node
@@ -10,6 +11,10 @@ var last_saved_walk_meters := 0.0
 var last_position := Vector3.ZERO
 var totals: Dictionary = {"jobs": 0, "missions": 0, "daily_claims": 0}
 var unlocked: Dictionary = {}
+var server_verified_building_missions: Dictionary = {}
+var server_verified_achievements: Dictionary = {}
+var server_verified_walk_meters := 0.0
+var _last_online_ready := false
 var definitions: Array[Dictionary] = [
 	{"id":"first_steps", "title":"أول خطواتك", "description":"امشِ أو اجرِ لمسافة 100 متر", "kind":"walk", "target":100, "money":100, "chips":0},
 	{"id":"worker", "title":"عامل مجتهد", "description":"أكمل 3 وظائف ميدانية", "kind":"jobs", "target":3, "money":250, "chips":0},
@@ -35,10 +40,22 @@ func _ready() -> void:
 	if is_instance_valid(player):
 		last_position = player.global_position
 	_build_ui()
+	if is_instance_valid(PlayerSyncClient):
+		if not PlayerSyncClient.verified_activity_progress_received.is_connected(_on_verified_activity_progress_received):
+			PlayerSyncClient.verified_activity_progress_received.connect(_on_verified_activity_progress_received)
+		var existing_verified := PlayerSyncClient.get_server_verified_activity_progress()
+		if not existing_verified.is_empty():
+			_on_verified_activity_progress_received(existing_verified, "موثّق من خادم اللعبة")
 	_check_all()
 
 func _process(_delta: float) -> void:
-	if GameModeManager.is_online_ready():
+	var online_ready := GameModeManager.is_online_ready()
+	if online_ready != _last_online_ready:
+		_last_online_ready = online_ready
+		_refresh_ui()
+		if online_ready and is_instance_valid(PlayerSyncClient):
+			PlayerSyncClient.fetch_verified_activity_progress()
+	if online_ready:
 		return
 	if not is_instance_valid(player):
 		return
@@ -182,15 +199,50 @@ func _build_ui() -> void:
 	close.pressed.connect(func(): panel.visible = false)
 	box.add_child(close)
 
+func _on_verified_activity_progress_received(activities: Array, trust_label: String) -> void:
+	if trust_label != "موثّق من خادم اللعبة":
+		return
+	var verified: Dictionary = {}
+	var verified_achievements: Dictionary = {}
+	var verified_walk_meters := 0.0
+	for item in activities:
+		if not (item is Dictionary):
+			continue
+		var activity_kind := str(item.get("activity_kind", ""))
+		var activity_id := str(item.get("activity_id", ""))
+		if activity_kind == "mission" and SERVER_VERIFIED_BUILDING_MISSION_IDS.has(activity_id):
+			verified[activity_id] = true
+		elif activity_kind == "achievement" and activity_id == "first_steps":
+			verified_achievements[activity_id] = true
+		elif activity_kind == "walk_distance" and activity_id == "first_steps":
+			verified_walk_meters = maxf(0.0, float(item.get("distance_meters", 0.0)))
+	server_verified_building_missions = verified
+	server_verified_achievements = verified_achievements
+	server_verified_walk_meters = verified_walk_meters
+	_refresh_ui()
+
+
 func _refresh_ui() -> void:
 	if not is_instance_valid(list_label):
 		return
 	var lines := PackedStringArray()
-	var count := unlocked.size()
+	var count := 0
 	for item in definitions:
-		var done := unlocked.has(str(item["id"]))
+		var achievement_id := str(item["id"])
+		var done := unlocked.has(achievement_id)
 		var amount := mini(_current_value(str(item["kind"])), int(item["target"]))
+		var reward_text := "%d جنيه + %d رقائق" % [int(item["money"]), int(item["chips"])]
+		if achievement_id == "first_steps" and GameModeManager.is_online_ready():
+			amount = mini(int(server_verified_walk_meters), int(item["target"]))
+			done = server_verified_achievements.has("first_steps")
+			reward_text = "المكافأة الخادمية غير متاحة حاليًا" if done else "تُحتسب من مسافة محفوظة وموثقة خادميًا"
+		elif achievement_id == "explorer" and GameModeManager.is_online_ready():
+			amount = mini(server_verified_building_missions.size(), int(item["target"]))
+			done = amount >= int(item["target"])
+			reward_text = "المكافأة الخادمية غير متاحة حاليًا" if done else "تُحتسب بعد توثيق المهام الثلاث"
+		if done:
+			count += 1
 		var mark := "🏆" if done else "🔒"
-		lines.append("%s %s — %s (%d/%d) | مكافأة: %d جنيه + %d رقائق" % [mark, str(item["title"]), str(item["description"]), amount, int(item["target"]), int(item["money"]), int(item["chips"])])
+		lines.append("%s %s — %s (%d/%d) | مكافأة: %s" % [mark, str(item["title"]), str(item["description"]), amount, int(item["target"]), reward_text])
 	list_label.text = "\n\n".join(lines)
 	summary_label.text = "الإنجازات المفتوحة: %d من %d" % [count, definitions.size()]

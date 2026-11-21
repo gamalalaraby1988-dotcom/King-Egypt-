@@ -23,7 +23,7 @@ func _run_city_adventure_contract() -> void:
 		push_error("Adventure entry interaction must remain at the existing adventure_center building.")
 		quit(1)
 		return
-	if not city_layout_source.contains('["adventure_center","مركز المغامرات",Vector3(-75,0,58)') or not city_layout_source.contains("d * 0.5 + 0.09"):
+	if not city_layout_source.contains('["adventure_center","مركز المغامرات",Vector3(-75,0,58)') or not city_layout_source.contains("half_d - wall_depth * 0.5"):
 		push_error("Adventure hub anchor must line up with the entrance of the existing adventure center.")
 		quit(1)
 		return
@@ -91,7 +91,7 @@ func _run_city_adventure_contract() -> void:
 		push_error("Survival race must report the current checkpoint count alongside the timer.")
 		quit(1)
 		return
-	if not server_source.contains("\"time_limit_seconds\": 60.0 if safe_mission_id == \"city_adventure_survival\" else 0.0") or not server_source.contains("receive_server_mission_failed"):
+	if not server_source.contains("\"time_limit_seconds\": 60.0 if mission_id == \"city_adventure_survival\" else 0.0") or not server_source.contains("receive_server_mission_failed"):
 		push_error("Online survival race timeout must be enforced by the authoritative server.")
 		quit(1)
 		return
