@@ -235,7 +235,7 @@ select pg_catalog.set_config('request.jwt.claim.sub','00000000-0000-4000-8000-00
 
 select extensions.is(
     pg_catalog.jsonb_array_length(public.get_player_verified_activity_progress()->'activities'),
-    4,'player can retrieve their own verified progress including replayable adventures'
+    9,'player can retrieve their own verified progress including Explorer and replayable adventures'
 );
 select pg_catalog.set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000062',true);
 select extensions.is(
