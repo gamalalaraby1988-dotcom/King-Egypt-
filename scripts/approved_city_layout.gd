@@ -677,49 +677,105 @@ func _build_main_street_wall_ads() -> void:
 
 
 func _add_founder_mural_inlay(parent: Node3D) -> void:
-	# Fine gold inlay is attached directly to the facade; it decorates the wall,
-	# rather than creating a plaque, backing panel, or picture frame.
+	# Integrated Egyptian architectural relief: carved stone pilasters and gold
+	# inlay ornaments sit on the facade itself; no plaque or closed picture frame.
 	var gold := StandardMaterial3D.new()
-	gold.albedo_color = Color(0.72, 0.48, 0.17)
-	gold.metallic = 0.72
-	gold.roughness = 0.3
+	gold.albedo_color = Color(0.78, 0.57, 0.25)
+	gold.metallic = 0.68
+	gold.roughness = 0.28
 	gold.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
 
-	var details := [
-		{"name":"WingLeftOuter", "size":Vector3(0.92, 0.035, 0.018), "pos":Vector3(-0.94, 1.36, 0.185), "rot":-0.10},
-		{"name":"WingLeftInner", "size":Vector3(0.62, 0.025, 0.018), "pos":Vector3(-0.83, 1.27, 0.185), "rot":-0.24},
-		{"name":"WingRightOuter", "size":Vector3(0.92, 0.035, 0.018), "pos":Vector3(0.94, 1.36, 0.185), "rot":0.10},
-		{"name":"WingRightInner", "size":Vector3(0.62, 0.025, 0.018), "pos":Vector3(0.83, 1.27, 0.185), "rot":0.24},
-		{"name":"LowerGoldRule", "size":Vector3(2.2, 0.018, 0.018), "pos":Vector3(0.0, -1.06, 0.185), "rot":0.0},
-		{"name":"LeftVerticalGlyph", "size":Vector3(0.035, 0.54, 0.018), "pos":Vector3(-1.58, 0.35, 0.185), "rot":0.0},
-		{"name":"RightVerticalGlyph", "size":Vector3(0.035, 0.54, 0.018), "pos":Vector3(1.58, 0.35, 0.185), "rot":0.0}
-	]
-	for detail in details:
-		var piece := MeshInstance3D.new()
-		piece.name = str(detail["name"])
-		var mesh := BoxMesh.new()
-		mesh.size = detail["size"]
-		piece.mesh = mesh
-		piece.position = detail["pos"]
-		piece.rotation.z = float(detail["rot"])
-		piece.material_override = gold
-		piece.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		parent.add_child(piece)
+	var sandstone := StandardMaterial3D.new()
+	sandstone.albedo_color = Color(0.62, 0.48, 0.31)
+	sandstone.roughness = 0.82
 
-	# Small raised-gold sun disk and rays, kept in the same wall plane.
+	# Two shallow carved pilasters visually belong to the building facade.
+	for side in [-1.0, 1.0]:
+		var pillar := MeshInstance3D.new()
+		pillar.name = "FounderMuralCarvedPilaster"
+		var pillar_mesh := BoxMesh.new()
+		pillar_mesh.size = Vector3(0.16, 2.42, 0.11)
+		pillar.mesh = pillar_mesh
+		pillar.position = Vector3(side * 1.88, 0.28, 0.13)
+		pillar.material_override = sandstone
+		pillar.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		parent.add_child(pillar)
+
+		# Fine gold grooves run vertically through the stone, like temple carving.
+		for groove_x in [-0.045, 0.045]:
+			var groove := MeshInstance3D.new()
+			groove.name = "FounderMuralPilasterGoldGroove"
+			var groove_mesh := BoxMesh.new()
+			groove_mesh.size = Vector3(0.012, 2.18, 0.014)
+			groove.mesh = groove_mesh
+			groove.position = Vector3(side * 1.88 + groove_x, 0.28, 0.192)
+			groove.material_override = gold
+			groove.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			parent.add_child(groove)
+
+		# Lotus-inspired capitals and bases, deliberately separated from a frame.
+		for cap_y in [-0.88, 1.44]:
+			var capital := MeshInstance3D.new()
+			capital.name = "FounderMuralLotusCapital"
+			var capital_mesh := BoxMesh.new()
+			capital_mesh.size = Vector3(0.28, 0.12, 0.13)
+			capital.mesh = capital_mesh
+			capital.position = Vector3(side * 1.88, cap_y, 0.17)
+			capital.material_override = gold
+			capital.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			parent.add_child(capital)
+
+		# Small diamond reliefs echo Egyptian wall engraving.
+		for diamond_y in [-0.48, 0.0, 0.48]:
+			var diamond := MeshInstance3D.new()
+			diamond.name = "FounderMuralDiamondRelief"
+			var diamond_mesh := BoxMesh.new()
+			diamond_mesh.size = Vector3(0.095, 0.095, 0.035)
+			diamond.mesh = diamond_mesh
+			diamond.position = Vector3(side * 1.88, diamond_y, 0.205)
+			diamond.rotation.z = PI * 0.25
+			diamond.material_override = gold
+			diamond.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			parent.add_child(diamond)
+
+	# Winged-sun inspired crown above the portrait, not a rectangular border.
+	for side in [-1.0, 1.0]:
+		for segment in range(3):
+			var wing := MeshInstance3D.new()
+			wing.name = "FounderMuralWingFeather"
+			var wing_mesh := BoxMesh.new()
+			wing_mesh.size = Vector3(0.42 - float(segment) * 0.075, 0.035, 0.025)
+			wing.mesh = wing_mesh
+			wing.position = Vector3(side * (0.42 + float(segment) * 0.27), 1.43 - float(segment) * 0.075, 0.205)
+			wing.rotation.z = -side * (0.08 + float(segment) * 0.07)
+			wing.material_override = gold
+			wing.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			parent.add_child(wing)
+
 	var sun := MeshInstance3D.new()
 	sun.name = "FounderMuralSunDisk"
 	var sun_mesh := CylinderMesh.new()
 	sun_mesh.top_radius = 0.13
 	sun_mesh.bottom_radius = 0.13
-	sun_mesh.height = 0.018
-	sun_mesh.radial_segments = 24
+	sun_mesh.height = 0.025
+	sun_mesh.radial_segments = 32
 	sun.mesh = sun_mesh
-	sun.position = Vector3(0.0, 1.39, 0.185)
+	sun.position = Vector3(0.0, 1.43, 0.215)
 	sun.rotation.x = PI * 0.5
 	sun.material_override = gold
 	sun.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	parent.add_child(sun)
+
+	# A restrained lower engraved rule ties the lettering into the masonry.
+	var lower_rule := MeshInstance3D.new()
+	lower_rule.name = "FounderMuralEngravedLowerRule"
+	var rule_mesh := BoxMesh.new()
+	rule_mesh.size = Vector3(2.45, 0.022, 0.018)
+	lower_rule.mesh = rule_mesh
+	lower_rule.position = Vector3(0.0, -1.08, 0.19)
+	lower_rule.material_override = gold
+	lower_rule.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	parent.add_child(lower_rule)
 
 func _tree(parent: Node3D, label: String, at: Vector3, scale_factor: float = 1.0) -> void:
 	var root := Node3D.new()
