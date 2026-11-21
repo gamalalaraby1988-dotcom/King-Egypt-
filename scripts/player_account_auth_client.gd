@@ -34,17 +34,23 @@ var _restoring := false
 var _restore_retry_pending := false
 var _deep_link_poll_elapsed := 0.0
 var _pending_code_verifier := ""
+var _plugin_runtime_warning_reported := false
 
 func _process(delta: float) -> void:
 	_deep_link_poll_elapsed += delta
 	if _deep_link_poll_elapsed < 0.4:
 		return
 	_deep_link_poll_elapsed = 0.0
-	if _pending_action != "" or not Engine.has_singleton(DEEP_LINK_PLUGIN_SINGLETON):
+	if _pending_action != "":
 		return
+	var plugin_error := _android_deep_link_error()
+	if not plugin_error.is_empty():
+		if not _plugin_runtime_warning_reported:
+			push_warning(plugin_error)
+			_plugin_runtime_warning_reported = true
+		return
+	_plugin_runtime_warning_reported = false
 	var plugin: Object = Engine.get_singleton(DEEP_LINK_PLUGIN_SINGLETON)
-	if not plugin.has_method("getPendingAuthLink") or not plugin.has_method("clearPendingAuthLink"):
-		return
 	var pending_link := str(plugin.call("getPendingAuthLink"))
 	if pending_link.is_empty():
 		return
@@ -94,9 +100,11 @@ func request_google_sign_in() -> bool:
 	if not is_configured():
 		request_finished.emit(false, "إعدادات خدمة الحسابات غير مكتملة.")
 		return false
-	if OS.get_name() == "Android" and not _android_deep_link_ready():
-		request_finished.emit(false, "نسخة Android لا تحتوي على مكوّن استقبال رابط Google.")
-		return false
+	if OS.get_name() == "Android":
+		var plugin_error := _android_deep_link_error()
+		if not plugin_error.is_empty():
+			request_finished.emit(false, plugin_error)
+			return false
 	var verifier_bytes := Crypto.new().generate_random_bytes(32)
 	if verifier_bytes.size() != 32:
 		request_finished.emit(false, "تعذر إنشاء حماية جلسة الدخول.")
@@ -131,11 +139,18 @@ func request_google_sign_in() -> bool:
 	request_finished.emit(true, "اختر حساب Google المرتبط بشخصيتك الأصلية، ثم عُد إلى اللعبة.")
 	return true
 
-func _android_deep_link_ready() -> bool:
+func _android_deep_link_error() -> String:
 	if not Engine.has_singleton(DEEP_LINK_PLUGIN_SINGLETON):
-		return false
+		return "تشخيص Google: لم يسجل Android إضافة FounderSecureStorage داخل اللعبة. هذا يعني أن إضافة APK لم تُحمّل أو لم تُسجّل وقت التشغيل."
 	var plugin: Object = Engine.get_singleton(DEEP_LINK_PLUGIN_SINGLETON)
-	return plugin.has_method("getPendingAuthLink") and plugin.has_method("clearPendingAuthLink")
+	var missing_methods := PackedStringArray()
+	if not plugin.has_method("getPendingAuthLink"):
+		missing_methods.append("getPendingAuthLink")
+	if not plugin.has_method("clearPendingAuthLink"):
+		missing_methods.append("clearPendingAuthLink")
+	if not missing_methods.is_empty():
+		return "تشخيص Google: الإضافة مسجلة، لكن دوال استقبال الرابط غير متاحة: " + ", ".join(missing_methods) + "."
+	return ""
 
 func _base64url(value: PackedByteArray) -> String:
 	return Marshalls.raw_to_base64(value).replace("+", "-").replace("/", "_").trim_suffix("=")
