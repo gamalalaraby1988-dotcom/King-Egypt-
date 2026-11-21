@@ -6,6 +6,10 @@ on:
     paths:
       - "export_presets.cfg"
       - "project.godot"
+      - "scripts/main.gd"
+      - "scripts/player_account_auth_client.gd"
+      - "addons/founder_secure_storage/**"
+      - "android/plugins/founder_secure_storage/**"
       - ".github/workflows/android-debug-apk.yml"
   push:
     branches: [main]
@@ -37,6 +41,18 @@ jobs:
         uses: android-actions/setup-android@v3
         with:
           packages: ''
+
+      - name: Set up Gradle 8.11.1
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+
+      - name: Build Android secure-storage and deep-link plugin
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle --no-daemon -p android/plugins/founder_secure_storage :plugin:copyDebugAARToAddon
+          test -s addons/founder_secure_storage/bin/debug/FounderSecureStorage-debug.aar
 
       - name: Install Android SDK packages
         shell: bash
