@@ -8,7 +8,7 @@ const EXPLORER_MIGRATION_PATH := "res://supabase/migrations/20261121150000_recor
 const REWARD_MIGRATION_PATH := "res://supabase/migrations/20261121132105_server_verified_player_progress.sql"
 const UNIQUENESS_MIGRATION_PATH := "res://supabase/migrations/20261121140213_prevent_duplicate_verified_activity_completions.sql"
 const LOOKUP_EDGE_PATH := "res://supabase/functions/game-progress-lookup/index.ts"
-const WALK_MIGRATION_PATH := "res://supabase/migrations/20261121160000_server_verified_walk_distance.sql"
+const WALK_MIGRATION_PATH := "res://supabase/migrations/20261121153058_server_verified_walk_distance.sql"
 const WALK_EDGE_PATH := "res://supabase/functions/game-walk-progress/index.ts"
 
 
