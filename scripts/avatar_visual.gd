@@ -37,7 +37,7 @@ func _ready() -> void:
 	_cache_animation_defaults()
 
 func set_motion_state(state: String, speed: float = 0.0) -> void:
-	motion_state = state if ["idle", "walk", "run", "sit", "talk", "wave", "celebrate", "disappointed"].has(state) else "idle"
+	motion_state = state if ["idle", "walk", "run", "sit", "talk", "wave", "celebrate", "disappointed", "clap", "dance", "cry", "heart"].has(state) else "idle"
 	motion_speed = maxf(speed, 0.0)
 
 func _process(delta: float) -> void:
@@ -58,6 +58,51 @@ func _process(delta: float) -> void:
 			var waving_arm := parts["RightArm"] as MeshInstance3D
 			waving_arm.rotation.z = 1.05
 			waving_arm.rotation.x = sin(motion_time * 8.0) * 0.42
+		return
+	if motion_state == "clap":
+		var clap_phase := absf(sin(motion_time * 8.5))
+		if parts.has("LeftArm"):
+			(parts["LeftArm"] as MeshInstance3D).rotation = Vector3(-0.12, 0.0, -0.92 - clap_phase * 0.18)
+		if parts.has("RightArm"):
+			(parts["RightArm"] as MeshInstance3D).rotation = Vector3(-0.12, 0.0, 0.92 + clap_phase * 0.18)
+		if parts.has("TorsoBase"):
+			(parts["TorsoBase"] as MeshInstance3D).position.y += clap_phase * 0.025
+		return
+	if motion_state == "dance":
+		var dance_phase := sin(motion_time * 5.2)
+		if parts.has("TorsoBase"):
+			(parts["TorsoBase"] as MeshInstance3D).rotation.z = dance_phase * 0.16
+			(parts["TorsoBase"] as MeshInstance3D).position.y += absf(dance_phase) * 0.055
+		if parts.has("LeftArm"):
+			(parts["LeftArm"] as MeshInstance3D).rotation.z = -0.85 - dance_phase * 0.32
+			(parts["LeftArm"] as MeshInstance3D).rotation.x = cos(motion_time * 5.2) * 0.28
+		if parts.has("RightArm"):
+			(parts["RightArm"] as MeshInstance3D).rotation.z = 0.85 + dance_phase * 0.32
+			(parts["RightArm"] as MeshInstance3D).rotation.x = -cos(motion_time * 5.2) * 0.28
+		if parts.has("LeftLeg"):
+			(parts["LeftLeg"] as MeshInstance3D).rotation.x = sin(motion_time * 5.2) * 0.24
+		if parts.has("RightLeg"):
+			(parts["RightLeg"] as MeshInstance3D).rotation.x = -sin(motion_time * 5.2) * 0.24
+		return
+	if motion_state == "cry":
+		if parts.has("Head"):
+			(parts["Head"] as MeshInstance3D).rotation.x = 0.28 + sin(motion_time * 5.0) * 0.035
+		if parts.has("TorsoBase"):
+			(parts["TorsoBase"] as MeshInstance3D).rotation.x = 0.20
+		if parts.has("LeftArm"):
+			(parts["LeftArm"] as MeshInstance3D).rotation.z = -0.34
+			(parts["LeftArm"] as MeshInstance3D).rotation.x = -0.20
+		if parts.has("RightArm"):
+			(parts["RightArm"] as MeshInstance3D).rotation.z = 0.34
+			(parts["RightArm"] as MeshInstance3D).rotation.x = -0.20
+		return
+	if motion_state == "heart":
+		if parts.has("LeftArm"):
+			(parts["LeftArm"] as MeshInstance3D).rotation = Vector3(-0.28, 0.0, -1.02)
+		if parts.has("RightArm"):
+			(parts["RightArm"] as MeshInstance3D).rotation = Vector3(-0.28, 0.0, 1.02)
+		if parts.has("TorsoBase"):
+			(parts["TorsoBase"] as MeshInstance3D).rotation.x = -0.035
 		return
 	if motion_state == "celebrate":
 		if parts.has("TorsoBase"):
