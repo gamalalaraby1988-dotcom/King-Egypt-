@@ -182,6 +182,8 @@ func _on_peer_connected(peer_id: int) -> void:
 		"last_emote_usec": 0,
 		"active_emote": "",
 		"emote_until_usec": 0,
+		"is_sitting": false,
+		"last_sit_usec": 0,
 		"last_safe_position": SPAWN_POSITION,
 		"input_window_usec": Time.get_ticks_usec(),
 		"input_count": 0,
@@ -370,6 +372,28 @@ func send_movement_input(world_direction: Vector3, sprint: bool) -> void:
 		direction = direction.normalized()
 	_input_sequence += 1
 	submit_movement_input.rpc_id(1, _input_sequence, direction, sprint)
+
+
+func send_player_sit(is_sitting: bool) -> void:
+	if _is_dedicated_server or not is_authenticated():
+		return
+	submit_player_sit.rpc_id(1, is_sitting)
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func submit_player_sit(is_sitting: bool) -> void:
+	if not multiplayer.is_server() or not _sessions.has(multiplayer.get_remote_sender_id()):
+		return
+	var peer_id := multiplayer.get_remote_sender_id()
+	var session: Dictionary = _sessions[peer_id]
+	if not bool(session.get("authenticated", false)) or typeof(is_sitting) != TYPE_BOOL:
+		return
+	var now_usec := Time.get_ticks_usec()
+	if now_usec - int(session.get("last_sit_usec", 0)) < 200000:
+		return
+	session["last_sit_usec"] = now_usec
+	session["is_sitting"] = is_sitting
+	_sessions[peer_id] = session
 
 
 func send_player_emote(emote_id: String) -> void:
@@ -1634,7 +1658,8 @@ func _build_remote_player_snapshots() -> Dictionary:
 			"rotation_y": source_body.rotation.y,
 			"velocity": source_body.velocity,
 			"active_emote": str(source_session.get("active_emote", "")),
-			"emote_remaining": maxf(0.0, float(int(source_session.get("emote_until_usec", 0)) - Time.get_ticks_usec()) / 1000000.0)
+			"emote_remaining": maxf(0.0, float(int(source_session.get("emote_until_usec", 0)) - Time.get_ticks_usec()) / 1000000.0),
+			"is_sitting": bool(source_session.get("is_sitting", false))
 		})
 		bodies_by_peer[source_peer] = source_body
 
@@ -1684,6 +1709,7 @@ func receive_remote_players(players: Array) -> void:
 		var velocity_variant: Variant = player.get("velocity", null)
 		var emote_variant: Variant = player.get("active_emote", "")
 		var emote_remaining_variant: Variant = player.get("emote_remaining", 0.0)
+		var sitting_variant: Variant = player.get("is_sitting", false)
 		if not (peer_id_variant is int) or int(peer_id_variant) <= 0 or int(peer_id_variant) == multiplayer.get_unique_id():
 			continue
 		if seen_peer_ids.has(int(peer_id_variant)) or not (position_variant is Vector3) or not (velocity_variant is Vector3):
@@ -1701,6 +1727,7 @@ func receive_remote_players(players: Array) -> void:
 		var safe_emote_remaining := clampf(float(emote_remaining_variant), 0.0, 4.0) if emote_remaining_variant is float or emote_remaining_variant is int else 0.0
 		if safe_emote_remaining <= 0.0:
 			safe_emote = ""
+		var safe_sitting := sitting_variant if sitting_variant is bool else false
 		seen_peer_ids[int(peer_id_variant)] = true
 		safe_players.append({
 			"peer_id": int(peer_id_variant),
@@ -1708,7 +1735,8 @@ func receive_remote_players(players: Array) -> void:
 			"rotation_y": remote_rotation,
 			"velocity": remote_velocity,
 			"active_emote": safe_emote,
-			"emote_remaining": safe_emote_remaining
+			"emote_remaining": safe_emote_remaining,
+			"is_sitting": safe_sitting
 		})
 		if safe_players.size() >= MAX_PLAYERS - 1:
 			break
