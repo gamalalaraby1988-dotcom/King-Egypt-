@@ -12,6 +12,7 @@ signal mission_start_result(success: bool, mission_id: String, target: Vector3, 
 signal mission_stage_updated(mission_id: String, target: Vector3, stage_number: int, stage_count: int, message: String)
 signal mission_failed(mission_id: String, message: String)
 signal mission_completed(mission_id: String)
+signal activity_progress_recorded(activity_kind: String, activity_id: String, reward_eligible: bool)
 signal activity_proof_received(activity_kind: String, activity_id: String, proof_id: String)
 signal activity_proof_failed(activity_kind: String, activity_id: String, message: String)
 signal arcade_session_state_changed(session_id: String, state: String, machine_id: String, message: String)
@@ -32,6 +33,7 @@ const SPAWN_POSITION := Vector3(0.0, 1.0, -42.0)
 var _server_peer: WebSocketMultiplayerPeer
 var _sessions: Dictionary = {}
 var _auth_requests: Dictionary = {}
+var _pending_mission_progress_lookups: Dictionary = {}
 var _is_dedicated_server := false
 var _input_sequence := 0
 var _snapshot_elapsed := 0.0
@@ -187,6 +189,11 @@ func _on_peer_connected(peer_id: int) -> void:
 
 
 func _on_peer_disconnected(peer_id: int) -> void:
+	var pending_lookup := _pending_mission_progress_lookups.get(peer_id, {}) as Dictionary
+	var pending_request := pending_lookup.get("request") as HTTPRequest
+	if is_instance_valid(pending_request):
+		pending_request.queue_free()
+	_pending_mission_progress_lookups.erase(peer_id)
 	_abort_peer_arcade_session(peer_id, "انقطع اتصال أحد المشاركين؛ أُغلقت الجلسة دون نتيجة أو مكافأة.")
 	var session: Dictionary = _sessions.get(peer_id, {})
 	var body := session.get("body") as CharacterBody3D
@@ -475,35 +482,119 @@ func request_start_mission(mission_id: String) -> void:
 	if definition.is_empty():
 		rpc_id(peer_id, "receive_mission_start_result", false, safe_mission_id, Vector3.ZERO, "هذه المهمة غير معتمدة على الخادم.")
 		return
-	var active_mission: Dictionary = session.get("active_mission", {})
-	var active_job: Dictionary = session.get("active_job", {})
-	if not active_mission.is_empty() or not active_job.is_empty():
+	if not session.get("active_mission", {}).is_empty() or not session.get("active_job", {}).is_empty():
 		rpc_id(peer_id, "receive_mission_start_result", false, safe_mission_id, Vector3.ZERO, "أنهِ النشاط الحالي أولًا.")
 		return
-	var completed_missions: Dictionary = session.get("completed_missions", {})
-	if completed_missions.has(safe_mission_id):
+	if (session.get("completed_missions", {}) as Dictionary).has(safe_mission_id):
 		rpc_id(peer_id, "receive_mission_start_result", false, safe_mission_id, Vector3.ZERO, "أنجزت هذه المهمة بالفعل في جلسة اللعب.")
 		return
 	var body := session.get("body") as CharacterBody3D
 	if not is_instance_valid(body) or body.global_position.distance_to(definition["board"]) > 5.0:
 		rpc_id(peer_id, "receive_mission_start_result", false, safe_mission_id, Vector3.ZERO, "اقترب من المبنى أولًا.")
 		return
+	if safe_mission_id.begins_with("city_adventure_"):
+		_start_server_mission_for_peer(peer_id, safe_mission_id)
+		return
+	_request_server_mission_progress_lookup(peer_id, safe_mission_id)
+
+
+func _start_server_mission_for_peer(peer_id: int, mission_id: String) -> void:
+	if not _sessions.has(peer_id) or not bool(_sessions[peer_id].get("authenticated", false)):
+		return
+	var session: Dictionary = _sessions[peer_id]
+	if not session.get("active_mission", {}).is_empty() or not session.get("active_job", {}).is_empty():
+		rpc_id(peer_id, "receive_mission_start_result", false, mission_id, Vector3.ZERO, "أنهِ النشاط الحالي أولًا.")
+		return
+	if (session.get("completed_missions", {}) as Dictionary).has(mission_id):
+		rpc_id(peer_id, "receive_mission_start_result", false, mission_id, Vector3.ZERO, "أنجزت هذه المهمة بالفعل في جلسة اللعب.")
+		return
+	var definition := _get_server_mission_definition(mission_id)
+	var body := session.get("body") as CharacterBody3D
+	if definition.is_empty() or not is_instance_valid(body) or body.global_position.distance_to(definition.get("board", Vector3.ZERO)) > 5.0:
+		rpc_id(peer_id, "receive_mission_start_result", false, mission_id, Vector3.ZERO, "تعذر تأكيد موقع بدء المهمة.")
+		return
 	var mission_stages: Array = definition.get("stages", [definition.get("target", Vector3.ZERO)])
 	if mission_stages.is_empty():
-		rpc_id(peer_id, "receive_mission_start_result", false, safe_mission_id, Vector3.ZERO, "مسار المهمة غير مكتمل على الخادم.")
+		rpc_id(peer_id, "receive_mission_start_result", false, mission_id, Vector3.ZERO, "مسار المهمة غير مكتمل على الخادم.")
 		return
 	var first_target: Vector3 = mission_stages[0]
 	session["active_mission"] = {
-		"mission_id": safe_mission_id,
+		"mission_id": mission_id,
 		"target": first_target,
 		"stages": mission_stages.duplicate(true),
 		"stage_index": 0,
 		"radius": 2.2,
 		"started_at_usec": Time.get_ticks_usec(),
-		"time_limit_seconds": 60.0 if safe_mission_id == "city_adventure_survival" else 0.0
+		"time_limit_seconds": 60.0 if mission_id == "city_adventure_survival" else 0.0
 	}
 	_sessions[peer_id] = session
-	rpc_id(peer_id, "receive_mission_start_result", true, safe_mission_id, first_target, "بدأت المهمة على الخادم. اتبع علامة الهدف.")
+	rpc_id(peer_id, "receive_mission_start_result", true, mission_id, first_target, "بدأت المهمة على الخادم. اتبع علامة الهدف.")
+
+
+func _request_server_mission_progress_lookup(peer_id: int, mission_id: String) -> void:
+	if _pending_mission_progress_lookups.has(peer_id):
+		rpc_id(peer_id, "receive_mission_start_result", false, mission_id, Vector3.ZERO, "جارٍ التحقق من سجل المهمة؛ انتظر لحظة.")
+		return
+	var session: Dictionary = _sessions.get(peer_id, {})
+	var user_id := str(session.get("user_id", ""))
+	if user_id.is_empty() or _proof_hmac_secret.size() < 32:
+		rpc_id(peer_id, "receive_mission_start_result", false, mission_id, Vector3.ZERO, "خدمة التحقق من سجل الإنجازات غير مهيأة؛ لم تبدأ المهمة.")
+		return
+	var base_url := str(ProjectSettings.get_setting("founder/auth/api_base_url", "")).strip_edges().trim_suffix("/")
+	var publishable_key := str(ProjectSettings.get_setting("founder/auth/publishable_key", "")).strip_edges()
+	if not base_url.begins_with("https://") or publishable_key.is_empty():
+		rpc_id(peer_id, "receive_mission_start_result", false, mission_id, Vector3.ZERO, "إعدادات سجل الإنجازات الخادمي غير مكتملة.")
+		return
+	var issued_at := int(Time.get_unix_time_from_system())
+	var canonical := "v1|lookup|%s|mission|%s|%d" % [user_id, mission_id, issued_at]
+	var hmac_context := HMACContext.new()
+	if hmac_context.start(HashingContext.HASH_SHA256, _proof_hmac_secret) != OK or hmac_context.update(canonical.to_utf8_buffer()) != OK:
+		rpc_id(peer_id, "receive_mission_start_result", false, mission_id, Vector3.ZERO, "تعذر توقيع طلب التحقق من سجل المهمة.")
+		return
+	var payload := {
+		"user_id": user_id,
+		"activity_kind": "mission",
+		"activity_id": mission_id,
+		"issued_at": issued_at,
+		"signature_hex": hmac_context.finish().hex_encode()
+	}
+	var request := HTTPRequest.new()
+	request.timeout = 10.0
+	add_child(request)
+	request.request_completed.connect(_on_server_mission_progress_lookup_completed.bind(request, peer_id, user_id, mission_id))
+	_pending_mission_progress_lookups[peer_id] = {"request": request, "user_id": user_id, "mission_id": mission_id}
+	var error := request.request(
+		base_url + "/functions/v1/game-progress-lookup",
+		PackedStringArray(["Content-Type: application/json", "apikey: " + publishable_key]),
+		HTTPClient.METHOD_POST,
+		JSON.stringify(payload)
+	)
+	if error != OK:
+		_pending_mission_progress_lookups.erase(peer_id)
+		request.queue_free()
+		rpc_id(peer_id, "receive_mission_start_result", false, mission_id, Vector3.ZERO, "تعذر بدء التحقق من سجل المهمة؛ لم تبدأ المهمة.")
+
+
+func _on_server_mission_progress_lookup_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray, request: HTTPRequest, peer_id: int, user_id: String, mission_id: String) -> void:
+	if is_instance_valid(request):
+		request.queue_free()
+	var pending: Dictionary = _pending_mission_progress_lookups.get(peer_id, {})
+	if pending.is_empty() or pending.get("request") != request:
+		return
+	_pending_mission_progress_lookups.erase(peer_id)
+	if not _sessions.has(peer_id) or str(_sessions[peer_id].get("user_id", "")) != user_id:
+		return
+	if result != HTTPRequest.RESULT_SUCCESS or response_code != 200:
+		rpc_id(peer_id, "receive_mission_start_result", false, mission_id, Vector3.ZERO, "تعذر التحقق من سجل إنجازاتك؛ لم تبدأ المهمة حفاظًا على تقدمك.")
+		return
+	var parsed: Variant = JSON.parse_string(body.get_string_from_utf8())
+	if not (parsed is Dictionary) or not bool(parsed.get("verified", false)) or typeof(parsed.get("completed")) != TYPE_BOOL:
+		rpc_id(peer_id, "receive_mission_start_result", false, mission_id, Vector3.ZERO, "استجابة سجل الإنجازات غير موثوقة؛ لم تبدأ المهمة.")
+		return
+	if bool(parsed.get("completed", false)):
+		rpc_id(peer_id, "receive_mission_start_result", false, mission_id, Vector3.ZERO, "أنجزت هذه المهمة سابقًا على حسابك؛ لن نكررها.")
+		return
+	_start_server_mission_for_peer(peer_id, mission_id)
 
 
 @rpc("any_peer", "call_remote", "reliable")
@@ -533,6 +624,7 @@ func request_submit_message_puzzle_answer(answer: String) -> void:
 	session["active_mission"] = {}
 	_sessions[peer_id] = session
 	rpc_id(peer_id, "receive_server_mission_completed", "city_adventure_message")
+	_issue_activity_proof(peer_id, str(session.get("user_id", "")), "mission", "city_adventure_message")
 
 
 @rpc("any_peer", "call_remote", "reliable")
@@ -608,6 +700,13 @@ func receive_server_mission_completed(mission_id: String) -> void:
 	if multiplayer.is_server() or not is_authenticated():
 		return
 	mission_completed.emit(mission_id)
+
+
+@rpc("authority", "call_remote", "reliable")
+func receive_server_activity_progress_recorded(activity_kind: String, activity_id: String, reward_eligible: bool) -> void:
+	if multiplayer.is_server() or not is_authenticated():
+		return
+	activity_progress_recorded.emit(activity_kind, activity_id, reward_eligible)
 
 
 @rpc("authority", "call_remote", "reliable")
@@ -1130,15 +1229,23 @@ func _on_proof_issue_completed(result: int, response_code: int, _headers: Packed
 		_notify_proof_issue_failed(peer_id, activity_kind, activity_id, "لم تصدر خدمة المكافآت إثباتًا صالحًا؛ لم تُمنح مكافأة.")
 		return
 	var parsed: Variant = JSON.parse_string(body.get_string_from_utf8())
-	var proof_id := str(parsed.get("proof_id", "")) if parsed is Dictionary else ""
+	if not (parsed is Dictionary) or not bool(parsed.get("progress_recorded", false)):
+		push_warning("Trusted game server progress recorder returned an invalid response.")
+		_notify_proof_issue_failed(peer_id, activity_kind, activity_id, "لم يؤكد الخادم حفظ الإنجاز.")
+		return
+	var reward_eligible := bool(parsed.get("reward_eligible", false))
+	var proof_id := str(parsed.get("proof_id", ""))
+	var user_id := str(payload.get("user_id", ""))
+	if not _sessions.has(peer_id) or str(_sessions[peer_id].get("user_id", "")) != user_id:
+		return
+	rpc_id(peer_id, "receive_server_activity_progress_recorded", activity_kind, activity_id, reward_eligible)
+	if proof_id.is_empty():
+		return
 	var uuid_pattern := RegEx.new()
 	uuid_pattern.compile("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$")
 	if uuid_pattern.search(proof_id) == null:
-		push_warning("Trusted proof issuer returned an invalid proof response.")
+		push_warning("Trusted progress recorder returned an invalid reward proof id.")
 		_notify_proof_issue_failed(peer_id, activity_kind, activity_id, "استجابة إثبات المكافأة غير صالحة.")
-		return
-	var user_id := str(payload.get("user_id", ""))
-	if not _sessions.has(peer_id) or str(_sessions[peer_id].get("user_id", "")) != user_id:
 		return
 	rpc_id(peer_id, "receive_server_activity_proof", activity_kind, activity_id, proof_id)
 
@@ -1281,8 +1388,8 @@ func _physics_process(delta: float) -> void:
 							var completed_missions: Dictionary = session.get("completed_missions", {})
 							completed_missions[completed_mission_id] = true
 							session["completed_missions"] = completed_missions
-							server_objective_reached.emit(str(session.get("user_id", "")), "mission", completed_mission_id)
-							_issue_activity_proof(peer_id, str(session.get("user_id", "")), "mission", completed_mission_id)
+						server_objective_reached.emit(str(session.get("user_id", "")), "mission", completed_mission_id)
+						_issue_activity_proof(peer_id, str(session.get("user_id", "")), "mission", completed_mission_id)
 		_sessions[peer_id] = session
 	_snapshot_elapsed += safe_delta
 	if _snapshot_elapsed >= SNAPSHOT_INTERVAL:

@@ -311,6 +311,21 @@ jobs:
             exit 1
           fi
 
+      - name: Run server verified progress contract tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          GODOT="/tmp/godot/Godot_v4.7.2-stable_linux.x86_64"
+          LOG="/tmp/godot-server-verified-progress-contract.log"
+          set +e
+          timeout 60s "$GODOT" --headless --path . --script res://tests/server_verified_progress_contract_test.gd 2>&1 | tee "$LOG"
+          GODOT_STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$GODOT_STATUS" -ne 0 ] || grep -E '(^|[[:space:]])(ERROR|SCRIPT ERROR):|Parse Error:|Server verified progress contract test failed' "$LOG"; then
+            echo "Server verified progress contract tests failed."
+            exit 1
+          fi
+
       - name: Start main scene headlessly
         shell: bash
         run: |
@@ -352,3 +367,6 @@ jobs:
 
       - name: Run player sync Edge Function authentication tests
         run: deno test --allow-net supabase/tests/player-sync-edge.test.ts
+
+      - name: Run server verified progress Edge Function tests
+        run: deno test supabase/tests/game-proof-issuer-edge.test.ts supabase/tests/game-progress-lookup-edge.test.ts

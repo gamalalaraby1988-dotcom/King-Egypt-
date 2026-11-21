@@ -144,6 +144,7 @@ func _ready() -> void:
 	rescue_population = get_tree().current_scene.get_node_or_null("CityNPCPopulation") if is_instance_valid(get_tree().current_scene) else null
 	AuthoritativeGameServer.mission_failed.connect(_on_server_mission_failed)
 	AuthoritativeGameServer.mission_completed.connect(_on_server_mission_completed)
+	AuthoritativeGameServer.activity_progress_recorded.connect(_on_server_activity_progress_recorded)
 	AuthoritativeGameServer.activity_proof_received.connect(_on_server_activity_proof_received)
 	AuthoritativeGameServer.activity_proof_failed.connect(_on_server_activity_proof_failed)
 	PlayerSyncClient.verified_reward_claim_finished.connect(_on_verified_reward_claim_finished)
@@ -164,6 +165,8 @@ func _exit_tree() -> void:
 		AuthoritativeGameServer.mission_failed.disconnect(_on_server_mission_failed)
 	if AuthoritativeGameServer.mission_completed.is_connected(_on_server_mission_completed):
 		AuthoritativeGameServer.mission_completed.disconnect(_on_server_mission_completed)
+	if AuthoritativeGameServer.activity_progress_recorded.is_connected(_on_server_activity_progress_recorded):
+		AuthoritativeGameServer.activity_progress_recorded.disconnect(_on_server_activity_progress_recorded)
 	if AuthoritativeGameServer.activity_proof_received.is_connected(_on_server_activity_proof_received):
 		AuthoritativeGameServer.activity_proof_received.disconnect(_on_server_activity_proof_received)
 	if AuthoritativeGameServer.activity_proof_failed.is_connected(_on_server_activity_proof_failed):
@@ -1422,6 +1425,16 @@ func _on_server_mission_completed(mission_id: String) -> void:
 	panel.visible = true
 
 
+func _on_server_activity_progress_recorded(activity_kind: String, activity_id: String, reward_eligible: bool) -> void:
+	if not GameModeManager.is_online_ready():
+		return
+	if not ["mission", "job"].has(activity_kind):
+		return
+	status_label.text = "تم حفظ إنجاز %s في سجل حسابك الخادمي." % activity_id
+	description_label.text = "هذا الإنجاز موثّق من خادم اللعبة، ويمكن استعادته عند تسجيل الدخول من جهاز آخر."
+	reward_label.text = "إثبات المكافأة متاح للتحقق." if reward_eligible else "تم حفظ الإنجاز دون مكافأة؛ المكافآت ما زالت مغلقة."
+
+
 func _on_server_activity_proof_received(activity_kind: String, activity_id: String, proof_id: String) -> void:
 	if not GameModeManager.is_online_ready() or not ["mission", "job"].has(activity_kind):
 		return
@@ -1619,6 +1632,11 @@ func _accept_mission() -> void:
 		if server_mission_id.is_empty():
 			accept_button.disabled = false
 			status_label.text = "تعذر تحديد معرف المهمة الخادمي."
+			return
+		if selected_activity_kind != "adventure" and PlayerSyncClient.is_server_activity_verified("mission", server_mission_id):
+			accept_button.disabled = false
+			status_label.text = "أنجزت هذه المهمة سابقًا على حسابك؛ تم استرجاع إنجازها الموثق."
+			description_label.text = "لن نكرر المهمة أو نعتمد إكمالًا محليًا بدل السجل الخادمي."
 			return
 		AuthoritativeGameServer.request_start_mission.rpc_id(1, server_mission_id)
 		return

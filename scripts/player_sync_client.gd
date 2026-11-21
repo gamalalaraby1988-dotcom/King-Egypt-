@@ -8,6 +8,8 @@ signal preference_snapshot_received(revision: int, settings: Dictionary)
 signal preference_snapshot_finished(success: bool, message: String)
 signal progress_observations_received(observations: Array, trust_label: String)
 signal progress_observations_finished(success: bool, message: String)
+signal verified_activity_progress_received(activities: Array, trust_label: String)
+signal verified_activity_progress_finished(success: bool, message: String)
 signal verified_reward_claim_finished(success: bool, result: Dictionary, message: String)
 
 const OUTBOX_PATH := "user://player_sync_outbox.cfg"
@@ -26,6 +28,11 @@ const ALLOWED_EVENT_TYPES := [
 var _http: HTTPRequest
 var _snapshot_http: HTTPRequest
 var _progress_http: HTTPRequest
+var _verified_progress_http: HTTPRequest
+var _verified_progress_request_active := false
+var _verified_progress_request_token := ""
+var _verified_progress_request_user_id := ""
+var _verified_activity_progress: Array[Dictionary] = []
 var _progress_request_active := false
 var _progress_request_token := ""
 var _progress_request_user_id := ""
@@ -67,6 +74,11 @@ func _ready() -> void:
 	_progress_http.timeout = 25.0
 	add_child(_progress_http)
 	_progress_http.request_completed.connect(_on_progress_recovery_completed)
+	_verified_progress_http = HTTPRequest.new()
+	_verified_progress_http.name = "ServerVerifiedActivityProgressHTTPRequest"
+	_verified_progress_http.timeout = 25.0
+	add_child(_verified_progress_http)
+	_verified_progress_http.request_completed.connect(_on_verified_activity_progress_completed)
 	_reward_claim_http = HTTPRequest.new()
 	_reward_claim_http.name = "VerifiedRewardClaimHTTPRequest"
 	_reward_claim_http.timeout = 25.0
@@ -80,8 +92,11 @@ func _ready() -> void:
 
 
 func set_session_access_token(access_token: String, user_id: String) -> void:
+	var next_user_id := user_id.strip_edges()
+	if not _session_user_id.is_empty() and _session_user_id != next_user_id:
+		_verified_activity_progress.clear()
 	_access_token = access_token.strip_edges()
-	_session_user_id = user_id.strip_edges()
+	_session_user_id = next_user_id
 	if _access_token.is_empty() or _session_user_id.is_empty():
 		clear_session_access_token()
 		push_warning("Player sync session requires both an access token and an authenticated account ID.")
@@ -89,6 +104,7 @@ func set_session_access_token(access_token: String, user_id: String) -> void:
 	if bool(ProjectSettings.get_setting(SYNC_ENABLED_SETTING, false)):
 		call_deferred("fetch_preference_snapshot")
 		call_deferred("fetch_progress_observations")
+		call_deferred("fetch_verified_activity_progress")
 		call_deferred("flush_pending")
 
 
@@ -102,6 +118,10 @@ func clear_session_access_token() -> void:
 	_progress_request_active = false
 	_progress_request_token = ""
 	_progress_request_user_id = ""
+	_verified_progress_request_active = false
+	_verified_progress_request_token = ""
+	_verified_progress_request_user_id = ""
+	_verified_activity_progress.clear()
 	_reward_claim_active = false
 	_reward_claim_token = ""
 	_reward_claim_user_id = ""
@@ -112,6 +132,97 @@ func clear_session_access_token() -> void:
 
 func get_preference_snapshot_revision() -> int:
 	return _snapshot_revision
+
+
+func get_server_verified_activity_progress() -> Array[Dictionary]:
+	return _verified_activity_progress.duplicate(true)
+
+
+func is_server_activity_verified(activity_kind: String, activity_id: String) -> bool:
+	for activity in _verified_activity_progress:
+		if str(activity.get("activity_kind", "")) == activity_kind and str(activity.get("activity_id", "")) == activity_id:
+			return true
+	return false
+
+
+func fetch_verified_activity_progress() -> void:
+	if not bool(ProjectSettings.get_setting(SYNC_ENABLED_SETTING, false)):
+		return
+	if _access_token.is_empty() or _verified_progress_request_active:
+		return
+	var base_url := str(ProjectSettings.get_setting("founder/auth/api_base_url", "")).strip_edges().trim_suffix("/")
+	var publishable_key := str(ProjectSettings.get_setting("founder/auth/publishable_key", "")).strip_edges()
+	if not base_url.begins_with("https://") or publishable_key.is_empty():
+		verified_activity_progress_finished.emit(false, "إعدادات سجل الإنجازات الخادمي غير مكتملة.")
+		return
+	var headers := PackedStringArray([
+		"Content-Type: application/json",
+		"Accept: application/json",
+		"apikey: " + publishable_key,
+		"Authorization: Bearer " + _access_token
+	])
+	var error := _verified_progress_http.request(
+		base_url + "/rest/v1/rpc/get_player_verified_activity_progress",
+		headers,
+		HTTPClient.METHOD_POST,
+		"{}"
+	)
+	if error != OK:
+		verified_activity_progress_finished.emit(false, "تعذر بدء جلب سجل الإنجازات الخادمي.")
+		return
+	_verified_progress_request_active = true
+	_verified_progress_request_token = _access_token
+	_verified_progress_request_user_id = _session_user_id
+
+
+func _on_verified_activity_progress_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+	_verified_progress_request_active = false
+	var request_token := _verified_progress_request_token
+	var request_user_id := _verified_progress_request_user_id
+	_verified_progress_request_token = ""
+	_verified_progress_request_user_id = ""
+	if request_token.is_empty() or request_user_id.is_empty() or request_token != _access_token or request_user_id != _session_user_id:
+		if not _access_token.is_empty() and not _session_user_id.is_empty():
+			call_deferred("fetch_verified_activity_progress")
+		return
+	if result != HTTPRequest.RESULT_SUCCESS or response_code < 200 or response_code >= 300:
+		verified_activity_progress_finished.emit(false, "تعذر جلب سجل الإنجازات الموثق؛ لم تتغير بيانات اللعب.")
+		return
+	var parsed: Variant = JSON.parse_string(body.get_string_from_utf8())
+	if parsed is Array and parsed.size() == 1:
+		parsed = parsed[0]
+	if not (parsed is Dictionary) or not bool(parsed.get("authoritative", false)) or str(parsed.get("trust", "")) != "server_verified":
+		verified_activity_progress_finished.emit(false, "رفضت اللعبة سجلًا لا يحمل تصنيف التحقق الخادمي.")
+		return
+	var activities_value: Variant = parsed.get("activities", [])
+	if not (activities_value is Array) or activities_value.size() > 500:
+		verified_activity_progress_finished.emit(false, "قائمة الإنجازات الخادمية غير صالحة.")
+		return
+	var clean_activities: Array[Dictionary] = []
+	var uuid_pattern := RegEx.new()
+	uuid_pattern.compile("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$")
+	var activity_pattern := RegEx.new()
+	activity_pattern.compile("^[a-z0-9][a-z0-9_.-]{0,79}$")
+	for item in activities_value:
+		if not (item is Dictionary):
+			verified_activity_progress_finished.emit(false, "سجل الإنجازات يحتوي على عنصر غير صالح.")
+			return
+		var kind := str(item.get("activity_kind", ""))
+		var activity_id := str(item.get("activity_id", ""))
+		var event_id := str(item.get("server_event_id", ""))
+		var verified_at := str(item.get("verified_at", ""))
+		if not ["mission", "job", "achievement", "daily_claim"].has(kind) or activity_pattern.search(activity_id) == null or uuid_pattern.search(event_id) == null or verified_at.is_empty():
+			verified_activity_progress_finished.emit(false, "سجل الإنجازات يحتوي على بيانات خارج الحدود.")
+			return
+		clean_activities.append({
+			"activity_kind": kind,
+			"activity_id": activity_id,
+			"server_event_id": event_id,
+			"verified_at": verified_at
+		})
+	_verified_activity_progress = clean_activities
+	verified_activity_progress_received.emit(clean_activities.duplicate(true), "موثّق من خادم اللعبة")
+	verified_activity_progress_finished.emit(true, "تم جلب سجل الإنجازات الموثق. لم تُستبدل بيانات Offline ولم تُصرف مكافآت.")
 
 
 func fetch_preference_snapshot() -> void:
