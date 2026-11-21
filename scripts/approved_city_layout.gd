@@ -536,6 +536,32 @@ func _build_royal_gate_and_square() -> void:
 		guardian.add_child(head)
 		_box(guardian, "GuardianHeaddress", Vector3(1.25, 1.2, 0.85), Vector3(0.0, 3.65, -0.12), dark_gold)
 
+	# Additional monumental crown and layered Egyptian reliefs enrich the gate silhouette.
+	for side in [-1.0, 1.0]:
+		var crown_wing := _box(gate, "RoyalGateCrownWingRelief", Vector3(3.2, 0.22, 0.22), Vector3(side * 5.25, 9.12, 1.74), gold)
+		crown_wing.rotation.z = side * -0.10
+		_box(gate, "RoyalGateTowerLowerGoldBelt", Vector3(3.78, 0.22, 3.25), Vector3(side * 8.65, 1.15, 0.0), gold)
+		_box(gate, "RoyalGateTowerUpperGoldBelt", Vector3(3.82, 0.18, 3.28), Vector3(side * 8.65, 6.95, 0.0), gold)
+		_box(gate, "RoyalGateTowerFrontCartouche", Vector3(1.75, 2.25, 0.16), Vector3(side * 8.65, 4.05, 1.72), black)
+		_box(gate, "RoyalGateTowerCartoucheGoldInset", Vector3(1.48, 1.98, 0.08), Vector3(side * 8.65, 4.05, 1.82), gold)
+		# Slim obelisk-like finials sit outside the vehicle opening.
+		var finial := MeshInstance3D.new()
+		finial.name = "RoyalGateObeliskFinial"
+		var finial_mesh := CylinderMesh.new()
+		finial_mesh.top_radius = 0.0
+		finial_mesh.bottom_radius = 0.38
+		finial_mesh.height = 2.2
+		finial_mesh.radial_segments = 4
+		finial.mesh = finial_mesh
+		finial.position = Vector3(side * 11.35, 1.1, 0.0)
+		finial.material_override = _mat(gold, 0.72)
+		gate.add_child(finial)
+
+	# A second gold edge makes the founder portrait read as a royal medallion.
+	_box(gate, "FounderPortraitRoyalTopCrown", Vector3(2.0, 0.24, 0.48), Vector3(0.0, 13.02, 1.40), gold)
+	for side in [-1.0, 1.0]:
+		_box(gate, "FounderPortraitRoyalSideGem", Vector3(0.28, 0.62, 0.28), Vector3(side * 3.42, 11.15, 1.52), gold)
+
 	# Low-cost warm emissive accents; no real-time shadows or dynamic light cost.
 	var glow_material := StandardMaterial3D.new()
 	glow_material.albedo_color = gold
@@ -613,20 +639,19 @@ func _build_main_street_wall_ads() -> void:
 		mount.add_to_group("main_street_wall_advertisements")
 		building.add_child(mount)
 
-		# The narrower 2.7 m panel stays inside the clear central wall bay:
-		# side windows begin beyond +/-1.46 m on the smallest 10 m-deep buildings.
-		_box(mount, "AdBlackBacking", Vector3(2.85, 2.35, 0.16), Vector3.ZERO, DARK)
-		_box(mount, "AdGoldTopTrim", Vector3(2.90, 0.09, 0.18), Vector3(0.0, 1.20, 0.02), GOLD)
-		_box(mount, "AdGoldBottomTrim", Vector3(2.90, 0.09, 0.18), Vector3(0.0, -1.20, 0.02), GOLD)
-		_box(mount, "AdGoldLeftTrim", Vector3(0.09, 2.35, 0.18), Vector3(-1.405, 0.0, 0.02), GOLD)
-		_box(mount, "AdGoldRightTrim", Vector3(0.09, 2.35, 0.18), Vector3(1.405, 0.0, 0.02), GOLD)
+		# A wider, layered royal panel remains centered in the clear wall bay, away from the side windows.
+		_box(mount, "AdBlackBacking", Vector3(3.15, 2.55, 0.20), Vector3.ZERO, DARK)
+		_box(mount, "AdGoldTopTrim", Vector3(3.24, 0.11, 0.22), Vector3(0.0, 1.30, 0.03), GOLD)
+		_box(mount, "AdGoldBottomTrim", Vector3(2.90, 0.09, 0.18), Vector3(0.0, -1.30, 0.03), GOLD)
+		_box(mount, "AdGoldLeftTrim", Vector3(0.11, 2.55, 0.22), Vector3(-1.565, 0.0, 0.03), GOLD)
+		_box(mount, "AdGoldRightTrim", Vector3(0.09, 2.35, 0.18), Vector3(1.565, 0.0, 0.03), GOLD)
 
 		var poster := MeshInstance3D.new()
 		poster.name = "FounderPortraitPoster"
 		var poster_mesh := QuadMesh.new()
-		poster_mesh.size = Vector2(2.48, 1.18)
+		poster_mesh.size = Vector2(2.78, 1.34)
 		poster.mesh = poster_mesh
-		poster.position = Vector3(0.0, 0.28, 0.105)
+		poster.position = Vector3(0.0, 0.32, 0.13)
 		poster.material_override = portrait_material
 		poster.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		mount.add_child(poster)
@@ -634,8 +659,8 @@ func _build_main_street_wall_ads() -> void:
 		var name_label := Label3D.new()
 		name_label.name = "FounderAdName"
 		name_label.text = "GAMAL ALARABY"
-		name_label.position = Vector3(0.0, -0.72, 0.12)
-		name_label.font_size = 28
+		name_label.position = Vector3(0.0, -0.76, 0.15)
+		name_label.font_size = 30
 		name_label.pixel_size = 0.008
 		name_label.modulate = Color(1.0, 0.82, 0.42)
 		name_label.outline_size = 5
@@ -645,8 +670,8 @@ func _build_main_street_wall_ads() -> void:
 		var title_label := Label3D.new()
 		title_label.name = "FounderAdTitle"
 		title_label.text = "FOUNDER OF KING OF EGYPT CITY"
-		title_label.position = Vector3(0.0, -1.00, 0.12)
-		title_label.font_size = 12
+		title_label.position = Vector3(0.0, -1.08, 0.15)
+		title_label.font_size = 13
 		title_label.pixel_size = 0.008
 		title_label.modulate = Color(1.0, 0.88, 0.62)
 		title_label.outline_size = 3
