@@ -13,6 +13,7 @@ func _initialize() -> void:
 	_expect(server_source.contains('"action": "server_player_disconnected"'), "server releases a connected reservation on disconnect")
 	_expect(server_source.contains('if _city_directory_enabled and not _city_directory_registered:'), "directory-enabled server rejects players before registration")
 	_expect(server_source.contains('func authenticate_player(access_token: String, reservation_id: String = "")'), "server authentication accepts the reservation id")
+	_expect(server_source.contains("لا يمكن تغيير حجز الجلسة أثناء الاتصال."), "authenticated peer cannot swap its reservation during token refresh")
 	_expect(main_source.contains('ProjectSettings.get_setting("network/online/session_directory_enabled", false)'), "matchmaking is disabled by default")
 	_expect(main_source.contains('"action": "matchmake"'), "client requests an authenticated city reservation")
 	_expect(main_source.contains('"Authorization: Bearer " + access_token'), "matchmaking request uses the player's access token")
