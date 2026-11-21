@@ -184,10 +184,7 @@ func _on_peer_connected(peer_id: int) -> void:
 		"active_job": {},
 		"completed_jobs": {},
 		"active_mission": {},
-		"completed_missions": {},
-		"walked_distance_meters": 0.0,
-		"first_steps_recorded": false,
-		"first_steps_recording": false
+		"completed_missions": {}
 	}
 
 
@@ -1126,8 +1123,6 @@ func receive_arcade_session_state(session_id: String, state: String, machine_id:
 
 
 func _notify_proof_issue_failed(peer_id: int, activity_kind: String, activity_id: String, message: String) -> void:
-	if activity_kind == "achievement" and activity_id == "first_steps" and _sessions.has(peer_id):
-		_sessions[peer_id]["first_steps_recording"] = false
 	if _sessions.has(peer_id) and multiplayer.get_peers().has(peer_id):
 		rpc_id(peer_id, "receive_server_activity_proof_failed", activity_kind, activity_id, message)
 
@@ -1243,9 +1238,6 @@ func _on_proof_issue_completed(result: int, response_code: int, _headers: Packed
 	var user_id := str(payload.get("user_id", ""))
 	if not _sessions.has(peer_id) or str(_sessions[peer_id].get("user_id", "")) != user_id:
 		return
-	if activity_kind == "achievement" and activity_id == "first_steps":
-		_sessions[peer_id]["first_steps_recording"] = false
-		_sessions[peer_id]["first_steps_recorded"] = true
 	rpc_id(peer_id, "receive_server_activity_progress_recorded", activity_kind, activity_id, reward_eligible)
 	var uuid_pattern := RegEx.new()
 	uuid_pattern.compile("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$")
@@ -1324,8 +1316,6 @@ func _physics_process(delta: float) -> void:
 		if not is_instance_valid(body):
 			continue
 		var current_position := body.global_position
-		var movement_start_position := current_position
-		var was_grounded := body.is_on_floor()
 		var outside_city := absf(current_position.x) > 155.0 or current_position.z < -340.0 or current_position.z > 180.0
 		if current_position.y < -3.0 or outside_city:
 			var safe_position: Vector3 = session.get("last_safe_position", SPAWN_POSITION)
@@ -1358,15 +1348,6 @@ func _physics_process(delta: float) -> void:
 		body.move_and_slide()
 		if direction.length() > 0.1:
 			body.rotation.y = atan2(direction.x, direction.z)
-		if was_grounded and body.is_on_floor() and direction.length() > 0.1 and not bool(session.get("first_steps_recorded", false)) and not bool(session.get("first_steps_recording", false)):
-			var server_walk_step := Vector2(body.global_position.x - movement_start_position.x, body.global_position.z - movement_start_position.z).length()
-			var maximum_valid_step := RUN_SPEED * safe_delta + 0.12
-			if is_finite(server_walk_step) and server_walk_step > 0.0 and server_walk_step <= maximum_valid_step:
-				var verified_walk_total := float(session.get("walked_distance_meters", 0.0)) + server_walk_step
-				session["walked_distance_meters"] = minf(verified_walk_total, 100.0)
-				if verified_walk_total >= 100.0:
-					session["first_steps_recording"] = true
-					_issue_activity_proof(peer_id, str(session.get("user_id", "")), "achievement", "first_steps")
 		session["velocity"] = body.velocity
 		session = _evaluate_server_objective_zones(peer_id, session, body)
 		var active_job: Dictionary = session.get("active_job", {})
