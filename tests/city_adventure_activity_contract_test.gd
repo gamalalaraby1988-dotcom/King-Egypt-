@@ -23,7 +23,7 @@ func _run_city_adventure_contract() -> void:
 		push_error("Adventure entry interaction must remain at the existing adventure_center building.")
 		quit(1)
 		return
-	if not city_layout_source.contains('["adventure_center","مركز المغامرات",Vector3(-75,0,58)') or not city_layout_source.contains("d * 0.5 + 0.09"):
+	if not city_layout_source.contains('["adventure_center","مركز المغامرات",Vector3(-75,0,58)') or not city_layout_source.contains("half_d - wall_depth * 0.5"):
 		push_error("Adventure hub anchor must line up with the entrance of the existing adventure center.")
 		quit(1)
 		return
