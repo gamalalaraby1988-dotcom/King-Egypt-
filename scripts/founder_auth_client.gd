@@ -39,7 +39,7 @@ func _ready() -> void:
 	_session_refresh_timer.one_shot = true
 	add_child(_session_refresh_timer)
 	_session_refresh_timer.timeout.connect(_refresh_auth_session)
-	call_deferred("_restore_persisted_session")
+	# Founder entitlement now uses the authenticated player session; no second Auth session is restored.
 
 func is_configured() -> bool:
 	var base := _api_base_url()
@@ -180,6 +180,19 @@ func _request_founder_entitlement(access_token: String) -> void:
 		return
 	_pending_action = "founder_entitlement"
 
+
+func request_founder_entitlement_with_access_token(access_token: String) -> bool:
+	if access_token.strip_edges().is_empty():
+		founder_entitlement_failed.emit("سجّل الدخول إلى حساب اللاعب أولًا.")
+		return false
+	if not is_configured():
+		founder_entitlement_failed.emit("إعدادات خدمة اعتماد المؤسس غير مكتملة.")
+		return false
+	if _pending_action != "":
+		founder_entitlement_failed.emit("هناك طلب اعتماد آخر قيد التنفيذ.")
+		return false
+	_request_founder_entitlement(access_token)
+	return _pending_action == "founder_entitlement"
 
 func has_active_auth_session() -> bool:
 	return not _session_access_token.is_empty() and Time.get_unix_time_from_system() < _session_expires_at
