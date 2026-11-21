@@ -28,6 +28,7 @@ const RUN_SPEED := 6.2
 const ACCELERATION := 18.0
 const GRAVITY := 20.0
 const SNAPSHOT_INTERVAL := 0.05
+const MAX_PLAYER_VISIBILITY_DISTANCE := 140.0
 const SPAWN_POSITION := Vector3(0.0, 1.0, -42.0)
 
 var _server_peer: WebSocketMultiplayerPeer
@@ -1321,7 +1322,10 @@ func _physics_process(delta: float) -> void:
 			var remote_players: Array = []
 			for player_snapshot_variant in same_instance_players:
 				var player_snapshot: Dictionary = player_snapshot_variant
-				if int(player_snapshot.get("peer_id", 0)) != peer_id:
+				if int(player_snapshot.get("peer_id", 0)) == peer_id:
+					continue
+				var remote_position: Vector3 = player_snapshot.get("position", Vector3.ZERO)
+				if body.global_position.distance_squared_to(remote_position) <= pow(MAX_PLAYER_VISIBILITY_DISTANCE, 2.0):
 					remote_players.append(player_snapshot)
 			rpc_id(peer_id, "receive_remote_players", remote_players)
 
