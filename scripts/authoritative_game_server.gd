@@ -12,6 +12,7 @@ signal mission_start_result(success: bool, mission_id: String, target: Vector3, 
 signal mission_stage_updated(mission_id: String, target: Vector3, stage_number: int, stage_count: int, message: String)
 signal mission_failed(mission_id: String, message: String)
 signal mission_completed(mission_id: String)
+signal activity_progress_recorded(activity_kind: String, activity_id: String, reward_eligible: bool)
 signal activity_proof_received(activity_kind: String, activity_id: String, proof_id: String)
 signal activity_proof_failed(activity_kind: String, activity_id: String, message: String)
 signal arcade_session_state_changed(session_id: String, state: String, machine_id: String, message: String)
@@ -32,6 +33,8 @@ const SPAWN_POSITION := Vector3(0.0, 1.0, -42.0)
 var _server_peer: WebSocketMultiplayerPeer
 var _sessions: Dictionary = {}
 var _auth_requests: Dictionary = {}
+var _walk_progress_requests: Dictionary = {}
+var _pending_mission_progress_lookups: Dictionary = {}
 var _is_dedicated_server := false
 var _input_sequence := 0
 var _snapshot_elapsed := 0.0
@@ -182,11 +185,29 @@ func _on_peer_connected(peer_id: int) -> void:
 		"active_job": {},
 		"completed_jobs": {},
 		"active_mission": {},
-		"completed_missions": {}
+		"completed_missions": {},
+		"walk_distance_meters": 0.0,
+		"walk_pending_meters": 0.0,
+		"walk_progress_ready": false,
+		"walk_request_active": false,
+		"walk_retry_after_usec": 0,
+		"walk_pending_event_id": "",
+		"walk_pending_event_meters": 0.0,
+		"walk_pending_event_issued_at": 0,
+		"walk_pending_event_expires_at": 0
 	}
 
 
 func _on_peer_disconnected(peer_id: int) -> void:
+	var walk_request := _walk_progress_requests.get(peer_id) as HTTPRequest
+	if is_instance_valid(walk_request):
+		walk_request.queue_free()
+	_walk_progress_requests.erase(peer_id)
+	var pending_lookup := _pending_mission_progress_lookups.get(peer_id, {}) as Dictionary
+	var pending_request := pending_lookup.get("request") as HTTPRequest
+	if is_instance_valid(pending_request):
+		pending_request.queue_free()
+	_pending_mission_progress_lookups.erase(peer_id)
 	_abort_peer_arcade_session(peer_id, "انقطع اتصال أحد المشاركين؛ أُغلقت الجلسة دون نتيجة أو مكافأة.")
 	var session: Dictionary = _sessions.get(peer_id, {})
 	var body := session.get("body") as CharacterBody3D
@@ -281,6 +302,7 @@ func _on_auth_request_completed(result: int, response_code: int, _headers: Packe
 	_sessions[peer_id]["user_id"] = user_id
 	_sessions[peer_id]["body"] = body_node
 	_sessions[peer_id]["last_auth_usec"] = Time.get_ticks_usec()
+	_request_walk_progress(peer_id, "lookup")
 	rpc_id(peer_id, "receive_authentication_result", true, "تم التحقق من حساب اللاعب.")
 	print("Authenticated game peer %d." % peer_id)
 
@@ -475,35 +497,119 @@ func request_start_mission(mission_id: String) -> void:
 	if definition.is_empty():
 		rpc_id(peer_id, "receive_mission_start_result", false, safe_mission_id, Vector3.ZERO, "هذه المهمة غير معتمدة على الخادم.")
 		return
-	var active_mission: Dictionary = session.get("active_mission", {})
-	var active_job: Dictionary = session.get("active_job", {})
-	if not active_mission.is_empty() or not active_job.is_empty():
+	if not session.get("active_mission", {}).is_empty() or not session.get("active_job", {}).is_empty():
 		rpc_id(peer_id, "receive_mission_start_result", false, safe_mission_id, Vector3.ZERO, "أنهِ النشاط الحالي أولًا.")
 		return
-	var completed_missions: Dictionary = session.get("completed_missions", {})
-	if completed_missions.has(safe_mission_id):
+	if (session.get("completed_missions", {}) as Dictionary).has(safe_mission_id):
 		rpc_id(peer_id, "receive_mission_start_result", false, safe_mission_id, Vector3.ZERO, "أنجزت هذه المهمة بالفعل في جلسة اللعب.")
 		return
 	var body := session.get("body") as CharacterBody3D
 	if not is_instance_valid(body) or body.global_position.distance_to(definition["board"]) > 5.0:
 		rpc_id(peer_id, "receive_mission_start_result", false, safe_mission_id, Vector3.ZERO, "اقترب من المبنى أولًا.")
 		return
+	if safe_mission_id.begins_with("city_adventure_"):
+		_start_server_mission_for_peer(peer_id, safe_mission_id)
+		return
+	_request_server_mission_progress_lookup(peer_id, safe_mission_id)
+
+
+func _start_server_mission_for_peer(peer_id: int, mission_id: String) -> void:
+	if not _sessions.has(peer_id) or not bool(_sessions[peer_id].get("authenticated", false)):
+		return
+	var session: Dictionary = _sessions[peer_id]
+	if not session.get("active_mission", {}).is_empty() or not session.get("active_job", {}).is_empty():
+		rpc_id(peer_id, "receive_mission_start_result", false, mission_id, Vector3.ZERO, "أنهِ النشاط الحالي أولًا.")
+		return
+	if (session.get("completed_missions", {}) as Dictionary).has(mission_id):
+		rpc_id(peer_id, "receive_mission_start_result", false, mission_id, Vector3.ZERO, "أنجزت هذه المهمة بالفعل في جلسة اللعب.")
+		return
+	var definition := _get_server_mission_definition(mission_id)
+	var body := session.get("body") as CharacterBody3D
+	if definition.is_empty() or not is_instance_valid(body) or body.global_position.distance_to(definition.get("board", Vector3.ZERO)) > 5.0:
+		rpc_id(peer_id, "receive_mission_start_result", false, mission_id, Vector3.ZERO, "تعذر تأكيد موقع بدء المهمة.")
+		return
 	var mission_stages: Array = definition.get("stages", [definition.get("target", Vector3.ZERO)])
 	if mission_stages.is_empty():
-		rpc_id(peer_id, "receive_mission_start_result", false, safe_mission_id, Vector3.ZERO, "مسار المهمة غير مكتمل على الخادم.")
+		rpc_id(peer_id, "receive_mission_start_result", false, mission_id, Vector3.ZERO, "مسار المهمة غير مكتمل على الخادم.")
 		return
 	var first_target: Vector3 = mission_stages[0]
 	session["active_mission"] = {
-		"mission_id": safe_mission_id,
+		"mission_id": mission_id,
 		"target": first_target,
 		"stages": mission_stages.duplicate(true),
 		"stage_index": 0,
 		"radius": 2.2,
 		"started_at_usec": Time.get_ticks_usec(),
-		"time_limit_seconds": 60.0 if safe_mission_id == "city_adventure_survival" else 0.0
+		"time_limit_seconds": 60.0 if mission_id == "city_adventure_survival" else 0.0
 	}
 	_sessions[peer_id] = session
-	rpc_id(peer_id, "receive_mission_start_result", true, safe_mission_id, first_target, "بدأت المهمة على الخادم. اتبع علامة الهدف.")
+	rpc_id(peer_id, "receive_mission_start_result", true, mission_id, first_target, "بدأت المهمة على الخادم. اتبع علامة الهدف.")
+
+
+func _request_server_mission_progress_lookup(peer_id: int, mission_id: String) -> void:
+	if _pending_mission_progress_lookups.has(peer_id):
+		rpc_id(peer_id, "receive_mission_start_result", false, mission_id, Vector3.ZERO, "جارٍ التحقق من سجل المهمة؛ انتظر لحظة.")
+		return
+	var session: Dictionary = _sessions.get(peer_id, {})
+	var user_id := str(session.get("user_id", ""))
+	if user_id.is_empty() or _proof_hmac_secret.size() < 32:
+		rpc_id(peer_id, "receive_mission_start_result", false, mission_id, Vector3.ZERO, "خدمة التحقق من سجل الإنجازات غير مهيأة؛ لم تبدأ المهمة.")
+		return
+	var base_url := str(ProjectSettings.get_setting("founder/auth/api_base_url", "")).strip_edges().trim_suffix("/")
+	var publishable_key := str(ProjectSettings.get_setting("founder/auth/publishable_key", "")).strip_edges()
+	if not base_url.begins_with("https://") or publishable_key.is_empty():
+		rpc_id(peer_id, "receive_mission_start_result", false, mission_id, Vector3.ZERO, "إعدادات سجل الإنجازات الخادمي غير مكتملة.")
+		return
+	var issued_at := int(Time.get_unix_time_from_system())
+	var canonical := "v1|lookup|%s|mission|%s|%d" % [user_id, mission_id, issued_at]
+	var hmac_context := HMACContext.new()
+	if hmac_context.start(HashingContext.HASH_SHA256, _proof_hmac_secret) != OK or hmac_context.update(canonical.to_utf8_buffer()) != OK:
+		rpc_id(peer_id, "receive_mission_start_result", false, mission_id, Vector3.ZERO, "تعذر توقيع طلب التحقق من سجل المهمة.")
+		return
+	var payload := {
+		"user_id": user_id,
+		"activity_kind": "mission",
+		"activity_id": mission_id,
+		"issued_at": issued_at,
+		"signature_hex": hmac_context.finish().hex_encode()
+	}
+	var request := HTTPRequest.new()
+	request.timeout = 10.0
+	add_child(request)
+	request.request_completed.connect(_on_server_mission_progress_lookup_completed.bind(request, peer_id, user_id, mission_id))
+	_pending_mission_progress_lookups[peer_id] = {"request": request, "user_id": user_id, "mission_id": mission_id}
+	var error := request.request(
+		base_url + "/functions/v1/game-progress-lookup",
+		PackedStringArray(["Content-Type: application/json", "apikey: " + publishable_key]),
+		HTTPClient.METHOD_POST,
+		JSON.stringify(payload)
+	)
+	if error != OK:
+		_pending_mission_progress_lookups.erase(peer_id)
+		request.queue_free()
+		rpc_id(peer_id, "receive_mission_start_result", false, mission_id, Vector3.ZERO, "تعذر بدء التحقق من سجل المهمة؛ لم تبدأ المهمة.")
+
+
+func _on_server_mission_progress_lookup_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray, request: HTTPRequest, peer_id: int, user_id: String, mission_id: String) -> void:
+	if is_instance_valid(request):
+		request.queue_free()
+	var pending: Dictionary = _pending_mission_progress_lookups.get(peer_id, {})
+	if pending.is_empty() or pending.get("request") != request:
+		return
+	_pending_mission_progress_lookups.erase(peer_id)
+	if not _sessions.has(peer_id) or str(_sessions[peer_id].get("user_id", "")) != user_id:
+		return
+	if result != HTTPRequest.RESULT_SUCCESS or response_code != 200:
+		rpc_id(peer_id, "receive_mission_start_result", false, mission_id, Vector3.ZERO, "تعذر التحقق من سجل إنجازاتك؛ لم تبدأ المهمة حفاظًا على تقدمك.")
+		return
+	var parsed: Variant = JSON.parse_string(body.get_string_from_utf8())
+	if not (parsed is Dictionary) or not bool(parsed.get("verified", false)) or typeof(parsed.get("completed")) != TYPE_BOOL:
+		rpc_id(peer_id, "receive_mission_start_result", false, mission_id, Vector3.ZERO, "استجابة سجل الإنجازات غير موثوقة؛ لم تبدأ المهمة.")
+		return
+	if bool(parsed.get("completed", false)):
+		rpc_id(peer_id, "receive_mission_start_result", false, mission_id, Vector3.ZERO, "أنجزت هذه المهمة سابقًا على حسابك؛ لن نكررها.")
+		return
+	_start_server_mission_for_peer(peer_id, mission_id)
 
 
 @rpc("any_peer", "call_remote", "reliable")
@@ -533,6 +639,7 @@ func request_submit_message_puzzle_answer(answer: String) -> void:
 	session["active_mission"] = {}
 	_sessions[peer_id] = session
 	rpc_id(peer_id, "receive_server_mission_completed", "city_adventure_message")
+	_issue_activity_proof(peer_id, str(session.get("user_id", "")), "mission", "city_adventure_message")
 
 
 @rpc("any_peer", "call_remote", "reliable")
@@ -608,6 +715,13 @@ func receive_server_mission_completed(mission_id: String) -> void:
 	if multiplayer.is_server() or not is_authenticated():
 		return
 	mission_completed.emit(mission_id)
+
+
+@rpc("authority", "call_remote", "reliable")
+func receive_server_activity_progress_recorded(activity_kind: String, activity_id: String, reward_eligible: bool) -> void:
+	if multiplayer.is_server() or not is_authenticated():
+		return
+	activity_progress_recorded.emit(activity_kind, activity_id, reward_eligible)
 
 
 @rpc("authority", "call_remote", "reliable")
@@ -1023,6 +1137,136 @@ func receive_arcade_session_state(session_id: String, state: String, machine_id:
 
 
 
+func _walk_signature_message(action: String, user_id: String, issued_at: int, event_id: String = "", distance_meters: float = 0.0, expires_at: int = 0) -> String:
+	if action == "lookup":
+		return "v1|walk|lookup|%s|%d" % [user_id, issued_at]
+	return "v1|walk|record|%s|%s|%.3f|%d|%d" % [user_id, event_id, distance_meters, issued_at, expires_at]
+
+
+func _request_walk_progress(peer_id: int, action: String) -> void:
+	if not multiplayer.is_server() or not _sessions.has(peer_id) or _walk_progress_requests.has(peer_id):
+		return
+	var session: Dictionary = _sessions[peer_id]
+	var user_id := str(session.get("user_id", ""))
+	if user_id.is_empty():
+		return
+	if _proof_hmac_secret.size() < 32:
+		session["walk_retry_after_usec"] = Time.get_ticks_usec() + 60000000
+		return
+	var base_url := str(ProjectSettings.get_setting("founder/auth/api_base_url", "")).strip_edges().trim_suffix("/")
+	var publishable_key := str(ProjectSettings.get_setting("founder/auth/publishable_key", "")).strip_edges()
+	if not base_url.begins_with("https://") or publishable_key.is_empty():
+		session["walk_retry_after_usec"] = Time.get_ticks_usec() + 30000000
+		return
+
+	var issued_at := int(Time.get_unix_time_from_system())
+	var event_id := ""
+	var distance_meters := 0.0
+	var expires_at := 0
+	if action == "record":
+		event_id = str(session.get("walk_pending_event_id", ""))
+		if event_id.is_empty():
+			distance_meters = floorf(minf(float(session.get("walk_pending_meters", 0.0)), 5.0) * 1000.0) / 1000.0
+			if distance_meters <= 0.0:
+				return
+			event_id = _new_server_event_uuid()
+			if event_id.is_empty():
+				return
+			expires_at = issued_at + 300
+			session["walk_pending_event_id"] = event_id
+			session["walk_pending_event_meters"] = distance_meters
+			session["walk_pending_event_issued_at"] = issued_at
+			session["walk_pending_event_expires_at"] = expires_at
+		else:
+			distance_meters = float(session.get("walk_pending_event_meters", 0.0))
+			issued_at = int(session.get("walk_pending_event_issued_at", 0))
+			expires_at = int(session.get("walk_pending_event_expires_at", 0))
+			if expires_at < int(Time.get_unix_time_from_system()):
+				# Expired unconfirmed batch is discarded rather than replayed with a new event id.
+				session["walk_pending_meters"] = maxf(0.0, float(session.get("walk_pending_meters", 0.0)) - distance_meters)
+				session["walk_pending_event_id"] = ""
+				session["walk_pending_event_meters"] = 0.0
+				session["walk_pending_event_issued_at"] = 0
+				session["walk_pending_event_expires_at"] = 0
+				session["walk_retry_after_usec"] = Time.get_ticks_usec() + 5000000
+				return
+
+	var canonical := _walk_signature_message(action, user_id, issued_at, event_id, distance_meters, expires_at)
+	var hmac_context := HMACContext.new()
+	if hmac_context.start(HashingContext.HASH_SHA256, _proof_hmac_secret) != OK or hmac_context.update(canonical.to_utf8_buffer()) != OK:
+		session["walk_retry_after_usec"] = Time.get_ticks_usec() + 5000000
+		return
+	var payload: Dictionary = {
+		"action": action,
+		"user_id": user_id,
+		"issued_at": issued_at,
+		"signature_hex": hmac_context.finish().hex_encode()
+	}
+	if action == "record":
+		payload["server_event_id"] = event_id
+		payload["distance_meters"] = distance_meters
+		payload["expires_at"] = expires_at
+
+	var request := HTTPRequest.new()
+	request.name = "WalkProgressHTTPRequest_%d" % peer_id
+	request.timeout = 10.0
+	add_child(request)
+	request.request_completed.connect(_on_walk_progress_completed.bind(peer_id, user_id, action, event_id, distance_meters))
+	var headers := PackedStringArray([
+		"Content-Type: application/json",
+		"Accept: application/json",
+		"apikey: " + publishable_key
+	])
+	var error := request.request(base_url + "/functions/v1/game-walk-progress", headers, HTTPClient.METHOD_POST, JSON.stringify(payload))
+	if error != OK:
+		request.queue_free()
+		session["walk_retry_after_usec"] = Time.get_ticks_usec() + 5000000
+		return
+	session["walk_request_active"] = true
+	_walk_progress_requests[peer_id] = request
+
+
+func _on_walk_progress_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray, peer_id: int, user_id: String, action: String, event_id: String, distance_meters: float) -> void:
+	var request := _walk_progress_requests.get(peer_id) as HTTPRequest
+	_walk_progress_requests.erase(peer_id)
+	if is_instance_valid(request):
+		request.queue_free()
+	if not _sessions.has(peer_id):
+		return
+	var session: Dictionary = _sessions[peer_id]
+	if str(session.get("user_id", "")) != user_id:
+		return
+	session["walk_request_active"] = false
+	if result != HTTPRequest.RESULT_SUCCESS or response_code < 200 or response_code >= 300:
+		session["walk_retry_after_usec"] = Time.get_ticks_usec() + 5000000
+		return
+	var parsed: Variant = JSON.parse_string(body.get_string_from_utf8())
+	if not (parsed is Dictionary) or not bool(parsed.get("verified", false)):
+		session["walk_retry_after_usec"] = Time.get_ticks_usec() + 5000000
+		return
+	var total_meters := float(parsed.get("total_meters", -1.0))
+	if not is_finite(total_meters) or total_meters < 0.0 or total_meters > 100000000.0:
+		session["walk_retry_after_usec"] = Time.get_ticks_usec() + 5000000
+		return
+	session["walk_distance_meters"] = maxf(float(session.get("walk_distance_meters", 0.0)), total_meters)
+	if action == "lookup":
+		session["walk_progress_ready"] = true
+		session["first_steps_recorded"] = total_meters >= 100.0
+	else:
+		if bool(parsed.get("recorded", false)) and str(session.get("walk_pending_event_id", "")) == event_id:
+			session["walk_pending_meters"] = maxf(0.0, float(session.get("walk_pending_meters", 0.0)) - distance_meters)
+			session["walk_pending_event_id"] = ""
+			session["walk_pending_event_meters"] = 0.0
+			session["walk_pending_event_issued_at"] = 0
+			session["walk_pending_event_expires_at"] = 0
+		if bool(parsed.get("achievement_unlocked", false)):
+			session["first_steps_recorded"] = true
+			session["walk_pending_meters"] = 0.0
+			if multiplayer.get_peers().has(peer_id):
+				rpc_id(peer_id, "receive_server_activity_progress_recorded", "achievement", "first_steps", false)
+	session["walk_retry_after_usec"] = 0
+
+
 func _notify_proof_issue_failed(peer_id: int, activity_kind: String, activity_id: String, message: String) -> void:
 	if _sessions.has(peer_id) and multiplayer.get_peers().has(peer_id):
 		rpc_id(peer_id, "receive_server_activity_proof_failed", activity_kind, activity_id, message)
@@ -1130,17 +1374,38 @@ func _on_proof_issue_completed(result: int, response_code: int, _headers: Packed
 		_notify_proof_issue_failed(peer_id, activity_kind, activity_id, "لم تصدر خدمة المكافآت إثباتًا صالحًا؛ لم تُمنح مكافأة.")
 		return
 	var parsed: Variant = JSON.parse_string(body.get_string_from_utf8())
-	var proof_id := str(parsed.get("proof_id", "")) if parsed is Dictionary else ""
-	var uuid_pattern := RegEx.new()
-	uuid_pattern.compile("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$")
-	if uuid_pattern.search(proof_id) == null:
-		push_warning("Trusted proof issuer returned an invalid proof response.")
-		_notify_proof_issue_failed(peer_id, activity_kind, activity_id, "استجابة إثبات المكافأة غير صالحة.")
+	if not (parsed is Dictionary) or not bool(parsed.get("progress_recorded", false)):
+		push_warning("Trusted game server progress recorder returned an invalid response.")
+		_notify_proof_issue_failed(peer_id, activity_kind, activity_id, "لم يؤكد الخادم حفظ الإنجاز.")
 		return
+	var reward_eligible := bool(parsed.get("reward_eligible", false))
+	var proof_id := str(parsed.get("proof_id", ""))
 	var user_id := str(payload.get("user_id", ""))
 	if not _sessions.has(peer_id) or str(_sessions[peer_id].get("user_id", "")) != user_id:
 		return
-	rpc_id(peer_id, "receive_server_activity_proof", activity_kind, activity_id, proof_id)
+	rpc_id(peer_id, "receive_server_activity_progress_recorded", activity_kind, activity_id, reward_eligible)
+	var uuid_pattern := RegEx.new()
+	uuid_pattern.compile("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$")
+	if proof_id.is_empty() == false:
+		if uuid_pattern.search(proof_id) == null:
+			push_warning("Trusted progress recorder returned an invalid reward proof id.")
+			_notify_proof_issue_failed(peer_id, activity_kind, activity_id, "استجابة إثبات المكافأة غير صالحة.")
+			return
+		rpc_id(peer_id, "receive_server_activity_proof", activity_kind, activity_id, proof_id)
+	if bool(parsed.get("achievement_unlocked", false)):
+		rpc_id(
+			peer_id,
+			"receive_server_activity_progress_recorded",
+			"achievement",
+			"explorer",
+			bool(parsed.get("achievement_reward_eligible", false))
+		)
+		var achievement_proof_id := str(parsed.get("achievement_proof_id", "")).strip_edges()
+		if not achievement_proof_id.is_empty():
+			if uuid_pattern.search(achievement_proof_id) == null:
+				push_warning("Trusted progress recorder returned an invalid Explorer achievement proof id.")
+			else:
+				rpc_id(peer_id, "receive_server_activity_proof", "achievement", "explorer", achievement_proof_id)
 
 
 func register_server_objective_zone(activity_kind: String, activity_id: String, center: Vector3, radius: float) -> bool:
@@ -1196,6 +1461,10 @@ func _physics_process(delta: float) -> void:
 		if not is_instance_valid(body):
 			continue
 		var current_position := body.global_position
+		var movement_start_position := current_position
+		var was_grounded := body.is_on_floor()
+		if not bool(session.get("walk_progress_ready", false)) and not bool(session.get("walk_request_active", false)) and now_usec >= int(session.get("walk_retry_after_usec", 0)):
+			_request_walk_progress(peer_id, "lookup")
 		var outside_city := absf(current_position.x) > 155.0 or current_position.z < -340.0 or current_position.z > 180.0
 		if current_position.y < -3.0 or outside_city:
 			var safe_position: Vector3 = session.get("last_safe_position", SPAWN_POSITION)
@@ -1228,6 +1497,14 @@ func _physics_process(delta: float) -> void:
 		body.move_and_slide()
 		if direction.length() > 0.1:
 			body.rotation.y = atan2(direction.x, direction.z)
+		if bool(session.get("walk_progress_ready", false)) and not bool(session.get("first_steps_recorded", false)) and was_grounded and body.is_on_floor() and direction.length() > 0.1 and not outside_city:
+			var verified_step := Vector2(body.global_position.x - movement_start_position.x, body.global_position.z - movement_start_position.z).length()
+			var maximum_step := RUN_SPEED * safe_delta + 0.12
+			if is_finite(verified_step) and verified_step > 0.0 and verified_step <= maximum_step:
+				var remaining_distance := maxf(0.0, 100.0 - float(session.get("walk_distance_meters", 0.0)) - float(session.get("walk_pending_meters", 0.0)))
+				session["walk_pending_meters"] = float(session.get("walk_pending_meters", 0.0)) + minf(verified_step, remaining_distance)
+		if float(session.get("walk_pending_meters", 0.0)) >= 1.0 and not bool(session.get("walk_request_active", false)) and now_usec >= int(session.get("walk_retry_after_usec", 0)):
+			_request_walk_progress(peer_id, "record")
 		session["velocity"] = body.velocity
 		session = _evaluate_server_objective_zones(peer_id, session, body)
 		var active_job: Dictionary = session.get("active_job", {})
@@ -1281,8 +1558,8 @@ func _physics_process(delta: float) -> void:
 							var completed_missions: Dictionary = session.get("completed_missions", {})
 							completed_missions[completed_mission_id] = true
 							session["completed_missions"] = completed_missions
-							server_objective_reached.emit(str(session.get("user_id", "")), "mission", completed_mission_id)
-							_issue_activity_proof(peer_id, str(session.get("user_id", "")), "mission", completed_mission_id)
+						server_objective_reached.emit(str(session.get("user_id", "")), "mission", completed_mission_id)
+						_issue_activity_proof(peer_id, str(session.get("user_id", "")), "mission", completed_mission_id)
 		_sessions[peer_id] = session
 	_snapshot_elapsed += safe_delta
 	if _snapshot_elapsed >= SNAPSHOT_INTERVAL:
