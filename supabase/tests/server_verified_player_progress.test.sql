@@ -1,5 +1,5 @@
 begin;
-select extensions.plan(41);
+select extensions.plan(58);
 
 insert into auth.users (id,aud,role,email,encrypted_password,email_confirmed_at)
 values
@@ -263,6 +263,100 @@ select extensions.is(
     1,'enabled Explorer achievement creates exactly one reward proof'
 );
 
+
+select extensions.ok(
+    not pg_catalog.has_function_privilege('authenticated','public.record_server_verified_walk_distance(uuid,uuid,numeric,text,timestamp with time zone,timestamp with time zone)','EXECUTE'),
+    'authenticated clients cannot submit server walk distance'
+);
+select extensions.ok(
+    pg_catalog.has_function_privilege('service_role','public.record_server_verified_walk_distance(uuid,uuid,numeric,text,timestamp with time zone,timestamp with time zone)','EXECUTE'),
+    'only trusted service role can record server walk distance'
+);
+select extensions.ok(
+    not pg_catalog.has_table_privilege('service_role','private.player_verified_walk_distance_events','UPDATE'),
+    'walk distance event ledger is append-only for service role'
+);
+select extensions.ok(
+    not pg_catalog.has_table_privilege('service_role','private.player_verified_walk_distance_events','DELETE'),
+    'walk distance event ledger cannot be deleted by service role'
+);
+
+create temporary table walk_first_event on commit drop as
+select public.record_server_verified_walk_distance(
+    '00000000-0000-4000-8000-000000000061',
+    '60000000-0000-4000-8000-000000000031',
+    4.500,pg_catalog.repeat('a1',32),pg_catalog.now(),pg_catalog.now()+interval '5 minutes'
+) as result;
+
+select extensions.is((select result->>'recorded' from walk_first_event),'true','first signed walk increment is recorded');
+select extensions.is((select result->>'total_meters' from walk_first_event),'4.500','server distance is accumulated precisely to millimeters');
+
+select extensions.is(
+    (public.record_server_verified_walk_distance(
+        '00000000-0000-4000-8000-000000000061',
+        '60000000-0000-4000-8000-000000000031',
+        4.500,pg_catalog.repeat('a1',32),
+        (select verified_at from private.player_verified_walk_distance_events where server_event_id='60000000-0000-4000-8000-000000000031'),
+        (select verified_at from private.player_verified_walk_distance_events where server_event_id='60000000-0000-4000-8000-000000000031')+interval '5 minutes'
+    )->>'duplicate'),
+    'true','replaying the same walk event does not add distance twice'
+);
+select extensions.throws_ok(
+    $select public.record_server_verified_walk_distance(
+        '00000000-0000-4000-8000-000000000061',
+        '60000000-0000-4000-8000-000000000031',
+        4.000,repeat('a1',32),now(),now()+interval '5 minutes'
+    )$,
+    '23505','server_walk_event_conflict','reusing a walk event id with different distance is rejected'
+);
+select extensions.throws_ok(
+    $select public.record_server_verified_walk_distance(
+        '00000000-0000-4000-8000-000000000061',
+        '60000000-0000-4000-8000-000000000032',
+        5.001,repeat('a2',32),now(),now()+interval '5 minutes'
+    )$,
+    '22023','invalid_server_walk_progress_payload','a single walk increment cannot exceed five meters'
+);
+
+select pg_catalog.count(*)::integer as walk_batch_count
+from (
+    select public.record_server_verified_walk_distance(
+        '00000000-0000-4000-8000-000000000061',
+        pg_catalog.gen_random_uuid(),
+        5.000,
+        pg_catalog.encode(extensions.digest(pg_catalog.gen_random_uuid()::text,'sha256'),'hex'),
+        pg_catalog.now(),pg_catalog.now()+interval '5 minutes'
+    )
+    from pg_catalog.generate_series(1,19)
+) as walk_batch;
+
+select extensions.is(
+    public.get_server_verified_walk_distance('00000000-0000-4000-8000-000000000061'),
+    99.500::numeric,
+    'nineteen bounded increments accumulate to 99.5 meters after the initial 4.5'
+);
+
+create temporary table first_steps_unlock on commit drop as
+select public.record_server_verified_walk_distance(
+    '00000000-0000-4000-8000-000000000061',
+    '60000000-0000-4000-8000-000000000033',
+    0.500,pg_catalog.repeat('a3',32),pg_catalog.now(),pg_catalog.now()+interval '5 minutes'
+) as result;
+
+select extensions.is((select result->>'total_meters' from first_steps_unlock),'100.000','walk ledger reaches exactly one hundred meters');
+select extensions.is((select result->>'achievement_unlocked' from first_steps_unlock),'true','one hundred server-verified meters unlock First Steps');
+select extensions.is(
+    (select count(*)::integer from private.player_verified_activity_progress where user_id='00000000-0000-4000-8000-000000000061' and activity_kind='achievement' and activity_id='first_steps'),
+    1,'First Steps is persisted exactly once per account'
+);
+select extensions.is(
+    (select reward_eligible_at_completion from private.player_verified_activity_progress where user_id='00000000-0000-4000-8000-000000000061' and activity_kind='achievement' and activity_id='first_steps'),
+    false,'First Steps is recorded without reward eligibility'
+);
+select extensions.is(
+    (select count(*)::integer from private.player_activity_proofs where user_id='00000000-0000-4000-8000-000000000061' and activity_kind='achievement' and activity_id='first_steps'),
+    0,'First Steps does not create a reward proof'
+);
 
 reset role;
 set local role authenticated;
