@@ -22,6 +22,7 @@ func _initialize() -> void:
 	_check(main_source.contains('str(parsed_claims.get("subject_id", "")) != PlayerAccountAuthClient.get_user_id()'), "Founder tickets must match the active player account.")
 	_check(main_source.contains("FounderAuthClient.request_founder_entitlement_with_access_token(access_token)"), "Founder entitlement must be checked automatically after the player session is active.")
 	_check(not main_source.contains("_on_founder_verify_current_player_account"), "There must be no separate founder verification action.")
+	_check(not main_source.contains("founder_pin_gate") and not main_source.contains("_on_founder_pin_submit"), "Founder entry must not open a separate PIN login gate.")
 	_check(main_source.contains("المتابعة باستخدام Google"), "The login screen must expose the single Google sign-in button.")
 	_check(not main_source.contains("player_account_code_input") and not main_source.contains("player_account_email_input") and not main_source.contains("founder_email_gate"), "Player UI must not ask for an email or a six-digit code.")
 	_check(android_plugin.contains("getPendingAuthLink") and android_plugin.contains("clearPendingAuthLink"), "Android plugin must expose callback retrieval and clearing.")
