@@ -285,7 +285,7 @@ func _build_open_fuel_station() -> void:
 	# No enclosed building, door, interaction prompt, or entry trigger is created.
 	var station := Node3D.new()
 	station.name = "OpenFuelStation"
-	station.position = Vector3(-75.0, 0.0, 38.0)
+	station.position = Vector3(-74.0, 0.0, 38.0)
 	station.add_to_group("city_world_geometry")
 	station.add_to_group("approved_city_buildings")
 	add_child(station)
