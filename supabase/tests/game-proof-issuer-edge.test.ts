@@ -114,6 +114,9 @@ Deno.test("persists server progress when reward catalog is disabled without crea
       duplicate: false,
       reward_eligible: false,
       proof_id: null,
+      achievement_unlocked: false,
+      achievement_reward_eligible: false,
+      achievement_proof_id: null,
     });
   }));
   const response = await handler(post(await signedBody()));
@@ -129,6 +132,9 @@ Deno.test("returns a proof only when the server catalog allowed rewards at compl
     duplicate: false,
     reward_eligible: true,
     proof_id: PROOF_ID,
+    achievement_unlocked: false,
+    achievement_reward_eligible: false,
+    achievement_proof_id: null,
   })));
   const response = await handler(post(await signedBody("mission.progress_reward_test")));
   const data = await response.json();

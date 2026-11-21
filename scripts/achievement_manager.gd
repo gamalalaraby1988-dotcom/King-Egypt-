@@ -12,6 +12,7 @@ var last_position := Vector3.ZERO
 var totals: Dictionary = {"jobs": 0, "missions": 0, "daily_claims": 0}
 var unlocked: Dictionary = {}
 var server_verified_building_missions: Dictionary = {}
+var _last_online_ready := false
 var definitions: Array[Dictionary] = [
 	{"id":"first_steps", "title":"أول خطواتك", "description":"امشِ أو اجرِ لمسافة 100 متر", "kind":"walk", "target":100, "money":100, "chips":0},
 	{"id":"worker", "title":"عامل مجتهد", "description":"أكمل 3 وظائف ميدانية", "kind":"jobs", "target":3, "money":250, "chips":0},
@@ -46,7 +47,13 @@ func _ready() -> void:
 	_check_all()
 
 func _process(_delta: float) -> void:
-	if GameModeManager.is_online_ready():
+	var online_ready := GameModeManager.is_online_ready()
+	if online_ready != _last_online_ready:
+		_last_online_ready = online_ready
+		_refresh_ui()
+		if online_ready and is_instance_valid(PlayerSyncClient):
+			PlayerSyncClient.fetch_verified_activity_progress()
+	if online_ready:
 		return
 	if not is_instance_valid(player):
 		return
@@ -218,7 +225,7 @@ func _refresh_ui() -> void:
 		if achievement_id == "explorer" and GameModeManager.is_online_ready():
 			amount = mini(server_verified_building_missions.size(), int(item["target"]))
 			done = amount >= int(item["target"])
-			reward_text = "مكافأة خادمية غير مفعلة" if done else "تُعتمد بعد توثيق المهام الثلاث"
+			reward_text = "المكافأة الخادمية غير متاحة حاليًا" if done else "تُحتسب بعد توثيق المهام الثلاث"
 		if done:
 			count += 1
 		var mark := "🏆" if done else "🔒"

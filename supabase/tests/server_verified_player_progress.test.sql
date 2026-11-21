@@ -1,10 +1,11 @@
 begin;
-select extensions.plan(37);
+select extensions.plan(41);
 
 insert into auth.users (id,aud,role,email,encrypted_password,email_confirmed_at)
 values
 ('00000000-0000-4000-8000-000000000061','authenticated','authenticated','verified-progress-test@example.invalid','',pg_catalog.now()),
-('00000000-0000-4000-8000-000000000062','authenticated','authenticated','verified-progress-other@example.invalid','',pg_catalog.now())
+('00000000-0000-4000-8000-000000000062','authenticated','authenticated','verified-progress-other@example.invalid','',pg_catalog.now()),
+('00000000-0000-4000-8000-000000000063','authenticated','authenticated','verified-explorer-reward@example.invalid','',pg_catalog.now())
 on conflict (id) do nothing;
 
 insert into private.player_activity_reward_catalog (
@@ -226,6 +227,40 @@ select extensions.is(
 select extensions.is(
     (select count(*)::integer from private.player_activity_proofs where user_id='00000000-0000-4000-8000-000000000061' and activity_kind='achievement' and activity_id='explorer'),
     0,'disabled Explorer rewards do not create a proof'
+);
+
+
+update private.player_activity_reward_catalog
+set enabled = true
+where activity_kind = 'achievement' and activity_id = 'explorer';
+
+select public.record_server_verified_activity_progress(
+    '00000000-0000-4000-8000-000000000063',
+    'mission','mission_shop',
+    '60000000-0000-4000-8000-000000000024',
+    pg_catalog.repeat('05',32),pg_catalog.now(),pg_catalog.now()+interval '5 minutes'
+);
+select public.record_server_verified_activity_progress(
+    '00000000-0000-4000-8000-000000000063',
+    'mission','mission_restaurant',
+    '60000000-0000-4000-8000-000000000025',
+    pg_catalog.repeat('06',32),pg_catalog.now(),pg_catalog.now()+interval '5 minutes'
+);
+
+create temporary table explorer_reward_enabled_result on commit drop as
+select public.record_server_verified_activity_progress(
+    '00000000-0000-4000-8000-000000000063',
+    'mission','mission_employment',
+    '60000000-0000-4000-8000-000000000026',
+    pg_catalog.repeat('07',32),pg_catalog.now(),pg_catalog.now()+interval '5 minutes'
+) as result;
+
+select extensions.is((select result->>'achievement_unlocked' from explorer_reward_enabled_result),'true','Explorer unlock is returned when the third mission is completed');
+select extensions.is((select result->>'achievement_reward_eligible' from explorer_reward_enabled_result),'true','Explorer reward eligibility is captured when the catalog is enabled');
+select extensions.ok(pg_catalog.jsonb_typeof((select result->'achievement_proof_id' from explorer_reward_enabled_result))='string','enabled Explorer achievement receives a server proof');
+select extensions.is(
+    (select count(*)::integer from private.player_activity_proofs where user_id='00000000-0000-4000-8000-000000000063' and activity_kind='achievement' and activity_id='explorer'),
+    1,'enabled Explorer achievement creates exactly one reward proof'
 );
 
 
