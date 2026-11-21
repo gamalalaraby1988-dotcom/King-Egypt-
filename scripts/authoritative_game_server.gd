@@ -436,11 +436,16 @@ func authenticate_player(access_token: String, reservation_id: String = "") -> v
 		return
 	if _city_directory_enabled:
 		var reservation_regex := RegEx.new()
-		reservation_regex.compile("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$")
+		reservation_regex.compile("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$")
 		if reservation_regex.search(reservation_id) == null:
 			_reject_peer(peer_id, "حجز جلسة المدينة غير صالح أو منتهي.")
 			return
-		_sessions[peer_id]["reservation_id"] = reservation_id
+		if bool(_sessions[peer_id].get("authenticated", false)):
+			if str(_sessions[peer_id].get("reservation_id", "")) != reservation_id:
+				_reject_peer(peer_id, "لا يمكن تغيير حجز الجلسة أثناء الاتصال.")
+				return
+		else:
+			_sessions[peer_id]["reservation_id"] = reservation_id
 	if access_token.length() < 40 or access_token.length() > 8192:
 		_reject_peer(peer_id, "رمز جلسة الحساب غير صالح.")
 		return
