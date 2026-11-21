@@ -12,6 +12,8 @@ extends CharacterBody3D
 var mobile_move: Vector2 = Vector2.ZERO
 var mobile_sprint: bool = false
 var sitting := false
+var _active_emote := ""
+var _emote_remaining := 0.0
 var arcade_seated := false
 var _sit_key_was_down := false
 var _arcade_touch_index: int = -1
@@ -35,6 +37,33 @@ func _ready() -> void:
 		var avatar := get_node_or_null("AvatarVisual")
 		if is_instance_valid(avatar) and avatar.has_method("apply_founder_style"):
 			avatar.call("apply_founder_style")
+
+func _process(delta: float) -> void:
+	if _emote_remaining <= 0.0:
+		return
+	_emote_remaining = maxf(0.0, _emote_remaining - delta)
+	if _emote_remaining == 0.0:
+		_active_emote = ""
+
+
+func play_emote(emote_id: String) -> bool:
+	# التعبيرات محلية في هذه المرحلة؛ لا يوجد بروتوكول خادمي لمزامنتها بعد.
+	if sitting or arcade_seated or animal_riding:
+		return false
+	var durations := {
+		"clap": 2.4,
+		"dance": 4.0,
+		"cry": 3.0,
+		"wave": 2.2,
+		"heart": 2.6
+	}
+	if not durations.has(emote_id):
+		return false
+	_active_emote = emote_id
+	_emote_remaining = float(durations[emote_id])
+	_update_avatar_animation(_active_emote, 0.0)
+	return true
+
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not arcade_seated or not is_instance_valid(camera_pivot):
@@ -134,7 +163,7 @@ func _physics_process(delta: float) -> void:
 	var motion_state := "idle"
 	if planar_speed > 0.25:
 		motion_state = "run" if running else "walk"
-	_update_avatar_animation(motion_state, planar_speed)
+	_update_avatar_animation(_active_emote if not _active_emote.is_empty() else motion_state, planar_speed)
 
 func _process_online_input() -> void:
 	if not AuthoritativeGameServer.is_authenticated():
@@ -166,7 +195,7 @@ func _apply_authoritative_state(server_position: Vector3, server_rotation_y: flo
 	rotation.y = server_rotation_y
 	velocity = server_velocity
 	var planar_speed := Vector2(velocity.x, velocity.z).length()
-	_update_avatar_animation("run" if planar_speed > 4.2 else "walk" if planar_speed > 0.25 else ("sit" if sitting else "idle"), planar_speed)
+	_update_avatar_animation(_active_emote if not _active_emote.is_empty() else ("run" if planar_speed > 4.2 else "walk" if planar_speed > 0.25 else ("sit" if sitting else "idle")), planar_speed)
 
 
 func is_riding_animal() -> bool:
