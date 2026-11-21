@@ -1,8 +1,9 @@
-[gd_scene load_steps=7 format=3]
+[gd_scene load_steps=8 format=3]
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
 [ext_resource type="PackedScene" path="res://scenes/player.tscn" id="2_player"]
 [ext_resource type="Shader" path="res://shaders/royal_cinematic_sky.gdshader" id="3_royal_sky"]
+[ext_resource type="Script" path="res://scripts/city_day_night_cycle.gd" id="4_day_night"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_royal_sky"]
 shader = ExtResource("3_royal_sky")
@@ -34,6 +35,9 @@ script = ExtResource("1_main")
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment_main")
+
+[node name="DayNightCycle" type="Node" parent="."]
+script = ExtResource("4_day_night")
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
 rotation = Vector3(-0.8, -0.5, 0)
