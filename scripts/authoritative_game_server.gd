@@ -117,30 +117,39 @@ func is_authenticated() -> bool:
 func start_dedicated_server() -> void:
 	if not _is_dedicated_server or _server_peer != null:
 		return
-	var key_path := OS.get_environment("KING_CITY_TLS_KEY_PATH").strip_edges()
-	var cert_path := OS.get_environment("KING_CITY_TLS_CERT_PATH").strip_edges()
-	if key_path.is_empty() or cert_path.is_empty():
-		push_error("Dedicated server requires KING_CITY_TLS_KEY_PATH and KING_CITY_TLS_CERT_PATH.")
-		return
-	var private_key := CryptoKey.new()
-	var key_error := private_key.load(key_path)
-	var certificate := X509Certificate.new()
-	var cert_error := certificate.load(cert_path)
-	if key_error != OK or cert_error != OK:
-		push_error("Dedicated server TLS key/certificate could not be loaded.")
-		return
-	var tls_options := TLSOptions.server(private_key, certificate)
+	var proxy_terminates_tls := OS.get_environment("KING_CITY_TLS_TERMINATED_BY_PROXY").strip_edges().to_lower() in ["1", "true", "yes"]
 	_server_peer = WebSocketMultiplayerPeer.new()
-	var port := int(OS.get_environment("KING_CITY_GAME_PORT")) if not OS.get_environment("KING_CITY_GAME_PORT").is_empty() else DEFAULT_PORT
-	var error := _server_peer.create_server(port, "0.0.0.0", tls_options)
+	var port_value := OS.get_environment("KING_CITY_GAME_PORT").strip_edges()
+	var port := int(port_value) if not port_value.is_empty() else DEFAULT_PORT
+	var error: Error = OK
+	if proxy_terminates_tls:
+		# Render terminates public HTTPS/WSS. Keep the unencrypted WS hop inside
+		# this container only; never expose this listener directly to the internet.
+		error = _server_peer.create_server(port, "127.0.0.1")
+	else:
+		var key_path := OS.get_environment("KING_CITY_TLS_KEY_PATH").strip_edges()
+		var cert_path := OS.get_environment("KING_CITY_TLS_CERT_PATH").strip_edges()
+		if key_path.is_empty() or cert_path.is_empty():
+			push_error("Dedicated server requires TLS key/certificate paths or KING_CITY_TLS_TERMINATED_BY_PROXY=1.")
+			return
+		var private_key := CryptoKey.new()
+		var key_error := private_key.load(key_path)
+		var certificate := X509Certificate.new()
+		var cert_error := certificate.load(cert_path)
+		if key_error != OK or cert_error != OK:
+			push_error("Dedicated server TLS key/certificate could not be loaded.")
+			return
+		var tls_options := TLSOptions.server(private_key, certificate)
+		error = _server_peer.create_server(port, "0.0.0.0", tls_options)
 	if error != OK:
-		push_error("Could not start secure WebSocket game server: %s" % error_string(error))
+		push_error("Could not start WebSocket game server: %s" % error_string(error))
 		_server_peer = null
 		return
 	multiplayer.multiplayer_peer = _server_peer
 	multiplayer.peer_connected.connect(_on_peer_connected)
 	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
-	print("KING OF EGYPT CITY authoritative WSS server listening on TCP port %d." % port)
+	var transport_label := "WS behind trusted TLS proxy" if proxy_terminates_tls else "WSS"
+	print("KING OF EGYPT CITY authoritative %s server listening on port %d." % [transport_label, port])
 
 
 func clear_client_session() -> void:
