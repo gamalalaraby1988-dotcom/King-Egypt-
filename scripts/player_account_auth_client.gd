@@ -15,7 +15,6 @@ const PKCE_TOKEN_PATH := "/auth/v1/token?grant_type=pkce"
 const REFRESH_PATH := "/auth/v1/token?grant_type=refresh_token"
 const MAGIC_LINK_REDIRECT_URI := "kingofegyptcity://auth-callback"
 const PKCE_VERIFIER_ALIAS := "king_of_egypt_city.player.magic_link_verifier.v1"
-const PENDING_EMAIL_ALIAS := "king_of_egypt_city.player.magic_link_email.v1"
 const DEEP_LINK_PLUGIN_SINGLETON := "FounderSecureStorage"
 const PROFILE_PATH := "/rest/v1/player_profiles"
 const SECURE_STORAGE_SINGLETON := "FounderSecureStorage"
@@ -91,16 +90,15 @@ func get_user_id() -> String:
 func get_email() -> String:
 	return _email
 
-func request_email_magic_link(email: String) -> bool:
-	var normalized := email.strip_edges().to_lower()
+func request_google_sign_in() -> bool:
 	if _pending_action != "":
 		request_finished.emit(false, "هناك طلب حساب قيد التنفيذ.")
 		return false
-	if not _valid_email(normalized) or not is_configured():
-		request_finished.emit(false, "أدخل بريدًا صحيحًا وتأكد من إعداد خدمة الحسابات.")
+	if not is_configured():
+		request_finished.emit(false, "إعدادات خدمة الحسابات غير مكتملة.")
 		return false
 	if OS.get_name() == "Android" and not _android_deep_link_ready():
-		request_finished.emit(false, "نسخة Android لا تحتوي بعد على مكوّن استقبال رابط الدخول.")
+		request_finished.emit(false, "نسخة Android لا تحتوي على مكوّن استقبال رابط Google.")
 		return false
 	var verifier_bytes := Crypto.new().generate_random_bytes(32)
 	if verifier_bytes.size() != 32:
@@ -110,7 +108,7 @@ func request_email_magic_link(email: String) -> bool:
 	var hashing := HashingContext.new()
 	if hashing.start(HashingContext.HASH_SHA256) != OK:
 		_pending_code_verifier = ""
-		request_finished.emit(false, "تعذر تجهيز حماية رابط الدخول.")
+		request_finished.emit(false, "تعذر تجهيز حماية تسجيل الدخول.")
 		return false
 	hashing.update(_pending_code_verifier.to_utf8_buffer())
 	var challenge := _base64url(hashing.finish())
@@ -118,21 +116,23 @@ func request_email_magic_link(email: String) -> bool:
 	if storage != null and storage.has_method("save_secret"):
 		if not bool(storage.call("save_secret", PKCE_VERIFIER_ALIAS, _pending_code_verifier)):
 			_pending_code_verifier = ""
-			request_finished.emit(false, "تعذر حفظ حماية رابط الدخول على هذا الجهاز.")
+			request_finished.emit(false, "تعذر حفظ حماية تسجيل الدخول على هذا الجهاز.")
 			return false
-		storage.call("save_secret", PENDING_EMAIL_ALIAS, normalized)
 	elif OS.get_name() == "Android":
 		_pending_code_verifier = ""
-		request_finished.emit(false, "التخزين الآمن في Android غير متاح؛ لم يتم إرسال الرابط.")
+		request_finished.emit(false, "التخزين الآمن في Android غير متاح؛ لم يتم فتح Google.")
 		return false
-	_pending_email = normalized
-	var redirect_query := "?redirect_to=" + MAGIC_LINK_REDIRECT_URI.uri_encode()
-	return _send_auth_request(OTP_PATH + redirect_query, {
-		"email": normalized,
-		"create_user": false,
-		"code_challenge": challenge,
-		"code_challenge_method": "s256"
-	}, "request_magic_link")
+	var redirect_query := "?provider=google&redirect_to=" + MAGIC_LINK_REDIRECT_URI.uri_encode()
+	redirect_query += "&code_challenge=" + challenge.uri_encode()
+	redirect_query += "&code_challenge_method=s256"
+	var authorize_url := _api_base_url() + "/auth/v1/authorize" + redirect_query
+	var open_error := OS.shell_open(authorize_url)
+	if open_error != OK:
+		_clear_pending_magic_link()
+		request_finished.emit(false, "تعذر فتح صفحة تسجيل الدخول باستخدام Google.")
+		return false
+	request_finished.emit(true, "اختر حساب Google المرتبط بشخصيتك الأصلية، ثم عُد إلى اللعبة.")
+	return true
 
 func _android_deep_link_ready() -> bool:
 	if not Engine.has_singleton(DEEP_LINK_PLUGIN_SINGLETON):
@@ -148,15 +148,13 @@ func _handle_magic_link_callback(link: String) -> void:
 		return
 	var auth_code := _url_parameter(link, "code")
 	if auth_code.is_empty():
-		request_finished.emit(false, "رابط الدخول غير مكتمل أو انتهت صلاحيته. اطلب رابطًا جديدًا.")
+		request_finished.emit(false, "لم يكتمل رد Google أو انتهت صلاحيته. أعد المحاولة.")
 		return
 	var storage := _secure_storage()
 	if _pending_code_verifier.is_empty() and storage != null and storage.has_method("load_secret"):
 		_pending_code_verifier = str(storage.call("load_secret", PKCE_VERIFIER_ALIAS))
-	if _pending_email.is_empty() and storage != null and storage.has_method("load_secret"):
-		_pending_email = str(storage.call("load_secret", PENDING_EMAIL_ALIAS))
 	if _pending_code_verifier.is_empty():
-		request_finished.emit(false, "تعذر استعادة حماية رابط الدخول. أعد طلب رابط جديد من اللعبة.")
+		request_finished.emit(false, "تعذر استعادة حماية Google. ابدأ تسجيل الدخول من اللعبة مجددًا.")
 		return
 	if _pending_action != "":
 		return
@@ -179,7 +177,6 @@ func _clear_pending_magic_link() -> void:
 	var storage := _secure_storage()
 	if storage != null and storage.has_method("delete_secret"):
 		storage.call("delete_secret", PKCE_VERIFIER_ALIAS)
-		storage.call("delete_secret", PENDING_EMAIL_ALIAS)
 	_pending_code_verifier = ""
 	_pending_email = ""
 
@@ -232,7 +229,7 @@ func _on_auth_request_completed(result: int, response_code: int, _headers: Packe
 		return
 	match action:
 		"request_magic_link":
-			request_finished.emit(true, "تم إرسال رابط الدخول. افتح الرسالة واضغط الرابط للعودة إلى اللعبة تلقائيًا.")
+			request_finished.emit(true, "تم فتح تسجيل الدخول باستخدام Google. أكمل الاختيار ثم عُد إلى اللعبة.")
 		"verify_magic_link":
 			_accept_session_response(response, false)
 		"refresh":
@@ -271,7 +268,7 @@ func _accept_session_response(response: Dictionary, was_restoring: bool) -> void
 	if was_restoring:
 		request_finished.emit(true, "تم استعادة حساب اللاعب بأمان.")
 	else:
-		request_finished.emit(true, "تم تسجيل الدخول والتحقق من حساب اللاعب.")
+		request_finished.emit(true, "تم تسجيل الدخول والتحقق من حساب Google.")
 
 func _secure_storage() -> Object:
 	if not Engine.has_singleton(SECURE_STORAGE_SINGLETON):
@@ -423,6 +420,6 @@ func _safe_error(response: Dictionary) -> String:
 		"otp_disabled":
 			return "التحقق عبر البريد غير مفعّل حاليًا."
 		"flow_state_expired", "bad_code_verifier":
-			return "انتهت صلاحية رابط الدخول أو تعذر التحقق منه. اطلب رابطًا جديدًا."
+			return "انتهت صلاحية جلسة Google أو تعذر التحقق منها. أعد المحاولة."
 		_:
-			return "تعذر تسجيل الدخول. راجع الرمز وحاول مرة أخرى."
+			return "تعذر تسجيل الدخول باستخدام Google. حاول مرة أخرى."
