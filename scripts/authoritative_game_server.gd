@@ -33,6 +33,7 @@ const SPAWN_POSITION := Vector3(0.0, 1.0, -42.0)
 var _server_peer: WebSocketMultiplayerPeer
 var _sessions: Dictionary = {}
 var _auth_requests: Dictionary = {}
+var _walk_progress_requests: Dictionary = {}
 var _pending_mission_progress_lookups: Dictionary = {}
 var _is_dedicated_server := false
 var _input_sequence := 0
@@ -184,11 +185,24 @@ func _on_peer_connected(peer_id: int) -> void:
 		"active_job": {},
 		"completed_jobs": {},
 		"active_mission": {},
-		"completed_missions": {}
+		"completed_missions": {},
+		"walk_distance_meters": 0.0,
+		"walk_pending_meters": 0.0,
+		"walk_progress_ready": false,
+		"walk_request_active": false,
+		"walk_retry_after_usec": 0,
+		"walk_pending_event_id": "",
+		"walk_pending_event_meters": 0.0,
+		"walk_pending_event_issued_at": 0,
+		"walk_pending_event_expires_at": 0
 	}
 
 
 func _on_peer_disconnected(peer_id: int) -> void:
+	var walk_request := _walk_progress_requests.get(peer_id) as HTTPRequest
+	if is_instance_valid(walk_request):
+		walk_request.queue_free()
+	_walk_progress_requests.erase(peer_id)
 	var pending_lookup := _pending_mission_progress_lookups.get(peer_id, {}) as Dictionary
 	var pending_request := pending_lookup.get("request") as HTTPRequest
 	if is_instance_valid(pending_request):
@@ -288,6 +302,7 @@ func _on_auth_request_completed(result: int, response_code: int, _headers: Packe
 	_sessions[peer_id]["user_id"] = user_id
 	_sessions[peer_id]["body"] = body_node
 	_sessions[peer_id]["last_auth_usec"] = Time.get_ticks_usec()
+	_request_walk_progress(peer_id, "lookup")
 	rpc_id(peer_id, "receive_authentication_result", true, "تم التحقق من حساب اللاعب.")
 	print("Authenticated game peer %d." % peer_id)
 
@@ -1316,6 +1331,10 @@ func _physics_process(delta: float) -> void:
 		if not is_instance_valid(body):
 			continue
 		var current_position := body.global_position
+		var movement_start_position := current_position
+		var was_grounded := body.is_on_floor()
+		if not bool(session.get("walk_progress_ready", false)) and not bool(session.get("walk_request_active", false)) and now_usec >= int(session.get("walk_retry_after_usec", 0)):
+			_request_walk_progress(peer_id, "lookup")
 		var outside_city := absf(current_position.x) > 155.0 or current_position.z < -340.0 or current_position.z > 180.0
 		if current_position.y < -3.0 or outside_city:
 			var safe_position: Vector3 = session.get("last_safe_position", SPAWN_POSITION)
@@ -1348,6 +1367,13 @@ func _physics_process(delta: float) -> void:
 		body.move_and_slide()
 		if direction.length() > 0.1:
 			body.rotation.y = atan2(direction.x, direction.z)
+		if bool(session.get("walk_progress_ready", false)) and was_grounded and body.is_on_floor() and direction.length() > 0.1 and not outside_city:
+			var verified_step := Vector2(body.global_position.x - movement_start_position.x, body.global_position.z - movement_start_position.z).length()
+			var maximum_step := RUN_SPEED * safe_delta + 0.12
+			if is_finite(verified_step) and verified_step > 0.0 and verified_step <= maximum_step:
+				session["walk_pending_meters"] = float(session.get("walk_pending_meters", 0.0)) + verified_step
+		if float(session.get("walk_pending_meters", 0.0)) >= 5.0 and not bool(session.get("walk_request_active", false)) and now_usec >= int(session.get("walk_retry_after_usec", 0)):
+			_request_walk_progress(peer_id, "record")
 		session["velocity"] = body.velocity
 		session = _evaluate_server_objective_zones(peer_id, session, body)
 		var active_job: Dictionary = session.get("active_job", {})
