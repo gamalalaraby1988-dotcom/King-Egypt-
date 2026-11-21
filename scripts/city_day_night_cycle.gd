@@ -8,6 +8,9 @@ var _world_environment: WorldEnvironment
 var _directional_light: DirectionalLight3D
 var _environment: Environment
 var _sky_material: ShaderMaterial
+var _city_night_lights: Array[OmniLight3D] = []
+var _city_window_materials: Array[StandardMaterial3D] = []
+var _last_night_amount: float = -1.0
 
 
 func _ready() -> void:
@@ -32,6 +35,7 @@ func _ready() -> void:
 		return
 	_elapsed_seconds = initial_cycle_progress * cycle_duration_seconds
 	_apply_cycle()
+	call_deferred("_cache_city_lighting_nodes")
 
 
 func _process(delta: float) -> void:
@@ -63,3 +67,32 @@ func _apply_cycle() -> void:
 	_directional_light.look_at(-sun_direction, light_up)
 	_directional_light.light_color = Color(1.0, 0.48, 0.30, 1.0).lerp(Color(1.0, 0.84, 0.68, 1.0), daylight)
 	_directional_light.light_energy = lerpf(0.035, 1.15, daylight) + twilight * 0.12
+	_apply_city_night_lighting(daylight)
+
+func _cache_city_lighting_nodes() -> void:
+	_city_night_lights.clear()
+	_city_window_materials.clear()
+	for node in get_tree().get_nodes_in_group("city_night_lights"):
+		if node is OmniLight3D:
+			_city_night_lights.append(node as OmniLight3D)
+	for node in get_tree().get_nodes_in_group("city_night_windows"):
+		if node is GeometryInstance3D:
+			var material := (node as GeometryInstance3D).material_override as StandardMaterial3D
+			if material != null:
+				_city_window_materials.append(material)
+	_last_night_amount = -1.0
+	_apply_cycle()
+
+
+func _apply_city_night_lighting(daylight: float) -> void:
+	var night_amount := 1.0 - smoothstep(0.15, 0.62, daylight)
+	if absf(night_amount - _last_night_amount) < 0.025:
+		return
+	_last_night_amount = night_amount
+	for light in _city_night_lights:
+		if is_instance_valid(light):
+			light.light_energy = 0.72 * night_amount
+	for material in _city_window_materials:
+		if is_instance_valid(material):
+			material.emission = Color(0.018, 0.055, 0.07).lerp(Color(1.0, 0.46, 0.14), night_amount)
+			material.emission_energy_multiplier = lerpf(0.025, 1.25, night_amount)
