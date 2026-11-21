@@ -673,6 +673,53 @@ func _build_main_street_wall_ads() -> void:
 		title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		mural.add_child(title_label)
 
+		_add_founder_mural_inlay(mural)
+
+
+func _add_founder_mural_inlay(parent: Node3D) -> void:
+	# Fine gold inlay is attached directly to the facade; it decorates the wall,
+	# rather than creating a plaque, backing panel, or picture frame.
+	var gold := StandardMaterial3D.new()
+	gold.albedo_color = Color(0.72, 0.48, 0.17)
+	gold.metallic = 0.72
+	gold.roughness = 0.3
+	gold.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
+
+	var details := [
+		{"name":"WingLeftOuter", "size":Vector3(0.92, 0.035, 0.018), "pos":Vector3(-0.94, 1.36, 0.185), "rot":-0.10},
+		{"name":"WingLeftInner", "size":Vector3(0.62, 0.025, 0.018), "pos":Vector3(-0.83, 1.27, 0.185), "rot":-0.24},
+		{"name":"WingRightOuter", "size":Vector3(0.92, 0.035, 0.018), "pos":Vector3(0.94, 1.36, 0.185), "rot":0.10},
+		{"name":"WingRightInner", "size":Vector3(0.62, 0.025, 0.018), "pos":Vector3(0.83, 1.27, 0.185), "rot":0.24},
+		{"name":"LowerGoldRule", "size":Vector3(2.2, 0.018, 0.018), "pos":Vector3(0.0, -1.06, 0.185), "rot":0.0},
+		{"name":"LeftVerticalGlyph", "size":Vector3(0.035, 0.54, 0.018), "pos":Vector3(-1.58, 0.35, 0.185), "rot":0.0},
+		{"name":"RightVerticalGlyph", "size":Vector3(0.035, 0.54, 0.018), "pos":Vector3(1.58, 0.35, 0.185), "rot":0.0}
+	]
+	for detail in details:
+		var piece := MeshInstance3D.new()
+		piece.name = str(detail["name"])
+		var mesh := BoxMesh.new()
+		mesh.size = detail["size"]
+		piece.mesh = mesh
+		piece.position = detail["pos"]
+		piece.rotation.z = float(detail["rot"])
+		piece.material_override = gold
+		piece.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		parent.add_child(piece)
+
+	# Small raised-gold sun disk and rays, kept in the same wall plane.
+	var sun := MeshInstance3D.new()
+	sun.name = "FounderMuralSunDisk"
+	var sun_mesh := CylinderMesh.new()
+	sun_mesh.top_radius = 0.13
+	sun_mesh.bottom_radius = 0.13
+	sun_mesh.height = 0.018
+	sun_mesh.radial_segments = 24
+	sun.mesh = sun_mesh
+	sun.position = Vector3(0.0, 1.39, 0.185)
+	sun.rotation.x = PI * 0.5
+	sun.material_override = gold
+	sun.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	parent.add_child(sun)
 
 func _tree(parent: Node3D, label: String, at: Vector3, scale_factor: float = 1.0) -> void:
 	var root := Node3D.new()
