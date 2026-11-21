@@ -340,7 +340,7 @@ jobs:
           LOG="/tmp/godot-render-previews.log"
           mkdir -p artifacts
           set +e
-          xvfb-run -a "$GODOT" --path . --rendering-method gl_compatibility --script res://tests/capture_production_scene_previews.gd 2>&1 | tee "$LOG"
+          xvfb-run -a "$GODOT" --audio-driver Dummy --path . --rendering-method gl_compatibility --script res://tests/capture_production_scene_previews.gd 2>&1 | tee "$LOG"
           GODOT_STATUS=${PIPESTATUS[0]}
           set -e
           if [ "$GODOT_STATUS" -ne 0 ] || grep -E '(^|[[:space:]])(ERROR|SCRIPT ERROR):|Parse Error:|Could not load|Could not save rendered preview' "$LOG"; then
