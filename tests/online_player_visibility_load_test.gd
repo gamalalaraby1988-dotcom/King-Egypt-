@@ -6,10 +6,6 @@ var _failed := 0
 
 func _initialize() -> void:
 	var server := SERVER_SCRIPT.new() as Node
-	root.add_child(server)
-	server.set_process(false)
-	server.set_physics_process(false)
-	await process_frame
 	for player_count in [5, 10, 20]:
 		var sessions := _make_sessions(server, player_count, "city-main", 2.0)
 		server.set("_sessions", sessions)
@@ -44,7 +40,7 @@ func _initialize() -> void:
 			_expect(int(remote.get("peer_id", 0)) != 100, "unauthenticated peers are hidden")
 			_expect(int(remote.get("peer_id", 0)) != 101, "players outside visibility radius are hidden")
 	_free_sessions(isolated_sessions)
-	server.queue_free()
+	server.free()
 
 	if _failed > 0:
 		push_error("Online player visibility load simulation failed: %d" % _failed)
@@ -65,7 +61,7 @@ func _make_player_session(server: Node, peer_id: int, instance_id: String, playe
 	var body := CharacterBody3D.new()
 	body.name = "LoadTestPlayer_%d" % peer_id
 	body.position = player_position
-	server.add_child(body)
+	root.add_child(body)
 	return {
 		"authenticated": true,
 		"instance_id": instance_id,
