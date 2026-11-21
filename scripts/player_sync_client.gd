@@ -288,7 +288,8 @@ func _on_progress_recovery_completed(result: int, response_code: int, _headers: 
 			return
 		var key := str(item.get("progress_key", ""))
 		var value: Variant = item.get("progress_value", -1)
-		if key.length() < 1 or key.length() > 80 or typeof(value) != TYPE_INT or int(value) < 0 or int(value) > 1000000:
+		var numeric_value := float(value) if typeof(value) in [TYPE_INT, TYPE_FLOAT] else -1.0
+		if key.length() < 1 or key.length() > 80 or typeof(value) not in [TYPE_INT, TYPE_FLOAT] or not is_finite(numeric_value) or numeric_value < 0.0 or numeric_value > 1000000.0 or floorf(numeric_value) != numeric_value:
 			progress_observations_finished.emit(false, "تحتوي قائمة التقدم على قيمة خارج الحدود.")
 			return
 		if not (key.begins_with("mission.") or key.begins_with("achievement.") or key.begins_with("activity.")):
