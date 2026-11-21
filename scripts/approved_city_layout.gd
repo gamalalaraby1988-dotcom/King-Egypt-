@@ -17,6 +17,7 @@ func _ready() -> void:
 	_build_nile_waterfront()
 	_build_pyramids()
 	_build_royal_gate_and_square()
+	_build_royal_square_mosaic_mural()
 	_build_royal_square_landscaping()
 	_build_waterfront_landscaping()
 	_build_beach_handball_court()
@@ -1662,3 +1663,115 @@ func _build_npc_population() -> void:
 	population.name = "CityNPCPopulation"
 	population.set_script(population_script)
 	add_child(population)
+
+
+func _build_royal_square_mosaic_mural() -> void:
+	# Temporary first-pass in-world mosaic mural on the palace facade facing the royal square.
+	# It is built from the same scene geometry (one colored MultiMesh), not a separate concept image.
+	var palace := get_node_or_null("Approved_royal_palace") as Node3D
+	if palace == null:
+		push_warning("تعذر العثور على واجهة القصر لوضع جدارية الفسيفساء.")
+		return
+
+	var mural := Node3D.new()
+	mural.name = "RoyalSquareHistoricalMosaicPreview"
+	mural.position = Vector3(-6.45, 5.55, 8.03)
+	mural.add_to_group("royal_square_mosaic_preview")
+	palace.add_child(mural)
+
+	var tile_mesh := BoxMesh.new()
+	tile_mesh.size = Vector3(0.172, 0.172, 0.045)
+	var tile_material := StandardMaterial3D.new()
+	tile_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	tile_material.vertex_color_use_as_albedo = true
+	tile_material.roughness = 0.92
+	var multi := MultiMesh.new()
+	multi.transform_format = MultiMesh.TRANSFORM_3D
+	multi.use_colors = true
+	multi.mesh = tile_mesh
+
+	var columns := 30
+	var rows := 17
+	var transforms: Array[Transform3D] = []
+	var colors: Array[Color] = []
+	var blue := Color(0.035, 0.23, 0.34)
+	var turquoise := Color(0.08, 0.48, 0.49)
+	var gold := Color(0.88, 0.62, 0.22)
+	var dark_gold := Color(0.47, 0.29, 0.10)
+	var sandstone := Color(0.78, 0.62, 0.40)
+	var skin := Color(0.86, 0.66, 0.45)
+	var dark := Color(0.12, 0.10, 0.08)
+	var red := Color(0.58, 0.16, 0.12)
+	var ivory := Color(0.91, 0.82, 0.64)
+
+	for row in range(rows):
+		for column in range(columns):
+			var u := float(column) / float(columns - 1)
+			var v := float(row) / float(rows - 1)
+			var color := blue if (column + row) % 3 != 0 else turquoise
+			var border := column == 0 or column == columns - 1 or row == 0 or row == rows - 1
+			if border:
+				color = gold if (column + row) % 2 == 0 else dark_gold
+			else:
+				# A stylized pharaonic profile in the left half of the mosaic.
+				var face_dx := (u - 0.34) / 0.19
+				var face_dy := (v - 0.48) / 0.34
+				if face_dx * face_dx + face_dy * face_dy < 1.0:
+					color = skin
+				if u > 0.24 and u < 0.47 and v > 0.18 and v < 0.31:
+					color = gold if column % 3 == 0 else dark_gold
+				if absf(u - 0.41) < 0.025 and absf(v - 0.47) < 0.025:
+					color = dark
+				if absf(u - 0.49) < 0.018 and v > 0.35 and v < 0.72:
+					color = gold
+				# Gold-and-red royal headdress stripes.
+				if u > 0.18 and u < 0.52 and v > 0.16 and v < 0.28 and row % 2 == 0:
+					color = red if column % 3 == 0 else gold
+				# A horse and chariot procession occupies the lower-right area.
+				var horse_body := u > 0.59 and u < 0.84 and v > 0.57 and v < 0.75
+				var horse_neck := u > 0.77 and u < 0.86 and v > 0.42 and v < 0.64
+				var horse_head := u > 0.82 and u < 0.91 and v > 0.38 and v < 0.49
+				if horse_body or horse_neck or horse_head:
+					color = sandstone
+				if u > 0.62 and u < 0.68 and v > 0.72 and v < 0.91:
+					color = dark_gold
+				if u > 0.77 and u < 0.82 and v > 0.72 and v < 0.91:
+					color = dark_gold
+				# Chariot wheel and long reins.
+				var wheel_dx := (u - 0.91) / 0.065
+				var wheel_dy := (v - 0.75) / 0.12
+				if wheel_dx * wheel_dx + wheel_dy * wheel_dy < 1.0:
+					color = gold if absf(wheel_dx * wheel_dx + wheel_dy * wheel_dy - 0.55) < 0.32 else red
+				if u > 0.50 and u < 0.83 and absf(v - (0.34 + (u - 0.50) * 0.55)) < 0.018:
+					color = ivory
+				# Small hieroglyphic-inspired gold marks along the upper field.
+				if v < 0.18 and int(u * 100.0) % 7 < 2:
+					color = gold
+
+			var tile_x := -2.70 + float(column) * 0.186
+			var tile_y := -1.49 + float(row) * 0.186
+			transforms.append(Transform3D(Basis.IDENTITY, Vector3(tile_x, tile_y, 0.0)))
+			colors.append(color)
+
+	multi.instance_count = transforms.size()
+	for index in range(transforms.size()):
+		multi.set_instance_transform(index, transforms[index])
+		multi.set_instance_color(index, colors[index])
+
+	var tiles := MultiMeshInstance3D.new()
+	tiles.name = "RoyalHistoricalMosaicTiles"
+	tiles.multimesh = multi
+	tiles.material_override = tile_material
+	tiles.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mural.add_child(tiles)
+
+	# Slim inlaid edges sit flush with the wall and visually finish the mosaic.
+	for side in [-1.0, 1.0]:
+		var edge := MeshInstance3D.new()
+		edge.name = "MosaicGoldSideInlay"
+		var edge_mesh := BoxMesh.new()
+		edge_mesh.size = Vector3(0.055, 3.22, 0.045)
+		edge.mesh = edge_mesh
+		edge.position = Vector3(side * 2.84, 0.0, 0.0)
+		edge.material_override = _mat(gold, 0.58)
+		mural.add_child(edge)
