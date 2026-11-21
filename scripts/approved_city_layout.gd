@@ -644,6 +644,12 @@ func _build_main_street_wall_ads() -> void:
 			var facade_piece := building.get_node_or_null(facade_name) as MeshInstance3D
 			if facade_piece != null:
 				facade_piece.material_override = sandstone_wall
+		# The detailed facade disappears beyond 140m. Its LOD proxy used the
+		# generic ivory body, which caused the distant mural buildings to lose
+		# the sandstone finish. Match the proxy body to the real facade material.
+		var lod_body := building.get_node_or_null("BuildingLODProxy/LowDetailBuildingBody") as MeshInstance3D
+		if lod_body != null:
+			lod_body.material_override = sandstone_wall
 		var mural := Node3D.new()
 		mural.name = "FounderWallMural_" + str(spec["id"])
 		# The image and lettering sit almost flush to the plaster facade, with no projecting frame.
