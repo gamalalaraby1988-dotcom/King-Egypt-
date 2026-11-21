@@ -414,58 +414,38 @@ func _build_royal_gate_and_square() -> void:
 	gate.add_to_group("approved_city_landmarks")
 	add_child(gate)
 
+	# Load the exact authored GLB asset used for the gate preview. Founder identity
+	# remains a runtime texture and text plaque attached to this same model.
+	var gate_scene := load("res://assets/models/royal_gate.glb") as PackedScene
+	if gate_scene == null:
+		push_error("تعذر تحميل مجسم البوابة الملكية: res://assets/models/royal_gate.glb")
+		return
+	var gate_model := gate_scene.instantiate() as Node3D
+	if gate_model == null:
+		push_error("ملف البوابة الملكية لم ينتج Node3D صالحًا.")
+		return
+	gate_model.name = "RoyalGateGLB"
+	gate.add_child(gate_model)
+	for mesh_node in gate_model.find_children("*", "MeshInstance3D", true, false):
+		mesh_node.add_to_group("city_world_geometry")
+
+	# Preserve walkable passage and prevent the player from walking through pylons.
+	_add_static_box_collision(gate, "RoyalEntranceWalkableCollision", Vector3(17.2, 0.22, 8.0), Vector3(0.0, 0.11, 0.0))
+	for side in [-1.0, 1.0]:
+		_add_static_box_collision(
+			gate,
+			"RoyalGatePylonCollision",
+			Vector3(4.35, 8.6, 3.7),
+			Vector3(side * 8.55, 4.3, 0.0)
+		)
+
 	var black := Color(0.018, 0.022, 0.026)
 	var gold := Color(0.88, 0.62, 0.22)
 	var dark_gold := Color(0.48, 0.31, 0.10)
-	var marble := Color(0.78, 0.72, 0.60)
 
-	# Walkable ceremonial threshold: the center lane stays unobstructed.
-	_box(gate, "RoyalEntranceBlackMarbleFloor", Vector3(17.0, 0.18, 8.0), Vector3(0.0, 0.09, 0.0), black)
-	_add_static_box_collision(gate, "RoyalEntranceWalkableCollision", Vector3(17.0, 0.18, 8.0), Vector3(0.0, 0.09, 0.0))
-	_box(gate, "RoyalEntranceGoldCenterline", Vector3(1.15, 0.025, 7.6), Vector3(0.0, 0.195, 0.0), gold)
-	for side in [-1.0, 1.0]:
-		_box(gate, "RoyalEntranceGoldFloorBorder", Vector3(0.16, 0.035, 7.6), Vector3(side * 8.25, 0.205, 0.0), gold)
-		_box(gate, "RoyalEntrancePharaonicFloorMotif", Vector3(2.0, 0.035, 1.35), Vector3(side * 5.8, 0.205, 0.0), dark_gold)
-
-	# Symmetrical black-and-gold towers, replacing the former plain pillars.
-	for side in [-1.0, 1.0]:
-		var tower := Node3D.new()
-		tower.name = "RoyalGateTower_Left" if side < 0.0 else "RoyalGateTower_Right"
-		tower.position = Vector3(side * 8.65, 0.0, 0.0)
-		gate.add_child(tower)
-		_box(tower, "TowerMarbleBase", Vector3(4.15, 0.65, 3.6), Vector3(0.0, 0.325, 0.0), marble)
-		_box(tower, "TowerBlackBody", Vector3(3.65, 7.0, 3.15), Vector3(0.0, 4.15, 0.0), black)
-		_box(tower, "TowerGoldFrontPanel", Vector3(2.65, 5.5, 0.10), Vector3(0.0, 4.25, 1.63), dark_gold)
-		_box(tower, "TowerGoldVerticalTrim", Vector3(0.14, 6.6, 0.12), Vector3(-1.72, 4.15, 1.66), gold)
-		_box(tower, "TowerGoldVerticalTrim", Vector3(0.14, 6.6, 0.12), Vector3(1.72, 4.15, 1.66), gold)
-		_box(tower, "TowerUpperCornice", Vector3(4.25, 0.45, 3.7), Vector3(0.0, 7.75, 0.0), gold)
-		_box(tower, "TowerCrownCap", Vector3(3.3, 0.65, 3.0), Vector3(0.0, 8.3, 0.0), dark_gold)
-		_box(tower, "TowerCrownTip", Vector3(0.55, 1.0, 0.55), Vector3(0.0, 9.1, 0.0), gold)
-		for glyph_y in [2.2, 3.1, 4.0, 4.9, 5.8]:
-			_box(tower, "TowerPharaonicGlyphBand", Vector3(2.1, 0.055, 0.13), Vector3(0.0, glyph_y, 1.70), gold)
-
-	# Wide lintel and a raised central Egyptian sun-wing emblem.
-	_box(gate, "RoyalGateMainBeam", Vector3(22.0, 1.0, 2.5), Vector3(0.0, 8.15, 0.0), black)
-	_box(gate, "RoyalGateBeamGoldFrontTrim", Vector3(21.6, 0.16, 0.12), Vector3(0.0, 7.62, 1.28), gold)
-	_box(gate, "RoyalGateBeamGoldTopTrim", Vector3(22.0, 0.18, 2.6), Vector3(0.0, 8.72, 0.0), gold)
-	var sun_disk := MeshInstance3D.new()
-	sun_disk.name = "RoyalWingedSunDisk"
-	var sun_mesh := SphereMesh.new()
-	sun_mesh.radius = 0.72
-	sun_mesh.height = 1.44
-	sun_mesh.radial_segments = 12
-	sun_mesh.rings = 6
-	sun_disk.mesh = sun_mesh
-	sun_disk.position = Vector3(0.0, 9.45, 1.42)
-	sun_disk.material_override = _mat(gold, 0.72)
-	gate.add_child(sun_disk)
-	for side in [-1.0, 1.0]:
-		_box(gate, "RoyalSunWing", Vector3(2.0, 0.18, 0.22), Vector3(side * 1.55, 9.48, 1.42), gold)
-
-	# Founder portrait mount: load the approved portrait asset directly into the royal gate frame.
+	# Founder portrait frame and founder identity are intentionally live scene nodes.
 	_box(gate, "FounderPortraitOuterFrame", Vector3(6.6, 3.55, 0.42), Vector3(0.0, 11.15, 1.36), gold)
 	_box(gate, "FounderPortraitInnerFrame", Vector3(6.18, 3.13, 0.16), Vector3(0.0, 11.15, 1.60), dark_gold)
-	# Load the founder's uploaded portrait directly onto the reserved framed surface.
 	var founder_portrait_path := "res://assets/founder/founder_portrait.jpg"
 	if ResourceLoader.exists(founder_portrait_path):
 		var portrait_texture := load(founder_portrait_path) as Texture2D
@@ -486,6 +466,7 @@ func _build_royal_gate_and_square() -> void:
 	else:
 		push_warning("Founder portrait asset is missing: " + founder_portrait_path)
 		_box(gate, "FounderPortraitTextureSlot", Vector3(5.82, 2.78, 0.08), Vector3(0.0, 11.15, 1.71), black)
+
 	_box(gate, "FounderNamePlaque", Vector3(6.8, 1.05, 0.38), Vector3(0.0, 8.95, 1.38), black)
 	var founder_name := Label3D.new()
 	founder_name.name = "FounderName"
@@ -497,6 +478,7 @@ func _build_royal_gate_and_square() -> void:
 	founder_name.outline_size = 8
 	founder_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	gate.add_child(founder_name)
+
 	var founder_title := Label3D.new()
 	founder_title.name = "FounderTitle"
 	founder_title.text = "FOUNDER OF KING OF EGYPT CITY"
@@ -508,77 +490,9 @@ func _build_royal_gate_and_square() -> void:
 	founder_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	gate.add_child(founder_title)
 
-	# Two stylized royal guardian statues flank the opening without narrowing it.
-	for side in [-1.0, 1.0]:
-		var guardian := Node3D.new()
-		guardian.name = "RoyalPharaohGuardian_Left" if side < 0.0 else "RoyalPharaohGuardian_Right"
-		guardian.position = Vector3(side * 6.3, 0.0, 1.9)
-		gate.add_child(guardian)
-		var body := MeshInstance3D.new()
-		body.name = "GuardianBody"
-		var body_mesh := CylinderMesh.new()
-		body_mesh.top_radius = 0.48
-		body_mesh.bottom_radius = 0.68
-		body_mesh.height = 2.7
-		body_mesh.radial_segments = 8
-		body.mesh = body_mesh
-		body.position.y = 1.35
-		body.material_override = _mat(dark_gold, 0.48)
-		guardian.add_child(body)
-		var head := MeshInstance3D.new()
-		head.name = "GuardianHead"
-		var head_mesh := SphereMesh.new()
-		head_mesh.radius = 0.62
-		head_mesh.height = 1.18
-		head_mesh.radial_segments = 10
-		head.mesh = head_mesh
-		head.position = Vector3(0.0, 3.05, 0.0)
-		head.material_override = _mat(gold, 0.62)
-		guardian.add_child(head)
-		_box(guardian, "GuardianHeaddress", Vector3(1.25, 1.2, 0.85), Vector3(0.0, 3.65, -0.12), dark_gold)
-
-	# Additional monumental crown and layered Egyptian reliefs enrich the gate silhouette.
-	for side in [-1.0, 1.0]:
-		var crown_wing := _box(gate, "RoyalGateCrownWingRelief", Vector3(3.2, 0.22, 0.22), Vector3(side * 5.25, 9.12, 1.74), gold)
-		crown_wing.rotation.z = side * -0.10
-		_box(gate, "RoyalGateTowerLowerGoldBelt", Vector3(3.78, 0.22, 3.25), Vector3(side * 8.65, 1.15, 0.0), gold)
-		_box(gate, "RoyalGateTowerUpperGoldBelt", Vector3(3.82, 0.18, 3.28), Vector3(side * 8.65, 6.95, 0.0), gold)
-		_box(gate, "RoyalGateTowerFrontCartouche", Vector3(1.75, 2.25, 0.16), Vector3(side * 8.65, 4.05, 1.72), black)
-		_box(gate, "RoyalGateTowerCartoucheGoldInset", Vector3(1.48, 1.98, 0.08), Vector3(side * 8.65, 4.05, 1.82), gold)
-		# Slim obelisk-like finials sit outside the vehicle opening.
-		var finial := MeshInstance3D.new()
-		finial.name = "RoyalGateObeliskFinial"
-		var finial_mesh := CylinderMesh.new()
-		finial_mesh.top_radius = 0.0
-		finial_mesh.bottom_radius = 0.38
-		finial_mesh.height = 2.2
-		finial_mesh.radial_segments = 4
-		finial.mesh = finial_mesh
-		finial.position = Vector3(side * 11.35, 1.1, 0.0)
-		finial.material_override = _mat(gold, 0.72)
-		gate.add_child(finial)
-
-	# A second gold edge makes the founder portrait read as a royal medallion.
 	_box(gate, "FounderPortraitRoyalTopCrown", Vector3(2.0, 0.24, 0.48), Vector3(0.0, 13.02, 1.40), gold)
 	for side in [-1.0, 1.0]:
 		_box(gate, "FounderPortraitRoyalSideGem", Vector3(0.28, 0.62, 0.28), Vector3(side * 3.42, 11.15, 1.52), gold)
-
-	# Low-cost warm emissive accents; no real-time shadows or dynamic light cost.
-	var glow_material := StandardMaterial3D.new()
-	glow_material.albedo_color = gold
-	glow_material.emission_enabled = true
-	glow_material.emission = Color(0.95, 0.48, 0.12)
-	glow_material.emission_energy_multiplier = 0.8
-	glow_material.roughness = 0.3
-	for side in [-1.0, 1.0]:
-		var light_strip := MeshInstance3D.new()
-		light_strip.name = "RoyalGateEmissiveColumnTrim"
-		var strip_mesh := BoxMesh.new()
-		strip_mesh.size = Vector3(0.12, 6.8, 0.1)
-		light_strip.mesh = strip_mesh
-		light_strip.position = Vector3(side * 8.65, 4.2, 1.82)
-		light_strip.material_override = glow_material
-		gate.add_child(light_strip)
 
 	var gate_name := Label3D.new()
 	gate_name.name = "RoyalGateCityName"
