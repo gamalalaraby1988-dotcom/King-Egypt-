@@ -5,6 +5,7 @@ extends Node
 
 signal authentication_completed(success: bool, message: String)
 signal authoritative_state_received(position: Vector3, rotation_y: float, velocity: Vector3)
+signal remote_players_received(players: Array)
 signal server_objective_reached(user_id: String, activity_kind: String, activity_id: String)
 signal job_start_result(success: bool, job_id: String, target: Vector3, message: String)
 signal job_completed(job_id: String)
@@ -28,6 +29,7 @@ const RUN_SPEED := 6.2
 const ACCELERATION := 18.0
 const GRAVITY := 20.0
 const SNAPSHOT_INTERVAL := 0.05
+const MAX_PLAYER_VISIBILITY_DISTANCE := 140.0
 const SPAWN_POSITION := Vector3(0.0, 1.0, -42.0)
 
 var _server_peer: WebSocketMultiplayerPeer
@@ -170,6 +172,7 @@ func _on_peer_connected(peer_id: int) -> void:
 	_sessions[peer_id] = {
 		"authenticated": false,
 		"user_id": "",
+		"instance_id": "city-main",
 		"body": null,
 		"direction": Vector3.ZERO,
 		"sprint": false,
@@ -1564,14 +1567,63 @@ func _physics_process(delta: float) -> void:
 	_snapshot_elapsed += safe_delta
 	if _snapshot_elapsed >= SNAPSHOT_INTERVAL:
 		_snapshot_elapsed = 0.0
+		var remote_snapshots_by_peer := _build_remote_player_snapshots()
 		for peer_id_variant in _sessions.keys():
 			var peer_id := int(peer_id_variant)
 			var session: Dictionary = _sessions[peer_id]
 			if not bool(session.get("authenticated", false)):
 				continue
 			var body := session.get("body") as CharacterBody3D
-			if is_instance_valid(body):
-				rpc_id(peer_id, "receive_authoritative_state", body.global_position, body.rotation.y, body.velocity)
+			if not is_instance_valid(body):
+				continue
+			rpc_id(peer_id, "receive_authoritative_state", body.global_position, body.rotation.y, body.velocity)
+			var remote_players: Array = remote_snapshots_by_peer.get(peer_id, [])
+			rpc_id(peer_id, "receive_remote_players", remote_players)
+
+
+func _build_remote_player_snapshots() -> Dictionary:
+	var snapshots_by_instance: Dictionary = {}
+	var bodies_by_peer: Dictionary = {}
+	for source_peer_variant in _sessions.keys():
+		var source_peer := int(source_peer_variant)
+		var source_session: Dictionary = _sessions[source_peer]
+		if not bool(source_session.get("authenticated", false)):
+			continue
+		var source_body := source_session.get("body") as CharacterBody3D
+		if not is_instance_valid(source_body):
+			continue
+		var instance_id := str(source_session.get("instance_id", "city-main"))
+		if not snapshots_by_instance.has(instance_id):
+			snapshots_by_instance[instance_id] = []
+		(snapshots_by_instance[instance_id] as Array).append({
+			"peer_id": source_peer,
+			"position": source_body.global_position,
+			"rotation_y": source_body.rotation.y,
+			"velocity": source_body.velocity
+		})
+		bodies_by_peer[source_peer] = source_body
+
+	var snapshots_by_peer: Dictionary = {}
+	for peer_id_variant in bodies_by_peer.keys():
+		var peer_id := int(peer_id_variant)
+		var session: Dictionary = _sessions[peer_id]
+		var body := bodies_by_peer[peer_id] as CharacterBody3D
+		var instance_id := str(session.get("instance_id", "city-main"))
+		var same_instance_players: Array = snapshots_by_instance.get(instance_id, [])
+		var remote_players: Array = []
+		for player_snapshot_variant in same_instance_players:
+			var player_snapshot: Dictionary = player_snapshot_variant
+			if int(player_snapshot.get("peer_id", 0)) == peer_id:
+				continue
+			var remote_position: Vector3 = player_snapshot.get("position", Vector3.ZERO)
+			if body.global_position.distance_squared_to(remote_position) <= pow(MAX_PLAYER_VISIBILITY_DISTANCE, 2.0):
+				remote_players.append(player_snapshot)
+		snapshots_by_peer[peer_id] = remote_players
+	return snapshots_by_peer
+
+
+
+
 
 
 @rpc("authority", "call_remote", "unreliable_ordered")
@@ -1579,6 +1631,45 @@ func receive_authoritative_state(position: Vector3, rotation_y: float, velocity:
 	if multiplayer.is_server() or not is_authenticated():
 		return
 	authoritative_state_received.emit(position, rotation_y, velocity)
+
+
+@rpc("authority", "call_remote", "unreliable_ordered")
+func receive_remote_players(players: Array) -> void:
+	if multiplayer.is_server() or not is_authenticated():
+		return
+	var safe_players: Array = []
+	var seen_peer_ids: Dictionary = {}
+	for player_variant in players:
+		if not (player_variant is Dictionary):
+			continue
+		var player: Dictionary = player_variant
+		var peer_id_variant: Variant = player.get("peer_id", 0)
+		var position_variant: Variant = player.get("position", null)
+		var rotation_variant: Variant = player.get("rotation_y", 0.0)
+		var velocity_variant: Variant = player.get("velocity", null)
+		if not (peer_id_variant is int) or int(peer_id_variant) <= 0 or int(peer_id_variant) == multiplayer.get_unique_id():
+			continue
+		if seen_peer_ids.has(int(peer_id_variant)) or not (position_variant is Vector3) or not (velocity_variant is Vector3):
+			continue
+		if not (rotation_variant is float or rotation_variant is int):
+			continue
+		var remote_position: Vector3 = position_variant
+		var remote_velocity: Vector3 = velocity_variant
+		var remote_rotation := float(rotation_variant)
+		if not is_finite(remote_position.x) or not is_finite(remote_position.y) or not is_finite(remote_position.z):
+			continue
+		if not is_finite(remote_velocity.x) or not is_finite(remote_velocity.y) or not is_finite(remote_velocity.z) or not is_finite(remote_rotation):
+			continue
+		seen_peer_ids[int(peer_id_variant)] = true
+		safe_players.append({
+			"peer_id": int(peer_id_variant),
+			"position": remote_position,
+			"rotation_y": remote_rotation,
+			"velocity": remote_velocity
+		})
+		if safe_players.size() >= MAX_PLAYERS - 1:
+			break
+	remote_players_received.emit(safe_players)
 
 
 func _try_player_step_up(body: CharacterBody3D, delta: float) -> void:
