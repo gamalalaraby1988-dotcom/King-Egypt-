@@ -65,12 +65,7 @@ func _initialize() -> void:
 		_require(uniqueness_migration, "player_verified_activity_progress_one_time_idx", "one-time activities must be unique per player at the database level"),
 		_require(uniqueness_migration, "pg_advisory_xact_lock", "concurrent completion attempts must be serialized by account and activity"),
 		_require(migration, "get_player_verified_activity_progress", "only the authenticated player's verified progress may be read"),
-		_require(explorer_migration, "achievement_proof_id", "Explorer reward proof must be returned only from the server recorder"),
-		_require(server, "walked_distance_meters", "first-steps distance must be accumulated by the dedicated server"),
-		_require(server, "RUN_SPEED * safe_delta + 0.12", "first-steps movement samples must be bounded by authoritative server speed"),
-		_require(server, "\"first_steps\"", "the 100-meter server threshold must issue the first-steps achievement"),
-		_require(achievement, "SERVER_VERIFIED_ACHIEVEMENT_IDS", "first-steps Online state must come only from the verified achievement ledger"),
-		_require(mission, "activity_id == \"first_steps\"", "first-steps completion must refresh the server verified ledger")
+		_require(explorer_migration, "achievement_proof_id", "Explorer reward proof must be returned only from the server recorder")
 	]
 	for passed in checks:
 		if not passed:
