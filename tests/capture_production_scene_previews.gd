@@ -65,8 +65,9 @@ func _capture_previews() -> void:
 	var mosaic_normal := mosaic.global_transform.basis.z.normalized()
 	var mosaic_ok := await _capture_view(
 		"royal_square_historical_mosaic_preview.png",
-		mosaic_target + mosaic_normal * 13.0 + Vector3(1.0, 2.0, 0.0),
-		mosaic_target + Vector3(0.0, 0.0, 0.0)
+		mosaic_target + mosaic_normal * 10.5 + Vector3(0.0, 0.35, 0.0),
+		mosaic_target + Vector3(0.0, 0.0, 0.0),
+		42.0
 	)
 	if not mosaic_ok:
 		quit(1)
@@ -75,10 +76,10 @@ func _capture_previews() -> void:
 	print("Production-scene previews saved in ", OUTPUT_DIR)
 	quit(0)
 
-func _capture_view(file_name: String, camera_position: Vector3, target: Vector3) -> bool:
+func _capture_view(file_name: String, camera_position: Vector3, target: Vector3, camera_fov: float = 55.0) -> bool:
 	var camera := Camera3D.new()
 	camera.name = "TemporaryPreviewCamera"
-	camera.fov = 55.0
+	camera.fov = camera_fov
 	current_scene.add_child(camera)
 	camera.global_position = camera_position
 	camera.look_at(target, Vector3.UP)
