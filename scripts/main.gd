@@ -1286,10 +1286,6 @@ var mode_selection_layer: CanvasLayer
 var mode_selection_panel: PanelContainer
 var mode_status_label: Label
 var online_address_input: LineEdit
-var founder_pin_input: LineEdit
-var founder_pin_confirm_input: LineEdit
-var founder_pin_button: Button
-var founder_pin_gate: VBoxContainer
 var game_mode_controls: VBoxContainer
 var player_account_status_label: Label
 var player_account_button: Button
@@ -1347,44 +1343,9 @@ func _create_mode_selection_ui() -> void:
 	if PlayerAccountAuthClient.has_active_session():
 		player_account_button.text = "Google - الحساب متصل"
 
-	founder_pin_gate = VBoxContainer.new()
-	founder_pin_gate.add_theme_constant_override("separation", 8)
-	content.add_child(founder_pin_gate)
-	var founder_heading := Label.new()
-	founder_heading.text = "حماية حساب المؤسس"
-	founder_heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	founder_pin_gate.add_child(founder_heading)
-	founder_pin_input = LineEdit.new()
-	founder_pin_input.placeholder_text = "رمز PIN من 6 أرقام"
-	founder_pin_input.secret = true
-	founder_pin_input.max_length = 6
-	founder_pin_input.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_NUMBER
-	founder_pin_gate.add_child(founder_pin_input)
-	founder_pin_confirm_input = LineEdit.new()
-	founder_pin_confirm_input.placeholder_text = "تأكيد رمز PIN"
-	founder_pin_confirm_input.secret = true
-	founder_pin_confirm_input.max_length = 6
-	founder_pin_confirm_input.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_NUMBER
-	founder_pin_gate.add_child(founder_pin_confirm_input)
-	founder_pin_button = Button.new()
-	founder_pin_button.custom_minimum_size.y = 44
-	founder_pin_button.pressed.connect(_on_founder_pin_submit)
-	founder_pin_gate.add_child(founder_pin_button)
 	var is_verified_founder := FounderIdentityManager.is_founder
-	founder_pin_gate.visible = is_verified_founder
-	if is_verified_founder:
-		if FounderPinManager.is_pin_configured():
-			founder_pin_confirm_input.visible = false
-			founder_pin_button.text = "فتح حساب المؤسس"
-			mode_status_label = Label.new()
-			mode_status_label.text = "أدخل رمزك المحلي لفتح الحساب."
-		else:
-			founder_pin_button.text = "حفظ رمز المؤسس"
-			mode_status_label = Label.new()
-			mode_status_label.text = "أنشئ رمزًا خاصًا من 6 أرقام لهذا الجهاز."
-	else:
-		mode_status_label = Label.new()
-		mode_status_label.text = "اختر طريقة اللعب."
+	mode_status_label = Label.new()
+	mode_status_label.text = "جارٍ التحقق من هوية المؤسس بالحساب الحالي..." if is_verified_founder else "اختر طريقة اللعب."
 	mode_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	mode_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	content.add_child(mode_status_label)
@@ -1449,8 +1410,6 @@ func _on_player_account_access_token_changed(access_token: String) -> void:
 		ProfileConfigStore.complete_account_switch()
 		if FounderIdentityManager.is_founder and FounderIdentityManager.founder_subject_id != account_id:
 			FounderIdentityManager.clear_entitlement()
-			if is_instance_valid(founder_pin_gate):
-				founder_pin_gate.visible = false
 		# Founder status is checked automatically with the same Google-authenticated player session.
 		FounderAuthClient.request_founder_entitlement_with_access_token(access_token)
 
@@ -1488,48 +1447,18 @@ func _on_founder_entitlement_received(payload: String, signature_base64: String)
 	if not FounderIdentityManager.accept_signed_entitlement(payload, signature_base64):
 		_on_founder_entitlement_failed("رفض الجهاز التذكرة الموقعة أو تعذر حفظها بأمان.")
 		return
-	if is_instance_valid(founder_pin_gate):
-		founder_pin_gate.visible = true
 	if is_instance_valid(game_mode_controls):
-		game_mode_controls.visible = false
-	if FounderPinManager.is_pin_configured():
-		founder_pin_confirm_input.visible = false
-		founder_pin_button.text = "فتح حساب المؤسس"
-	else:
-		founder_pin_confirm_input.visible = true
-		founder_pin_button.text = "حفظ رمز المؤسس"
+		game_mode_controls.visible = true
 	if is_instance_valid(mode_status_label):
-		mode_status_label.text = "تم اعتماد هوية المؤسس وحفظ التذكرة لهذا الجهاز. أنشئ رمز PIN المحلي للمتابعة."
+		mode_status_label.text = "تم التعرف على حساب المؤسس تلقائيًا من Google. يمكنك المتابعة."
 
 func _on_founder_entitlement_failed(message: String) -> void:
-	if is_instance_valid(founder_pin_gate):
-		founder_pin_gate.visible = false
+	if is_instance_valid():
+		.visible = false
 	if is_instance_valid(game_mode_controls):
 		game_mode_controls.visible = true
 	if is_instance_valid(mode_status_label):
 		mode_status_label.text = message + " سيتم الدخول كلاعب عادي دون صلاحيات مؤسس."
-
-func _on_founder_pin_submit() -> void:
-	if not FounderIdentityManager.is_founder:
-		mode_status_label.text = "لا توجد تذكرة مؤسس موثقة على هذا الجهاز."
-		return
-	var pin := founder_pin_input.text.strip_edges()
-	if FounderPinManager.is_pin_configured():
-		if FounderPinManager.is_locked():
-			mode_status_label.text = "محاولات كثيرة. انتظر %d ثانية." % FounderPinManager.lock_seconds_remaining()
-			return
-		if not FounderPinManager.verify_pin(pin):
-			mode_status_label.text = "الرمز غير صحيح أو غير صالح. المحاولات محدودة."
-			return
-	else:
-		if not FounderPinManager.setup_pin(pin, founder_pin_confirm_input.text.strip_edges()):
-			mode_status_label.text = "تعذر حفظ الرمز. أدخل 6 أرقام متطابقة."
-			return
-	founder_pin_gate.visible = false
-	game_mode_controls.visible = true
-	mode_status_label.text = "تم فتح حساب المؤسس على هذا الجهاز. اختر طريقة اللعب."
-	founder_pin_input.clear()
-	founder_pin_confirm_input.clear()
 
 func _make_mode_panel_style() -> StyleBox:
 	var style := StyleBoxFlat.new()
