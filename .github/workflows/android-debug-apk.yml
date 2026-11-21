@@ -6,12 +6,20 @@ on:
     paths:
       - "export_presets.cfg"
       - "project.godot"
+      - "scripts/main.gd"
+      - "scripts/player_account_auth_client.gd"
+      - "addons/founder_secure_storage/**"
+      - "android/plugins/founder_secure_storage/**"
       - ".github/workflows/android-debug-apk.yml"
   push:
     branches: [main]
     paths:
       - "export_presets.cfg"
       - "project.godot"
+      - "scripts/main.gd"
+      - "scripts/player_account_auth_client.gd"
+      - "addons/founder_secure_storage/**"
+      - "android/plugins/founder_secure_storage/**"
       - ".github/workflows/android-debug-apk.yml"
   workflow_dispatch:
 
@@ -38,11 +46,23 @@ jobs:
         with:
           packages: ''
 
+      - name: Set up Gradle 8.11.1
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+
       - name: Install Android SDK packages
         shell: bash
         run: |
           set -euo pipefail
-          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0" "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Build Android secure-storage and deep-link plugin
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle --no-daemon -p android/plugins/founder_secure_storage :plugin:copyDebugAARToAddon
+          test -s addons/founder_secure_storage/bin/debug/FounderSecureStorage-debug.aar
 
       - name: Download Godot 4.7.2 editor
         shell: bash
@@ -96,7 +116,7 @@ jobs:
           export GODOT_ANDROID_KEYSTORE_DEBUG_USER="androiddebugkey"
           export GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD="android"
           /tmp/godot/Godot_v4.7.2-stable_linux.x86_64 \
-            --headless --path . \
+            --headless --path . --install-android-build-template \
             --export-debug "Android" "build/android/KING_OF_EGYPT_CITY-debug.apk"
           test -s "build/android/KING_OF_EGYPT_CITY-debug.apk"
           unzip -t "build/android/KING_OF_EGYPT_CITY-debug.apk"

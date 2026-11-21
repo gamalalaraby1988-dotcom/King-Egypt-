@@ -125,6 +125,21 @@ jobs:
             exit 1
           fi
 
+      - name: Run Google OAuth contract tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          GODOT="/tmp/godot/Godot_v4.7.2-stable_linux.x86_64"
+          LOG="/tmp/godot-player-email-magic-link.log"
+          set +e
+          "$GODOT" --headless --path . --script res://tests/player_email_magic_link_contract_test.gd 2>&1 | tee "$LOG"
+          GODOT_STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$GODOT_STATUS" -ne 0 ] || grep -E '(^|[[:space:]])(ERROR|SCRIPT ERROR):|Parse Error:|Player email magic-link contract tests failed' "$LOG"; then
+            echo "Player email magic-link contract tests failed."
+            exit 1
+          fi
+
       - name: Run player profile account-switch test
         shell: bash
         run: |

@@ -1281,23 +1281,12 @@ func _create_pyramids_area() -> void:
 	add_child(pyramids)
 
 
-# اختيار وضع اللعب وبوابة PIN محلية لحساب المؤسس الموثق.
+# اختيار وضع اللعب مع تسجيل دخول Google والتحقق الخادمي من هوية المؤسس.
 var mode_selection_layer: CanvasLayer
 var mode_selection_panel: PanelContainer
 var mode_status_label: Label
 var online_address_input: LineEdit
-var founder_pin_input: LineEdit
-var founder_pin_confirm_input: LineEdit
-var founder_pin_button: Button
-var founder_pin_gate: VBoxContainer
 var game_mode_controls: VBoxContainer
-var founder_email_gate: VBoxContainer
-var founder_email_input: LineEdit
-var founder_email_code_input: LineEdit
-var founder_email_verified := false
-var player_account_window: Window
-var player_account_email_input: LineEdit
-var player_account_code_input: LineEdit
 var player_account_status_label: Label
 var player_account_button: Button
 var player_account_profile_label: Label
@@ -1314,12 +1303,6 @@ func _create_mode_selection_ui() -> void:
 	mode_selection_layer.layer = 100
 	add_child(mode_selection_layer)
 	# Connect auth lifecycle even when the founder identity is already cached locally.
-	FounderAuthClient.request_finished.connect(_on_founder_auth_request_finished)
-	FounderAuthClient.email_verified.connect(_on_founder_email_verified)
-	FounderAuthClient.auth_session_received.connect(_on_founder_auth_session_received)
-	FounderAuthClient.auth_session_refreshed.connect(_on_founder_auth_session_refreshed)
-	FounderAuthClient.auth_session_restored.connect(_on_founder_auth_session_restored)
-	FounderAuthClient.auth_session_expired.connect(_on_founder_auth_session_expired)
 	FounderAuthClient.founder_entitlement_received.connect(_on_founder_entitlement_received)
 	FounderAuthClient.founder_entitlement_failed.connect(_on_founder_entitlement_failed)
 	PlayerAccountAuthClient.request_finished.connect(_on_player_account_request_finished)
@@ -1353,81 +1336,20 @@ func _create_mode_selection_ui() -> void:
 	content.add_child(heading)
 
 	player_account_button = Button.new()
-	player_account_button.text = "حساب اللاعب - تسجيل الدخول وحفظ التقدم"
+	player_account_button.text = "المتابعة باستخدام Google"
 	player_account_button.custom_minimum_size.y = 40
-	player_account_button.pressed.connect(_open_player_account_window)
+	player_account_button.pressed.connect(_on_google_sign_in_pressed)
 	content.add_child(player_account_button)
-	_create_player_account_window()
+	if PlayerAccountAuthClient.has_active_session():
+		player_account_button.text = "Google - الحساب متصل"
 
-	founder_pin_gate = VBoxContainer.new()
-	founder_pin_gate.add_theme_constant_override("separation", 8)
-	content.add_child(founder_pin_gate)
-	var founder_heading := Label.new()
-	founder_heading.text = "حماية حساب المؤسس"
-	founder_heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	founder_pin_gate.add_child(founder_heading)
-	founder_pin_input = LineEdit.new()
-	founder_pin_input.placeholder_text = "رمز PIN من 6 أرقام"
-	founder_pin_input.secret = true
-	founder_pin_input.max_length = 6
-	founder_pin_input.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_NUMBER
-	founder_pin_gate.add_child(founder_pin_input)
-	founder_pin_confirm_input = LineEdit.new()
-	founder_pin_confirm_input.placeholder_text = "تأكيد رمز PIN"
-	founder_pin_confirm_input.secret = true
-	founder_pin_confirm_input.max_length = 6
-	founder_pin_confirm_input.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_NUMBER
-	founder_pin_gate.add_child(founder_pin_confirm_input)
-	founder_pin_button = Button.new()
-	founder_pin_button.custom_minimum_size.y = 44
-	founder_pin_button.pressed.connect(_on_founder_pin_submit)
-	founder_pin_gate.add_child(founder_pin_button)
 	var is_verified_founder := FounderIdentityManager.is_founder
-	founder_pin_gate.visible = is_verified_founder
-	if is_verified_founder:
-		if FounderPinManager.is_pin_configured():
-			founder_pin_confirm_input.visible = false
-			founder_pin_button.text = "فتح حساب المؤسس"
-			mode_status_label = Label.new()
-			mode_status_label.text = "أدخل رمزك المحلي لفتح الحساب."
-		else:
-			founder_pin_button.text = "حفظ رمز المؤسس"
-			mode_status_label = Label.new()
-			mode_status_label.text = "أنشئ رمزًا خاصًا من 6 أرقام لهذا الجهاز."
-	else:
-		mode_status_label = Label.new()
-		mode_status_label.text = "اختر طريقة اللعب."
+	mode_status_label = Label.new()
+	mode_status_label.text = "جارٍ التحقق من هوية المؤسس بالحساب الحالي..." if is_verified_founder else "اختر طريقة اللعب."
 	mode_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	mode_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	content.add_child(mode_status_label)
 
-	if not is_verified_founder:
-		founder_email_gate = VBoxContainer.new()
-		founder_email_gate.add_theme_constant_override("separation", 7)
-		content.add_child(founder_email_gate)
-		var email_heading := Label.new()
-		email_heading.text = "التحقق من بريد حساب المؤسس"
-		email_heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		founder_email_gate.add_child(email_heading)
-		founder_email_input = LineEdit.new()
-		founder_email_input.placeholder_text = "البريد الإلكتروني"
-		founder_email_input.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_EMAIL_ADDRESS
-		founder_email_gate.add_child(founder_email_input)
-		var send_code_button := Button.new()
-		send_code_button.text = "إرسال رمز التحقق"
-		send_code_button.custom_minimum_size.y = 40
-		send_code_button.pressed.connect(_on_founder_send_code)
-		founder_email_gate.add_child(send_code_button)
-		founder_email_code_input = LineEdit.new()
-		founder_email_code_input.placeholder_text = "رمز البريد المكوّن من 6 أرقام"
-		founder_email_code_input.max_length = 6
-		founder_email_code_input.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_NUMBER
-		founder_email_gate.add_child(founder_email_code_input)
-		var verify_code_button := Button.new()
-		verify_code_button.text = "تأكيد البريد"
-		verify_code_button.custom_minimum_size.y = 40
-		verify_code_button.pressed.connect(_on_founder_verify_code)
-		founder_email_gate.add_child(verify_code_button)
 
 	game_mode_controls = VBoxContainer.new()
 	game_mode_controls.add_theme_constant_override("separation", 8)
@@ -1449,99 +1371,23 @@ func _create_mode_selection_ui() -> void:
 	game_mode_controls.visible = not is_verified_founder
 
  
-func _create_player_account_window() -> void:
-	player_account_window = Window.new()
-	player_account_window.title = "حساب اللاعب"
-	player_account_window.size = Vector2i(380, 360)
-	player_account_window.min_size = Vector2i(340, 320)
-	player_account_window.unresizable = false
-	player_account_window.exclusive = true
-	add_child(player_account_window)
-
-	var panel := PanelContainer.new()
-	panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	player_account_window.add_child(panel)
-	var content := VBoxContainer.new()
-	content.add_theme_constant_override("separation", 9)
-	panel.add_child(content)
-
-	var heading := Label.new()
-	heading.text = "حساب اللاعب"
-	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	content.add_child(heading)
-
-	player_account_status_label = Label.new()
-	player_account_status_label.text = "سجّل ببريدك لحفظ هوية اللاعب والتقدم بين الأجهزة."
-	player_account_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	player_account_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	content.add_child(player_account_status_label)
-
-	player_account_email_input = LineEdit.new()
-	player_account_email_input.placeholder_text = "البريد الإلكتروني"
-	player_account_email_input.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_EMAIL_ADDRESS
-	content.add_child(player_account_email_input)
-
-	var send_button := Button.new()
-	send_button.text = "إنشاء حساب / إرسال رمز الدخول"
-	send_button.custom_minimum_size.y = 42
-	send_button.pressed.connect(_on_player_account_send_code)
-	content.add_child(send_button)
-
-	player_account_code_input = LineEdit.new()
-	player_account_code_input.placeholder_text = "رمز التحقق المكوّن من 6 أرقام"
-	player_account_code_input.max_length = 6
-	player_account_code_input.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_NUMBER
-	content.add_child(player_account_code_input)
-
-	var verify_button := Button.new()
-	verify_button.text = "تأكيد الرمز وتسجيل الدخول"
-	verify_button.custom_minimum_size.y = 42
-	verify_button.pressed.connect(_on_player_account_verify_code)
-	content.add_child(verify_button)
-
-	player_account_profile_label = Label.new()
-	player_account_profile_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	player_account_profile_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	content.add_child(player_account_profile_label)
-
-	if PlayerAccountAuthClient.has_active_session():
-		player_account_email_input.text = PlayerAccountAuthClient.get_email()
-		player_account_status_label.text = "الحساب متصل. رمز اللاعب مرتبط بهوية الحساب الثابتة."
-		player_account_button.text = "حساب اللاعب - متصل"
-		if not PlayerAccountAuthClient.get_user_id().is_empty():
-			player_account_profile_label.text = "معرّف الحساب: " + PlayerAccountAuthClient.get_user_id()
-
-func _open_player_account_window() -> void:
-	if not is_instance_valid(player_account_window):
+func _on_google_sign_in_pressed() -> void:
+	if not PlayerAccountAuthClient.request_google_sign_in():
+		if is_instance_valid(mode_status_label):
+			mode_status_label.text = "تعذر بدء تسجيل الدخول باستخدام Google."
 		return
-	if PlayerAccountAuthClient.has_active_session():
-		player_account_email_input.text = PlayerAccountAuthClient.get_email()
-		player_account_status_label.text = "الحساب متصل. يمكنك استخدامه على أجهزتك الأخرى."
-	player_account_window.popup_centered()
-
-func _on_player_account_send_code() -> void:
-	if not is_instance_valid(player_account_email_input):
-		return
-	player_account_status_label.text = "جارٍ إرسال رمز الدخول..."
-	if not PlayerAccountAuthClient.request_email_code(player_account_email_input.text):
-		player_account_status_label.text = "تعذر بدء طلب الرمز. راجع البريد والإعدادات."
-
-func _on_player_account_verify_code() -> void:
-	if not is_instance_valid(player_account_email_input) or not is_instance_valid(player_account_code_input):
-		return
-	player_account_status_label.text = "جارٍ التحقق من الرمز..."
-	if not PlayerAccountAuthClient.verify_email_code(player_account_email_input.text, player_account_code_input.text):
-		player_account_status_label.text = "تعذر بدء التحقق. راجع البريد والرمز."
+	if is_instance_valid(mode_status_label):
+		mode_status_label.text = "أكمل اختيار حساب Google المرتبط بشخصيتك الأصلية، ثم ستعود إلى اللعبة تلقائيًا."
 
 func _on_player_account_request_finished(success: bool, message: String) -> void:
-	if is_instance_valid(player_account_status_label):
-		player_account_status_label.text = message
+	if is_instance_valid(mode_status_label):
+		mode_status_label.text = message
 
 func _on_player_account_authenticated(user_id: String, email: String) -> void:
 	if is_instance_valid(player_account_button):
-		player_account_button.text = "حساب اللاعب - متصل"
-	if is_instance_valid(player_account_status_label):
-		player_account_status_label.text = "تم ربط الحساب %s بهوية لاعب ثابتة." % email
+		player_account_button.text = "Google - الحساب متصل"
+	if is_instance_valid(mode_status_label):
+		mode_status_label.text = "تم تسجيل الدخول بالحساب %s." % email
 	if is_instance_valid(player_account_profile_label):
 		player_account_profile_label.text = "معرّف الحساب: " + user_id
 
@@ -1562,6 +1408,10 @@ func _on_player_account_access_token_changed(access_token: String) -> void:
 		call_deferred("_reload_scene_for_account_profile")
 	else:
 		ProfileConfigStore.complete_account_switch()
+		if FounderIdentityManager.is_founder and FounderIdentityManager.founder_subject_id != account_id:
+			FounderIdentityManager.clear_entitlement()
+		# Founder status is checked automatically with the same Google-authenticated player session.
+		FounderAuthClient.request_founder_entitlement_with_access_token(access_token)
 
 func _reload_scene_for_account_profile() -> void:
 	# Recreate scene managers so mission, achievement, daily, vehicle, and settings state
@@ -1574,9 +1424,9 @@ func _on_player_account_session_expired() -> void:
 	ProfileConfigStore.complete_account_switch()
 	PlayerSyncClient.clear_session_access_token()
 	if is_instance_valid(player_account_button):
-		player_account_button.text = "حساب اللاعب - تسجيل الدخول وحفظ التقدم"
-	if is_instance_valid(player_account_status_label):
-		player_account_status_label.text = "انتهت جلسة الحساب. سجّل الدخول مجددًا لاستعادة المزامنة."
+		player_account_button.text = "المتابعة باستخدام Google"
+	if is_instance_valid(mode_status_label):
+		mode_status_label.text = "انتهت جلسة الحساب. سجّل الدخول مجددًا باستخدام Google."
 	if GameModeManager.is_online_ready():
 		_on_mode_status_changed("انتهت جلسة حساب اللاعب؛ تم إنهاء اتصال Online لحماية الحساب.")
 		GameModeManager.disconnect_online()
@@ -1589,92 +1439,24 @@ func _on_player_profile_failed(message: String) -> void:
 	if is_instance_valid(player_account_profile_label):
 		player_account_profile_label.text = message
 
-func _on_founder_send_code() -> void:
-	if not is_instance_valid(founder_email_input):
-		return
-	mode_status_label.text = "جارٍ طلب رمز التحقق..."
-	if not FounderAuthClient.request_email_code(founder_email_input.text):
-		mode_status_label.text = "تعذر بدء طلب الرمز. راجع البريد والإعدادات."
-
-func _on_founder_verify_code() -> void:
-	if not is_instance_valid(founder_email_input) or not is_instance_valid(founder_email_code_input):
-		return
-	mode_status_label.text = "جارٍ التحقق من الرمز..."
-	if not FounderAuthClient.verify_email_code(founder_email_input.text, founder_email_code_input.text):
-		mode_status_label.text = "تعذر بدء التحقق. راجع البريد والرمز."
-
-func _on_founder_auth_request_finished(success: bool, message: String) -> void:
-	if is_instance_valid(mode_status_label):
-		mode_status_label.text = message
-
-func _on_founder_email_verified(_user_id: String, verified_email: String) -> void:
-	founder_email_verified = true
-	if is_instance_valid(mode_status_label):
-		mode_status_label.text = "تم تأكيد ملكية البريد %s. تفعيل حساب المؤسس ينتظر اعتماد التذكرة الخادمية." % verified_email
-
-func _on_founder_auth_session_expired() -> void:
-	# انتهاء جلسة المؤسس لا يمس جلسة حساب اللاعب المستقلة أو رمز مزامنته.
-	if FounderIdentityManager.is_founder and is_instance_valid(mode_status_label):
-		mode_status_label.text = "انتهت جلسة الاتصال الآمنة. أعد التحقق من بريد المؤسس للعمليات Online؛ تذكرة Offline الصالحة لا تتأثر."
-
-
-func _on_founder_auth_session_received(access_token: String, _refresh_token: String) -> void:
-	# Founder session remains isolated; player sync uses PlayerAccountAuthClient only.
-	pass
-
-
-func _on_founder_auth_session_refreshed(_access_token: String) -> void:
-	pass
-
-
-func _on_founder_auth_session_restored(_access_token: String) -> void:
-	# Revalidate the founder entitlement after a persisted Auth session is recovered.
-	FounderAuthClient.request_founder_entitlement_for_active_session()
-
 func _on_founder_entitlement_received(payload: String, signature_base64: String) -> void:
+	var parsed_claims: Variant = JSON.parse_string(payload)
+	if not (parsed_claims is Dictionary) or str(parsed_claims.get("subject_id", "")) != PlayerAccountAuthClient.get_user_id():
+		_on_founder_entitlement_failed("التذكرة لا تخص حساب اللاعب الحالي.")
+		return
 	if not FounderIdentityManager.accept_signed_entitlement(payload, signature_base64):
 		_on_founder_entitlement_failed("رفض الجهاز التذكرة الموقعة أو تعذر حفظها بأمان.")
 		return
-	if is_instance_valid(founder_email_gate):
-		founder_email_gate.visible = false
-	if is_instance_valid(founder_pin_gate):
-		founder_pin_gate.visible = true
 	if is_instance_valid(game_mode_controls):
-		game_mode_controls.visible = false
-	if FounderPinManager.is_pin_configured():
-		founder_pin_confirm_input.visible = false
-		founder_pin_button.text = "فتح حساب المؤسس"
-	else:
-		founder_pin_confirm_input.visible = true
-		founder_pin_button.text = "حفظ رمز المؤسس"
+		game_mode_controls.visible = true
 	if is_instance_valid(mode_status_label):
-		mode_status_label.text = "تم اعتماد هوية المؤسس وحفظ التذكرة لهذا الجهاز. أنشئ رمز PIN المحلي للمتابعة."
+		mode_status_label.text = "تم التعرف على حساب المؤسس تلقائيًا من Google. يمكنك المتابعة."
 
 func _on_founder_entitlement_failed(message: String) -> void:
+	if is_instance_valid(game_mode_controls):
+		game_mode_controls.visible = true
 	if is_instance_valid(mode_status_label):
-		mode_status_label.text = message + " لم تُمنح صلاحيات المؤسس."
-
-func _on_founder_pin_submit() -> void:
-	if not FounderIdentityManager.is_founder:
-		mode_status_label.text = "لا توجد تذكرة مؤسس موثقة على هذا الجهاز."
-		return
-	var pin := founder_pin_input.text.strip_edges()
-	if FounderPinManager.is_pin_configured():
-		if FounderPinManager.is_locked():
-			mode_status_label.text = "محاولات كثيرة. انتظر %d ثانية." % FounderPinManager.lock_seconds_remaining()
-			return
-		if not FounderPinManager.verify_pin(pin):
-			mode_status_label.text = "الرمز غير صحيح أو غير صالح. المحاولات محدودة."
-			return
-	else:
-		if not FounderPinManager.setup_pin(pin, founder_pin_confirm_input.text.strip_edges()):
-			mode_status_label.text = "تعذر حفظ الرمز. أدخل 6 أرقام متطابقة."
-			return
-	founder_pin_gate.visible = false
-	game_mode_controls.visible = true
-	mode_status_label.text = "تم فتح حساب المؤسس على هذا الجهاز. اختر طريقة اللعب."
-	founder_pin_input.clear()
-	founder_pin_confirm_input.clear()
+		mode_status_label.text = message + " سيتم الدخول كلاعب عادي دون صلاحيات مؤسس."
 
 func _make_mode_panel_style() -> StyleBox:
 	var style := StyleBoxFlat.new()

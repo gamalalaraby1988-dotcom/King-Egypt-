@@ -35,6 +35,7 @@ enabled=false
 security/public_key_pem="-----BEGIN PUBLIC KEY-----\nMIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEAighakuZgDl8O8Ahmfd7F\n5djU6URqzaB6KqxSm7PyyAWt1/uziC+SiltBHm8KrCQTbRW/kVBmTKwK+zl/KooL\nZd1As1ULzRNaD/lFrVNiuDDB702ictX1iQrrhYMAO1hSU7u/mCyMoRyBhndjvDFh\nWWRalFuStpR1IwRK91ynU0Z0WkEWTyLxrkWjUNdrTNUuWRVoUMSOMgXOZakTm+Y3\nPcUXqTHKCyTTGKZFyAdsOktY6s07Vpyzz/vWcSVnoQj+jQVBJxRWqHVS4QxF2Bwl\nRoktamLaIQadLnJbUop1nfDPdQT4D2ssP6IW0kBCG49YWi0K+HbSgIiIayOzcq75\njCSSNEm3T/tbh7ekeNKQNLGwzoaeljchIw093GAvnpVPwDb2cehtFYUsvu2GVerm\nXT6XB6dP04sDOdQFUPkgNl+3V6xQ2USRMTOpISyThGn+1/F2X9cZylXD3DdcCi0U\nMAw2NRNCV4zglg/SqJy/dwBmgHbYWVsDTkMcNKHE9LIPAgMBAAE=\n-----END PUBLIC KEY-----"
 auth/api_base_url="https://lupmaktbymuaymhqsxxu.supabase.co"
 auth/publishable_key="sb_publishable_KMNgd88WnXikozVVI9TeLA_PxV5ap9P"
+auth/magic_link_redirect_uri="kingofegyptcity://auth-callback"
 
 [display]
 window/size/viewport_width=1280

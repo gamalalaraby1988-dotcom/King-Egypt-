@@ -1,5 +1,5 @@
 extends Node
-## General player email-OTP authentication. Separate from FounderAuthClient and its identity.
+## Google OAuth PKCE authentication for the player account. Founder checks reuse this exact session.
 signal request_finished(success: bool, message: String)
 signal account_authenticated(user_id: String, email: String)
 signal session_access_token_changed(access_token: String)
@@ -9,9 +9,11 @@ signal player_profile_failed(message: String)
 
 const API_BASE_SETTING := "founder/auth/api_base_url"
 const PUBLISHABLE_KEY_SETTING := "founder/auth/publishable_key"
-const OTP_PATH := "/auth/v1/otp"
-const VERIFY_PATH := "/auth/v1/verify"
+const PKCE_TOKEN_PATH := "/auth/v1/token?grant_type=pkce"
 const REFRESH_PATH := "/auth/v1/token?grant_type=refresh_token"
+const GOOGLE_REDIRECT_URI := "kingofegyptcity://auth-callback"
+const PKCE_VERIFIER_ALIAS := "king_of_egypt_city.player.magic_link_verifier.v1"
+const DEEP_LINK_PLUGIN_SINGLETON := "FounderSecureStorage"
 const PROFILE_PATH := "/rest/v1/player_profiles"
 const SECURE_STORAGE_SINGLETON := "FounderSecureStorage"
 const REFRESH_TOKEN_ALIAS := "king_of_egypt_city.player.refresh_token.v1"
@@ -22,7 +24,6 @@ var _pending_action := ""
 var _profile_action := ""
 var _profile_request_access_token := ""
 var _profile_request_user_id := ""
-var _pending_email := ""
 var _access_token := ""
 var _refresh_token := ""
 var _expires_at := 0
@@ -31,6 +32,24 @@ var _email := ""
 var _refresh_timer: Timer
 var _restoring := false
 var _restore_retry_pending := false
+var _deep_link_poll_elapsed := 0.0
+var _pending_code_verifier := ""
+
+func _process(delta: float) -> void:
+	_deep_link_poll_elapsed += delta
+	if _deep_link_poll_elapsed < 0.4:
+		return
+	_deep_link_poll_elapsed = 0.0
+	if _pending_action != "" or not Engine.has_singleton(DEEP_LINK_PLUGIN_SINGLETON):
+		return
+	var plugin: Object = Engine.get_singleton(DEEP_LINK_PLUGIN_SINGLETON)
+	if not plugin.has_method("getPendingAuthLink") or not plugin.has_method("clearPendingAuthLink"):
+		return
+	var pending_link := str(plugin.call("getPendingAuthLink"))
+	if pending_link.is_empty():
+		return
+	plugin.call("clearPendingAuthLink")
+	_handle_google_oauth_callback(pending_link)
 
 func _ready() -> void:
 	_auth_http = HTTPRequest.new()
@@ -68,32 +87,94 @@ func get_user_id() -> String:
 func get_email() -> String:
 	return _email
 
-func request_email_code(email: String) -> bool:
-	var normalized := email.strip_edges().to_lower()
+func request_google_sign_in() -> bool:
 	if _pending_action != "":
 		request_finished.emit(false, "هناك طلب حساب قيد التنفيذ.")
 		return false
-	if not _valid_email(normalized) or not is_configured():
-		request_finished.emit(false, "أدخل بريدًا صحيحًا وتأكد من إعداد خدمة الحسابات.")
+	if not is_configured():
+		request_finished.emit(false, "إعدادات خدمة الحسابات غير مكتملة.")
 		return false
-	_pending_email = normalized
-	return _send_auth_request(OTP_PATH, {"email": normalized, "create_user": true}, "request_code")
+	if OS.get_name() == "Android" and not _android_deep_link_ready():
+		request_finished.emit(false, "نسخة Android لا تحتوي على مكوّن استقبال رابط Google.")
+		return false
+	var verifier_bytes := Crypto.new().generate_random_bytes(32)
+	if verifier_bytes.size() != 32:
+		request_finished.emit(false, "تعذر إنشاء حماية جلسة الدخول.")
+		return false
+	_pending_code_verifier = _base64url(verifier_bytes)
+	var hashing := HashingContext.new()
+	if hashing.start(HashingContext.HASH_SHA256) != OK:
+		_pending_code_verifier = ""
+		request_finished.emit(false, "تعذر تجهيز حماية تسجيل الدخول.")
+		return false
+	hashing.update(_pending_code_verifier.to_utf8_buffer())
+	var challenge := _base64url(hashing.finish())
+	var storage := _secure_storage()
+	if storage != null and storage.has_method("save_secret"):
+		if not bool(storage.call("save_secret", PKCE_VERIFIER_ALIAS, _pending_code_verifier)):
+			_pending_code_verifier = ""
+			request_finished.emit(false, "تعذر حفظ حماية تسجيل الدخول على هذا الجهاز.")
+			return false
+	elif OS.get_name() == "Android":
+		_pending_code_verifier = ""
+		request_finished.emit(false, "التخزين الآمن في Android غير متاح؛ لم يتم فتح Google.")
+		return false
+	var redirect_query := "?provider=google&redirect_to=" + GOOGLE_REDIRECT_URI.uri_encode()
+	redirect_query += "&code_challenge=" + challenge.uri_encode()
+	redirect_query += "&code_challenge_method=s256"
+	var authorize_url := _api_base_url() + "/auth/v1/authorize" + redirect_query
+	var open_error := OS.shell_open(authorize_url)
+	if open_error != OK:
+		_clear_pending_oauth()
+		request_finished.emit(false, "تعذر فتح صفحة تسجيل الدخول باستخدام Google.")
+		return false
+	request_finished.emit(true, "اختر حساب Google المرتبط بشخصيتك الأصلية، ثم عُد إلى اللعبة.")
+	return true
 
-func verify_email_code(email: String, code: String) -> bool:
-	var normalized_email := email.strip_edges().to_lower()
-	var normalized_code := code.strip_edges()
+func _android_deep_link_ready() -> bool:
+	if not Engine.has_singleton(DEEP_LINK_PLUGIN_SINGLETON):
+		return false
+	var plugin: Object = Engine.get_singleton(DEEP_LINK_PLUGIN_SINGLETON)
+	return plugin.has_method("getPendingAuthLink") and plugin.has_method("clearPendingAuthLink")
+
+func _base64url(value: PackedByteArray) -> String:
+	return Marshalls.raw_to_base64(value).replace("+", "-").replace("/", "_").trim_suffix("=")
+
+func _handle_google_oauth_callback(link: String) -> void:
+	if not link.begins_with(GOOGLE_REDIRECT_URI):
+		return
+	var auth_code := _url_parameter(link, "code")
+	if auth_code.is_empty():
+		request_finished.emit(false, "لم يكتمل رد Google أو انتهت صلاحيته. أعد المحاولة.")
+		return
+	var storage := _secure_storage()
+	if _pending_code_verifier.is_empty() and storage != null and storage.has_method("load_secret"):
+		_pending_code_verifier = str(storage.call("load_secret", PKCE_VERIFIER_ALIAS))
+	if _pending_code_verifier.is_empty():
+		request_finished.emit(false, "تعذر استعادة حماية Google. ابدأ تسجيل الدخول من اللعبة مجددًا.")
+		return
 	if _pending_action != "":
-		request_finished.emit(false, "هناك طلب حساب قيد التنفيذ.")
-		return false
-	if not _valid_email(normalized_email) or normalized_code.length() != 6 or not normalized_code.is_valid_int() or not is_configured():
-		request_finished.emit(false, "راجع البريد وأدخل رمز التحقق المكوّن من 6 أرقام.")
-		return false
-	_pending_email = normalized_email
-	return _send_auth_request(VERIFY_PATH, {
-		"email": normalized_email,
-		"token": normalized_code,
-		"type": "email"
-	}, "verify_code")
+		return
+	_send_auth_request(PKCE_TOKEN_PATH, {
+		"auth_code": auth_code,
+		"code_verifier": _pending_code_verifier
+	}, "verify_google_oauth")
+
+func _url_parameter(url: String, key: String) -> String:
+	var query := url.get_slice("?", 1).get_slice("#", 0)
+	if query.is_empty():
+		query = url.get_slice("#", 1)
+	for item in query.split("&", false):
+		var parts := item.split("=", true, 1)
+		if parts.size() == 2 and parts[0].uri_decode() == key:
+			return parts[1].uri_decode()
+	return ""
+
+func _clear_pending_oauth() -> void:
+	var storage := _secure_storage()
+	if storage != null and storage.has_method("delete_secret"):
+		storage.call("delete_secret", PKCE_VERIFIER_ALIAS)
+	_pending_code_verifier = ""
 
 func _api_base_url() -> String:
 	return str(ProjectSettings.get_setting(API_BASE_SETTING, "")).strip_edges().trim_suffix("/")
@@ -143,9 +224,9 @@ func _on_auth_request_completed(result: int, response_code: int, _headers: Packe
 			request_finished.emit(false, _safe_error(response))
 		return
 	match action:
-		"request_code":
-			request_finished.emit(true, "إذا كان البريد صالحًا للإرسال، فسيصلك رمز التحقق.")
-		"verify_code":
+		"request_google_oauth":
+			request_finished.emit(true, "تم فتح تسجيل الدخول باستخدام Google. أكمل الاختيار ثم عُد إلى اللعبة.")
+		"verify_google_oauth":
 			_accept_session_response(response, false)
 		"refresh":
 			_accept_session_response(response, _restoring)
@@ -167,6 +248,7 @@ func _accept_session_response(response: Dictionary, was_restoring: bool) -> void
 	if user_id.is_empty() or verified_email.is_empty() or confirmed_at.is_empty():
 		request_finished.emit(false, "لم يثبت الخادم ملكية البريد الإلكتروني.")
 		return
+	_clear_pending_oauth()
 	_user_id = user_id
 	_email = verified_email
 	_access_token = access
@@ -182,7 +264,7 @@ func _accept_session_response(response: Dictionary, was_restoring: bool) -> void
 	if was_restoring:
 		request_finished.emit(true, "تم استعادة حساب اللاعب بأمان.")
 	else:
-		request_finished.emit(true, "تم تسجيل الدخول والتحقق من حساب اللاعب.")
+		request_finished.emit(true, "تم تسجيل الدخول والتحقق من حساب Google.")
 
 func _secure_storage() -> Object:
 	if not Engine.has_singleton(SECURE_STORAGE_SINGLETON):
@@ -332,6 +414,8 @@ func _safe_error(response: Dictionary) -> String:
 		"otp_expired":
 			return "انتهت صلاحية الرمز. اطلب رمزًا جديدًا."
 		"otp_disabled":
-			return "التحقق برمز البريد غير مفعّل حاليًا."
+			return "التحقق عبر البريد غير مفعّل حاليًا."
+		"flow_state_expired", "bad_code_verifier":
+			return "انتهت صلاحية جلسة Google أو تعذر التحقق منها. أعد المحاولة."
 		_:
-			return "تعذر تسجيل الدخول. راجع الرمز وحاول مرة أخرى."
+			return "تعذر تسجيل الدخول باستخدام Google. حاول مرة أخرى."
