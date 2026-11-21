@@ -29,6 +29,8 @@ var _player_saved_collision_layer := 1
 var _player_saved_collision_mask := 1
 var _last_safe_player_position := Vector3(0.0, 1.0, -42.0)
 var _remote_player_views: Dictionary = {}
+var _city_matchmaking_request: HTTPRequest
+var _pending_city_reservation_id := ""
 const PLAYER_RECOVERY_FALL_LIMIT := -3.0
 const CITY_SAFE_X_LIMIT := 155.0
 const CITY_SAFE_Z_MIN := -340.0
@@ -1510,12 +1512,68 @@ func _select_offline_mode() -> void:
 	_enter_selected_game_mode()
 
 func _select_online_mode() -> void:
+	if bool(ProjectSettings.get_setting("network/online/session_directory_enabled", false)):
+		_request_city_session_matchmaking()
+		return
 	var address := online_address_input.text.strip_edges()
 	if address.is_empty():
 		mode_status_label.text = "أدخل اسم نطاق خادم WSS الآمن بعد تجهيز شهادة TLS."
 		return
 	mode_status_label.text = "جارٍ إنشاء اتصال آمن والتحقق من حساب اللاعب..."
 	GameModeManager.connect_online(address, 2456)
+
+
+func _request_city_session_matchmaking() -> void:
+	if is_instance_valid(_city_matchmaking_request):
+		mode_status_label.text = "جارٍ البحث عن جلسة مدينة مناسبة بالفعل."
+		return
+	var access_token := PlayerAccountAuthClient.get_access_token()
+	var base_url := str(ProjectSettings.get_setting("founder/auth/api_base_url", "")).strip_edges().trim_suffix("/")
+	var publishable_key := str(ProjectSettings.get_setting("founder/auth/publishable_key", "")).strip_edges()
+	if access_token.is_empty() or not base_url.begins_with("https://") or publishable_key.is_empty():
+		mode_status_label.text = "سجّل الدخول أولًا، ثم أعد محاولة العثور على جلسة المدينة."
+		return
+	var preferred_region := str(ProjectSettings.get_setting("network/online/preferred_region", "egypt")).strip_edges().to_lower()
+	var payload := {"action": "matchmake", "preferred_region": preferred_region}
+	var request := HTTPRequest.new()
+	request.timeout = 10.0
+	add_child(request)
+	_city_matchmaking_request = request
+	request.request_completed.connect(_on_city_matchmaking_completed.bind(request))
+	var headers := PackedStringArray([
+		"Content-Type: application/json",
+		"apikey: " + publishable_key,
+		"Authorization: Bearer " + access_token
+	])
+	var error := request.request(base_url + "/functions/v1/city-session-directory", headers, HTTPClient.METHOD_POST, JSON.stringify(payload))
+	if error != OK:
+		_city_matchmaking_request = null
+		request.queue_free()
+		mode_status_label.text = "تعذر بدء البحث عن جلسة المدينة. حاول مرة أخرى."
+
+
+func _on_city_matchmaking_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray, request: HTTPRequest) -> void:
+	if _city_matchmaking_request == request:
+		_city_matchmaking_request = null
+	if is_instance_valid(request):
+		request.queue_free()
+	if result != HTTPRequest.RESULT_SUCCESS or response_code != 200:
+		mode_status_label.text = "تعذر العثور على جلسة مدينة متاحة أو أن خدمة الجلسات غير مفعلة."
+		return
+	var parsed: Variant = JSON.parse_string(body.get_string_from_utf8())
+	if not (parsed is Dictionary) or str(parsed.get("status", "")) != "assigned":
+		mode_status_label.text = "لا توجد جلسة مدينة متاحة حاليًا. حاول بعد قليل."
+		return
+	var endpoint := str(parsed.get("endpoint", "")).strip_edges()
+	var reservation_id := str(parsed.get("reservation_id", "")).strip_edges()
+	var reservation_regex := RegEx.new()
+	reservation_regex.compile("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$")
+	if not endpoint.begins_with("wss://") or reservation_regex.search(reservation_id) == null:
+		mode_status_label.text = "استجابة دليل الجلسات غير صالحة؛ تم إيقاف الاتصال للحماية."
+		return
+	_pending_city_reservation_id = reservation_id
+	mode_status_label.text = "تم العثور على جلسة مناسبة. جارٍ الاتصال الآمن بالمدينة..."
+	GameModeManager.connect_online(endpoint, 2456)
 
 func _enter_selected_game_mode() -> void:
 	if is_instance_valid(mode_selection_layer):
@@ -1535,7 +1593,7 @@ func _on_mode_connected() -> void:
 		_on_mode_status_changed("سجّل الدخول إلى حساب اللاعب قبل دخول Online.")
 		GameModeManager.disconnect_online()
 		return
-	AuthoritativeGameServer.authenticate_player.rpc_id(1, access_token)
+	AuthoritativeGameServer.authenticate_player.rpc_id(1, access_token, _pending_city_reservation_id)
 
 
 func _on_player_access_token_changed(access_token: String) -> void:
@@ -1595,6 +1653,7 @@ func _on_player_server_authenticated(success: bool, message: String) -> void:
 
 func _on_mode_disconnected() -> void:
 	_clear_remote_player_views()
+	_pending_city_reservation_id = ""
 	# أعد نافذة اختيار الوضع بعد فقد الخادم، ولا تحوّل الجلسة تلقائيًا إلى Offline.
 	var player := get_node_or_null("Player")
 	if is_instance_valid(player):
