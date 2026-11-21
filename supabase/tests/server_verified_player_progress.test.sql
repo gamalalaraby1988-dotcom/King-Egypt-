@@ -331,6 +331,10 @@ from (
 ) as walk_batch;
 
 select extensions.is(
+    (select count(*)::integer from private.player_verified_walk_distance_events where user_id='00000000-0000-4000-8000-000000000061'),
+    20,'each accepted walk batch is stored as an independent append-only event'
+);
+select extensions.is(
     public.get_server_verified_walk_distance('00000000-0000-4000-8000-000000000061'),
     99.500::numeric,
     'nineteen bounded increments accumulate to 99.5 meters after the initial 4.5'
@@ -356,6 +360,10 @@ select extensions.is(
 select extensions.is(
     (select count(*)::integer from private.player_activity_proofs where user_id='00000000-0000-4000-8000-000000000061' and activity_kind='achievement' and activity_id='first_steps'),
     0,'First Steps does not create a reward proof'
+);
+select extensions.is(
+    (select count(*)::integer from private.player_verified_walk_distance_events where user_id='00000000-0000-4000-8000-000000000061'),
+    21,'the final half-meter is persisted as the twenty-first walk event'
 );
 
 reset role;
