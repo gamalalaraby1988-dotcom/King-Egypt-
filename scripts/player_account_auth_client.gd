@@ -10,6 +10,8 @@ signal player_profile_failed(message: String)
 const API_BASE_SETTING := "founder/auth/api_base_url"
 const PUBLISHABLE_KEY_SETTING := "founder/auth/publishable_key"
 const PKCE_TOKEN_PATH := "/auth/v1/token?grant_type=pkce"
+const PASSWORD_TOKEN_PATH := "/auth/v1/token?grant_type=password"
+const EMAIL_SIGNUP_PATH := "/auth/v1/signup"
 const REFRESH_PATH := "/auth/v1/token?grant_type=refresh_token"
 const GOOGLE_REDIRECT_URI := "kingofegyptcity://auth-callback"
 const PKCE_VERIFIER_ALIAS := "king_of_egypt_city.player.magic_link_verifier.v1"
@@ -86,6 +88,38 @@ func get_user_id() -> String:
 
 func get_email() -> String:
 	return _email
+
+func request_email_sign_in(email: String, password: String) -> bool:
+	var normalized_email := email.strip_edges().to_lower()
+	if not is_configured():
+		request_finished.emit(false, "إعدادات خدمة الحسابات غير مكتملة.")
+		return false
+	if not _valid_email(normalized_email):
+		request_finished.emit(false, "أدخل بريدًا إلكترونيًا صحيحًا.")
+		return false
+	if password.is_empty():
+		request_finished.emit(false, "أدخل كلمة المرور.")
+		return false
+	if _pending_action != "":
+		request_finished.emit(false, "هناك طلب حساب قيد التنفيذ.")
+		return false
+	return _send_auth_request(PASSWORD_TOKEN_PATH, {"email": normalized_email, "password": password}, "email_sign_in")
+
+func request_email_sign_up(email: String, password: String) -> bool:
+	var normalized_email := email.strip_edges().to_lower()
+	if not is_configured():
+		request_finished.emit(false, "إعدادات خدمة الحسابات غير مكتملة.")
+		return false
+	if not _valid_email(normalized_email):
+		request_finished.emit(false, "أدخل بريدًا إلكترونيًا صحيحًا.")
+		return false
+	if password.length() < 8:
+		request_finished.emit(false, "اجعل كلمة المرور 8 أحرف على الأقل.")
+		return false
+	if _pending_action != "":
+		request_finished.emit(false, "هناك طلب حساب قيد التنفيذ.")
+		return false
+	return _send_auth_request(EMAIL_SIGNUP_PATH, {"email": normalized_email, "password": password}, "email_sign_up")
 
 func request_google_sign_in() -> bool:
 	if _pending_action != "":
@@ -226,8 +260,13 @@ func _on_auth_request_completed(result: int, response_code: int, _headers: Packe
 	match action:
 		"request_google_oauth":
 			request_finished.emit(true, "تم فتح تسجيل الدخول باستخدام Google. أكمل الاختيار ثم عُد إلى اللعبة.")
-		"verify_google_oauth":
+		"verify_google_oauth", "email_sign_in":
 			_accept_session_response(response, false)
+		"email_sign_up":
+			if not str(response.get("access_token", "")).is_empty():
+				_accept_session_response(response, false)
+			else:
+				request_finished.emit(true, "تم إنشاء الحساب. افتح رسالة التأكيد في بريدك الإلكتروني، ثم ارجع وسجّل الدخول.")
 		"refresh":
 			_accept_session_response(response, _restoring)
 		_:
@@ -264,7 +303,7 @@ func _accept_session_response(response: Dictionary, was_restoring: bool) -> void
 	if was_restoring:
 		request_finished.emit(true, "تم استعادة حساب اللاعب بأمان.")
 	else:
-		request_finished.emit(true, "تم تسجيل الدخول والتحقق من حساب Google.")
+		request_finished.emit(true, "تم تسجيل الدخول بنجاح.")
 
 func _secure_storage() -> Object:
 	if not Engine.has_singleton(SECURE_STORAGE_SINGLETON):
@@ -407,6 +446,14 @@ func _on_profile_request_completed(result: int, response_code: int, _headers: Pa
 
 func _safe_error(response: Dictionary) -> String:
 	match str(response.get("code", "")):
+		"invalid_credentials":
+			return "البريد الإلكتروني أو كلمة المرور غير صحيحة."
+		"email_not_confirmed":
+			return "أكد بريدك الإلكتروني من الرسالة التي وصلتك أولًا."
+		"user_already_exists":
+			return "هذا البريد مسجل بالفعل. استخدم تسجيل الدخول."
+		"weak_password":
+			return "كلمة المرور ضعيفة. استخدم 8 أحرف على الأقل."
 		"over_email_send_rate_limit":
 			return "تم تجاوز حد إرسال الرموز مؤقتًا. حاول لاحقًا."
 		"email_address_invalid":
