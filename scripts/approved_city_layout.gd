@@ -1675,23 +1675,26 @@ func _build_royal_square_mosaic_mural() -> void:
 
 	var mural := Node3D.new()
 	mural.name = "RoyalSquareHistoricalMosaicPreview"
-	mural.position = Vector3(-6.45, 5.55, 8.03)
+	mural.position = Vector3(-4.80, 5.65, 8.03)
+	# Keep the full panel between the palace column and doorway so no facade element hides it.
+	mural.scale = Vector3(0.86, 0.86, 1.0)
 	mural.add_to_group("royal_square_mosaic_preview")
 	palace.add_child(mural)
 
 	var tile_mesh := BoxMesh.new()
-	tile_mesh.size = Vector3(0.172, 0.172, 0.045)
+	tile_mesh.size = Vector3(0.086, 0.086, 0.045)
 	var tile_material := StandardMaterial3D.new()
-	tile_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	tile_material.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
 	tile_material.vertex_color_use_as_albedo = true
-	tile_material.roughness = 0.92
+	tile_material.roughness = 0.82
+	tile_material.metallic = 0.08
 	var multi := MultiMesh.new()
 	multi.transform_format = MultiMesh.TRANSFORM_3D
 	multi.use_colors = true
 	multi.mesh = tile_mesh
 
-	var columns := 30
-	var rows := 17
+	var columns := 60
+	var rows := 34
 	var transforms: Array[Transform3D] = []
 	var colors: Array[Color] = []
 	var blue := Color(0.035, 0.23, 0.34)
@@ -1748,8 +1751,8 @@ func _build_royal_square_mosaic_mural() -> void:
 				if v < 0.18 and int(u * 100.0) % 7 < 2:
 					color = gold
 
-			var tile_x := -2.70 + float(column) * 0.186
-			var tile_y := -1.49 + float(row) * 0.186
+			var tile_x := -2.70 + float(column) * 0.093
+			var tile_y := -1.49 + float(row) * 0.093
 			transforms.append(Transform3D(Basis.IDENTITY, Vector3(tile_x, tile_y, 0.0)))
 			colors.append(color)
 
