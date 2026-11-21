@@ -1430,7 +1430,7 @@ func _on_server_activity_progress_recorded(activity_kind: String, activity_id: S
 		return
 	if not ["mission", "job", "achievement"].has(activity_kind):
 		return
-	if activity_kind == "mission" and ["mission_shop", "mission_restaurant", "mission_employment"].has(activity_id):
+	if (activity_kind == "mission" and ["mission_shop", "mission_restaurant", "mission_employment"].has(activity_id)) or (activity_kind == "achievement" and activity_id == "first_steps"):
 		# Read the account's authoritative ledger after the server confirms the write.
 		PlayerSyncClient.fetch_verified_activity_progress()
 	status_label.text = "تم حفظ إنجاز %s في سجل حسابك الخادمي." % activity_id
