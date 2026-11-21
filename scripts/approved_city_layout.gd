@@ -632,6 +632,16 @@ func _build_main_street_wall_ads() -> void:
 			continue
 		var side := float(spec["side"])
 		var width := float(spec["width"])
+		# Give the complete target side facade a warm sandstone finish so the
+		# founder artwork reads as part of the building wall, not as a mounted panel.
+		var facade_name := "RightFacade" if side > 0.0 else "LeftFacade"
+		var mural_wall := building.get_node_or_null(facade_name) as MeshInstance3D
+		if mural_wall != null:
+			var sandstone_wall := StandardMaterial3D.new()
+			sandstone_wall.albedo_color = Color(0.70, 0.59, 0.43)
+			sandstone_wall.roughness = 0.94
+			sandstone_wall.metallic = 0.0
+			mural_wall.material_override = sandstone_wall
 		var mural := Node3D.new()
 		mural.name = "FounderWallMural_" + str(spec["id"])
 		# The image and lettering sit almost flush to the plaster facade, with no projecting frame.
