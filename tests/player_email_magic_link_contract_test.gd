@@ -16,6 +16,7 @@ func _initialize() -> void:
 	_check(player_auth.contains('"/auth/v1/token?grant_type=pkce"'), "Magic-link callbacks must exchange the PKCE code.")
 	_check(player_auth.contains('getPendingAuthLink') and player_auth.contains('clearPendingAuthLink'), "Player auth must consume and clear Android callback links.")
 	_check(founder_auth.contains("request_founder_entitlement_with_access_token"), "Founder entitlement must accept the player session.")
+	_check(not founder_auth.contains("/auth/v1/otp") and not founder_auth.contains("refresh_token"), "Founder entitlement transport must not maintain a separate Auth session.")
 	_check(not founder_auth.contains('call_deferred("_restore_persisted_session")'), "Founder auth must not restore a separate Auth session.")
 	_check(main_source.contains("FounderIdentityManager.founder_subject_id != account_id"), "Founder identity must remain bound to its original Auth user.")
 	_check(main_source.contains('str(parsed_claims.get("subject_id", "")) != PlayerAccountAuthClient.get_user_id()'), "Founder tickets must match the active player account.")
