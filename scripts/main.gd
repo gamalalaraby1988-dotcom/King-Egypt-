@@ -175,6 +175,11 @@ func _guard_player_safety() -> void:
 func _is_safe_city_position(position: Vector3) -> bool:
 	return position.y > PLAYER_RECOVERY_FALL_LIMIT and absf(position.x) <= CITY_SAFE_X_LIMIT and position.z >= CITY_SAFE_Z_MIN and position.z <= CITY_SAFE_Z_MAX
 
+func _is_local_city_interaction_allowed() -> bool:
+	# Interior teleports and local vehicle control are not yet server-authoritative.
+	return not GameModeManager.is_online_ready()
+
+
 func _unhandled_input(event: InputEvent) -> void:
 	if GameModeManager.is_online_ready():
 		return
@@ -235,6 +240,8 @@ func _create_player_vehicle() -> void:
 	layer.add_child(vehicle_interaction_button)
 
 func _summon_player_vehicle() -> void:
+	if not _is_local_city_interaction_allowed():
+		return
 	if interior_transition_busy or is_instance_valid(interior_root) or vehicle_occupied:
 		return
 	var selected_vehicle_id := VehicleStoreManager.get_selected_vehicle_id()
@@ -282,6 +289,8 @@ func _summon_player_vehicle() -> void:
 		vehicle_interaction_button.visible = true
 
 func _toggle_vehicle_use() -> void:
+	if not _is_local_city_interaction_allowed():
+		return
 	if interior_transition_busy or is_instance_valid(interior_root):
 		return
 	if vehicle_occupied:
@@ -545,6 +554,8 @@ func _hide_interior_loading() -> void:
 		_set_palace_navigation_visible(true)
 
 func enter_building_interior(building: Node3D, actor: Node3D) -> void:
+	if not _is_local_city_interaction_allowed():
+		return
 	var body := actor as CharacterBody3D
 	if interior_transition_busy or is_instance_valid(interior_root) or vehicle_occupied:
 		return
@@ -1531,7 +1542,7 @@ func _on_player_access_token_changed(access_token: String) -> void:
 
 func _on_player_server_authenticated(success: bool, message: String) -> void:
 	_on_mode_status_changed(message)
-	if success:
+	if success and GameModeManager.confirm_online_authentication():
 		_enter_selected_game_mode()
 	else:
 		GameModeManager.disconnect_online()
