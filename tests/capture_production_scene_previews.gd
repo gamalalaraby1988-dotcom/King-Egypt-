@@ -37,10 +37,10 @@ func _capture_previews() -> void:
 		return
 
 	var ad := current_scene.get_node_or_null(
-		"ApprovedCityLayout/Approved_royal_bank/FounderWallAd_royal_bank"
+		"ApprovedCityLayout/Approved_royal_bank/FounderWallMural_royal_bank"
 	) as Node3D
 	if ad == null:
-		push_error("The production royal-bank founder wall ad was not found.")
+		push_error("The production royal-bank founder wall mural was not found.")
 		quit(1)
 		return
 	var ad_target := ad.global_position + Vector3(0.0, 0.0, 0.0)
