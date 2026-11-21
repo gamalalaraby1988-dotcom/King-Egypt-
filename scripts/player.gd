@@ -47,7 +47,7 @@ func _process(delta: float) -> void:
 
 
 func play_emote(emote_id: String) -> bool:
-	# التعبيرات محلية في هذه المرحلة؛ لا يوجد بروتوكول خادمي لمزامنتها بعد.
+	# يرسل التعبير إلى الخادم عند اللعب عبر الإنترنت.
 	if sitting or arcade_seated or animal_riding:
 		return false
 	var durations := {
@@ -173,6 +173,9 @@ func _process_online_input() -> void:
 	var input_vector := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
 	if mobile_move.length() > 0.08:
 		input_vector = mobile_move
+	if sitting and input_vector.length() > 0.08:
+		sitting = false
+		AuthoritativeGameServer.send_player_sit(false)
 	if sitting:
 		input_vector = Vector2.ZERO
 	var direction := Vector3(input_vector.x, 0.0, input_vector.y)
@@ -299,6 +302,8 @@ func toggle_sit() -> void:
 	if sitting:
 		mobile_move = Vector2.ZERO
 		mobile_sprint = false
+	if GameModeManager.is_online_ready():
+		AuthoritativeGameServer.send_player_sit(sitting)
 
 func _update_avatar_animation(state: String, speed: float) -> void:
 	var avatar := get_node_or_null("AvatarVisual")
