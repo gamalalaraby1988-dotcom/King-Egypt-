@@ -168,7 +168,7 @@ func _run_city_adventure_contract() -> void:
 		push_error("Rescue must reuse an existing city resident and its wave animation.")
 		quit(1)
 		return
-	if manager_source.contains('description_label.text = "%s\\\\n%s"'):
+	if manager_source.contains('description_label.text = "%s\\\\n%s"') or manager_source.contains('description_label.text = "%s\\\\nالمرحلة'):
 		push_error("Online adventure descriptions must use real line breaks instead of a literal backslash-n.")
 		quit(1)
 		return
