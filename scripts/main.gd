@@ -1289,6 +1289,9 @@ var online_address_input: LineEdit
 var game_mode_controls: VBoxContainer
 var player_account_status_label: Label
 var player_account_button: Button
+var google_sign_in_button: Button
+var player_account_email_input: LineEdit
+var player_account_password_input: LineEdit
 var player_account_profile_label: Label
 
 
@@ -1335,13 +1338,39 @@ func _create_mode_selection_ui() -> void:
 	heading.add_theme_color_override("font_color", Color(0.94, 0.79, 0.43))
 	content.add_child(heading)
 
+	player_account_email_input = LineEdit.new()
+	player_account_email_input.name = "PlayerAccountEmailInput"
+	player_account_email_input.placeholder_text = "البريد الإلكتروني"
+	player_account_email_input.custom_minimum_size.y = 40
+	player_account_email_input.keyboard_type = LineEdit.KEYBOARD_TYPE_EMAIL_ADDRESS
+	content.add_child(player_account_email_input)
+
+	player_account_password_input = LineEdit.new()
+	player_account_password_input.name = "PlayerAccountPasswordInput"
+	player_account_password_input.placeholder_text = "كلمة المرور (8 أحرف على الأقل)"
+	player_account_password_input.custom_minimum_size.y = 40
+	player_account_password_input.secret = true
+	content.add_child(player_account_password_input)
+
 	player_account_button = Button.new()
-	player_account_button.text = "المتابعة باستخدام Google"
-	player_account_button.custom_minimum_size.y = 40
-	player_account_button.pressed.connect(_on_google_sign_in_pressed)
+	player_account_button.text = "تسجيل الدخول بالبريد الإلكتروني"
+	player_account_button.custom_minimum_size.y = 42
+	player_account_button.pressed.connect(_on_email_sign_in_pressed)
 	content.add_child(player_account_button)
+
+	var create_account_button := Button.new()
+	create_account_button.text = "إنشاء حساب جديد"
+	create_account_button.custom_minimum_size.y = 40
+	create_account_button.pressed.connect(_on_email_sign_up_pressed)
+	content.add_child(create_account_button)
+
+	google_sign_in_button = Button.new()
+	google_sign_in_button.text = "الدخول باستخدام Google (اختياري)"
+	google_sign_in_button.custom_minimum_size.y = 36
+	google_sign_in_button.pressed.connect(_on_google_sign_in_pressed)
+	content.add_child(google_sign_in_button)
 	if PlayerAccountAuthClient.has_active_session():
-		player_account_button.text = "Google - الحساب متصل"
+		player_account_button.text = "البريد الإلكتروني - الحساب متصل"
 
 	var is_verified_founder := FounderIdentityManager.is_founder
 	mode_status_label = Label.new()
@@ -1371,6 +1400,16 @@ func _create_mode_selection_ui() -> void:
 	game_mode_controls.visible = not is_verified_founder
 
  
+func _on_email_sign_in_pressed() -> void:
+	if not is_instance_valid(player_account_email_input) or not is_instance_valid(player_account_password_input):
+		return
+	PlayerAccountAuthClient.request_email_sign_in(player_account_email_input.text, player_account_password_input.text)
+
+func _on_email_sign_up_pressed() -> void:
+	if not is_instance_valid(player_account_email_input) or not is_instance_valid(player_account_password_input):
+		return
+	PlayerAccountAuthClient.request_email_sign_up(player_account_email_input.text, player_account_password_input.text)
+
 func _on_google_sign_in_pressed() -> void:
 	if not PlayerAccountAuthClient.request_google_sign_in():
 		if is_instance_valid(mode_status_label):
@@ -1385,7 +1424,7 @@ func _on_player_account_request_finished(success: bool, message: String) -> void
 
 func _on_player_account_authenticated(user_id: String, email: String) -> void:
 	if is_instance_valid(player_account_button):
-		player_account_button.text = "Google - الحساب متصل"
+		player_account_button.text = "البريد الإلكتروني - الحساب متصل"
 	if is_instance_valid(mode_status_label):
 		mode_status_label.text = "تم تسجيل الدخول بالحساب %s." % email
 	if is_instance_valid(player_account_profile_label):
@@ -1424,9 +1463,9 @@ func _on_player_account_session_expired() -> void:
 	ProfileConfigStore.complete_account_switch()
 	PlayerSyncClient.clear_session_access_token()
 	if is_instance_valid(player_account_button):
-		player_account_button.text = "المتابعة باستخدام Google"
+		player_account_button.text = "تسجيل الدخول بالبريد الإلكتروني"
 	if is_instance_valid(mode_status_label):
-		mode_status_label.text = "انتهت جلسة الحساب. سجّل الدخول مجددًا باستخدام Google."
+		mode_status_label.text = "انتهت جلسة الحساب. سجّل الدخول مجددًا باستخدام بريدك الإلكتروني."
 	if GameModeManager.is_online_ready():
 		_on_mode_status_changed("انتهت جلسة حساب اللاعب؛ تم إنهاء اتصال Online لحماية الحساب.")
 		GameModeManager.disconnect_online()
