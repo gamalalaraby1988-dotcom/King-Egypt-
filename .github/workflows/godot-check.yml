@@ -369,4 +369,4 @@ jobs:
         run: deno test --allow-net supabase/tests/player-sync-edge.test.ts
 
       - name: Run server verified progress Edge Function tests
-        run: deno test supabase/tests/game-proof-issuer-edge.test.ts supabase/tests/game-progress-lookup-edge.test.ts
+        run: deno test supabase/tests/game-proof-issuer-edge.test.ts supabase/tests/game-progress-lookup-edge.test.ts supabase/tests/game-walk-progress-edge.test.ts
