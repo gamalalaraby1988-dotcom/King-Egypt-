@@ -14,11 +14,18 @@ func _capture_previews() -> void:
 		return
 
 	root.size = Vector2i(1600, 900)
-	current_scene = packed.instantiate()
-	root.add_child(current_scene)
+	var production_scene := packed.instantiate()
+	root.add_child(production_scene)
+	current_scene = production_scene
 	await process_frame
 	for _frame in range(12):
 		await process_frame
+
+	# Hide only the startup mode-selection overlay for clean production-scene renders.
+	var mode_overlay := current_scene.get_node_or_null("GameModeSelection") as CanvasLayer
+	if is_instance_valid(mode_overlay):
+		mode_overlay.visible = false
+	await process_frame
 
 	var gate_ok := await _capture_view(
 		"royal_gate_preview.png",
@@ -30,10 +37,10 @@ func _capture_previews() -> void:
 		return
 
 	var ad := current_scene.get_node_or_null(
-		"ApprovedCityLayout/Approved_royal_bank/FounderWallAd_royal_bank"
+		"ApprovedCityLayout/Approved_royal_bank/FounderWallMural_royal_bank"
 	) as Node3D
 	if ad == null:
-		push_error("The production royal-bank founder wall ad was not found.")
+		push_error("The production royal-bank founder wall mural was not found.")
 		quit(1)
 		return
 	var ad_target := ad.global_position + Vector3(0.0, 0.0, 0.0)
