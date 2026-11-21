@@ -198,11 +198,22 @@ export function createGameProofIssuerHandler(runtime: GameProofIssuerRuntime = d
       }
       const proofId = data.proof_id == null ? null : String(data.proof_id);
       if (proofId !== null && !UUID_RE.test(proofId)) return json({ error: "progress_response_invalid" }, 502);
+      const achievementUnlocked = data.achievement_unlocked === true;
+      const achievementRewardEligible = data.achievement_reward_eligible === true;
+      const achievementProofId = data.achievement_proof_id == null ? null : String(data.achievement_proof_id);
+      if (
+        (achievementUnlocked && typeof data.achievement_reward_eligible !== "boolean") ||
+        (!achievementUnlocked && (achievementRewardEligible || achievementProofId !== null)) ||
+        (achievementProofId !== null && (!achievementUnlocked || !achievementRewardEligible || !UUID_RE.test(achievementProofId)))
+      ) return json({ error: "progress_response_invalid" }, 502);
       return json({
         progress_recorded: true,
         duplicate: data.duplicate === true,
         reward_eligible: data.reward_eligible,
         proof_id: proofId,
+        achievement_unlocked: achievementUnlocked,
+        achievement_reward_eligible: achievementRewardEligible,
+        achievement_proof_id: achievementProofId,
       });
     } catch {
       return json({ error: "progress_response_invalid" }, 502);

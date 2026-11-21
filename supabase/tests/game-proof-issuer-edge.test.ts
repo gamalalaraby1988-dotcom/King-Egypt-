@@ -151,3 +151,38 @@ Deno.test("fails closed when the progress database is unavailable", async () => 
   const response = await handler(post(await signedBody()));
   if (response.status !== 503) throw new Error("database outage must not be acknowledged as saved");
 });
+
+
+Deno.test("forwards the Explorer achievement only when the database confirms all approved missions", async () => {
+  const handler = createGameProofIssuerHandler(runtime(async () => Response.json({
+    progress_recorded: true,
+    duplicate: false,
+    reward_eligible: false,
+    proof_id: null,
+    achievement_unlocked: true,
+    achievement_reward_eligible: true,
+    achievement_proof_id: "70000000-0000-4000-8000-000000000012",
+  })));
+  const response = await handler(post(await signedBody("mission_employment")));
+  const data = await response.json();
+  if (
+    response.status !== 200 ||
+    data.achievement_unlocked !== true ||
+    data.achievement_reward_eligible !== true ||
+    data.achievement_proof_id !== "70000000-0000-4000-8000-000000000012"
+  ) throw new Error("verified Explorer achievement proof was not forwarded");
+});
+
+Deno.test("rejects an Explorer proof unless the database marks the achievement unlocked and reward eligible", async () => {
+  const handler = createGameProofIssuerHandler(runtime(async () => Response.json({
+    progress_recorded: true,
+    duplicate: false,
+    reward_eligible: false,
+    proof_id: null,
+    achievement_unlocked: false,
+    achievement_reward_eligible: false,
+    achievement_proof_id: "70000000-0000-4000-8000-000000000012",
+  })));
+  const response = await handler(post(await signedBody("mission_employment")));
+  if (response.status !== 502) throw new Error("orphan Explorer proof must be rejected");
+});

@@ -1428,17 +1428,22 @@ func _on_server_mission_completed(mission_id: String) -> void:
 func _on_server_activity_progress_recorded(activity_kind: String, activity_id: String, reward_eligible: bool) -> void:
 	if not GameModeManager.is_online_ready():
 		return
-	if not ["mission", "job"].has(activity_kind):
+	if not ["mission", "job", "achievement"].has(activity_kind):
 		return
+	if activity_kind == "mission" and ["mission_shop", "mission_restaurant", "mission_employment"].has(activity_id):
+		# Read the account's authoritative ledger after the server confirms the write.
+		PlayerSyncClient.fetch_verified_activity_progress()
 	status_label.text = "تم حفظ إنجاز %s في سجل حسابك الخادمي." % activity_id
 	description_label.text = "هذا الإنجاز موثّق من خادم اللعبة، ويمكن استعادته عند تسجيل الدخول من جهاز آخر."
+	if activity_kind == "achievement" and activity_id == "explorer":
+		description_label.text = "أكملت مهام المتجر والمطعم والتوظيف الثلاث، واعتمد الخادم إنجاز مستكشف المدينة."
 	reward_label.text = "إثبات المكافأة متاح للتحقق." if reward_eligible else "تم حفظ الإنجاز دون مكافأة؛ المكافآت ما زالت مغلقة."
 
 
 func _on_server_activity_proof_received(activity_kind: String, activity_id: String, proof_id: String) -> void:
-	if not GameModeManager.is_online_ready() or not ["mission", "job"].has(activity_kind):
+	if not GameModeManager.is_online_ready() or not ["mission", "job", "achievement"].has(activity_kind):
 		return
-	var allowed_ids: Array = ["mission_shop", "mission_restaurant", "mission_employment"] if activity_kind == "mission" else CityJobsCatalog.get_job_ids()
+	var allowed_ids: Array = ["mission_shop", "mission_restaurant", "mission_employment"] if activity_kind == "mission" else (CityJobsCatalog.get_job_ids() if activity_kind == "job" else ["explorer"])
 	if not allowed_ids.has(activity_id):
 		return
 	_pending_verified_proofs.append({"activity_kind": activity_kind, "activity_id": activity_id, "proof_id": proof_id})
@@ -1457,7 +1462,7 @@ func _process_next_server_reward_proof() -> void:
 func _on_server_activity_proof_failed(activity_kind: String, activity_id: String, message: String) -> void:
 	if not GameModeManager.is_online_ready():
 		return
-	var allowed_ids: Array = ["mission_shop", "mission_restaurant", "mission_employment"] if activity_kind == "mission" else CityJobsCatalog.get_job_ids() if activity_kind == "job" else []
+	var allowed_ids: Array = ["mission_shop", "mission_restaurant", "mission_employment"] if activity_kind == "mission" else (CityJobsCatalog.get_job_ids() if activity_kind == "job" else (["explorer"] if activity_kind == "achievement" else []))
 	if not allowed_ids.has(activity_id):
 		return
 	status_label.text = message

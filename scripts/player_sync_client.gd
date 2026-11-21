@@ -101,10 +101,11 @@ func set_session_access_token(access_token: String, user_id: String) -> void:
 		clear_session_access_token()
 		push_warning("Player sync session requires both an access token and an authenticated account ID.")
 		return
+	# Verified progress is a read-only account ledger and does not enable player sync.
+	call_deferred("fetch_verified_activity_progress")
 	if bool(ProjectSettings.get_setting(SYNC_ENABLED_SETTING, false)):
 		call_deferred("fetch_preference_snapshot")
 		call_deferred("fetch_progress_observations")
-		call_deferred("fetch_verified_activity_progress")
 		call_deferred("flush_pending")
 
 
@@ -146,9 +147,7 @@ func is_server_activity_verified(activity_kind: String, activity_id: String) -> 
 
 
 func fetch_verified_activity_progress() -> void:
-	if not bool(ProjectSettings.get_setting(SYNC_ENABLED_SETTING, false)):
-		return
-	if _access_token.is_empty() or _verified_progress_request_active:
+	if _access_token.is_empty() or _session_user_id.is_empty() or _verified_progress_request_active:
 		return
 	var base_url := str(ProjectSettings.get_setting("founder/auth/api_base_url", "")).strip_edges().trim_suffix("/")
 	var publishable_key := str(ProjectSettings.get_setting("founder/auth/publishable_key", "")).strip_edges()

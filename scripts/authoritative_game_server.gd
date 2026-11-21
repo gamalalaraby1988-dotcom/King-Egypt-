@@ -1239,15 +1239,28 @@ func _on_proof_issue_completed(result: int, response_code: int, _headers: Packed
 	if not _sessions.has(peer_id) or str(_sessions[peer_id].get("user_id", "")) != user_id:
 		return
 	rpc_id(peer_id, "receive_server_activity_progress_recorded", activity_kind, activity_id, reward_eligible)
-	if proof_id.is_empty():
-		return
 	var uuid_pattern := RegEx.new()
 	uuid_pattern.compile("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$")
-	if uuid_pattern.search(proof_id) == null:
-		push_warning("Trusted progress recorder returned an invalid reward proof id.")
-		_notify_proof_issue_failed(peer_id, activity_kind, activity_id, "استجابة إثبات المكافأة غير صالحة.")
-		return
-	rpc_id(peer_id, "receive_server_activity_proof", activity_kind, activity_id, proof_id)
+	if proof_id.is_empty() == false:
+		if uuid_pattern.search(proof_id) == null:
+			push_warning("Trusted progress recorder returned an invalid reward proof id.")
+			_notify_proof_issue_failed(peer_id, activity_kind, activity_id, "استجابة إثبات المكافأة غير صالحة.")
+			return
+		rpc_id(peer_id, "receive_server_activity_proof", activity_kind, activity_id, proof_id)
+	if bool(parsed.get("achievement_unlocked", false)):
+		rpc_id(
+			peer_id,
+			"receive_server_activity_progress_recorded",
+			"achievement",
+			"explorer",
+			bool(parsed.get("achievement_reward_eligible", false))
+		)
+		var achievement_proof_id := str(parsed.get("achievement_proof_id", "")).strip_edges()
+		if not achievement_proof_id.is_empty():
+			if uuid_pattern.search(achievement_proof_id) == null:
+				push_warning("Trusted progress recorder returned an invalid Explorer achievement proof id.")
+			else:
+				rpc_id(peer_id, "receive_server_activity_proof", "achievement", "explorer", achievement_proof_id)
 
 
 func register_server_objective_zone(activity_kind: String, activity_id: String, center: Vector3, radius: float) -> bool:

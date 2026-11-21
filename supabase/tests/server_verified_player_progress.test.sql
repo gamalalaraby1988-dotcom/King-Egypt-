@@ -1,5 +1,5 @@
 begin;
-select extensions.plan(29);
+select extensions.plan(37);
 
 insert into auth.users (id,aud,role,email,encrypted_password,email_confirmed_at)
 values
@@ -11,7 +11,8 @@ insert into private.player_activity_reward_catalog (
     activity_kind, activity_id, reward_cash, reward_chips, reward_xp, enabled
 ) values
 ('mission','mission.progress_only_test',0,0,0,false),
-('mission','mission.progress_reward_test',25,1,5,true)
+('mission','mission.progress_reward_test',25,1,5,true),
+('achievement','explorer',250,5,0,false)
 on conflict (activity_kind,activity_id) do update
 set reward_cash=excluded.reward_cash,
     reward_chips=excluded.reward_chips,
@@ -175,6 +176,58 @@ select extensions.is(
     (select count(*)::integer from private.player_verified_activity_progress where user_id='00000000-0000-4000-8000-000000000061' and activity_kind='mission' and activity_id='city_adventure_message'),
     2,'replayable city adventures may keep multiple verified completions'
 );
+
+
+create temporary table unapproved_mission_result on commit drop as
+select public.record_server_verified_activity_progress(
+    '00000000-0000-4000-8000-000000000061',
+    'mission','mission_unapproved_test',
+    '60000000-0000-4000-8000-000000000016',
+    pg_catalog.repeat('01',32),pg_catalog.now(),pg_catalog.now()+interval '5 minutes'
+) as result;
+
+select extensions.is((select result->>'achievement_unlocked' from unapproved_mission_result),'false','unapproved missions do not count toward Explorer');
+
+create temporary table explorer_shop_result on commit drop as
+select public.record_server_verified_activity_progress(
+    '00000000-0000-4000-8000-000000000061',
+    'mission','mission_shop',
+    '60000000-0000-4000-8000-000000000021',
+    pg_catalog.repeat('02',32),pg_catalog.now(),pg_catalog.now()+interval '5 minutes'
+) as result;
+
+select extensions.is((select result->>'achievement_unlocked' from explorer_shop_result),'false','one approved building mission is not enough for Explorer');
+
+create temporary table explorer_restaurant_result on commit drop as
+select public.record_server_verified_activity_progress(
+    '00000000-0000-4000-8000-000000000061',
+    'mission','mission_restaurant',
+    '60000000-0000-4000-8000-000000000022',
+    pg_catalog.repeat('03',32),pg_catalog.now(),pg_catalog.now()+interval '5 minutes'
+) as result;
+
+select extensions.is((select result->>'achievement_unlocked' from explorer_restaurant_result),'false','two approved building missions are not enough for Explorer');
+
+create temporary table explorer_employment_result on commit drop as
+select public.record_server_verified_activity_progress(
+    '00000000-0000-4000-8000-000000000061',
+    'mission','mission_employment',
+    '60000000-0000-4000-8000-000000000023',
+    pg_catalog.repeat('04',32),pg_catalog.now(),pg_catalog.now()+interval '5 minutes'
+) as result;
+
+select extensions.is((select result->>'achievement_unlocked' from explorer_employment_result),'true','the third approved building mission unlocks Explorer');
+select extensions.is((select result->>'achievement_reward_eligible' from explorer_employment_result),'false','Explorer reward eligibility remains disabled until its catalog is enabled');
+select extensions.is((select result->>'achievement_proof_id' from explorer_employment_result),null::text,'no Explorer reward proof is issued while rewards are disabled');
+select extensions.is(
+    (select count(*)::integer from private.player_verified_activity_progress where user_id='00000000-0000-4000-8000-000000000061' and activity_kind='achievement' and activity_id='explorer'),
+    1,'Explorer is recorded exactly once in the server verified ledger'
+);
+select extensions.is(
+    (select count(*)::integer from private.player_activity_proofs where user_id='00000000-0000-4000-8000-000000000061' and activity_kind='achievement' and activity_id='explorer'),
+    0,'disabled Explorer rewards do not create a proof'
+);
+
 
 reset role;
 set local role authenticated;
