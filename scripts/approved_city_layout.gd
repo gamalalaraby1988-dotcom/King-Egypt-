@@ -149,6 +149,7 @@ func _add_building_facade_details(root: Node3D, footprint: Vector2, height: floa
 	glass_material.emission_energy_multiplier = 0.28
 	var glass := MultiMeshInstance3D.new()
 	glass.name = "BatchedDarkTealWindows"
+	glass.add_to_group("city_night_windows")
 	glass.multimesh = glass_multi
 	glass.material_override = glass_material
 	glass.visibility_range_end = 140.0
@@ -339,6 +340,7 @@ func _build_nile_waterfront() -> void:
 	for x in [-65.0,-45.0,-25.0,25.0,45.0,65.0]:
 		_box(self, "PromenadeLamp", Vector3(0.18, 3.0, 0.18), Vector3(x, 1.5, 74), GOLD)
 		_box(self, "PromenadeLampHead", Vector3(0.8, 0.18, 0.8), Vector3(x, 3.0, 74), GOLD)
+		_add_city_night_light(self, "PromenadeNightLight", Vector3(x, 2.9, 74), 8.0)
 
 func _build_pyramids() -> void:
 	# Place the Giza landmarks beyond the northern city skyline so they read as a distant desert region.
@@ -1202,6 +1204,7 @@ func _build_city_lighting_and_wayfinding() -> void:
 		_box(lamp, "LampPost", Vector3(0.22, 4.2, 0.22), Vector3(0, 2.1, 0), GOLD)
 		_box(lamp, "LampArm", Vector3(1.1, 0.16, 0.16), Vector3(0.48, 4.0, 0), GOLD)
 		_box(lamp, "LampHead", Vector3(0.7, 0.32, 0.55), Vector3(0.95, 3.85, 0), IVORY)
+		_add_city_night_light(lamp, "CityLampNightLight", Vector3(0.95, 3.7, 0.0), 8.5)
 	# Direction markers use bilingual labels without adding standalone buildings.
 	var sign_specs := [
 		["Sign_RoyalSquare", Vector3(8, 0, -24), "الميدان الملكي"],
@@ -1226,6 +1229,20 @@ func _build_city_lighting_and_wayfinding() -> void:
 		label.modulate = Color(1.0, 0.9, 0.64)
 		label.outline_size = 6
 		sign.add_child(label)
+
+
+func _add_city_night_light(parent: Node3D, label: String, at: Vector3, radius: float) -> void:
+	# Warm point lights stay disabled by day and never cast real-time shadows on Android.
+	var light := OmniLight3D.new()
+	light.name = label
+	light.position = at
+	light.light_color = Color(1.0, 0.66, 0.34)
+	light.light_energy = 0.0
+	light.omni_range = radius
+	light.shadow_enabled = false
+	light.add_to_group("city_night_lights")
+	parent.add_child(light)
+
 
 
 func _build_npc_population() -> void:
