@@ -59,6 +59,7 @@ var social_add_code_input: LineEdit
 var social_requests_cache: Array = []
 var social_friends_cache: Array = []
 var social_active_tab := "friends"
+var emotes_popup: PanelContainer
 
 
 const GROUP_MAX_MEMBERS := 4
@@ -75,7 +76,7 @@ const SECTIONS := {
 	"social": ["الأصدقاء والتواصل", "ابحث عن صديق باستخدام رمز اللاعب الفريد، أو اضغط على شخصية لاعب لعرض قائمة التفاعل."],
 	"group": ["مجموعتي", "مجموعة صغيرة من أربعة لاعبين كحد أقصى: قائد وثلاثة أعضاء."],
 	"chat": ["المحادثة", "افتح محادثة مجموعتك للتواصل مع أعضائها. الرسائل بين الأجهزة تحتاج اتصال الخادم."],
-	"emotes": ["التعبيرات والحركات", "اختر تعبير وجه أو حركة اجتماعية للشخصية. الحركات المتاحة تظهر هنا عند ربط مكتبة التعبيرات."],
+	"emotes": ["التعبيرات والحركات", "اختر حركة لتظهر على شخصيتك داخل المدينة."],
 	"party": ["حفلة في المدينة", "تبدأ الحفلة بعد الدفع وتستمر 20 ثانية بالضبط. لا يوجد حد عددي اعتباطي للمشاركين؛ وتُمنح المكافآت وفق المشاركة الفعلية والتحقق ومنع التكرار."],
 	"pets": ["الحيوانات الأليفة", "تابع حيوانك الأليف ومهرجان الحيوانات، وطوّر الحيوان المؤقت للوصول إلى القط الفرعوني الذهبي."],
 	"settings": ["الإعدادات", "اضبط اللغة والصوت وجودة الرسوم بما يناسب جهازك."],
@@ -707,6 +708,9 @@ func _open_section(section: String) -> void:
 	if section == "chat":
 		_open_social_popup("public")
 		return
+	if section == "emotes":
+		_open_emotes_popup()
+		return
 	popup_title.text = str(SECTIONS[section][0])
 	popup_body.text = str(SECTIONS[section][1])
 	if section == "group":
@@ -725,6 +729,71 @@ func _open_section(section: String) -> void:
 					city_map.call(method_name)
 					break
 	popup.visible = true
+
+
+func _open_emotes_popup() -> void:
+	if not is_instance_valid(emotes_popup):
+		emotes_popup = PanelContainer.new()
+		emotes_popup.name = "AvatarEmotesPopup"
+		emotes_popup.anchor_left = 0.5
+		emotes_popup.anchor_right = 0.5
+		emotes_popup.anchor_top = 0.5
+		emotes_popup.anchor_bottom = 0.5
+		emotes_popup.offset_left = -145
+		emotes_popup.offset_right = 145
+		emotes_popup.offset_top = -190
+		emotes_popup.offset_bottom = 190
+		emotes_popup.mouse_filter = Control.MOUSE_FILTER_STOP
+		emotes_popup.add_theme_stylebox_override("panel", _make_hud_panel_style())
+		root.add_child(emotes_popup)
+		var list := VBoxContainer.new()
+		list.add_theme_constant_override("separation", 8)
+		emotes_popup.add_child(list)
+		var heading := Label.new()
+		heading.text = "حركات الشخصية"
+		heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		list.add_child(heading)
+		var actions := [
+			{"title":"👏 تصفيق", "id":"clap"},
+			{"title":"💃 رقص", "id":"dance"},
+			{"title":"😢 بكاء", "id":"cry"},
+			{"title":"👋 تلويح", "id":"wave"},
+			{"title":"🫶 قلب باليدين", "id":"heart"},
+			{"title":"🪑 جلوس", "id":"sit"}
+		]
+		for action in actions:
+			var button := Button.new()
+			button.text = str(action["title"])
+			button.custom_minimum_size.y = 42
+			button.pressed.connect(_on_emote_pressed.bind(str(action["id"])))
+			list.add_child(button)
+		var close := Button.new()
+		close.text = "إغلاق"
+		close.pressed.connect(func(): emotes_popup.visible = false)
+		list.add_child(close)
+	emotes_popup.visible = true
+	if is_instance_valid(popup):
+		popup.visible = false
+
+
+func _on_emote_pressed(emote_id: String) -> void:
+	var player := main_scene.get_node_or_null("Player") as Node if is_instance_valid(main_scene) else null
+	if not is_instance_valid(player):
+		return
+	var accepted := false
+	if emote_id == "sit":
+		if player.has_method("toggle_sit"):
+			player.call("toggle_sit")
+			accepted = true
+	elif player.has_method("play_emote"):
+		accepted = bool(player.call("play_emote", emote_id))
+	if is_instance_valid(emotes_popup):
+		emotes_popup.visible = false
+	if not accepted:
+		popup_title.text = "الحركة غير متاحة الآن"
+		popup_body.text = "أنهٍ الركوب أو الجلوس الحالي أولًا، ثم جرّب الحركة."
+		popup.visible = true
+
 
 func _open_vehicle_store_phone() -> void:
 	if is_instance_valid(popup):
