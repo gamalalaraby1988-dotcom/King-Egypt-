@@ -19,3 +19,7 @@ verify_jwt = false
 # Dedicated server signs each bounded walking increment; the Edge Function verifies HMAC.
 [functions.game-walk-progress]
 verify_jwt = false
+
+# The handler verifies server HMAC and player JWT itself.
+[functions.city-session-directory]
+verify_jwt = false
