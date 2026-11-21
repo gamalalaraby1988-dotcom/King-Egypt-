@@ -1441,16 +1441,16 @@ func _on_player_account_access_token_changed(access_token: String) -> void:
 			return
 	WalletManager.initialize_wallet()
 	PlayerSyncClient.set_session_access_token(access_token, account_id)
-	if FounderIdentityManager.is_founder:
-		if FounderIdentityManager.founder_subject_id != account_id:
-			FounderIdentityManager.clear_entitlement()
-			if is_instance_valid(founder_pin_gate):
-				founder_pin_gate.visible = false
-			FounderAuthClient.request_founder_entitlement_with_access_token(access_token)
 	if account_changed:
 		call_deferred("_reload_scene_for_account_profile")
 	else:
 		ProfileConfigStore.complete_account_switch()
+		if FounderIdentityManager.is_founder and FounderIdentityManager.founder_subject_id != account_id:
+			FounderIdentityManager.clear_entitlement()
+			if is_instance_valid(founder_pin_gate):
+				founder_pin_gate.visible = false
+		# Founder status is checked automatically with the same Google-authenticated player session.
+		FounderAuthClient.request_founder_entitlement_with_access_token(access_token)
 
 func _reload_scene_for_account_profile() -> void:
 	# Recreate scene managers so mission, achievement, daily, vehicle, and settings state
@@ -1477,17 +1477,6 @@ func _on_player_profile_ready(_user_id: String, player_code: String, display_nam
 func _on_player_profile_failed(message: String) -> void:
 	if is_instance_valid(player_account_profile_label):
 		player_account_profile_label.text = message
-
-func _on_founder_verify_current_player_account() -> void:
-	if not PlayerAccountAuthClient.has_active_session():
-		if is_instance_valid(mode_status_label):
-			mode_status_label.text = "سجّل الدخول إلى حساب اللاعب أولًا، ثم أعد التحقق من صلاحية المؤسس."
-		_on_google_sign_in_pressed()
-		return
-	if is_instance_valid(mode_status_label):
-		mode_status_label.text = "جارٍ التحقق من صلاحية المؤسس باستخدام جلسة حساب اللاعب نفسها..."
-	if not FounderAuthClient.request_founder_entitlement_with_access_token(PlayerAccountAuthClient.get_access_token()):
-		_on_founder_entitlement_failed("تعذر بدء التحقق من حساب المؤسس.")
 
 func _on_founder_entitlement_received(payload: String, signature_base64: String) -> void:
 	var parsed_claims: Variant = JSON.parse_string(payload)
