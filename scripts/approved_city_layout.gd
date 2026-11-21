@@ -606,23 +606,27 @@ func _build_main_street_wall_ads() -> void:
 		var width := float(spec["width"])
 		var mount := Node3D.new()
 		mount.name = "FounderWallAd_" + str(spec["id"])
-		mount.position = Vector3(side * (width * 0.5 + 0.13), 4.35, 0.0)
+		# Seat the backing slightly into the side facade so it reads as wall-mounted,
+		# while keeping its full face clear of the facade geometry.
+		mount.position = Vector3(side * (width * 0.5 + 0.04), 4.75, 0.0)
 		mount.rotation.y = PI * 0.5 if side > 0.0 else -PI * 0.5
 		mount.add_to_group("main_street_wall_advertisements")
 		building.add_child(mount)
 
-		_box(mount, "AdBlackBacking", Vector3(3.45, 2.55, 0.16), Vector3.ZERO, DARK)
-		_box(mount, "AdGoldTopTrim", Vector3(3.5, 0.09, 0.18), Vector3(0.0, 1.31, 0.02), GOLD)
-		_box(mount, "AdGoldBottomTrim", Vector3(3.5, 0.09, 0.18), Vector3(0.0, -1.31, 0.02), GOLD)
-		_box(mount, "AdGoldLeftTrim", Vector3(0.09, 2.55, 0.18), Vector3(-1.70, 0.0, 0.02), GOLD)
-		_box(mount, "AdGoldRightTrim", Vector3(0.09, 2.55, 0.18), Vector3(1.70, 0.0, 0.02), GOLD)
+		# The narrower 2.7 m panel stays inside the clear central wall bay:
+		# side windows begin beyond +/-1.46 m on the smallest 10 m-deep buildings.
+		_box(mount, "AdBlackBacking", Vector3(2.85, 2.35, 0.16), Vector3.ZERO, DARK)
+		_box(mount, "AdGoldTopTrim", Vector3(2.90, 0.09, 0.18), Vector3(0.0, 1.20, 0.02), GOLD)
+		_box(mount, "AdGoldBottomTrim", Vector3(2.90, 0.09, 0.18), Vector3(0.0, -1.20, 0.02), GOLD)
+		_box(mount, "AdGoldLeftTrim", Vector3(0.09, 2.35, 0.18), Vector3(-1.405, 0.0, 0.02), GOLD)
+		_box(mount, "AdGoldRightTrim", Vector3(0.09, 2.35, 0.18), Vector3(1.405, 0.0, 0.02), GOLD)
 
 		var poster := MeshInstance3D.new()
 		poster.name = "FounderPortraitPoster"
 		var poster_mesh := QuadMesh.new()
-		poster_mesh.size = Vector2(3.12, 1.48)
+		poster_mesh.size = Vector2(2.48, 1.18)
 		poster.mesh = poster_mesh
-		poster.position = Vector3(0.0, 0.30, 0.105)
+		poster.position = Vector3(0.0, 0.28, 0.105)
 		poster.material_override = portrait_material
 		poster.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		mount.add_child(poster)
@@ -630,8 +634,8 @@ func _build_main_street_wall_ads() -> void:
 		var name_label := Label3D.new()
 		name_label.name = "FounderAdName"
 		name_label.text = "GAMAL ALARABY"
-		name_label.position = Vector3(0.0, -0.78, 0.12)
-		name_label.font_size = 30
+		name_label.position = Vector3(0.0, -0.72, 0.12)
+		name_label.font_size = 28
 		name_label.pixel_size = 0.008
 		name_label.modulate = Color(1.0, 0.82, 0.42)
 		name_label.outline_size = 5
@@ -641,8 +645,8 @@ func _build_main_street_wall_ads() -> void:
 		var title_label := Label3D.new()
 		title_label.name = "FounderAdTitle"
 		title_label.text = "FOUNDER OF KING OF EGYPT CITY"
-		title_label.position = Vector3(0.0, -1.08, 0.12)
-		title_label.font_size = 13
+		title_label.position = Vector3(0.0, -1.00, 0.12)
+		title_label.font_size = 12
 		title_label.pixel_size = 0.008
 		title_label.modulate = Color(1.0, 0.88, 0.62)
 		title_label.outline_size = 3
