@@ -12,7 +12,7 @@ func _initialize() -> void:
 		server.set("_sessions", sessions)
 		var snapshots: Dictionary = server.call("_build_remote_player_snapshots")
 		_expect(snapshots.size() == player_count, "%d players each receive a visibility snapshot" % player_count)
-		var expected_total := player_count * (player_count - 1)
+		var expected_total: int = int(player_count) * (int(player_count) - 1)
 		var actual_total := 0
 		for peer_id_variant in snapshots.keys():
 			var remote_players: Array = snapshots[peer_id_variant]
