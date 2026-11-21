@@ -54,6 +54,24 @@ func _capture_previews() -> void:
 		quit(1)
 		return
 
+	var mosaic := current_scene.get_node_or_null(
+		"ApprovedCityLayout/Approved_royal_palace/RoyalSquareHistoricalMosaicPreview"
+	) as Node3D
+	if mosaic == null:
+		push_error("The production royal-square historical mosaic preview was not found.")
+		quit(1)
+		return
+	var mosaic_target := mosaic.global_position
+	var mosaic_normal := mosaic.global_transform.basis.z.normalized()
+	var mosaic_ok := await _capture_view(
+		"royal_square_historical_mosaic_preview.png",
+		mosaic_target + mosaic_normal * 13.0 + Vector3(1.0, 2.0, 0.0),
+		mosaic_target + Vector3(0.0, 0.0, 0.0)
+	)
+	if not mosaic_ok:
+		quit(1)
+		return
+
 	print("Production-scene previews saved in ", OUTPUT_DIR)
 	quit(0)
 
