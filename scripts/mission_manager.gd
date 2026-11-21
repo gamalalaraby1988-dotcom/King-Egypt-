@@ -1300,7 +1300,7 @@ func _on_server_mission_stage_updated(mission_id: String, server_target: Vector3
 		]
 		description_label.text = "%s\n%s" % [str(CITY_ADVENTURES.get(mission_id, {}).get("description", "")), clues[mini(stage_number - 2, clues.size() - 1)]]
 	else:
-		description_label.text = "%s\\nالمرحلة %d من %d" % [str(CITY_ADVENTURES.get(mission_id, {}).get("description", "")), stage_number, stage_count]
+		description_label.text = "%s\nالمرحلة %d من %d" % [str(CITY_ADVENTURES.get(mission_id, {}).get("description", "")), stage_number, stage_count]
 	status_label.text = message
 
 func _accept_job() -> void:
