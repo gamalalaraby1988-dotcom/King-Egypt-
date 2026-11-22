@@ -56,14 +56,21 @@ def torus(name, loc, major, minor, mat, rotation=(0,0,0)):
     bpy.ops.mesh.primitive_torus_add(major_radius=major, minor_radius=minor, major_segments=64, minor_segments=12, location=loc, rotation=rotation)
     return finish(bpy.context.object, name, mat)
 
-# Ground plinth and approach steps (front is negative Y).
-cube("Monumental foundation", (0, 0.0, 0.35), (28.0, 13.0, 0.7), black_stone, 0.18)
-cube("Gold foundation reveal", (0, -0.02, 0.74), (27.4, 12.6, 0.12), gold, 0.035)
-cube("Upper stone terrace", (0, 0.0, 0.98), (26.8, 12.0, 0.42), limestone, 0.12)
-for i in range(5):
-    y = -7.0 - i * 0.72
-    cube(f"Approach stair {i+1}", (0, y, 0.48 - i*0.075), (15.0 + i*1.1, 1.05, 0.22), limestone, 0.06)
-    cube(f"Stair gold nosing {i+1}", (0, y-0.48, 0.60 - i*0.075), (15.0 + i*1.1, 0.055, 0.045), gold, 0.012)
+# Side foundations only: keep the central vehicle passage completely free of steps.
+# The gate's structural plinths sit beneath the pylons and wing walls, not across the road.
+for side, x in (("Left", -9.0), ("Right", 9.0)):
+    cube(f"{side} monumental foundation", (x, 0.0, 0.35), (10.0, 13.0, 0.7), black_stone, 0.18)
+    cube(f"{side} gold foundation reveal", (x, -0.02, 0.74), (9.7, 12.6, 0.12), gold, 0.035)
+    cube(f"{side} upper stone terrace", (x, 0.0, 0.98), (9.4, 12.0, 0.42), limestone, 0.12)
+
+# Continuous, level vehicle roadway through the portal; no stairs or raised threshold.
+road = cube("Continuous level vehicle roadway", (0.0, -1.5, 1.075), (8.2, 42.0, 0.22), dark, 0.025)
+# Flush gold edge lines mark the lane without creating a physical obstruction.
+for x in (-3.95, 3.95):
+    cube("Flush gold roadway edge inlay", (x, -1.5, 1.19), (0.055, 42.0, 0.018), gold, 0.006)
+# Low-contrast center guide, also flush with the road surface.
+for y in range(-20, 19, 4):
+    cube("Flush roadway center guide", (0.0, y, 1.19), (0.10, 1.8, 0.018), limestone, 0.006)
 
 # Two monumental pylons framing a clear central vehicle/pedestrian opening.
 tower_x = 8.0
