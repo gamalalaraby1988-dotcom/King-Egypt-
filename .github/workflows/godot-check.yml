@@ -503,3 +503,23 @@ jobs:
             echo "3D asset review registry validation failed."
             exit 1
           fi
+
+      - name: Set up Node.js for Khronos glTF validation
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install pinned Khronos glTF Validator
+        run: npm install --no-save --no-package-lock gltf-validator@2.0.0-dev.3.10
+
+      - name: Validate GLB/glTF assets and write reports
+        run: node scripts/validate_gltf_assets.cjs
+
+      - name: Upload glTF validation reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: king-egypt-city-gltf-validation
+          path: artifacts/gltf-validation/*.report.json
+          if-no-files-found: ignore
+          retention-days: 14
