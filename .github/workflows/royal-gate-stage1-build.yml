@@ -66,6 +66,11 @@ jobs:
       - name: Import GLB into Godot
         run: /tmp/godot/Godot_v4.7.2-stable_linux.x86_64 --headless --editor --path . --quit
 
+      - name: Test the production city scene and bidirectional vehicle clearance
+        run: |
+          GODOT="/tmp/godot/Godot_v4.7.2-stable_linux.x86_64"
+          "$GODOT" --headless --audio-driver Dummy --path . --script res://tests/royal_gate_bidirectional_clearance_test.gd
+
       - name: Render preview from the exact GLB in Godot
         run: |
           GODOT="/tmp/godot/Godot_v4.7.2-stable_linux.x86_64"
