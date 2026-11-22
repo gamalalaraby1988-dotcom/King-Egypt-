@@ -116,9 +116,9 @@ cube("Central lintel gold fascia", (0, -2.47, 11.72), (9.8, 0.18, 0.42), gold, 0
 cube("Central lintel blue cartouche field", (0, -2.59, 12.35), (6.4, 0.16, 0.72), blue, 0.08)
 cube("Central lintel top cornice", (0, 0.0, 12.95), (11.0, 5.2, 0.28), gold, 0.06)
 # Enlarged royal founder crest: portrait reservation above two legible identity lines.
-cube("Royal crest backing", (0, -2.68, 13.42), (4.45, 0.34, 2.55), limestone, 0.14)
-cube("Royal crest gold frame", (0, -2.90, 13.42), (4.02, 0.14, 2.20), gold, 0.07)
-cube("Royal crest dark inset", (0, -3.00, 13.42), (3.72, 0.08, 1.94), dark, 0.045)
+cube("Royal crest backing", (0, -2.68, 13.42), (4.55, 0.34, 2.72), limestone, 0.14)
+cube("Royal crest gold frame", (0, -2.90, 13.42), (4.12, 0.14, 2.52), gold, 0.07)
+cube("Royal crest dark inset", (0, -3.00, 13.42), (3.82, 0.08, 2.30), dark, 0.045)
 # Use the founder portrait already stored in the official project repository.
 portrait_path = os.path.join(os.getcwd(), "assets", "founder", "founder_portrait.jpg")
 if not os.path.isfile(portrait_path):
@@ -136,14 +136,19 @@ portrait_mat.node_tree.links.new(portrait_tex.outputs["Color"], portrait_bsdf.in
 portrait_bsdf.inputs["Roughness"].default_value = 0.62
 portrait_bsdf.inputs["Metallic"].default_value = 0.0
 # Portrait frame and a vertical image plane facing the front of the gate.
-cube("Founder portrait reserved frame", (0, -3.065, 13.91), (1.18, 0.055, 0.98), gold, 0.035)
-bpy.ops.mesh.primitive_plane_add(size=1, location=(0, -3.115, 13.91), rotation=(math.radians(90), 0, 0))
+cube("Founder portrait reserved frame", (0, -3.065, 13.98), (1.66, 0.055, 1.34), gold, 0.035)
+bpy.ops.mesh.primitive_plane_add(size=1, location=(0, -3.115, 13.98), rotation=(math.radians(90), 0, 0))
 portrait_plane = bpy.context.object
 portrait_plane.name = "Founder official portrait image"
-portrait_plane.dimensions = (1.02, 0.82, 0.012)
+portrait_plane.dimensions = (1.48, 1.16, 0.012)
 bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
 portrait_plane.data.materials.append(portrait_mat)
-cube("Founder portrait top jewel", (0, -3.13, 14.43), (0.22, 0.035, 0.10), turquoise, 0.025)
+cube("Founder portrait top jewel", (0, -3.13, 14.70), (0.28, 0.035, 0.12), turquoise, 0.025)
+for sx in (-0.72, 0.72):
+    for sz in (13.48, 14.48):
+        sphere("Founder portrait turquoise corner stud", (sx, -3.13, sz), (0.075, 0.035, 0.075), turquoise, 20, 12)
+for sx in (-0.88, 0.88):
+    cube("Founder portrait slim gold side fillet", (sx, -3.12, 13.98), (0.045, 0.035, 0.92), gold, 0.012)
 
 # Founder identity lettering is real 3D text in the exported GLB.
 def crest_text(name, body, size, z, mat, max_width):
@@ -168,8 +173,8 @@ def crest_text(name, body, size, z, mat, max_width):
         obj.scale.z *= factor
     return obj
 
-crest_text("Founder name lettering", "GAMAL ALARABY", 0.56, 13.02, gold, 3.50)
-crest_text("Founder title lettering", "FOUNDER OF KING OF EGYPT CITY", 0.235, 12.68, gold, 3.50)
+crest_text("Founder name lettering", "GAMAL ALARABY", 0.68, 12.91, gold, 3.52)
+crest_text("Founder title lettering", "FOUNDER OF KING OF EGYPT CITY", 0.27, 12.57, gold, 3.52)
 
 # Twin slim ceremonial columns at the inside edges of the passage.
 for x in (-4.55, 4.55):
@@ -273,7 +278,7 @@ scene.render.resolution_x = 1600
 scene.render.resolution_y = 900
 scene["asset_id"] = "royal_gate_stage1_from_scratch"
 scene["review_status"] = "preview_pending"
-scene["design_note"] = "Enhanced royal gate with enlarged founder name/title, embedded founder portrait, paired sphinx guardians, hieroglyph-inspired reliefs, turquoise inlays and integrated warm emissive accents; vehicle passage remains level and unobstructed."
+scene["design_note"] = "Enhanced royal gate with larger founder portrait in a coordinated turquoise-and-gold cartouche, clearer founder name/title, paired sphinx guardians, hieroglyph-inspired reliefs, turquoise inlays and integrated warm emissive accents; vehicle passage remains level and unobstructed."
 
 # Export only the newly generated gate mesh.
 bpy.ops.object.select_all(action="SELECT")
