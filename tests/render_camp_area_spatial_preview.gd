@@ -43,6 +43,28 @@ func _capture() -> void:
 		quit(1)
 		return
 
+	# Verify the approved camp expansion exists in the actual production scene.
+	var tent_names := ["FoundersRoyalTent", "GuestTentWest", "GuestTentEast", "GuestTentNorth"]
+	for tent_name in tent_names:
+		var tent := camp.get_node_or_null(tent_name) as Node3D
+		if tent == null:
+			push_error("Required camp tent is missing: " + tent_name)
+			quit(1)
+			return
+		var interactive_seats := 0
+		for child in tent.get_children():
+			if child.name.begins_with("InteractiveSeat_"):
+				interactive_seats += 1
+		if interactive_seats != 4:
+			push_error("Each camp tent must contain four interactive seats: " + tent_name)
+			quit(1)
+			return
+	for required_node in ["CentralCampfire", "OpenRoyalMajlis", "PyramidViewingDeck", "CamelPen", "HorsePen", "SheepGoatPen"]:
+		if camp.get_node_or_null(required_node) == null:
+			push_error("Required camp feature is missing: " + required_node)
+			quit(1)
+			return
+
 	var captures := [
 		["01_spatial_overview.png", Vector3(-8.0, 142.0, 278.0), Vector3(-78.0, 5.0, 85.0), 66.0],
 		["02_camp_detail.png", Vector3(-165.0, 34.0, 121.0), Vector3(-130.0, 2.0, 70.0), 54.0],
