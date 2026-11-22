@@ -33,17 +33,19 @@ func _capture_previews() -> void:
 		quit(1)
 		return
 
-	# Validate the exact imported production GLB and text-only founder identity.
-	var gate_model := gate_node.get_node_or_null("RoyalGateGLB") as Node3D
-	if gate_model == null:
-		push_error("The approved royal_gate.glb instance is missing from the production gate.")
-		quit(1)
-		return
-	var gate_meshes := gate_model.find_children("*", "MeshInstance3D", true, false)
-	if gate_meshes.is_empty():
-		push_error("The production royal_gate.glb instance contains no MeshInstance3D nodes.")
-		quit(1)
-		return
+	# Validate the restored original procedural gate geometry in the production scene.
+	# The pre-GLB gate is built from native Godot meshes, so do not require RoyalGateGLB.
+	var original_gate_parts := [
+		"RoyalPylonBlack",
+		"RoyalGateUpperLintel",
+		"WingedSunCentralDisk",
+		"RoyalGateRearFace/RoyalGateRearGeometry"
+	]
+	for part_path in original_gate_parts:
+		if gate_node.get_node_or_null(NodePath(part_path)) == null:
+			push_error("The restored original procedural royal gate is missing: " + part_path)
+			quit(1)
+			return
 	if gate_node.get_node_or_null("FounderName") == null or gate_node.get_node_or_null("FounderTitle") == null:
 		push_error("The front founder name or title is missing from the production royal gate.")
 		quit(1)
