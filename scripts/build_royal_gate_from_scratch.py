@@ -61,7 +61,7 @@ def torus(name, loc, major, minor, mat, rotation=(0,0,0)):
 for side, x in (("Left", -9.0), ("Right", 9.0)):
     cube(f"{side} monumental foundation", (x, 0.0, 0.35), (10.0, 13.0, 0.7), black_stone, 0.18)
     cube(f"{side} gold foundation reveal", (x, -0.02, 0.74), (9.7, 12.6, 0.12), gold, 0.035)
-    cube(f"{side} upper stone terrace", (x, 0.0, 0.98), (9.4, 12.0, 0.42), limestone, 0.12)
+    cube(f"{side} upper stone terrace", (x, 0.0, 0.98), (9.0, 12.0, 0.42), limestone, 0.12)
 
 # Continuous, level vehicle roadway through the portal; no stairs or raised threshold.
 road = cube("Continuous level vehicle roadway", (0.0, -1.5, 1.075), (8.2, 42.0, 0.22), dark, 0.025)
