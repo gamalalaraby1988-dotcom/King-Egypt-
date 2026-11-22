@@ -25,6 +25,9 @@ func _render() -> void:
 	root.add_child(city)
 	current_scene = city
 
+	# Hide screen-space UI (login/mode selection/HUD) for a clean city review render.
+	_hide_canvas_layers(city)
+
 	# The review-only instance is attached to the live layout in memory.
 	# No production scene, script, registry, or collision data is changed.
 	await process_frame
@@ -70,3 +73,11 @@ func _render() -> void:
 	print("Rendered production city + exact tent GLB at ", TENT_POSITION, " yaw ", TENT_YAW)
 	print("Saved placement preview: ", OUTPUT_PATH)
 	quit(0)
+
+
+func _hide_canvas_layers(parent: Node) -> void:
+	for child in parent.get_children():
+		if child is CanvasLayer:
+			(child as CanvasLayer).visible = false
+		else:
+			_hide_canvas_layers(child)
