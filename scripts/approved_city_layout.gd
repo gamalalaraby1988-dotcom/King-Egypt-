@@ -498,7 +498,7 @@ func _build_royal_gate_and_square() -> void:
 			var rear_mesh := source_node.duplicate() as MeshInstance3D
 			if rear_mesh != null:
 				rear_mesh.name = source_node.name + "Rear"
-				rear_mesh.position.z = -source_node.position.z
+				rear_mesh.position.z = source_node.position.z
 				rear_geometry.add_child(rear_mesh)
 	# Preserve walkable passage and prevent the player from walking through pylons.
 	_add_static_box_collision(gate, "RoyalEntranceWalkableCollision", Vector3(20.0, 0.22, 8.0), Vector3(0.0, 0.11, 0.0))
