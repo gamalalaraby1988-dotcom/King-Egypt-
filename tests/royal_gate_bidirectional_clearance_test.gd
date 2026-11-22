@@ -93,10 +93,10 @@ func _run_clearance_sweep(
 			var hits := space.intersect_shape(query, 8)
 			if not hits.is_empty():
 				var collider: Object = hits[0].get("collider")
-				var collider_name := collider.get("name") if collider != null else "unknown collider"
+				var collider_name: String = str(collider.get("name")) if collider != null else "unknown collider"
 				_fail(
 					"%s is blocked %s at z=%.2f by %s" %
-					[label, direction_label, route_z, str(collider_name)]
+					[label, direction_label, route_z, collider_name]
 				)
 
 
