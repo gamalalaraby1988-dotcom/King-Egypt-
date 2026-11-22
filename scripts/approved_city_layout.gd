@@ -510,42 +510,42 @@ func _build_royal_gate_and_square() -> void:
 			Vector3(side * 8.25, 6.9, 0.0)
 		)
 
-	# Founder identity plaque: portrait intentionally omitted to keep the royal gate clean.
-	_box(gate, "FounderNamePlaque", Vector3(7.2, 4.6, 0.38), Vector3(0.0, 19.0, 1.38), black)
+	# # Portrait intentionally omitted. Keep all three text lines centered and legible inside the plaque.
+	_box(gate, "FounderNamePlaque", Vector3(9.2, 4.0, 0.38), Vector3(0.0, 19.0, 1.38), black)
 	var founder_name := Label3D.new()
 	founder_name.name = "FounderName"
 	founder_name.text = "GAMAL ALARABY"
-	founder_name.position = Vector3(0.0, 20.1, 1.62)
-	founder_name.font_size = 64
-	founder_name.pixel_size = 0.021
+	founder_name.position = Vector3(0.0, 20.05, 1.88)
+	founder_name.font_size = 42
+	founder_name.pixel_size = 0.012
 	founder_name.modulate = Color(1.0, 0.82, 0.42)
-	founder_name.outline_size = 8
+	founder_name.outline_size = 5
 	founder_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	gate.add_child(founder_name)
 
 	var founder_title := Label3D.new()
 	founder_title.name = "FounderTitle"
 	founder_title.text = "FOUNDER OF KING OF EGYPT CITY"
-	founder_title.position = Vector3(0.0, 18.9, 1.62)
-	founder_title.font_size = 30
-	founder_title.pixel_size = 0.018
+	founder_title.position = Vector3(0.0, 19.0, 1.88)
+	founder_title.font_size = 19
+	founder_title.pixel_size = 0.010
 	founder_title.modulate = Color(1.0, 0.88, 0.62)
-	founder_title.outline_size = 5
+	founder_title.outline_size = 4
 	founder_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	gate.add_child(founder_title)
 
 	_box(gate, "FounderRoyalTopCrown", Vector3(2.0, 0.24, 0.48), Vector3(0.0, 22.0, 1.40), gold)
 	for side in [-1.0, 1.0]:
-		_box(gate, "FounderRoyalSideGem", Vector3(0.28, 0.62, 0.28), Vector3(side * 3.72, 19.0, 1.52), gold)
+		_box(gate, "FounderRoyalSideGem", Vector3(0.28, 0.62, 0.28), Vector3(side * 4.65, 19.0, 1.52), gold)
 
 	var gate_name := Label3D.new()
 	gate_name.name = "RoyalGateCityName"
 	gate_name.text = "KING OF EGYPT CITY"
-	gate_name.position = Vector3(0.0, 17.8, 1.62)
-	gate_name.font_size = 28
-	gate_name.pixel_size = 0.014
+	gate_name.position = Vector3(0.0, 18.0, 1.88)
+	gate_name.font_size = 19
+	gate_name.pixel_size = 0.010
 	gate_name.modulate = Color(1.0, 0.86, 0.58)
-	gate_name.outline_size = 7
+	gate_name.outline_size = 4
 	gate_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	gate.add_child(gate_name)
 
