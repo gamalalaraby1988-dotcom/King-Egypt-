@@ -444,7 +444,7 @@ func _build_royal_gate_and_square() -> void:
 	# vertical fluting, lotus-capital motifs and relief bands on both pylons.
 	for side: float in [-1.0, 1.0]:
 		var x: float = side * 8.25
-		for z_face: float in [-2.16, 2.16]:
+		for z_face: float in [2.16]:
 			_box(gate, "PylonFrontPilaster", Vector3(0.34, 9.6, 0.16), Vector3(x - 1.42, 7.0, z_face), gold)
 			_box(gate, "PylonFrontPilaster", Vector3(0.34, 9.6, 0.16), Vector3(x + 1.42, 7.0, z_face), gold)
 			_box(gate, "PylonCartoucheFrame", Vector3(1.18, 3.15, 0.20), Vector3(x, 8.1, z_face), dark_gold)
@@ -458,7 +458,7 @@ func _build_royal_gate_and_square() -> void:
 		_box(gate, "PylonCrownStep", Vector3(5.0, 0.24, 4.9), Vector3(x, 14.55, 0.0), gold)
 		_box(gate, "PylonCrownUpperStep", Vector3(4.55, 0.20, 4.45), Vector3(x, 14.78, 0.0), dark_gold)
 		# Sphinx-inspired guardian relief mounted to the front and reverse tower faces.
-		for z_face: float in [-2.30, 2.30]:
+		for z_face: float in [2.30]:
 			_box(gate, "GuardianSphinxPlinth", Vector3(2.45, 0.42, 0.56), Vector3(x, 0.62, z_face), gold)
 			_box(gate, "GuardianSphinxBody", Vector3(1.62, 0.78, 0.68), Vector3(x, 1.28, z_face), dark_gold)
 			_box(gate, "GuardianSphinxChest", Vector3(0.72, 1.10, 0.72), Vector3(x, 1.92, z_face), gold)
