@@ -3,10 +3,12 @@ name: Royal gate stage 1 build and preview
 on:
   push:
     branches: [work/royal-gate-from-scratch]
+    paths-ignore:
+      - 'assets/models/royal_gate.glb'
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build-validate-render:
@@ -68,6 +70,21 @@ jobs:
         run: |
           GODOT="/tmp/godot/Godot_v4.7.2-stable_linux.x86_64"
           xvfb-run -a "$GODOT" --audio-driver Dummy --path . --rendering-method gl_compatibility --script res://tests/render_royal_gate_stage1.gd
+
+
+      - name: Install approved GLB into the project asset path
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p assets/models
+          cp artifacts/royal-gate-build/royal_gate_stage1.glb assets/models/royal_gate.glb
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/models/royal_gate.glb
+          if ! git diff --cached --quiet; then
+            git commit -m "Install approved royal gate GLB"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi
 
       - name: Upload GLB, Khronos report, and exact Godot preview
         if: always()
