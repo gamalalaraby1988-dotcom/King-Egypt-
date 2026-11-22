@@ -1,6 +1,7 @@
 extends SceneTree
 ## Review-only camera capture of the real production city scene.
 ## No substitute camp, pyramid, or mountain geometry is created.
+## Review captures include the proposed development campus and relocated mountain.
 
 const OUTPUT_DIR := "res://artifacts/royal-development-mountain-preview"
 
