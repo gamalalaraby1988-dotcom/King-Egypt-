@@ -48,7 +48,6 @@ func _ready() -> void:
 			remove_child(local_player)
 			local_player.queue_free()
 		_create_interactive_buildings()
-		_create_camp()
 		_create_desert_camp()
 		_create_pyramids_area()
 		return
@@ -64,7 +63,6 @@ func _ready() -> void:
 	if key_light:
 		key_light.add_to_group("quality_shadow_light")
 	_create_interactive_buildings()
-	_create_camp()
 	_create_desert_camp()
 	_create_pyramids_area()
 	_create_city_npc_population()
@@ -1232,7 +1230,6 @@ func _create_city_signage() -> void:
 	_create_direction_signpost("Signpost_Central", Vector3(9, 0, 8), "restaurant", "shop", PI / 2.0)
 	# Move roadside signs off the road centerline and turn their faces toward the road.
 	_create_direction_signpost("Signpost_Employment", Vector3(29, 0, -8), "employment", "city_center", PI / 2.0)
-	_create_direction_signpost("Signpost_Camp", Vector3(34, 0, 38), "city_center", "animal_camp", PI / 2.0)
 
 func _create_direction_signpost(sign_name: String, pos: Vector3, left_key: String, right_key: String, yaw: float = 0.0) -> void:
 	var sign_root := Node3D.new()
@@ -1286,21 +1283,8 @@ func _create_service_staff(display_name: String, role: String, dialogue: String,
 	staff.position = pos
 	add_child(staff)
 
-func _create_camp() -> void:
-	# مسار المخيم يلتف حول أطراف المدينة بدل المرور عبر قصور الشقق والمدينة المائية.
-	var camp_road_color := Color(0.12, 0.13, 0.15)
-	_create_box(self, "CampRoad_Entry", Vector3(5, 0.07, 45), Vector3(16, 0.025, -22.5), camp_road_color)
-	_create_box(self, "CampRoad_North", Vector3(35, 0.07, 5), Vector3(77.5, 0.025, 90), camp_road_color)
-	_create_box(self, "CampRoad_Camp", Vector3(5, 0.07, 15), Vector3(60, 0.025, 82.5), camp_road_color)
-	var camp := Node3D.new()
-	camp.name = "AnimalCamp"
-	camp.position = Vector3(60, 0, 75)
-	camp.set_script(load("res://scripts/camp_system.gd"))
-	add_child(camp)
-
-
 func _create_desert_camp() -> void:
-	# مخيم صحراوي ملكي مستقل غرب المدينة؛ لا يستبدل مخيم الحيوانات الحالي.
+	# المخيم الملكي هو منطقة الضيافة الصحراوية الوحيدة؛ الجمال والخيول جزء من تصميمه.
 	_create_box(self, "DesertCampAccessRoad", Vector3(35, 0.08, 5), Vector3(-112.5, 0.01, 70), Color(0.12, 0.13, 0.15), true)
 	_create_box(self, "DesertCampApproachRoad", Vector3(5, 0.08, 15), Vector3(-130, 0.01, 62.5), Color(0.12, 0.13, 0.15), true)
 	var camp := Node3D.new()
