@@ -385,6 +385,78 @@ func _build_royal_development_district() -> void:
 		marker.outline_size = 7
 		add_child(marker)
 
+	# Three open-air public spaces make the parcel feel occupied without adding buildings.
+	# Shared MultiMeshes keep palms to two draw calls for the whole district.
+	_box(self, "RoyalDevelopmentCentralPlaza", Vector3(54.0, 0.18, 18.0), Vector3(0.0, 0.02, -237.0), IVORY)
+	_add_static_box_collision(self, "RoyalDevelopmentCentralPlazaWalkable", Vector3(54.0, 0.18, 18.0), Vector3(0.0, 0.02, -237.0))
+	_box(self, "RoyalDevelopmentWestGardenCourt", Vector3(22.0, 0.14, 18.0), Vector3(-58.0, 0.0, -238.0), SAND)
+	_box(self, "RoyalDevelopmentEastGardenCourt", Vector3(22.0, 0.14, 18.0), Vector3(58.0, 0.0, -238.0), SAND)
+	_add_static_box_collision(self, "RoyalDevelopmentWestGardenWalkable", Vector3(22.0, 0.14, 18.0), Vector3(-58.0, 0.0, -238.0))
+	_add_static_box_collision(self, "RoyalDevelopmentEastGardenWalkable", Vector3(22.0, 0.14, 18.0), Vector3(58.0, 0.0, -238.0))
+
+	# Broad pedestrian links connect the building row, garden courts and mountain approach.
+	for side in [-1.0, 1.0]:
+		_box(self, "RoyalDevelopmentCrossWalk", Vector3(4.0, 0.12, 15.0), Vector3(side * 28.0, 0.01, -228.0), IVORY)
+		_box(self, "RoyalDevelopmentGardenWalk", Vector3(5.0, 0.12, 18.0), Vector3(side * 58.0, 0.01, -220.0), IVORY)
+
+	# Low planted beds, seating and palms define the open spaces without cluttering them.
+	for side in [-1.0, 1.0]:
+		for depth in [-1.0, 1.0]:
+			var bed := Node3D.new()
+			bed.name = "RoyalDevelopmentPlanter"
+			bed.position = Vector3(side * 58.0, 0.0, -238.0 + depth * 6.0)
+			add_child(bed)
+			_box(bed, "PlanterStoneRim", Vector3(5.0, 0.42, 2.2), Vector3.ZERO, IVORY)
+			_box(bed, "PlanterGreenCore", Vector3(4.45, 0.28, 1.7), Vector3(0.0, 0.28, 0.0), TEAL)
+		for bench_index in range(2):
+			var bench := Node3D.new()
+			bench.name = "RoyalDevelopmentOpenAirBench"
+			bench.position = Vector3(side * 18.0, 0.0, -237.0 + float(bench_index) * 7.0)
+			add_child(bench)
+			_box(bench, "BenchSeat", Vector3(3.0, 0.22, 0.72), Vector3(0.0, 0.62, 0.0), SAND)
+			_box(bench, "BenchBack", Vector3(3.0, 0.82, 0.16), Vector3(0.0, 1.08, -0.28), GOLD)
+
+	var palm_positions: Array[Vector3] = [
+		Vector3(-24.0, 0.0, -244.0), Vector3(-36.0, 0.0, -231.0),
+		Vector3(-58.0, 0.0, -244.0), Vector3(-58.0, 0.0, -232.0),
+		Vector3(24.0, 0.0, -244.0), Vector3(36.0, 0.0, -231.0),
+		Vector3(58.0, 0.0, -244.0), Vector3(58.0, 0.0, -232.0)
+	]
+	var trunk_mesh := CylinderMesh.new()
+	trunk_mesh.top_radius = 0.22
+	trunk_mesh.bottom_radius = 0.34
+	trunk_mesh.height = 4.2
+	trunk_mesh.radial_segments = 6
+	var crown_mesh := SphereMesh.new()
+	crown_mesh.radius = 1.45
+	crown_mesh.height = 1.8
+	crown_mesh.radial_segments = 7
+	crown_mesh.rings = 4
+	var trunk_multi := MultiMesh.new()
+	trunk_multi.transform_format = MultiMesh.TRANSFORM_3D
+	trunk_multi.mesh = trunk_mesh
+	trunk_multi.instance_count = palm_positions.size()
+	var crown_multi := MultiMesh.new()
+	crown_multi.transform_format = MultiMesh.TRANSFORM_3D
+	crown_multi.mesh = crown_mesh
+	crown_multi.instance_count = palm_positions.size()
+	for palm_index in range(palm_positions.size()):
+		var palm_at: Vector3 = palm_positions[palm_index]
+		trunk_multi.set_instance_transform(palm_index, Transform3D(Basis.IDENTITY, palm_at + Vector3(0.0, 2.1, 0.0)))
+		crown_multi.set_instance_transform(palm_index, Transform3D(Basis.IDENTITY, palm_at + Vector3(0.0, 4.45, 0.0)))
+	var trunks := MultiMeshInstance3D.new()
+	trunks.name = "RoyalDevelopmentBatchedPalmTrunks"
+	trunks.multimesh = trunk_multi
+	trunks.material_override = _mat(Color(0.34, 0.22, 0.13))
+	trunks.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(trunks)
+	var crowns := MultiMeshInstance3D.new()
+	crowns.name = "RoyalDevelopmentBatchedPalmCrowns"
+	crowns.multimesh = crown_multi
+	crowns.material_override = _mat(Color(0.12, 0.31, 0.19))
+	crowns.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(crowns)
+
 	# A broad approach links the development campus to the mountain trailhead.
 	_box(self, "RoyalDevelopmentMountainApproach", Vector3(12.0, 0.16, 9.0), Vector3(0.0, -0.02, -223.0), SAND)
 	_add_static_box_collision(self, "RoyalDevelopmentMountainApproachWalkable", Vector3(12.0, 0.16, 9.0), Vector3(0.0, -0.02, -223.0))
