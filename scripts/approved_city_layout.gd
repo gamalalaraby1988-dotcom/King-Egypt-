@@ -414,45 +414,56 @@ func _build_royal_gate_and_square() -> void:
 	gate.add_to_group("approved_city_landmarks")
 	add_child(gate)
 
-	# Load the exact authored GLB asset used for the gate preview. Founder identity
-	# remains a runtime texture and text plaque attached to this same model.
-	var gate_scene := load("res://assets/models/royal_gate.glb") as PackedScene
-	if gate_scene == null:
-		push_error("تعذر تحميل مجسم البوابة الملكية: res://assets/models/royal_gate.glb")
-		return
-	var gate_model := gate_scene.instantiate() as Node3D
-	if gate_model == null:
-		push_error("ملف البوابة الملكية لم ينتج Node3D صالحًا.")
-		return
-	gate_model.name = "RoyalGateGLB"
-	gate.add_child(gate_model)
-	for mesh_node in gate_model.find_children("*", "MeshInstance3D", true, false):
+	# Native Godot geometry for the approved royal gate; the vehicle and pedestrian lane stays fully open.
+	var black := Color(0.018, 0.022, 0.026)
+	var gold := Color(0.88, 0.62, 0.22)
+	var dark_gold := Color(0.48, 0.31, 0.10)
+	for side in [-1.0, 1.0]:
+		var x := side * 8.25
+		_box(gate, "RoyalPylonBlack", Vector3(4.25, 13.4, 4.2), Vector3(x, 6.7, 0.0), black)
+		_box(gate, "RoyalPylonFootGold", Vector3(4.55, 0.55, 4.5), Vector3(x, 0.32, 0.0), gold)
+		_box(gate, "RoyalPylonLowerBand", Vector3(4.38, 0.42, 4.34), Vector3(x, 2.0, 0.0), gold)
+		_box(gate, "RoyalPylonMidBand", Vector3(4.38, 0.32, 4.34), Vector3(x, 7.2, 0.0), dark_gold)
+		_box(gate, "RoyalPylonUpperBand", Vector3(4.48, 0.5, 4.42), Vector3(x, 12.9, 0.0), gold)
+		_box(gate, "RoyalPylonCrownBase", Vector3(4.8, 0.65, 4.7), Vector3(x, 13.65, 0.0), dark_gold)
+		_box(gate, "RoyalPylonCrownGold", Vector3(4.35, 0.45, 4.3), Vector3(x, 14.18, 0.0), gold)
+		for inset in [-1.0, 1.0]:
+			_box(gate, "PylonGoldInlay", Vector3(0.22, 8.9, 0.12), Vector3(x + inset * 1.42, 7.0, 2.12), gold)
+			_box(gate, "PylonGuardianBody", Vector3(0.72, 2.35, 0.62), Vector3(x + inset * 0.92, 2.0, 2.18), dark_gold)
+			_box(gate, "PylonGuardianHead", Vector3(0.82, 0.82, 0.72), Vector3(x + inset * 0.92, 3.55, 2.18), gold)
+			_box(gate, "PylonGuardianHeaddress", Vector3(1.02, 0.28, 0.82), Vector3(x + inset * 0.92, 4.08, 2.18), black)
+	_box(gate, "RoyalGateUpperLintel", Vector3(12.6, 1.45, 3.25), Vector3(0.0, 15.0, 0.0), black)
+	_box(gate, "RoyalGateLintelGoldFront", Vector3(12.6, 0.22, 0.16), Vector3(0.0, 14.25, 1.68), gold)
+	_box(gate, "RoyalGateLintelGoldRear", Vector3(12.6, 0.22, 0.16), Vector3(0.0, 14.25, -1.68), gold)
+	_box(gate, "WingedSunCentralDisk", Vector3(1.35, 1.05, 0.28), Vector3(0.0, 15.95, 1.78), gold)
+	_box(gate, "WingedSunLeftWing", Vector3(3.4, 0.42, 0.22), Vector3(-2.25, 16.0, 1.78), dark_gold)
+	_box(gate, "WingedSunRightWing", Vector3(3.4, 0.42, 0.22), Vector3(2.25, 16.0, 1.78), dark_gold)
+	for side in [-1.0, 1.0]:
+		_box(gate, "WingedSunFeather", Vector3(0.18, 0.78, 0.18), Vector3(side * 3.7, 15.92, 1.78), gold)
+	for mesh_node in gate.find_children("*", "MeshInstance3D", true, false):
 		mesh_node.add_to_group("city_world_geometry")
-
-	# Build a true second face from the exact same GLB resource. Rotating the
-	# duplicate 180 degrees keeps every authored mesh/material/detail identical
-	# while making the reverse approach a fully finished royal entrance too.
 	var rear_gate := Node3D.new()
 	rear_gate.name = "RoyalGateRearFace"
 	rear_gate.rotation.y = PI
 	gate.add_child(rear_gate)
-	var rear_gate_model := gate_model.duplicate() as Node3D
-	if rear_gate_model == null:
-		push_error("تعذر إنشاء الوجه الخلفي المطابق للبوابة الملكية.")
-		return
-	rear_gate_model.name = "RoyalGateRearGLB"
-	rear_gate.add_child(rear_gate_model)
-	for rear_mesh in rear_gate_model.find_children("*", "MeshInstance3D", true, false):
-		rear_mesh.add_to_group("city_world_geometry")
-
+	var rear_geometry := Node3D.new()
+	rear_geometry.name = "RoyalGateRearGeometry"
+	rear_gate.add_child(rear_geometry)
+	for source_node in gate.get_children():
+		if source_node is MeshInstance3D:
+			var rear_mesh := source_node.duplicate() as MeshInstance3D
+			if rear_mesh != null:
+				rear_mesh.name = source_node.name + "Rear"
+				rear_mesh.position.z = -source_node.position.z
+				rear_geometry.add_child(rear_mesh)
 	# Preserve walkable passage and prevent the player from walking through pylons.
-	_add_static_box_collision(gate, "RoyalEntranceWalkableCollision", Vector3(17.2, 0.22, 8.0), Vector3(0.0, 0.11, 0.0))
+	_add_static_box_collision(gate, "RoyalEntranceWalkableCollision", Vector3(20.0, 0.22, 8.0), Vector3(0.0, 0.11, 0.0))
 	for side in [-1.0, 1.0]:
 		_add_static_box_collision(
 			gate,
 			"RoyalGatePylonCollision",
-			Vector3(4.35, 8.6, 3.7),
-			Vector3(side * 8.55, 4.3, 0.0)
+			Vector3(4.55, 13.8, 4.5),
+			Vector3(side * 8.25, 6.9, 0.0)
 		)
 
 	var black := Color(0.018, 0.022, 0.026)
