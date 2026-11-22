@@ -425,14 +425,14 @@ func _build_royal_gate_and_square() -> void:
 		_add_static_box_collision(
 			gate,
 			"RoyalGatePylonCollision",
-			Vector3(6.5, 13.8, 5.2),
-			Vector3(side * 8.0, 6.9 - 0.965, 0.0)
+			Vector3(6.5, 12.0, 5.2),
+			Vector3(side * 8.0, 6.965, 0.0)
 		)
 	_add_static_box_collision(
 		gate,
 		"RoyalEntranceWalkableCollision",
 		Vector3(8.2, 0.22, 42.0),
-		Vector3(0.0, 0.11 - 0.965, 1.5)
+		Vector3(0.0, 1.075, 1.5)
 	)
 
 	assert(gate.get_node_count() > 1, "Royal gate GLB must contain imported visual nodes.")
