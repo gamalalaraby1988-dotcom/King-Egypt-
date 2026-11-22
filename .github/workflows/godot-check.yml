@@ -488,3 +488,18 @@ jobs:
             echo "Royal gate bidirectional physics clearance test failed."
             exit 1
           fi
+
+      - name: Validate 3D asset review registry
+        shell: bash
+        run: |
+          set -euo pipefail
+          GODOT="/tmp/godot/Godot_v4.7.2-stable_linux.x86_64"
+          LOG="/tmp/godot-asset-registry.log"
+          set +e
+          "$GODOT" --headless --path . --script res://tests/asset_review_registry_test.gd 2>&1 | tee "$LOG"
+          GODOT_STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$GODOT_STATUS" -ne 0 ] || grep -E '(^|[[:space:]])(ERROR|SCRIPT ERROR):|Parse Error:|Asset registry' "$LOG"; then
+            echo "3D asset review registry validation failed."
+            exit 1
+          fi
