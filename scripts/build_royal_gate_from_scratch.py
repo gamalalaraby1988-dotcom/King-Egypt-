@@ -1,10 +1,12 @@
 import bpy
 import math
+import os
 from mathutils import Vector
 
 # KING OF EGYPT CITY — Royal Gate, Stage 1 structural blockout.
 # Generates a new, isolated model. It never reads or overwrites the legacy GLB.
 OUT = "artifacts/royal-gate-build/royal_gate_stage1.glb"
+os.makedirs(os.path.dirname(OUT), exist_ok=True)
 
 bpy.ops.object.select_all(action="SELECT")
 bpy.ops.object.delete(use_global=False)
