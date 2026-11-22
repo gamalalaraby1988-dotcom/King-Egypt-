@@ -2,7 +2,7 @@ name: Camp area production spatial preview
 
 on:
   push:
-    branches: [review/camp-area-spatial-preview]
+    branches: [review/camp-area-spatial-preview, work/camp-area-royal-development]
     paths:
       - "tests/render_camp_area_spatial_preview.gd"
       - ".github/workflows/camp-area-spatial-preview.yml"
