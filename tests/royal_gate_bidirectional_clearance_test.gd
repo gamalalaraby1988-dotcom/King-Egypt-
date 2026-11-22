@@ -45,7 +45,7 @@ func _run_bidirectional_gate_clearance_test() -> void:
 		excluded_rids,
 		"pedestrian",
 		Vector3(0.85, 1.9, 0.85),
-		1.15,
+		1.22,
 		route_z_positions
 	)
 	_run_clearance_sweep(
