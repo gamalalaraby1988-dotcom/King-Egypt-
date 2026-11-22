@@ -532,15 +532,15 @@ func _build_royal_gate_and_square() -> void:
 			gate.add_child(portrait_surface)
 	else:
 		push_warning("Founder portrait asset is missing: " + founder_portrait_path)
-		_box(gate, "FounderPortraitTextureSlot", Vector3(5.82, 2.0, 0.08), Vector3(0.0, 11.15, 1.71), black)
+		_box(gate, "FounderPortraitTextureSlot", Vector3(5.82, 2.0, 0.08), Vector3(0.0, 18.55, 1.71), black)
 
 	_box(gate, "FounderNamePlaque", Vector3(6.8, 1.05, 0.38), Vector3(0.0, 16.85, 1.38), black)
 	var founder_name := Label3D.new()
 	founder_name.name = "FounderName"
 	founder_name.text = "GAMAL ALARABY"
-	founder_name.position = Vector3(0.0, 16.90, 1.62)
-	founder_name.font_size = 52
-	founder_name.pixel_size = 0.009
+	founder_name.position = Vector3(0.0, 17.02, 1.62)
+	founder_name.font_size = 44
+	founder_name.pixel_size = 0.014
 	founder_name.modulate = Color(1.0, 0.82, 0.42)
 	founder_name.outline_size = 8
 	founder_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -549,9 +549,9 @@ func _build_royal_gate_and_square() -> void:
 	var founder_title := Label3D.new()
 	founder_title.name = "FounderTitle"
 	founder_title.text = "FOUNDER OF KING OF EGYPT CITY"
-	founder_title.position = Vector3(0.0, 16.32, 1.62)
-	founder_title.font_size = 23
-	founder_title.pixel_size = 0.009
+	founder_title.position = Vector3(0.0, 16.48, 1.62)
+	founder_title.font_size = 20
+	founder_title.pixel_size = 0.012
 	founder_title.modulate = Color(1.0, 0.88, 0.62)
 	founder_title.outline_size = 5
 	founder_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -564,9 +564,9 @@ func _build_royal_gate_and_square() -> void:
 	var gate_name := Label3D.new()
 	gate_name.name = "RoyalGateCityName"
 	gate_name.text = "KING OF EGYPT CITY"
-	gate_name.position = Vector3(0.0, 15.96, 1.34)
-	gate_name.font_size = 38
-	gate_name.pixel_size = 0.009
+	gate_name.position = Vector3(0.0, 15.88, 1.34)
+	gate_name.font_size = 30
+	gate_name.pixel_size = 0.012
 	gate_name.modulate = Color(1.0, 0.86, 0.58)
 	gate_name.outline_size = 7
 	gate_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
