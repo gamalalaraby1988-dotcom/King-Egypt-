@@ -1,8 +1,8 @@
-name: Camp area production spatial preview
+name: Royal development and mountain layout preview
 
 on:
   push:
-    branches: [review/camp-area-spatial-preview, work/camp-area-royal-development]
+    branches: [review/camp-area-spatial-preview, work/camp-area-royal-development, review/royal-development-mountain-layout]
     paths:
       - "tests/render_camp_area_spatial_preview.gd"
       - ".github/workflows/camp-area-spatial-preview.yml"
@@ -40,7 +40,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y xvfb libgl1-mesa-dri
 
-      - name: Render real production city from three spatial angles
+      - name: Render actual city scene: development district and relocated mountain
         shell: bash
         run: |
           set -euo pipefail
@@ -51,7 +51,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: camp-area-production-spatial-preview
-          path: artifacts/camp-area-spatial-preview/
+          name: royal-development-mountain-layout-preview
+          path: artifacts/royal-development-mountain-preview/
           if-no-files-found: error
           retention-days: 14
