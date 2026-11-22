@@ -30,15 +30,15 @@ if (!Number.isInteger(bufferLength) || bufferLength > bin.length) {
 }
 bin = bin.subarray(0, bufferLength);
 
-const normalAccessors = new Set();
+const normalToPosition = new Map();
 for (const mesh of json.meshes ?? []) {
   for (const primitive of mesh.primitives ?? []) {
-    if (Number.isInteger(primitive.attributes?.NORMAL)) {
-      normalAccessors.add(primitive.attributes.NORMAL);
-    }
+    const normal = primitive.attributes?.NORMAL;
+    const position = primitive.attributes?.POSITION;
+    if (Number.isInteger(normal) && Number.isInteger(position)) normalToPosition.set(normal, position);
   }
 }
-if (normalAccessors.size === 0) throw new Error("No NORMAL accessors found.");
+if (normalToPosition.size === 0) throw new Error("No NORMAL/POSITION accessor pairs found.");
 
 const componentInfo = {
   5120: { size: 1, read: "getInt8" },
@@ -74,10 +74,37 @@ for (const [indexText, accessor] of (json.accessors ?? []).entries()) {
         throw new Error(`NORMAL accessor ${index} is not FLOAT; refusing unsafe conversion.`);
       }
       const magnitude = Math.hypot(v[0], v[1], v[2]);
-      if (!Number.isFinite(magnitude) || magnitude < 1e-12) {
-        throw new Error(`NORMAL accessor ${index} contains a zero or invalid vector at ${i}.`);
+      let sourceVector = v;
+      let safeMagnitude = magnitude;
+      if (!Number.isFinite(magnitude)) throw new Error(`NORMAL accessor ${index} contains a non-finite vector at ${i}.`);
+      if (magnitude < 1e-12) {
+        const positionAccessor = json.accessors[normalToPosition.get(index)];
+        if (!positionAccessor || positionAccessor.componentType !== 5126 || positionAccessor.type !== "VEC3") {
+          throw new Error(`Cannot safely rebuild zero normal in accessor ${index}.`);
+        }
+        const positionView = json.bufferViews[positionAccessor.bufferView];
+        const positionStride = positionView.byteStride ?? 12;
+        const positionStart = (positionView.byteOffset ?? 0) + (positionAccessor.byteOffset ?? 0);
+        const first = Math.floor(i / 3) * 3;
+        if (first + 2 >= positionAccessor.count) throw new Error(`Incomplete triangle for normal accessor ${index} at ${i}.`);
+        const readPosition = vertex => {
+          const base = positionStart + vertex * positionStride;
+          return [0, 1, 2].map(c => data.getFloat32(base + c * 4, true));
+        };
+        const a = readPosition(first), b = readPosition(first + 1), c = readPosition(first + 2);
+        const ab = b.map((x, k) => x - a[k]), ac = c.map((x, k) => x - a[k]);
+        sourceVector = [
+          ab[1] * ac[2] - ab[2] * ac[1],
+          ab[2] * ac[0] - ab[0] * ac[2],
+          ab[0] * ac[1] - ab[1] * ac[0]
+        ];
+        safeMagnitude = Math.hypot(...sourceVector);
+        if (!Number.isFinite(safeMagnitude) || safeMagnitude < 1e-12) {
+          sourceVector = [0, 1, 0];
+          safeMagnitude = 1;
+        }
       }
-      const normalized = v.map(x => x / magnitude);
+      const normalized = sourceVector.map(x => x / safeMagnitude);
       for (let c = 0; c < 3; c++) data.setFloat32(p + c * 4, normalized[c], true);
       normalizedVectors++;
       for (let c = 0; c < 3; c++) v[c] = normalized[c];
@@ -122,5 +149,5 @@ binChunk.copy(glb, binHeader + 8);
 fs.mkdirSync(path.dirname(output), { recursive: true });
 fs.writeFileSync(output, glb);
 console.log(`Created isolated review copy: ${output}`);
-console.log(`Normalized ${normalizedVectors} normal vectors and recalculated VEC3 accessor bounds.`);
+console.log(`Repaired ${normalizedVectors} normal vectors (zero normals rebuilt from triangle geometry) and recalculated VEC3 accessor bounds.`);
 console.log(`Preserved source file unchanged: ${input}`);
