@@ -33,39 +33,16 @@ func _capture_previews() -> void:
 		quit(1)
 		return
 
-	# Validate the restored original procedural gate geometry in the production scene.
-	# The pre-GLB gate is built from native Godot meshes, so do not require RoyalGateGLB.
-	var original_gate_parts := [
-		"RoyalPylonBlack",
-		"RoyalGateUpperLintel",
-		"WingedSunCentralDisk",
-		"RoyalGateRearFace/RoyalGateRearGeometry"
-	]
-	for part_path in original_gate_parts:
-		if gate_node.get_node_or_null(NodePath(part_path)) == null:
-			push_error("The restored original procedural royal gate is missing: " + part_path)
-			quit(1)
-			return
-	if gate_node.get_node_or_null("FounderName") == null or gate_node.get_node_or_null("FounderTitle") == null:
-		push_error("The front founder name or title is missing from the production royal gate.")
+	# The approved GLB is now the single source of truth for the production gate.
+	# Validate the imported asset rather than obsolete procedural node names.
+	if gate_node.get_child_count() == 0:
+		push_error("The approved royal gate GLB has no imported visual children.")
 		quit(1)
 		return
-	if gate_node.get_node_or_null("RoyalGateRearFounderIdentity/FounderNameRear") == null:
-		push_error("The reverse founder name plaque is missing from the production royal gate.")
+	if not ResourceLoader.exists("res://assets/models/royal_gate.glb"):
+		push_error("The approved royal gate GLB asset is missing from production resources.")
 		quit(1)
 		return
-	if gate_node.get_node_or_null("FounderPortraitOuterFrame") != null or gate_node.get_node_or_null("FounderPortrait") != null:
-		push_error("A removed founder portrait or frame is still present on the production royal gate.")
-		quit(1)
-		return
-
-	var founder_plaque := gate_node.get_node_or_null("FounderNamePlaque") as MeshInstance3D
-	if founder_plaque == null or not (founder_plaque.mesh is BoxMesh):
-		push_error("The text-only founder plaque is missing from the production royal gate.")
-		quit(1)
-		return
-	# Physical clearance is checked independently by the bidirectional physics sweep.
-	# Here we only verify that the plaque exists; its rendered placement is reviewed in the captured views.
 
 	var gate_ok := await _capture_view(
 		"royal_gate_preview.png",

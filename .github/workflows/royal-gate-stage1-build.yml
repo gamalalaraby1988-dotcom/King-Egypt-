@@ -1,0 +1,101 @@
+name: Royal gate stage 1 build and preview
+
+on:
+  push:
+    branches: [work/royal-gate-from-scratch]
+    paths-ignore:
+      - 'assets/models/royal_gate.glb'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-validate-render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install Blender and rendering dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y blender python3-numpy xvfb libgl1-mesa-dri
+
+      - name: Build new royal gate GLB from scratch
+        run: |
+          blender --background --python-expr "import sys; sys.path.append('/usr/lib/python3/dist-packages'); import numpy; print('NumPy', numpy.__version__, 'Blender Python', sys.version)" --python-exit-code 1 --python scripts/build_royal_gate_from_scratch.py
+
+      - name: Install Khronos glTF Validator
+        run: |
+          npm install --no-save gltf-validator@2.0.0-dev.3.10
+          mkdir -p artifacts/royal-gate-build
+
+      - name: Confirm generated GLB exists
+        run: test -s artifacts/royal-gate-build/royal_gate_stage1.glb
+
+      - name: Validate generated GLB
+        run: |
+          node <<'NODE'
+          const fs = require("node:fs");
+          const validator = require("gltf-validator");
+          (async () => {
+            const file = "artifacts/royal-gate-build/royal_gate_stage1.glb";
+            const report = await validator.validateBytes(new Uint8Array(fs.readFileSync(file)), {
+              uri: file, format: "glb", writeTimestamp: false, maxIssues: 0
+            });
+            fs.writeFileSync("artifacts/royal-gate-build/khronos-report.json", JSON.stringify(report, null, 2) + "\n");
+            const issues = report.issues || {};
+            console.log(`Khronos: ${issues.numErrors || 0} errors, ${issues.numWarnings || 0} warnings, ${issues.numInfos || 0} infos`);
+            if ((issues.numErrors || 0) > 0) process.exitCode = 1;
+          })().catch(e => { console.error(e); process.exitCode = 1; });
+          NODE
+
+      - name: Prepare exact GLB for Godot import
+        run: |
+          mkdir -p assets/review
+          cp artifacts/royal-gate-build/royal_gate_stage1.glb assets/review/royal_gate_stage1.glb
+
+      - name: Install Godot 4.7.2
+        run: |
+          curl -fL --retry 3 "https://github.com/godotengine/godot/releases/download/4.7.2-stable/Godot_v4.7.2-stable_linux.x86_64.zip" -o /tmp/godot.zip
+          unzip -q /tmp/godot.zip -d /tmp/godot
+          chmod +x /tmp/godot/Godot_v4.7.2-stable_linux.x86_64
+
+      - name: Import GLB into Godot
+        run: /tmp/godot/Godot_v4.7.2-stable_linux.x86_64 --headless --editor --path . --quit
+
+      - name: Test the production city scene and bidirectional vehicle clearance
+        run: |
+          GODOT="/tmp/godot/Godot_v4.7.2-stable_linux.x86_64"
+          "$GODOT" --headless --audio-driver Dummy --path . --script res://tests/royal_gate_bidirectional_clearance_test.gd
+
+      - name: Render preview from the exact GLB in Godot
+        run: |
+          GODOT="/tmp/godot/Godot_v4.7.2-stable_linux.x86_64"
+          xvfb-run -a "$GODOT" --audio-driver Dummy --path . --rendering-method gl_compatibility --script res://tests/render_royal_gate_stage1.gd
+
+
+      - name: Install approved GLB into the project asset path
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p assets/models
+          cp artifacts/royal-gate-build/royal_gate_stage1.glb assets/models/royal_gate.glb
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/models/royal_gate.glb
+          if ! git diff --cached --quiet; then
+            git commit -m "Install approved royal gate GLB"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi
+
+      - name: Upload GLB, Khronos report, and exact Godot preview
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: royal-gate-stage1-review
+          path: artifacts/royal-gate-build/
+          if-no-files-found: error
+          retention-days: 14

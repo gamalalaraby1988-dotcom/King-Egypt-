@@ -1,0 +1,92 @@
+name: Royal gate isolated repair review
+
+on:
+  push:
+    branches: [review/royal-gate-repair]
+
+permissions:
+  contents: read
+
+jobs:
+  repair-and-validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Khronos glTF Validator
+        run: npm install --no-save gltf-validator@2.0.0-dev.3.10
+
+      - name: Create isolated repaired GLB
+        run: node scripts/repair_royal_gate_review.cjs
+
+      - name: Validate repaired GLB with Khronos
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require("node:fs");
+          const validator = require("gltf-validator");
+          (async () => {
+            const file = "artifacts/royal-gate-review/royal_gate_repaired.glb";
+            const bytes = new Uint8Array(fs.readFileSync(file));
+            const report = await validator.validateBytes(bytes, {
+              uri: file,
+              format: "glb",
+              writeTimestamp: false,
+              maxIssues: 0
+            });
+            fs.writeFileSync(
+              "artifacts/royal-gate-review/khronos-report.json",
+              JSON.stringify(report, null, 2) + "\n"
+            );
+            const issues = report.issues || {};
+            console.log(`Khronos result: ${issues.numErrors || 0} errors, ${issues.numWarnings || 0} warnings, ${issues.numInfos || 0} infos.`);
+            if ((issues.numErrors || 0) > 0) process.exitCode = 1;
+          })().catch(error => {
+            console.error(error);
+            process.exitCode = 1;
+          });
+          NODE
+
+      - name: Prepare repaired GLB for direct Godot rendering
+        run: |
+          set -euo pipefail
+          mkdir -p assets/review
+          cp artifacts/royal-gate-review/royal_gate_repaired.glb assets/review/royal_gate_repaired.glb
+
+      - name: Install Godot 4.7.2
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fL --retry 3 \
+            "https://github.com/godotengine/godot/releases/download/4.7.2-stable/Godot_v4.7.2-stable_linux.x86_64.zip" \
+            -o /tmp/godot.zip
+          unzip -q /tmp/godot.zip -d /tmp/godot
+          chmod +x /tmp/godot/Godot_v4.7.2-stable_linux.x86_64
+
+      - name: Import repaired GLB into Godot
+        run: /tmp/godot/Godot_v4.7.2-stable_linux.x86_64 --headless --editor --path . --quit
+
+      - name: Render preview from the exact repaired GLB
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y xvfb libgl1-mesa-dri
+          GODOT="/tmp/godot/Godot_v4.7.2-stable_linux.x86_64"
+          xvfb-run -a "$GODOT" --audio-driver Dummy --path . --rendering-method gl_compatibility --script res://tests/render_royal_gate_glb_review.gd
+
+      - name: Upload repaired review copy and Khronos report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: royal-gate-repaired-review
+          path: artifacts/royal-gate-review/
+          if-no-files-found: warn
+          retention-days: 14
