@@ -69,7 +69,7 @@ for (const [indexText, accessor] of (json.accessors ?? []).entries()) {
   for (let i = 0; i < accessor.count; i++) {
     const p = start + i * stride;
     const v = [0, 1, 2].map(c => data[getter](p + c * info.size, littleEndian));
-    if (normalAccessors.has(index)) {
+    if (normalToPosition.has(index)) {
       if (accessor.componentType !== 5126) {
         throw new Error(`NORMAL accessor ${index} is not FLOAT; refusing unsafe conversion.`);
       }
