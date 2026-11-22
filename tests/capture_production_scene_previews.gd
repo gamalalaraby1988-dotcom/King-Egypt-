@@ -33,14 +33,19 @@ func _capture_previews() -> void:
 		quit(1)
 		return
 
-	# The founder portrait was intentionally removed. Validate the text-only identity
-	# plaques on both faces and ensure they remain above the clear passage.
-	if gate_node.get_node_or_null("FounderName") == null or gate_node.get_node_or_null("FounderTitle") == null:
-		push_error("The front founder name or title is missing from the production royal gate.")
+	# Validate the exact imported production GLB and text-only founder identity.
+	var gate_model := gate_node.get_node_or_null("RoyalGateGLB") as Node3D
+	if gate_model == null:
+		push_error("The approved royal_gate.glb instance is missing from the production gate.")
 		quit(1)
 		return
-	if gate_node.get_node_or_null("RoyalGateRearFace/RoyalGateRearGeometry") == null:
-		push_error("The reverse structural face is missing from the production royal gate.")
+	var gate_meshes := gate_model.find_children("*", "MeshInstance3D", true, false)
+	if gate_meshes.is_empty():
+		push_error("The production royal_gate.glb instance contains no MeshInstance3D nodes.")
+		quit(1)
+		return
+	if gate_node.get_node_or_null("FounderName") == null or gate_node.get_node_or_null("FounderTitle") == null:
+		push_error("The front founder name or title is missing from the production royal gate.")
 		quit(1)
 		return
 	if gate_node.get_node_or_null("RoyalGateRearFounderIdentity/FounderNameRear") == null:
@@ -52,20 +57,13 @@ func _capture_previews() -> void:
 		quit(1)
 		return
 
-	var lintel := gate_node.get_node_or_null("RoyalGateUpperLintel") as MeshInstance3D
 	var founder_plaque := gate_node.get_node_or_null("FounderNamePlaque") as MeshInstance3D
-	if lintel == null or founder_plaque == null or not (lintel.mesh is BoxMesh) or not (founder_plaque.mesh is BoxMesh):
-		push_error("The royal gate lintel or text-only founder plaque is missing.")
+	if founder_plaque == null or not (founder_plaque.mesh is BoxMesh):
+		push_error("The text-only founder plaque is missing from the production royal gate.")
 		quit(1)
 		return
-	var lintel_box := lintel.mesh as BoxMesh
-	var plaque_box := founder_plaque.mesh as BoxMesh
-	var lintel_top := lintel.position.y + lintel_box.size.y * 0.5
-	var plaque_bottom := founder_plaque.position.y - plaque_box.size.y * 0.5
-	if plaque_bottom <= lintel_top:
-		push_error("The founder name plaque intrudes into the open vehicle and pedestrian passage.")
-		quit(1)
-		return
+	# Physical clearance is checked independently by the bidirectional physics sweep.
+	# Here we only verify that the plaque exists; its rendered placement is reviewed in the captured views.
 
 	var gate_ok := await _capture_view(
 		"royal_gate_preview.png",
