@@ -440,6 +440,50 @@ func _build_royal_gate_and_square() -> void:
 	_box(gate, "WingedSunRightWing", Vector3(3.4, 0.42, 0.22), Vector3(2.25, 16.0, 1.78), dark_gold)
 	for side in [-1.0, 1.0]:
 		_box(gate, "WingedSunFeather", Vector3(0.18, 0.78, 0.18), Vector3(side * 3.7, 15.92, 1.78), gold)
+	# Richer carved Egyptian facade details: stepped cornices, inset cartouches,
+	# vertical fluting, lotus-capital motifs and relief bands on both pylons.
+	for side: float in [-1.0, 1.0]:
+		var x: float = side * 8.25
+		for z_face: float in [-2.16, 2.16]:
+			_box(gate, "PylonFrontPilaster", Vector3(0.34, 9.6, 0.16), Vector3(x - 1.42, 7.0, z_face), gold)
+			_box(gate, "PylonFrontPilaster", Vector3(0.34, 9.6, 0.16), Vector3(x + 1.42, 7.0, z_face), gold)
+			_box(gate, "PylonCartoucheFrame", Vector3(1.18, 3.15, 0.20), Vector3(x, 8.1, z_face), dark_gold)
+			_box(gate, "PylonCartoucheInset", Vector3(0.88, 2.78, 0.10), Vector3(x, 8.1, z_face + (0.12 if z_face > 0.0 else -0.12)), gold)
+			_box(gate, "PylonCartoucheCore", Vector3(0.30, 1.82, 0.12), Vector3(x, 8.1, z_face + (0.20 if z_face > 0.0 else -0.20)), black)
+			_box(gate, "PylonLotusCapital", Vector3(2.25, 0.42, 0.34), Vector3(x, 12.0, z_face), gold)
+			_box(gate, "PylonLowerReliefBand", Vector3(3.95, 0.24, 0.18), Vector3(x, 4.9, z_face), gold)
+			for groove: float in [-0.72, -0.24, 0.24, 0.72]:
+				_box(gate, "PylonFluting", Vector3(0.075, 5.8, 0.10), Vector3(x + groove, 7.0, z_face + (0.14 if z_face > 0.0 else -0.14)), dark_gold)
+		# Monumental layered crown blocks give each tower a stepped Egyptian silhouette.
+		_box(gate, "PylonCrownStep", Vector3(5.0, 0.24, 4.9), Vector3(x, 14.55, 0.0), gold)
+		_box(gate, "PylonCrownUpperStep", Vector3(4.55, 0.20, 4.45), Vector3(x, 14.78, 0.0), dark_gold)
+		# Sphinx-inspired guardian relief mounted to the front and reverse tower faces.
+		for z_face: float in [-2.30, 2.30]:
+			_box(gate, "GuardianSphinxPlinth", Vector3(2.45, 0.42, 0.56), Vector3(x, 0.62, z_face), gold)
+			_box(gate, "GuardianSphinxBody", Vector3(1.62, 0.78, 0.68), Vector3(x, 1.28, z_face), dark_gold)
+			_box(gate, "GuardianSphinxChest", Vector3(0.72, 1.10, 0.72), Vector3(x, 1.92, z_face), gold)
+			var guardian_head := MeshInstance3D.new()
+			guardian_head.name = "GuardianSphinxHead"
+			var guardian_head_mesh := SphereMesh.new()
+			guardian_head_mesh.radius = 0.43
+			guardian_head_mesh.height = 0.86
+			guardian_head_mesh.radial_segments = 10
+			guardian_head_mesh.rings = 6
+			guardian_head.mesh = guardian_head_mesh
+			guardian_head.position = Vector3(x, 2.78, z_face)
+			guardian_head.material_override = _mat(gold, 0.48)
+			gate.add_child(guardian_head)
+			_box(gate, "GuardianNem esHeaddress", Vector3(1.02, 0.34, 0.82), Vector3(x, 3.12, z_face), black)
+			for paw_side: float in [-1.0, 1.0]:
+				_box(gate, "GuardianSphinxPaw", Vector3(0.42, 0.28, 0.76), Vector3(x + paw_side * 0.64, 0.88, z_face + 0.12), gold)
+
+	# A layered winged sun with feather ribs, not a single flat icon.
+	_box(gate, "WingedSunUpperArc", Vector3(2.4, 0.18, 0.18), Vector3(0.0, 16.55, 1.82), gold)
+	for feather_index in range(7):
+		var feather_x: float = -3.0 + float(feather_index) * 1.0
+		_box(gate, "WingedSunFeatherRib", Vector3(0.12, 0.52, 0.12), Vector3(feather_x, 16.0, 1.94), gold)
+		_box(gate, "WingedSunLowerFeather", Vector3(0.12, 0.34, 0.12), Vector3(feather_x, 15.68, 1.94), dark_gold)
+	_box(gate, "WingedSunUraeus", Vector3(0.24, 0.72, 0.20), Vector3(0.0, 16.9, 1.82), gold)
 	for mesh_node in gate.find_children("*", "MeshInstance3D", true, false):
 		mesh_node.add_to_group("city_world_geometry")
 	var rear_gate := Node3D.new()
