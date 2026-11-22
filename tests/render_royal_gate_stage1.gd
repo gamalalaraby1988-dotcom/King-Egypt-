@@ -44,10 +44,10 @@ func _render() -> void:
     stage.add_child(fill)
 
     var camera := Camera3D.new()
-    camera.fov = 42.0
-    camera.position = Vector3(24.0, 17.0, 34.0)
+    camera.fov = 38.0
+    camera.position = Vector3(21.0, 15.0, 31.0)
     stage.add_child(camera)
-    camera.look_at(Vector3(0.0, 6.0, 0.0), Vector3.UP)
+    camera.look_at(Vector3(0.0, 7.0, 0.0), Vector3.UP)
     camera.make_current()
 
     for _frame in range(24):
