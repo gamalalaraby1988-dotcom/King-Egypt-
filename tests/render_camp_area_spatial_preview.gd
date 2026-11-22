@@ -18,24 +18,22 @@ func _capture() -> void:
 	var scene := packed.instantiate()
 	root.add_child(scene)
 	current_scene = scene
-	for _frame in range(20):
+	for _frame in range(24):
 		await process_frame
 
-	# Hide interface layers only; leave the real 3D production world untouched.
-	for child in scene.get_children():
-		if child is CanvasLayer:
-			child.visible = false
+	# Recursively hide all UI layers, including layers nested under gameplay systems.
+	_hide_interface_layers(scene)
 
 	var camp := scene.get_node_or_null("RoyalDesertCamp") as Node3D
 	var pyramids := scene.get_node_or_null("GizaPyramidsArea") as Node3D
 	var layout := scene.get_node_or_null("ApprovedCityLayout") as Node3D
-	if camp == null or pyramids == null or layout == null:
-		push_error("Required production nodes (camp, pyramids, approved layout) are missing.")
+	var mountain := layout.get_node_or_null("KingsMountainRoute") as Node3D if layout != null else null
+	if camp == null or pyramids == null or layout == null or mountain == null:
+		push_error("Required production nodes (camp, pyramids, layout, mountain) are missing.")
 		quit(1)
 		return
 
-	# Assert the production placement being reviewed; fail rather than silently
-	# rendering a guessed or substituted location.
+	# Assert actual production locations; fail rather than rendering guessed geometry.
 	if camp.global_position.distance_to(Vector3(-130.0, 0.0, 70.0)) > 0.1:
 		push_error("Production camp location differs from the audited location.")
 		quit(1)
@@ -45,53 +43,38 @@ func _capture() -> void:
 		quit(1)
 		return
 
-	var overview_ok := await _capture_view(
-		scene,
-		"01_camp_pyramids_mountain_overview.png",
-		Vector3(-18.0, 118.0, 246.0),
-		Vector3(-76.0, 2.0, 80.0),
-		68.0
-	)
-	if not overview_ok:
-		quit(1)
-		return
+	var captures := [
+		["01_spatial_overview.png", Vector3(-8.0, 142.0, 278.0), Vector3(-78.0, 5.0, 85.0), 66.0],
+		["02_camp_detail.png", Vector3(-165.0, 34.0, 121.0), Vector3(-130.0, 2.0, 70.0), 54.0],
+		["03_camp_and_pyramids.png", Vector3(-48.0, 47.0, 156.0), Vector3(-104.0, 2.0, 91.0), 56.0],
+		["04_camp_and_kings_mountain.png", Vector3(72.0, 104.0, 224.0), Vector3(-82.0, 7.0, 89.0), 72.0]
+	]
+	for capture in captures:
+		var ok := await _capture_view(scene, capture[0], capture[1], capture[2], capture[3])
+		if not ok:
+			quit(1)
+			return
 
-	var camp_ok := await _capture_view(
-		scene,
-		"02_camp_and_nearby_pyramids.png",
-		Vector3(-53.0, 58.0, 172.0),
-		Vector3(-103.0, 2.0, 91.0),
-		58.0
-	)
-	if not camp_ok:
-		quit(1)
-		return
-
-	var mountain_ok := await _capture_view(
-		scene,
-		"03_camp_to_mountain_spatial_relation.png",
-		Vector3(38.0, 96.0, 198.0),
-		Vector3(-55.0, 5.0, 55.0),
-		72.0
-	)
-	if not mountain_ok:
-		quit(1)
-		return
-
-	print("Camp spatial previews captured from the production main scene.")
+	print("Four clean production-scene camp spatial previews captured.")
 	quit(0)
+
+func _hide_interface_layers(node: Node) -> void:
+	for child in node.get_children():
+		if child is CanvasLayer:
+			child.visible = false
+		_hide_interface_layers(child)
 
 func _capture_view(scene: Node3D, file_name: String, camera_position: Vector3, target: Vector3, camera_fov: float) -> bool:
 	var camera := Camera3D.new()
 	camera.name = "TemporaryCampReviewCamera"
 	camera.fov = camera_fov
 	camera.near = 0.1
-	camera.far = 1200.0
+	camera.far = 1400.0
 	scene.add_child(camera)
 	camera.global_position = camera_position
 	camera.look_at(target, Vector3.UP)
 	camera.make_current()
-	for _frame in range(14):
+	for _frame in range(16):
 		await process_frame
 	RenderingServer.force_draw(false)
 	await process_frame
