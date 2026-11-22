@@ -52,6 +52,20 @@ func _capture_previews() -> void:
 		push_error("The reverse founder name plaque is missing from the production royal gate.")
 		quit(1)
 		return
+	var lintel := gate_node.get_node_or_null("RoyalGateUpperLintel") as MeshInstance3D
+	var founder_frame := gate_node.get_node_or_null("FounderPortraitOuterFrame") as MeshInstance3D
+	if lintel == null or founder_frame == null or not (lintel.mesh is BoxMesh) or not (founder_frame.mesh is BoxMesh):
+		push_error("The royal gate lintel or elevated founder frame is missing.")
+		quit(1)
+		return
+	var lintel_box := lintel.mesh as BoxMesh
+	var founder_frame_box := founder_frame.mesh as BoxMesh
+	var lintel_top := lintel.position.y + lintel_box.size.y * 0.5
+	var founder_frame_bottom := founder_frame.position.y - founder_frame_box.size.y * 0.5
+	if founder_frame_bottom <= lintel_top:
+		push_error("The founder portrait frame intrudes into the open vehicle and pedestrian passage.")
+		quit(1)
+		return
 	var gate_back_ok := await _capture_view(
 		"royal_gate_rear_preview.png",
 		Vector3(0.0, 16.0, -72.0),
