@@ -429,6 +429,22 @@ func _build_royal_gate_and_square() -> void:
 	for mesh_node in gate_model.find_children("*", "MeshInstance3D", true, false):
 		mesh_node.add_to_group("city_world_geometry")
 
+	# Build a true second face from the exact same GLB resource. Rotating the
+	# duplicate 180 degrees keeps every authored mesh/material/detail identical
+	# while making the reverse approach a fully finished royal entrance too.
+	var rear_gate := Node3D.new()
+	rear_gate.name = "RoyalGateRearFace"
+	rear_gate.rotation.y = PI
+	gate.add_child(rear_gate)
+	var rear_gate_model := gate_model.duplicate() as Node3D
+	if rear_gate_model == null:
+		push_error("تعذر إنشاء الوجه الخلفي المطابق للبوابة الملكية.")
+		return
+	rear_gate_model.name = "RoyalGateRearGLB"
+	rear_gate.add_child(rear_gate_model)
+	for rear_mesh in rear_gate_model.find_children("*", "MeshInstance3D", true, false):
+		rear_mesh.add_to_group("city_world_geometry")
+
 	# Preserve walkable passage and prevent the player from walking through pylons.
 	_add_static_box_collision(gate, "RoyalEntranceWalkableCollision", Vector3(17.2, 0.22, 8.0), Vector3(0.0, 0.11, 0.0))
 	for side in [-1.0, 1.0]:
@@ -504,6 +520,40 @@ func _build_royal_gate_and_square() -> void:
 	gate_name.outline_size = 7
 	gate_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	gate.add_child(gate_name)
+
+	# Duplicate the founder portrait, frames, name and titles onto the reverse
+	# face. The parent rotation turns the complete plaque around without mirroring
+	# its text or portrait, so both approaches read correctly.
+	var rear_identity := Node3D.new()
+	rear_identity.name = "RoyalGateRearFounderIdentity"
+	rear_identity.rotation.y = PI
+	gate.add_child(rear_identity)
+	var founder_face_nodes: Array[String] = [
+		"FounderPortraitOuterFrame",
+		"FounderPortraitInnerFrame",
+		"FounderPortraitTextureSlot",
+		"FounderNamePlaque",
+		"FounderName",
+		"FounderTitle",
+		"FounderPortraitRoyalTopCrown",
+		"FounderPortraitRoyalSideGem",
+		"RoyalGateCityName"
+	]
+	for source_name in founder_face_nodes:
+		var source_node := gate.get_node_or_null(NodePath(source_name))
+		if source_node == null:
+			continue
+		var rear_node := source_node.duplicate() as Node3D
+		if rear_node == null:
+			continue
+		rear_node.name = source_name + "Rear"
+		rear_identity.add_child(rear_node)
+
+	# Structural regression checks for both approaches and founder identity.
+	assert(gate.get_node_or_null("RoyalGateRearFace/RoyalGateRearGLB") != null)
+	assert(gate.get_node_or_null("RoyalGateRearFounderIdentity/FounderNameRear") != null)
+	assert(gate.get_node_or_null("RoyalGateRearFounderIdentity/FounderTitleRear") != null)
+	assert(is_equal_approx(rear_gate.rotation.y, PI))
 
 
 func _build_main_street_wall_ads() -> void:
