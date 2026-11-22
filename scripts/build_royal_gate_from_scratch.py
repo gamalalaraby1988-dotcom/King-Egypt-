@@ -147,8 +147,8 @@ def crest_text(name, body, size, z, mat, max_width):
         obj.scale.z *= factor
     return obj
 
-crest_text("Founder name lettering", "GAMAL ALARABY", 0.34, 13.02, gold, 3.35)
-crest_text("Founder title lettering", "FOUNDER OF KING OF EGYPT CITY", 0.145, 12.70, gold, 3.35)
+crest_text("Founder name lettering", "GAMAL ALARABY", 0.56, 13.02, gold, 3.50)
+crest_text("Founder title lettering", "FOUNDER OF KING OF EGYPT CITY", 0.235, 12.68, gold, 3.50)
 
 # Twin slim ceremonial columns at the inside edges of the passage.
 for x in (-4.55, 4.55):
@@ -183,6 +183,29 @@ for side, x in (("Left", -16.0), ("Right", 16.0)):
     for dx in (-0.23, 0.23):
         sphere(f"{side} sphinx eye", (x+dx, -5.61, 3.25), (0.075, 0.045, 0.055), gold, 16, 12)
     cube(f"{side} sphinx ceremonial collar", (x, -5.34, 2.62), (0.98, 0.12, 0.16), gold, 0.035)
+    # Facial sculpt details: dark eye sockets, raised brows, muzzle, nose and carved mouth.
+    for dx in (-0.24, 0.24):
+        sphere(f"{side} sphinx eye socket", (x+dx, -5.585, 3.27), (0.125, 0.055, 0.105), dark, 20, 12)
+        sphere(f"{side} sphinx eye highlight", (x+dx, -5.645, 3.27), (0.052, 0.026, 0.052), gold, 16, 10)
+        cube(f"{side} sphinx sculpted brow", (x+dx, -5.60, 3.40), (0.29, 0.10, 0.085), gold, 0.035)
+    sphere(f"{side} sphinx nose bridge", (x, -5.665, 3.12), (0.16, 0.12, 0.25), limestone, 24, 16)
+    sphere(f"{side} sphinx muzzle left", (x-0.13, -5.70, 3.02), (0.19, 0.12, 0.13), limestone, 20, 12)
+    sphere(f"{side} sphinx muzzle right", (x+0.13, -5.70, 3.02), (0.19, 0.12, 0.13), limestone, 20, 12)
+    cube(f"{side} sphinx nose tip", (x, -5.805, 3.06), (0.16, 0.07, 0.10), gold, 0.035)
+    cube(f"{side} sphinx mouth line", (x, -5.80, 2.91), (0.26, 0.035, 0.035), dark, 0.012)
+    sphere(f"{side} sphinx chin", (x, -5.62, 2.84), (0.25, 0.20, 0.10), limestone, 20, 12)
+    # Nemes pleats and ornamental beard make the royal headdress read as carved regalia.
+    for dx in (-0.43, -0.22, 0.22, 0.43):
+        cube(f"{side} sphinx nemes pleat", (x+dx, -5.40, 3.16), (0.045, 0.045, 0.70), gold, 0.012)
+    cube(f"{side} sphinx royal beard mount", (x, -5.48, 2.79), (0.20, 0.18, 0.18), gold, 0.025)
+    cube(f"{side} sphinx royal beard", (x, -5.54, 2.58), (0.14, 0.16, 0.30), blue, 0.025)
+    for dx in (-0.58, 0.58):
+        for j in range(3):
+            cube(f"{side} sphinx paw claw", (x+dx, -5.92+j*0.16, 1.96), (0.09, 0.10, 0.11), gold, 0.025)
+    # Layered shoulder and haunch forms soften the primitive lion silhouette.
+    sphere(f"{side} sphinx shoulder muscle", (x, -4.42, 2.28), (1.18, 0.90, 0.70), limestone, 32, 20)
+    for dx in (-0.86, 0.86):
+        torus(f"{side} sphinx flank carving", (x+dx, -3.60, 2.26), 0.34, 0.035, gold, (0, math.radians(90), 0))
 
 # Hieroglyph-inspired relief bands and turquoise cartouche details.
 for x in (-8.0, 8.0):
