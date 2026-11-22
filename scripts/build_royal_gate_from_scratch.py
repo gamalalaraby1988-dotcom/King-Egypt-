@@ -127,7 +127,7 @@ for a in range(0, 360, 30):
 # Scene metadata for downstream review.
 scene = bpy.context.scene
 scene.unit_settings.system = "METRIC"
-scene.render.engine = "BLENDER_EEVEE_NEXT"
+scene.render.engine = "BLENDER_EEVEE"
 scene.render.resolution_x = 1600
 scene.render.resolution_y = 900
 scene["asset_id"] = "royal_gate_stage1_from_scratch"
