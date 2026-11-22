@@ -119,10 +119,31 @@ cube("Central lintel top cornice", (0, 0.0, 12.95), (11.0, 5.2, 0.28), gold, 0.0
 cube("Royal crest backing", (0, -2.68, 13.42), (4.45, 0.34, 2.55), limestone, 0.14)
 cube("Royal crest gold frame", (0, -2.90, 13.42), (4.02, 0.14, 2.20), gold, 0.07)
 cube("Royal crest dark inset", (0, -3.00, 13.42), (3.72, 0.08, 1.94), dark, 0.045)
-# Portrait frame remains empty until the founder supplies/approves a reference photo.
+# Use the founder portrait already stored in the official project repository.
+portrait_path = os.path.join(os.getcwd(), "assets", "founder", "founder_portrait.jpg")
+if not os.path.isfile(portrait_path):
+    raise FileNotFoundError(f"Founder portrait missing from project: {portrait_path}")
+portrait_image = bpy.data.images.load(portrait_path, check_existing=True)
+portrait_image.pack()
+portrait_mat = bpy.data.materials.new("Founder portrait photo — embedded in GLB")
+portrait_mat.use_nodes = True
+portrait_nodes = portrait_mat.node_tree.nodes
+portrait_bsdf = portrait_nodes.get("Principled BSDF")
+portrait_tex = portrait_nodes.new("ShaderNodeTexImage")
+portrait_tex.image = portrait_image
+portrait_tex.interpolation = "Linear"
+portrait_mat.node_tree.links.new(portrait_tex.outputs["Color"], portrait_bsdf.inputs["Base Color"])
+portrait_bsdf.inputs["Roughness"].default_value = 0.62
+portrait_bsdf.inputs["Metallic"].default_value = 0.0
+# Portrait frame and a vertical image plane facing the front of the gate.
 cube("Founder portrait reserved frame", (0, -3.065, 13.91), (1.18, 0.055, 0.98), gold, 0.035)
-cube("Founder portrait reserved dark panel", (0, -3.10, 13.91), (1.02, 0.035, 0.82), blue, 0.02)
-cube("Founder portrait top jewel", (0, -3.12, 14.43), (0.22, 0.035, 0.10), turquoise, 0.025)
+bpy.ops.mesh.primitive_plane_add(size=1, location=(0, -3.115, 13.91), rotation=(math.radians(90), 0, 0))
+portrait_plane = bpy.context.object
+portrait_plane.name = "Founder official portrait image"
+portrait_plane.dimensions = (1.02, 0.82, 0.012)
+bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
+portrait_plane.data.materials.append(portrait_mat)
+cube("Founder portrait top jewel", (0, -3.13, 14.43), (0.22, 0.035, 0.10), turquoise, 0.025)
 
 # Founder identity lettering is real 3D text in the exported GLB.
 def crest_text(name, body, size, z, mat, max_width):
@@ -252,7 +273,7 @@ scene.render.resolution_x = 1600
 scene.render.resolution_y = 900
 scene["asset_id"] = "royal_gate_stage1_from_scratch"
 scene["review_status"] = "preview_pending"
-scene["design_note"] = "Enhanced royal gate with enlarged founder name/title, reserved portrait frame, paired sphinx guardians, hieroglyph-inspired reliefs, turquoise inlays and integrated warm emissive accents; vehicle passage remains level and unobstructed."
+scene["design_note"] = "Enhanced royal gate with enlarged founder name/title, embedded founder portrait, paired sphinx guardians, hieroglyph-inspired reliefs, turquoise inlays and integrated warm emissive accents; vehicle passage remains level and unobstructed."
 
 # Export only the newly generated gate mesh.
 bpy.ops.object.select_all(action="SELECT")
