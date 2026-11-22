@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "assets": [
+    {
+      "id": "royal_gate_existing",
+      "path": "res://assets/models/royal_gate.glb",
+      "format": "glb",
+      "status": "existing_unverified",
+      "source": "غير موثق في سجل الأصول الحالي",
+      "license": "يحتاج إلى توثيق قبل إعادة التوزيع",
+      "preview": "",
+      "notes": "أصل موجود مسبقًا في المستودع؛ لا يعني إدراجه اعتماده لتصميم جديد."
+    }
+  ]
+}
