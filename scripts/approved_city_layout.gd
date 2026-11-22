@@ -15,7 +15,7 @@ func _ready() -> void:
 	_build_districts()
 	_build_main_street_wall_ads()
 	_build_nile_waterfront()
-	_build_pyramids()
+	_build_royal_development_district()
 	_build_royal_gate_and_square()
 	_build_royal_square_mosaic_mural()
 	_build_royal_square_landscaping()
@@ -362,45 +362,42 @@ func _build_nile_waterfront() -> void:
 		_box(self, "PromenadeLampHead", Vector3(0.8, 0.18, 0.8), Vector3(x, 3.0, 74), GOLD)
 		_add_city_night_light(self, "PromenadeNightLight", Vector3(x, 2.9, 74), 8.0)
 
-func _build_pyramids() -> void:
-	# Place the Giza landmarks beyond the northern city skyline so they read as a distant desert region.
-	# The expanded ground in main.gd extends to z=-340; these landmarks remain inside the playable world.
-	var pyramid_positions: Array[Vector3] = [
-		Vector3(-48.0, 0.0, -252.0),
-		Vector3(0.0, 0.0, -270.0),
-		Vector3(48.0, 0.0, -252.0)
+func _build_royal_development_district() -> void:
+	# Reuse the former distant-pyramid parcel as a development campus.
+	# The real GizaPyramidsArea beside the desert camp remains untouched.
+	var entries := [
+		["city_development_center", "مركز تطوير المدينة", Vector3(-48.0, 0.0, -214.0), Vector2(17.0, 14.0), 11.0],
+		["technology_research_center", "مركز الأبحاث والتكنولوجيا", Vector3(-16.0, 0.0, -214.0), Vector2(17.0, 14.0), 13.0],
+		["vehicle_development_center", "مركز تطوير المركبات", Vector3(16.0, 0.0, -214.0), Vector2(17.0, 14.0), 10.0],
+		["character_equipment_center", "مركز تطوير الشخصيات والمعدات", Vector3(48.0, 0.0, -214.0), Vector2(17.0, 14.0), 12.0]
 	]
-	for i in range(pyramid_positions.size()):
-		var pyramid := MeshInstance3D.new()
-		pyramid.name = "DistantGizaPyramid_%d" % (i + 1)
-		var mesh := CylinderMesh.new()
-		mesh.top_radius = 0.0
-		mesh.bottom_radius = 18.0 - i * 2.0
-		mesh.height = 34.0 - i * 3.0
-		mesh.radial_segments = 4
-		mesh.rings = 1
-		pyramid.mesh = mesh
-		pyramid.position = pyramid_positions[i] + Vector3(0.0, mesh.height * 0.5, 0.0)
-		pyramid.material_override = _mat(Color(0.72, 0.58, 0.38))
-		pyramid.add_to_group("city_distant_landmarks")
-		pyramid.add_to_group("city_world_geometry")
-		pyramid.visibility_range_begin = 0.0
-		pyramid.visibility_range_end = 500.0
-		pyramid.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		add_child(pyramid)
-	var sphinx := MeshInstance3D.new()
-	sphinx.name = "DistantSphinxLandmark"
-	var sphinx_mesh := BoxMesh.new()
-	sphinx_mesh.size = Vector3(12.0, 4.0, 5.0)
-	sphinx.mesh = sphinx_mesh
-	sphinx.position = Vector3(70.0, 2.0, -246.0)
-	sphinx.material_override = _mat(SAND)
-	sphinx.add_to_group("city_distant_landmarks")
-	sphinx.add_to_group("city_world_geometry")
-	sphinx.visibility_range_begin = 0.0
-	sphinx.visibility_range_end = 500.0
-	sphinx.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	add_child(sphinx)
+	for i in range(entries.size()):
+		var e: Array = entries[i]
+		var accent := GOLD if i % 2 == 0 else TEAL
+		_building(self, str(e[0]), str(e[1]), e[2], e[3], float(e[4]), accent)
+		var marker := Label3D.new()
+		marker.name = "DevelopmentBuildingName"
+		marker.text = str(e[1])
+		marker.position = e[2] + Vector3(0.0, float(e[4]) + 2.0, 0.0)
+		marker.font_size = 28
+		marker.pixel_size = 0.012
+		marker.modulate = Color(1.0, 0.91, 0.69)
+		marker.outline_size = 7
+		add_child(marker)
+
+	# A broad approach links the development campus to the mountain trailhead.
+	_box(self, "RoyalDevelopmentMountainApproach", Vector3(12.0, 0.16, 9.0), Vector3(0.0, -0.02, -223.0), SAND)
+	_add_static_box_collision(self, "RoyalDevelopmentMountainApproachWalkable", Vector3(12.0, 0.16, 9.0), Vector3(0.0, -0.02, -223.0))
+	var district_sign := Label3D.new()
+	district_sign.name = "RoyalDevelopmentDistrictSign"
+	district_sign.text = "ROYAL DEVELOPMENT DISTRICT"
+	district_sign.position = Vector3(0.0, 8.0, -204.0)
+	district_sign.font_size = 42
+	district_sign.pixel_size = 0.012
+	district_sign.modulate = Color(1.0, 0.84, 0.48)
+	district_sign.outline_size = 8
+	add_child(district_sign)
+
 
 func _build_royal_gate_and_square() -> void:
 	# The approved GLB is the single source of truth for the royal gate visual.
@@ -1038,7 +1035,7 @@ func _build_mountain_route() -> void:
 	# The mountain zone is placed at the far eastern edge, beyond the service-building row.
 	var mountain := Node3D.new()
 	mountain.name = "KingsMountainRoute"
-	mountain.position = Vector3(98, 0, 40)
+	mountain.position = Vector3(0, 0, -255)
 	add_child(mountain)
 	var lower := MeshInstance3D.new()
 	lower.name = "MountainLowerSlope"
