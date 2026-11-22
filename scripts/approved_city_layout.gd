@@ -557,7 +557,7 @@ func _build_royal_gate_and_square() -> void:
 		rear_identity.add_child(rear_node)
 
 	# Structural regression checks for both approaches and founder identity.
-	assert(gate.get_node_or_null("RoyalGateRearFace/RoyalGateRearGLB") != null)
+	assert(gate.get_node_or_null("RoyalGateRearFace/RoyalGateRearGeometry") != null)
 	assert(gate.get_node_or_null("RoyalGateRearFounderIdentity/FounderNameRear") != null)
 	assert(gate.get_node_or_null("RoyalGateRearFounderIdentity/FounderTitleRear") != null)
 	assert(is_equal_approx(rear_gate.rotation.y, PI))
