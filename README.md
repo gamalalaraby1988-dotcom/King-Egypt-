@@ -8,6 +8,7 @@
 - [وثيقة النسخة الرئيسية المعتمدة](docs/MAIN_PROJECT_PRESENTATION_AR.md)
 - [سجل الميزات والأنظمة](docs/MASTER_FEATURE_REGISTER_AR.md)
 - [مخطط تكامل الأنظمة](docs/SYSTEM_INTEGRATION_BLUEPRINT_AR.md)
+- [دليل مصادر المجسمات ثلاثية الأبعاد](docs/3D_ASSET_SOURCES_AR.md)
 
 ## قاعدة النسخة الرئيسية
 - لا تعرض التصورات القديمة أو الواجهات القديمة باعتبارها النسخة الحالية.
