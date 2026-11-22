@@ -58,6 +58,13 @@ func _capture() -> void:
 		quit(1)
 		return
 
+	# Verify the open-air public spaces are present in the same production scene.
+	for open_space in ["RoyalDevelopmentCentralPlaza", "RoyalDevelopmentWestGardenCourt", "RoyalDevelopmentEastGardenCourt", "RoyalDevelopmentBatchedPalmTrunks", "RoyalDevelopmentBatchedPalmCrowns"]:
+		if layout.get_node_or_null(open_space) == null:
+			push_error("Royal development open-space feature is missing: " + open_space)
+			quit(1)
+			return
+
 	# Verify the approved camp expansion exists in the actual production scene.
 	var tent_names := ["FoundersRoyalTent", "GuestTentWest", "GuestTentEast", "GuestTentNorth"]
 	for tent_name in tent_names:
