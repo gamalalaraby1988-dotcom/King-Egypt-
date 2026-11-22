@@ -435,11 +435,11 @@ func _build_royal_gate_and_square() -> void:
 	_box(gate, "RoyalGateUpperLintel", Vector3(12.6, 1.45, 3.25), Vector3(0.0, 15.0, 0.0), black)
 	_box(gate, "RoyalGateLintelGoldFront", Vector3(12.6, 0.22, 0.16), Vector3(0.0, 14.25, 1.68), gold)
 	_box(gate, "RoyalGateLintelGoldRear", Vector3(12.6, 0.22, 0.16), Vector3(0.0, 14.25, -1.68), gold)
-	_box(gate, "WingedSunCentralDisk", Vector3(1.35, 1.05, 0.28), Vector3(0.0, 15.95, 1.78), gold)
-	_box(gate, "WingedSunLeftWing", Vector3(3.4, 0.42, 0.22), Vector3(-2.25, 16.0, 1.78), dark_gold)
-	_box(gate, "WingedSunRightWing", Vector3(3.4, 0.42, 0.22), Vector3(2.25, 16.0, 1.78), dark_gold)
+	_box(gate, "WingedSunCentralDisk", Vector3(1.35, 1.05, 0.28), Vector3(0.0, 21.05, 1.78), gold)
+	_box(gate, "WingedSunLeftWing", Vector3(3.4, 0.42, 0.22), Vector3(-2.25, 21.10, 1.78), dark_gold)
+	_box(gate, "WingedSunRightWing", Vector3(3.4, 0.42, 0.22), Vector3(2.25, 21.10, 1.78), dark_gold)
 	for side in [-1.0, 1.0]:
-		_box(gate, "WingedSunFeather", Vector3(0.18, 0.78, 0.18), Vector3(side * 3.7, 15.92, 1.78), gold)
+		_box(gate, "WingedSunFeather", Vector3(0.18, 0.78, 0.18), Vector3(side * 3.7, 21.02, 1.78), gold)
 	# Richer carved Egyptian facade details: stepped cornices, inset cartouches,
 	# vertical fluting, lotus-capital motifs and relief bands on both pylons.
 	for side: float in [-1.0, 1.0]:
@@ -478,12 +478,12 @@ func _build_royal_gate_and_square() -> void:
 				_box(gate, "GuardianSphinxPaw", Vector3(0.42, 0.28, 0.76), Vector3(x + paw_side * 0.64, 0.88, z_face + 0.12), gold)
 
 	# A layered winged sun with feather ribs, not a single flat icon.
-	_box(gate, "WingedSunUpperArc", Vector3(2.4, 0.18, 0.18), Vector3(0.0, 16.55, 1.82), gold)
+	_box(gate, "WingedSunUpperArc", Vector3(2.4, 0.18, 0.18), Vector3(0.0, 21.65, 1.82), gold)
 	for feather_index in range(7):
 		var feather_x: float = -3.0 + float(feather_index) * 1.0
-		_box(gate, "WingedSunFeatherRib", Vector3(0.12, 0.52, 0.12), Vector3(feather_x, 16.0, 1.94), gold)
-		_box(gate, "WingedSunLowerFeather", Vector3(0.12, 0.34, 0.12), Vector3(feather_x, 15.68, 1.94), dark_gold)
-	_box(gate, "WingedSunUraeus", Vector3(0.24, 0.72, 0.20), Vector3(0.0, 16.9, 1.82), gold)
+		_box(gate, "WingedSunFeatherRib", Vector3(0.12, 0.52, 0.12), Vector3(feather_x, 21.10, 1.94), gold)
+		_box(gate, "WingedSunLowerFeather", Vector3(0.12, 0.34, 0.12), Vector3(feather_x, 20.78, 1.94), dark_gold)
+	_box(gate, "WingedSunUraeus", Vector3(0.24, 0.72, 0.20), Vector3(0.0, 21.9, 1.82), gold)
 	for mesh_node in gate.find_children("*", "MeshInstance3D", true, false):
 		mesh_node.add_to_group("city_world_geometry")
 	var rear_gate := Node3D.new()
@@ -511,8 +511,8 @@ func _build_royal_gate_and_square() -> void:
 		)
 
 	# Founder portrait frame and founder identity are intentionally live scene nodes.
-	_box(gate, "FounderPortraitOuterFrame", Vector3(6.6, 3.55, 0.42), Vector3(0.0, 11.15, 1.36), gold)
-	_box(gate, "FounderPortraitInnerFrame", Vector3(6.18, 3.13, 0.16), Vector3(0.0, 11.15, 1.60), dark_gold)
+	_box(gate, "FounderPortraitOuterFrame", Vector3(6.6, 3.55, 0.42), Vector3(0.0, 18.0, 1.36), gold)
+	_box(gate, "FounderPortraitInnerFrame", Vector3(6.18, 3.13, 0.16), Vector3(0.0, 18.0, 1.60), dark_gold)
 	var founder_portrait_path := "res://assets/founder/founder_portrait.jpg"
 	if ResourceLoader.exists(founder_portrait_path):
 		var portrait_texture := load(founder_portrait_path) as Texture2D
@@ -520,9 +520,9 @@ func _build_royal_gate_and_square() -> void:
 			var portrait_surface := MeshInstance3D.new()
 			portrait_surface.name = "FounderPortraitTextureSlot"
 			var portrait_mesh := QuadMesh.new()
-			portrait_mesh.size = Vector2(5.82, 2.78)
+			portrait_mesh.size = Vector2(5.82, 2.0)
 			portrait_surface.mesh = portrait_mesh
-			portrait_surface.position = Vector3(0.0, 11.15, 1.71)
+			portrait_surface.position = Vector3(0.0, 18.55, 1.71)
 			var portrait_material := StandardMaterial3D.new()
 			portrait_material.albedo_texture = portrait_texture
 			portrait_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
@@ -532,13 +532,13 @@ func _build_royal_gate_and_square() -> void:
 			gate.add_child(portrait_surface)
 	else:
 		push_warning("Founder portrait asset is missing: " + founder_portrait_path)
-		_box(gate, "FounderPortraitTextureSlot", Vector3(5.82, 2.78, 0.08), Vector3(0.0, 11.15, 1.71), black)
+		_box(gate, "FounderPortraitTextureSlot", Vector3(5.82, 2.0, 0.08), Vector3(0.0, 11.15, 1.71), black)
 
-	_box(gate, "FounderNamePlaque", Vector3(6.8, 1.05, 0.38), Vector3(0.0, 8.95, 1.38), black)
+	_box(gate, "FounderNamePlaque", Vector3(6.8, 1.05, 0.38), Vector3(0.0, 16.85, 1.38), black)
 	var founder_name := Label3D.new()
 	founder_name.name = "FounderName"
 	founder_name.text = "GAMAL ALARABY"
-	founder_name.position = Vector3(0.0, 9.10, 1.62)
+	founder_name.position = Vector3(0.0, 16.90, 1.62)
 	founder_name.font_size = 52
 	founder_name.pixel_size = 0.009
 	founder_name.modulate = Color(1.0, 0.82, 0.42)
@@ -549,7 +549,7 @@ func _build_royal_gate_and_square() -> void:
 	var founder_title := Label3D.new()
 	founder_title.name = "FounderTitle"
 	founder_title.text = "FOUNDER OF KING OF EGYPT CITY"
-	founder_title.position = Vector3(0.0, 8.55, 1.62)
+	founder_title.position = Vector3(0.0, 16.32, 1.62)
 	founder_title.font_size = 23
 	founder_title.pixel_size = 0.009
 	founder_title.modulate = Color(1.0, 0.88, 0.62)
@@ -557,14 +557,14 @@ func _build_royal_gate_and_square() -> void:
 	founder_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	gate.add_child(founder_title)
 
-	_box(gate, "FounderPortraitRoyalTopCrown", Vector3(2.0, 0.24, 0.48), Vector3(0.0, 13.02, 1.40), gold)
+	_box(gate, "FounderPortraitRoyalTopCrown", Vector3(2.0, 0.24, 0.48), Vector3(0.0, 19.95, 1.40), gold)
 	for side in [-1.0, 1.0]:
-		_box(gate, "FounderPortraitRoyalSideGem", Vector3(0.28, 0.62, 0.28), Vector3(side * 3.42, 11.15, 1.52), gold)
+		_box(gate, "FounderPortraitRoyalSideGem", Vector3(0.28, 0.62, 0.28), Vector3(side * 3.42, 18.0, 1.52), gold)
 
 	var gate_name := Label3D.new()
 	gate_name.name = "RoyalGateCityName"
 	gate_name.text = "KING OF EGYPT CITY"
-	gate_name.position = Vector3(0.0, 7.95, 1.34)
+	gate_name.position = Vector3(0.0, 15.96, 1.34)
 	gate_name.font_size = 38
 	gate_name.pixel_size = 0.009
 	gate_name.modulate = Color(1.0, 0.86, 0.58)
