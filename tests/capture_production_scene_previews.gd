@@ -27,12 +27,64 @@ func _capture_previews() -> void:
 		mode_overlay.visible = false
 	await process_frame
 
+	var gate_node := current_scene.get_node_or_null("ApprovedCityLayout/RoyalFounderGate") as Node3D
+	if gate_node == null:
+		push_error("The production royal gate node was not found.")
+		quit(1)
+		return
+
+	# The founder portrait was intentionally removed. Validate the text-only identity
+	# plaques on both faces and ensure they remain above the clear passage.
+	if gate_node.get_node_or_null("FounderName") == null or gate_node.get_node_or_null("FounderTitle") == null:
+		push_error("The front founder name or title is missing from the production royal gate.")
+		quit(1)
+		return
+	if gate_node.get_node_or_null("RoyalGateRearFace/RoyalGateRearGeometry") == null:
+		push_error("The reverse structural face is missing from the production royal gate.")
+		quit(1)
+		return
+	if gate_node.get_node_or_null("RoyalGateRearFounderIdentity/FounderNameRear") == null:
+		push_error("The reverse founder name plaque is missing from the production royal gate.")
+		quit(1)
+		return
+	if gate_node.get_node_or_null("FounderPortraitOuterFrame") != null or gate_node.get_node_or_null("FounderPortrait") != null:
+		push_error("A removed founder portrait or frame is still present on the production royal gate.")
+		quit(1)
+		return
+
+	var lintel := gate_node.get_node_or_null("RoyalGateUpperLintel") as MeshInstance3D
+	var founder_plaque := gate_node.get_node_or_null("FounderNamePlaque") as MeshInstance3D
+	if lintel == null or founder_plaque == null or not (lintel.mesh is BoxMesh) or not (founder_plaque.mesh is BoxMesh):
+		push_error("The royal gate lintel or text-only founder plaque is missing.")
+		quit(1)
+		return
+	var lintel_box := lintel.mesh as BoxMesh
+	var plaque_box := founder_plaque.mesh as BoxMesh
+	var lintel_top := lintel.position.y + lintel_box.size.y * 0.5
+	var plaque_bottom := founder_plaque.position.y - plaque_box.size.y * 0.5
+	if plaque_bottom <= lintel_top:
+		push_error("The founder name plaque intrudes into the open vehicle and pedestrian passage.")
+		quit(1)
+		return
+
 	var gate_ok := await _capture_view(
 		"royal_gate_preview.png",
 		Vector3(0.0, 16.0, -24.0),
-		Vector3(0.0, 7.0, -60.0)
+		Vector3(0.0, 7.0, -60.0),
+		62.0
 	)
 	if not gate_ok:
+		quit(1)
+		return
+
+	# Capture the reverse approach independently so both actual production faces are reviewed.
+	var gate_back_ok := await _capture_view(
+		"royal_gate_rear_preview.png",
+		Vector3(0.0, 16.0, -72.0),
+		Vector3(0.0, 7.0, -36.0),
+		62.0
+	)
+	if not gate_back_ok:
 		quit(1)
 		return
 

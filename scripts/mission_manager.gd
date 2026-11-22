@@ -2182,6 +2182,28 @@ func _create_target_marker() -> void:
 	target_marker.visible = false
 	add_child(target_marker)
 
+func _layout_top_status_labels() -> void:
+	if not is_instance_valid(prompt_label) or not is_instance_valid(stats_label):
+		return
+	var viewport_width := get_viewport().get_visible_rect().size.x
+	# Keep the persistent mission/status text to the far right, below Destinations.
+	# This preserves the central skyline and landmark nameplates as clear sightlines.
+	var panel_width := clampf(viewport_width * 0.36, 260.0, 590.0)
+	var right_edge := -18.0
+	prompt_label.anchor_left = 1.0
+	prompt_label.anchor_right = 1.0
+	prompt_label.offset_left = -panel_width - 18.0
+	prompt_label.offset_right = right_edge
+	prompt_label.offset_top = 72.0
+	prompt_label.offset_bottom = 120.0
+	stats_label.anchor_left = 1.0
+	stats_label.anchor_right = 1.0
+	stats_label.offset_left = -panel_width - 18.0
+	stats_label.offset_right = right_edge
+	stats_label.offset_top = 122.0
+	stats_label.offset_bottom = 174.0
+
+
 func _build_ui() -> void:
 	var layer := CanvasLayer.new()
 	layer.name = "MissionHUD"
@@ -2192,17 +2214,22 @@ func _build_ui() -> void:
 	layer.add_child(root_control)
 
 	prompt_label = Label.new()
-	prompt_label.position = Vector2(18, 52)
-	prompt_label.size = Vector2(760, 36)
+	prompt_label.name = "MissionPromptStatus"
 	prompt_label.add_theme_font_size_override("font_size", 17)
 	prompt_label.add_theme_color_override("font_color", Color.WHITE)
+	prompt_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	prompt_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	root_control.add_child(prompt_label)
 
 	stats_label = Label.new()
-	stats_label.position = Vector2(18, 82)
-	stats_label.size = Vector2(850, 30)
+	stats_label.name = "PlayerStatsStatus"
+	stats_label.add_theme_font_size_override("font_size", 15)
 	stats_label.add_theme_color_override("font_color", Color.WHITE)
+	stats_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	stats_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	root_control.add_child(stats_label)
+	_layout_top_status_labels()
+	get_viewport().size_changed.connect(_layout_top_status_labels)
 
 	navigation_label = Label.new()
 	navigation_label.set_anchors_preset(Control.PRESET_TOP_WIDE)
