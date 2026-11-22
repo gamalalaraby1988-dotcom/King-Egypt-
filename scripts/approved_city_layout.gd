@@ -427,14 +427,14 @@ func _build_royal_gate_and_square() -> void:
 	gate_model.scale = Vector3.ONE * 1.45
 	gate.add_child(gate_model)
 
-	# Give the imported static meshes collision so the pylons remain solid while
-	# the central passage stays open. The square floor remains independently walkable.
+	# The GLB is one combined mesh spanning both pylons and the lintel.
+	# A trimesh collider on that combined mesh blocks the arch opening, so use
+	# two conservative side-pylon colliders only and leave the middle fully clear.
 	var gate_meshes := gate_model.find_children("*", "MeshInstance3D", true, false)
 	for mesh_node in gate_meshes:
-		var mesh_instance := mesh_node as MeshInstance3D
-		if mesh_instance != null and mesh_instance.mesh != null:
-			mesh_instance.create_trimesh_collision()
-		mesh_instance.add_to_group("city_world_geometry")
+		mesh_node.add_to_group("city_world_geometry")
+	_add_static_box_collision(gate, "RoyalGateLeftPylonCollision", Vector3(2.8, 8.0, 2.8), Vector3(-5.2, 4.0, 0.0))
+	_add_static_box_collision(gate, "RoyalGateRightPylonCollision", Vector3(2.8, 8.0, 2.8), Vector3(5.2, 4.0, 0.0))
 
 	# Founder identity is text only, duplicated on both faces; no portrait is used.
 	var plaque := _box(gate, "FounderNamePlaque", Vector3(12.2, 2.35, 0.18), Vector3(0.0, 10.35, 3.72), Color(0.018, 0.022, 0.026))
