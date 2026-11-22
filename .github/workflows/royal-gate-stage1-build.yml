@@ -1,0 +1,75 @@
+name: Royal gate stage 1 build and preview
+
+on:
+  push:
+    branches: [work/royal-gate-from-scratch]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-validate-render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install Blender and rendering dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y blender xvfb libgl1-mesa-dri
+
+      - name: Build new royal gate GLB from scratch
+        run: blender --background --python scripts/build_royal_gate_from_scratch.py
+
+      - name: Install Khronos glTF Validator
+        run: |
+          npm install --no-save gltf-validator@2.0.0-dev.3.10
+          mkdir -p artifacts/royal-gate-build
+
+      - name: Validate generated GLB
+        run: |
+          node <<'NODE'
+          const fs = require("node:fs");
+          const validator = require("gltf-validator");
+          (async () => {
+            const file = "artifacts/royal-gate-build/royal_gate_stage1.glb";
+            const report = await validator.validateBytes(new Uint8Array(fs.readFileSync(file)), {
+              uri: file, format: "glb", writeTimestamp: false, maxIssues: 0
+            });
+            fs.writeFileSync("artifacts/royal-gate-build/khronos-report.json", JSON.stringify(report, null, 2) + "\n");
+            const issues = report.issues || {};
+            console.log(`Khronos: ${issues.numErrors || 0} errors, ${issues.numWarnings || 0} warnings, ${issues.numInfos || 0} infos`);
+            if ((issues.numErrors || 0) > 0) process.exitCode = 1;
+          })().catch(e => { console.error(e); process.exitCode = 1; });
+          NODE
+
+      - name: Prepare exact GLB for Godot import
+        run: |
+          mkdir -p assets/review
+          cp artifacts/royal-gate-build/royal_gate_stage1.glb assets/review/royal_gate_stage1.glb
+
+      - name: Install Godot 4.7.2
+        run: |
+          curl -fL --retry 3 "https://github.com/godotengine/godot/releases/download/4.7.2-stable/Godot_v4.7.2-stable_linux.x86_64.zip" -o /tmp/godot.zip
+          unzip -q /tmp/godot.zip -d /tmp/godot
+          chmod +x /tmp/godot/Godot_v4.7.2-stable_linux.x86_64
+
+      - name: Import GLB into Godot
+        run: /tmp/godot/Godot_v4.7.2-stable_linux.x86_64 --headless --editor --path . --quit
+
+      - name: Render preview from the exact GLB in Godot
+        run: |
+          GODOT="/tmp/godot/Godot_v4.7.2-stable_linux.x86_64"
+          xvfb-run -a "$GODOT" --audio-driver Dummy --path . --rendering-method gl_compatibility --script res://tests/render_royal_gate_stage1.gd
+
+      - name: Upload GLB, Khronos report, and exact Godot preview
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: royal-gate-stage1-review
+          path: artifacts/royal-gate-build/
+          if-no-files-found: error
+          retention-days: 14
