@@ -30,7 +30,8 @@ func _capture_previews() -> void:
 	var gate_ok := await _capture_view(
 		"royal_gate_preview.png",
 		Vector3(0.0, 16.0, -24.0),
-		Vector3(0.0, 7.0, -60.0)
+		Vector3(0.0, 7.0, -60.0),
+		62.0
 	)
 	if not gate_ok:
 		quit(1)
@@ -54,7 +55,8 @@ func _capture_previews() -> void:
 	var gate_back_ok := await _capture_view(
 		"royal_gate_rear_preview.png",
 		Vector3(0.0, 16.0, -72.0),
-		Vector3(0.0, 7.0, -36.0)
+		Vector3(0.0, 7.0, -36.0),
+		62.0
 	)
 	if not gate_back_ok:
 		quit(1)
