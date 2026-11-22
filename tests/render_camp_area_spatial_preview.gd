@@ -65,6 +65,23 @@ func _capture() -> void:
 			quit(1)
 			return
 
+	# Verify lightweight open-air additions and their shared palm batches.
+	for walkable_name in ["RoyalDevelopmentCentralPlazaWalkable", "RoyalDevelopmentWestGardenWalkable", "RoyalDevelopmentEastGardenWalkable", "RoyalDevelopmentMountainApproachWalkable"]:
+		if layout.get_node_or_null(walkable_name) == null:
+			push_error("Open public-space collision is missing: " + walkable_name)
+			quit(1)
+			return
+	var palm_trunks := layout.get_node_or_null("RoyalDevelopmentBatchedPalmTrunks") as MultiMeshInstance3D
+	var palm_crowns := layout.get_node_or_null("RoyalDevelopmentBatchedPalmCrowns") as MultiMeshInstance3D
+	if palm_trunks == null or palm_crowns == null or palm_trunks.multimesh == null or palm_crowns.multimesh == null:
+		push_error("Batched palm meshes are missing from the open-space district.")
+		quit(1)
+		return
+	if palm_trunks.multimesh.instance_count != 8 or palm_crowns.multimesh.instance_count != 8:
+		push_error("Expected eight shared palm instances in each MultiMesh batch.")
+		quit(1)
+		return
+
 	# Verify the approved camp expansion exists in the actual production scene.
 	var tent_names := ["FoundersRoyalTent", "GuestTentWest", "GuestTentEast", "GuestTentNorth"]
 	for tent_name in tent_names:
