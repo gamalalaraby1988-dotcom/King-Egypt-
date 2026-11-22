@@ -108,6 +108,27 @@ cube("Royal crest backing", (0, -2.68, 13.15), (3.8, 0.32, 1.45), limestone, 0.1
 cube("Royal crest gold frame", (0, -2.88, 13.15), (3.25, 0.12, 1.08), gold, 0.06)
 cube("Royal crest dark inset", (0, -2.96, 13.15), (2.95, 0.08, 0.82), dark, 0.035)
 
+# Founder identity lettering: real 3D text geometry on the royal crest inset.
+# Text is part of this exported GLB, not a render-only overlay.
+def crest_text(name, body, size, z, mat):
+    curve = bpy.data.curves.new(name, type="FONT")
+    curve.body = body
+    curve.align_x = "CENTER"
+    curve.align_y = "CENTER"
+    curve.size = size
+    curve.extrude = 0.006
+    curve.bevel_depth = 0.0015
+    curve.bevel_resolution = 2
+    obj = bpy.data.objects.new(name, curve)
+    bpy.context.collection.objects.link(obj)
+    obj.location = (0.0, -3.018, z)
+    obj.rotation_euler = (math.radians(90), 0.0, 0.0)
+    obj.data.materials.append(mat)
+    return obj
+
+crest_text("Founder name lettering", "GAMAL ALARABY", 0.235, 13.30, gold)
+crest_text("Founder title lettering", "FOUNDER OF KING OF EGYPT CITY", 0.095, 12.99, gold)
+
 # Twin slim ceremonial columns at the inside edges of the passage.
 for x in (-4.55, 4.55):
     # Slim columns sit fully outside the 8.2 m vehicle lane and inside the pylon opening.
@@ -140,7 +161,7 @@ scene.render.resolution_x = 1600
 scene.render.resolution_y = 900
 scene["asset_id"] = "royal_gate_stage1_from_scratch"
 scene["review_status"] = "preview_pending"
-scene["design_note"] = "Stage 1 structural gate blockout; portrait, sphinx statues and fine hieroglyphic detailing intentionally reserved for later approved stages."
+scene["design_note"] = "Stage 1 gate with founder name and title as real 3D text on the crest; founder portrait, sphinx statues and fine hieroglyphic detailing remain reserved for later approved stages."
 
 # Export only the newly generated gate mesh.
 bpy.ops.object.select_all(action="SELECT")
