@@ -155,9 +155,19 @@ for x in (-4.55, 4.55):
     # Slim columns sit fully outside the 8.2 m vehicle lane and inside the pylon opening.
     cylinder("Portal column foot", (x, -1.95, 1.55), 0.30, 0.34, gold)
     cylinder("Portal column shaft", (x, -1.95, 5.5), 0.20, 7.6, limestone)
+    # Carved vertical fluting and layered lotus-inspired capital details.
+    for z in (2.25, 2.48, 8.55, 8.78):
+        torus("Portal column gold ring moulding", (x, -1.95, z), 0.225, 0.035, gold)
+    for a in range(0, 360, 45):
+        rad = math.radians(a)
+        rib = cube("Portal column carved flute", (x + math.cos(rad)*0.198, -1.95 + math.sin(rad)*0.198, 5.45), (0.035, 0.035, 5.65), gold, 0.012)
+        rib.rotation_euler[2] = rad
     cylinder("Portal column blue collar", (x, -1.95, 9.35), 0.24, 0.28, blue)
     cylinder("Portal column capital", (x, -1.95, 9.7), 0.30, 0.42, gold)
     cylinder("Portal column abacus", (x, -1.95, 10.0), 0.34, 0.18, limestone)
+    for a in range(0, 360, 60):
+        rad = math.radians(a)
+        sphere("Portal lotus capital petal", (x + math.cos(rad)*0.28, -1.95 + math.sin(rad)*0.28, 9.72), (0.12, 0.12, 0.22), turquoise, 20, 12)
 
 # Symmetric low wing walls visually anchor the gate.
 for side, x in (("Left", -12.0), ("Right", 12.0)):
@@ -223,14 +233,16 @@ for x in (-10.7, -5.35, 5.35, 10.7):
 for x in (-1.75, 1.75):
     cube("Crest side luminous jewel", (x, -3.08, 13.42), (0.10, 0.045, 0.34), warm_glow, 0.025)
 
-# A small sun-disc motif above the passage (structural ornament, not text).
-cylinder("Royal solar disc", (0, -2.95, 10.72), 0.72, 0.16, gold, 64)
+# A front-facing solar-disc motif above the passage (structural ornament, not text).
+solar_disc = cylinder("Royal solar disc", (0, -2.95, 10.72), 0.72, 0.16, gold, 64)
+solar_disc.rotation_euler[0] = math.radians(90)
 for a in range(0, 360, 30):
     rad = math.radians(a)
     x = math.sin(rad) * 1.05
     z = 10.72 + math.cos(rad) * 1.05
     bar = cube("Solar ray", (x, -2.96, z), (0.12, 0.12, 0.48), gold, 0.025)
     bar.rotation_euler[1] = -rad
+    bar.rotation_euler[0] = math.radians(90)
 
 # Scene metadata for downstream review.
 scene = bpy.context.scene
