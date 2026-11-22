@@ -6,6 +6,7 @@ on:
     paths:
       - 'scripts/build_main_royal_tent.py'
       - 'tests/render_main_royal_tent.gd'
+      - 'tests/render_royal_tent_city_placement.gd'
       - '.github/workflows/main-royal-tent-build.yml'
   workflow_dispatch:
 
@@ -66,6 +67,11 @@ jobs:
         run: |
           GODOT="/tmp/godot/Godot_v4.7.2-stable_linux.x86_64"
           xvfb-run -a "$GODOT" --audio-driver Dummy --path . --rendering-method gl_compatibility --script res://tests/render_main_royal_tent.gd
+
+      - name: Render proposed placement in production city scene
+        run: |
+          GODOT="/tmp/godot/Godot_v4.7.2-stable_linux.x86_64"
+          xvfb-run -a "$GODOT" --audio-driver Dummy --path . --rendering-method gl_compatibility --script res://tests/render_royal_tent_city_placement.gd
 
       - name: Upload isolated model, validation report, and exact preview
         if: always()
