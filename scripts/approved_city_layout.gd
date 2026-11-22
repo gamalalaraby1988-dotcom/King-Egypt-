@@ -473,7 +473,7 @@ func _build_royal_gate_and_square() -> void:
 			guardian_head.position = Vector3(x, 2.78, z_face)
 			guardian_head.material_override = _mat(gold, 0.48)
 			gate.add_child(guardian_head)
-			_box(gate, "GuardianNem esHeaddress", Vector3(1.02, 0.34, 0.82), Vector3(x, 3.12, z_face), black)
+			_box(gate, "GuardianNemesisHeaddress", Vector3(1.02, 0.34, 0.82), Vector3(x, 3.12, z_face), black)
 			for paw_side: float in [-1.0, 1.0]:
 				_box(gate, "GuardianSphinxPaw", Vector3(0.42, 0.28, 0.76), Vector3(x + paw_side * 0.64, 0.88, z_face + 0.12), gold)
 
