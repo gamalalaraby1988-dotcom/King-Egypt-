@@ -511,11 +511,11 @@ func _build_royal_gate_and_square() -> void:
 		)
 
 	# # Portrait intentionally omitted. Keep all three text lines centered and legible inside the plaque.
-	_box(gate, "FounderNamePlaque", Vector3(9.2, 4.0, 0.38), Vector3(0.0, 19.0, 1.38), black)
+	_box(gate, "FounderNamePlaque", Vector3(9.2, 4.6, 0.38), Vector3(0.0, 18.4, 1.38), black)
 	var founder_name := Label3D.new()
 	founder_name.name = "FounderName"
 	founder_name.text = "GAMAL ALARABY"
-	founder_name.position = Vector3(0.0, 20.05, 1.88)
+	founder_name.position = Vector3(0.0, 19.62, 1.88)
 	founder_name.font_size = 42
 	founder_name.pixel_size = 0.012
 	founder_name.modulate = Color(1.0, 0.82, 0.42)
@@ -526,9 +526,9 @@ func _build_royal_gate_and_square() -> void:
 	var founder_title := Label3D.new()
 	founder_title.name = "FounderTitle"
 	founder_title.text = "FOUNDER OF KING OF EGYPT CITY"
-	founder_title.position = Vector3(0.0, 19.0, 1.88)
-	founder_title.font_size = 19
-	founder_title.pixel_size = 0.010
+	founder_title.position = Vector3(0.0, 18.55, 1.88)
+	founder_title.font_size = 28
+	founder_title.pixel_size = 0.012
 	founder_title.modulate = Color(1.0, 0.88, 0.62)
 	founder_title.outline_size = 4
 	founder_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -541,9 +541,9 @@ func _build_royal_gate_and_square() -> void:
 	var gate_name := Label3D.new()
 	gate_name.name = "RoyalGateCityName"
 	gate_name.text = "KING OF EGYPT CITY"
-	gate_name.position = Vector3(0.0, 18.0, 1.88)
-	gate_name.font_size = 19
-	gate_name.pixel_size = 0.010
+	gate_name.position = Vector3(0.0, 17.48, 1.88)
+	gate_name.font_size = 27
+	gate_name.pixel_size = 0.012
 	gate_name.modulate = Color(1.0, 0.86, 0.58)
 	gate_name.outline_size = 4
 	gate_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
