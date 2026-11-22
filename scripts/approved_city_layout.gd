@@ -435,7 +435,7 @@ func _build_royal_gate_and_square() -> void:
 		Vector3(0.0, 1.075, 1.5)
 	)
 
-	assert(gate.get_node_count() > 1, "Royal gate GLB must contain imported visual nodes.")
+	assert(gate.get_child_count() > 0, "Royal gate GLB must contain imported visual nodes.")
 	assert(ResourceLoader.exists("res://assets/models/royal_gate.glb"))
 
 func _build_main_street_wall_ads() -> void:
