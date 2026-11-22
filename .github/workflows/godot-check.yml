@@ -474,3 +474,17 @@ jobs:
 
       - name: Run trusted city session directory Edge Function tests
         run: deno test supabase/tests/city-session-directory-edge.test.ts
+      - name: Run royal gate bidirectional physics clearance test
+        shell: bash
+        run: |
+          set -euo pipefail
+          GODOT="/tmp/godot/Godot_v4.7.2-stable_linux.x86_64"
+          LOG="/tmp/godot-royal-gate-clearance.log"
+          set +e
+          timeout 90s "$GODOT" --headless --path . --script res://tests/royal_gate_bidirectional_clearance_test.gd 2>&1 | tee "$LOG"
+          GODOT_STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$GODOT_STATUS" -ne 0 ] || grep -E '(^|[[:space:]])(ERROR|SCRIPT ERROR):|Parse Error:|Royal gate bidirectional clearance test failed' "$LOG"; then
+            echo "Royal gate bidirectional physics clearance test failed."
+            exit 1
+          fi
