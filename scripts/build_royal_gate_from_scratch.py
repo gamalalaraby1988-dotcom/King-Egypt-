@@ -109,12 +109,13 @@ cube("Royal crest gold frame", (0, -2.88, 13.15), (3.25, 0.12, 1.08), gold, 0.06
 cube("Royal crest dark inset", (0, -2.96, 13.15), (2.95, 0.08, 0.82), dark, 0.035)
 
 # Twin slim ceremonial columns at the inside edges of the passage.
-for x in (-4.25, 4.25):
-    cylinder("Portal column foot", (x, -1.95, 1.55), 0.62, 0.34, gold)
-    cylinder("Portal column shaft", (x, -1.95, 5.5), 0.34, 7.6, limestone)
-    cylinder("Portal column blue collar", (x, -1.95, 9.35), 0.43, 0.28, blue)
-    cylinder("Portal column capital", (x, -1.95, 9.7), 0.72, 0.42, gold)
-    cylinder("Portal column abacus", (x, -1.95, 10.0), 0.82, 0.18, limestone)
+for x in (-4.55, 4.55):
+    # Slim columns sit fully outside the 8.2 m vehicle lane and inside the pylon opening.
+    cylinder("Portal column foot", (x, -1.95, 1.55), 0.30, 0.34, gold)
+    cylinder("Portal column shaft", (x, -1.95, 5.5), 0.20, 7.6, limestone)
+    cylinder("Portal column blue collar", (x, -1.95, 9.35), 0.24, 0.28, blue)
+    cylinder("Portal column capital", (x, -1.95, 9.7), 0.30, 0.42, gold)
+    cylinder("Portal column abacus", (x, -1.95, 10.0), 0.34, 0.18, limestone)
 
 # Symmetric low wing walls visually anchor the gate.
 for side, x in (("Left", -12.0), ("Right", 12.0)):
