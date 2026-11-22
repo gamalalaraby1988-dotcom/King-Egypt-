@@ -510,35 +510,12 @@ func _build_royal_gate_and_square() -> void:
 			Vector3(side * 8.25, 6.9, 0.0)
 		)
 
-	# Founder portrait frame and founder identity are intentionally live scene nodes.
-	_box(gate, "FounderPortraitOuterFrame", Vector3(6.6, 3.8, 0.42), Vector3(0.0, 19.9, 1.36), gold)
-	_box(gate, "FounderPortraitInnerFrame", Vector3(6.18, 3.45, 0.16), Vector3(0.0, 19.9, 1.60), dark_gold)
-	var founder_portrait_path := "res://assets/founder/founder_portrait.jpg"
-	if ResourceLoader.exists(founder_portrait_path):
-		var portrait_texture := load(founder_portrait_path) as Texture2D
-		if portrait_texture != null:
-			var portrait_surface := MeshInstance3D.new()
-			portrait_surface.name = "FounderPortraitTextureSlot"
-			var portrait_mesh := QuadMesh.new()
-			portrait_mesh.size = Vector2(5.82, 2.0)
-			portrait_surface.mesh = portrait_mesh
-			portrait_surface.position = Vector3(0.0, 20.45, 1.71)
-			var portrait_material := StandardMaterial3D.new()
-			portrait_material.albedo_texture = portrait_texture
-			portrait_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-			portrait_material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR
-			portrait_material.cull_mode = BaseMaterial3D.CULL_DISABLED
-			portrait_surface.material_override = portrait_material
-			gate.add_child(portrait_surface)
-	else:
-		push_warning("Founder portrait asset is missing: " + founder_portrait_path)
-		_box(gate, "FounderPortraitTextureSlot", Vector3(5.82, 2.0, 0.08), Vector3(0.0, 20.45, 1.71), black)
-
-	_box(gate, "FounderNamePlaque", Vector3(6.8, 1.45, 0.38), Vector3(0.0, 17.0, 1.38), black)
+	# Founder identity plaque: portrait intentionally omitted to keep the royal gate clean.
+	_box(gate, "FounderNamePlaque", Vector3(7.2, 4.6, 0.38), Vector3(0.0, 19.0, 1.38), black)
 	var founder_name := Label3D.new()
 	founder_name.name = "FounderName"
 	founder_name.text = "GAMAL ALARABY"
-	founder_name.position = Vector3(0.0, 17.35, 1.62)
+	founder_name.position = Vector3(0.0, 20.1, 1.62)
 	founder_name.font_size = 64
 	founder_name.pixel_size = 0.021
 	founder_name.modulate = Color(1.0, 0.82, 0.42)
@@ -549,7 +526,7 @@ func _build_royal_gate_and_square() -> void:
 	var founder_title := Label3D.new()
 	founder_title.name = "FounderTitle"
 	founder_title.text = "FOUNDER OF KING OF EGYPT CITY"
-	founder_title.position = Vector3(0.0, 16.72, 1.62)
+	founder_title.position = Vector3(0.0, 18.9, 1.62)
 	founder_title.font_size = 30
 	founder_title.pixel_size = 0.018
 	founder_title.modulate = Color(1.0, 0.88, 0.62)
@@ -557,14 +534,14 @@ func _build_royal_gate_and_square() -> void:
 	founder_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	gate.add_child(founder_title)
 
-	_box(gate, "FounderPortraitRoyalTopCrown", Vector3(2.0, 0.24, 0.48), Vector3(0.0, 22.0, 1.40), gold)
+	_box(gate, "FounderRoyalTopCrown", Vector3(2.0, 0.24, 0.48), Vector3(0.0, 22.0, 1.40), gold)
 	for side in [-1.0, 1.0]:
-		_box(gate, "FounderPortraitRoyalSideGem", Vector3(0.28, 0.62, 0.28), Vector3(side * 3.42, 19.9, 1.52), gold)
+		_box(gate, "FounderRoyalSideGem", Vector3(0.28, 0.62, 0.28), Vector3(side * 3.72, 19.0, 1.52), gold)
 
 	var gate_name := Label3D.new()
 	gate_name.name = "RoyalGateCityName"
 	gate_name.text = "KING OF EGYPT CITY"
-	gate_name.position = Vector3(0.0, 16.15, 1.62)
+	gate_name.position = Vector3(0.0, 17.8, 1.62)
 	gate_name.font_size = 28
 	gate_name.pixel_size = 0.014
 	gate_name.modulate = Color(1.0, 0.86, 0.58)
@@ -572,22 +549,18 @@ func _build_royal_gate_and_square() -> void:
 	gate_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	gate.add_child(gate_name)
 
-	# Duplicate the founder portrait, frames, name and titles onto the reverse
-	# face. The parent rotation turns the complete plaque around without mirroring
-	# its text or portrait, so both approaches read correctly.
+	# Duplicate the founder name and title plaque onto the reverse face.
+	# The parent rotation turns the plaque around without mirroring its text.
 	var rear_identity := Node3D.new()
 	rear_identity.name = "RoyalGateRearFounderIdentity"
 	rear_identity.rotation.y = PI
 	gate.add_child(rear_identity)
 	var founder_face_nodes: Array[String] = [
-		"FounderPortraitOuterFrame",
-		"FounderPortraitInnerFrame",
-		"FounderPortraitTextureSlot",
 		"FounderNamePlaque",
 		"FounderName",
 		"FounderTitle",
-		"FounderPortraitRoyalTopCrown",
-		"FounderPortraitRoyalSideGem",
+		"FounderRoyalTopCrown",
+		"FounderRoyalSideGem",
 		"RoyalGateCityName"
 	]
 	for source_name in founder_face_nodes:
