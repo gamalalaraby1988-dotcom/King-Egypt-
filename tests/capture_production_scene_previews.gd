@@ -38,7 +38,7 @@ func _capture_previews() -> void:
 
 	# Capture the reverse approach independently so the duplicated GLB face
 	# and founder plaque are reviewed from the opposite direction as well.
-	var gate_node := current_scene.get_node_or_null("ApprovedCityLayout/RoyalGate") as Node3D
+	var gate_node := current_scene.get_node_or_null("ApprovedCityLayout/RoyalFounderGate") as Node3D
 	if gate_node == null:
 		push_error("The production royal gate node was not found for reverse-face preview.")
 		quit(1)
