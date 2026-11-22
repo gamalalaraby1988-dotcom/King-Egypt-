@@ -43,8 +43,8 @@ func _capture_previews() -> void:
 		push_error("The production royal gate node was not found for reverse-face preview.")
 		quit(1)
 		return
-	if gate_node.get_node_or_null("RoyalGateRearFace/RoyalGateRearGLB") == null:
-		push_error("The reverse GLB face is missing from the production royal gate.")
+	if gate_node.get_node_or_null("RoyalGateRearFace/RoyalGateRearGeometry") == null:
+		push_error("The reverse structural face is missing from the production royal gate.")
 		quit(1)
 		return
 	if gate_node.get_node_or_null("RoyalGateRearFounderIdentity/FounderNameRear") == null:
