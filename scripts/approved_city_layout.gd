@@ -418,8 +418,8 @@ func _build_royal_gate_and_square() -> void:
 	var black := Color(0.018, 0.022, 0.026)
 	var gold := Color(0.88, 0.62, 0.22)
 	var dark_gold := Color(0.48, 0.31, 0.10)
-	for side in [-1.0, 1.0]:
-		var x := side * 8.25
+	for side: float in [-1.0, 1.0]:
+		var x: float = side * 8.25
 		_box(gate, "RoyalPylonBlack", Vector3(4.25, 13.4, 4.2), Vector3(x, 6.7, 0.0), black)
 		_box(gate, "RoyalPylonFootGold", Vector3(4.55, 0.55, 4.5), Vector3(x, 0.32, 0.0), gold)
 		_box(gate, "RoyalPylonLowerBand", Vector3(4.38, 0.42, 4.34), Vector3(x, 2.0, 0.0), gold)
