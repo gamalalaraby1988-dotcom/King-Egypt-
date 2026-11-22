@@ -19,7 +19,7 @@ func _run_bidirectional_gate_clearance_test() -> void:
 	await physics_frame
 	await physics_frame
 
-	var gate := scene.get_node_or_null("City/RoyalFounderGate") as Node3D
+	var gate := scene.get_node_or_null("ApprovedCityLayout/RoyalFounderGate") as Node3D
 	_expect(gate != null, "Production royal founder gate exists in the live scene")
 	if gate == null:
 		quit(1)
@@ -81,7 +81,7 @@ func _run_clearance_sweep(
 		var ordered_positions := positions.duplicate()
 		if direction < 0:
 			ordered_positions.reverse()
-		var direction_label := "square-to-city" if direction > 0 else "city-to-square"
+		var direction_label := "city-to-square" if direction > 0 else "square-to-city"
 		for route_z in ordered_positions:
 			var query := PhysicsShapeQueryParameters3D.new()
 			query.shape = shape
