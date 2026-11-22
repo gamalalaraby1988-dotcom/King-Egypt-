@@ -466,10 +466,6 @@ func _build_royal_gate_and_square() -> void:
 			Vector3(side * 8.25, 6.9, 0.0)
 		)
 
-	var black := Color(0.018, 0.022, 0.026)
-	var gold := Color(0.88, 0.62, 0.22)
-	var dark_gold := Color(0.48, 0.31, 0.10)
-
 	# Founder portrait frame and founder identity are intentionally live scene nodes.
 	_box(gate, "FounderPortraitOuterFrame", Vector3(6.6, 3.55, 0.42), Vector3(0.0, 11.15, 1.36), gold)
 	_box(gate, "FounderPortraitInnerFrame", Vector3(6.18, 3.13, 0.16), Vector3(0.0, 11.15, 1.60), dark_gold)
