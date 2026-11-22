@@ -22,12 +22,15 @@ jobs:
           sudo apt-get install -y blender xvfb libgl1-mesa-dri
 
       - name: Build new royal gate GLB from scratch
-        run: blender --background --python scripts/build_royal_gate_from_scratch.py
+        run: blender --background --python-exit-code 1 --python scripts/build_royal_gate_from_scratch.py
 
       - name: Install Khronos glTF Validator
         run: |
           npm install --no-save gltf-validator@2.0.0-dev.3.10
           mkdir -p artifacts/royal-gate-build
+
+      - name: Confirm generated GLB exists
+        run: test -s artifacts/royal-gate-build/royal_gate_stage1.glb
 
       - name: Validate generated GLB
         run: |
