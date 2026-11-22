@@ -511,8 +511,8 @@ func _build_royal_gate_and_square() -> void:
 		)
 
 	# Founder portrait frame and founder identity are intentionally live scene nodes.
-	_box(gate, "FounderPortraitOuterFrame", Vector3(6.6, 4.1, 0.42), Vector3(0.0, 17.65, 1.36), gold)
-	_box(gate, "FounderPortraitInnerFrame", Vector3(6.18, 3.72, 0.16), Vector3(0.0, 17.65, 1.60), dark_gold)
+	_box(gate, "FounderPortraitOuterFrame", Vector3(6.6, 3.8, 0.42), Vector3(0.0, 17.75, 1.36), gold)
+	_box(gate, "FounderPortraitInnerFrame", Vector3(6.18, 3.45, 0.16), Vector3(0.0, 17.75, 1.60), dark_gold)
 	var founder_portrait_path := "res://assets/founder/founder_portrait.jpg"
 	if ResourceLoader.exists(founder_portrait_path):
 		var portrait_texture := load(founder_portrait_path) as Texture2D
@@ -534,7 +534,7 @@ func _build_royal_gate_and_square() -> void:
 		push_warning("Founder portrait asset is missing: " + founder_portrait_path)
 		_box(gate, "FounderPortraitTextureSlot", Vector3(5.82, 2.0, 0.08), Vector3(0.0, 18.55, 1.71), black)
 
-	_box(gate, "FounderNamePlaque", Vector3(6.8, 1.45, 0.38), Vector3(0.0, 16.45, 1.38), black)
+	_box(gate, "FounderNamePlaque", Vector3(6.8, 1.2, 0.38), Vector3(0.0, 16.45, 1.38), black)
 	var founder_name := Label3D.new()
 	founder_name.name = "FounderName"
 	founder_name.text = "GAMAL ALARABY"
@@ -564,7 +564,7 @@ func _build_royal_gate_and_square() -> void:
 	var gate_name := Label3D.new()
 	gate_name.name = "RoyalGateCityName"
 	gate_name.text = "KING OF EGYPT CITY"
-	gate_name.position = Vector3(0.0, 15.35, 1.34)
+	gate_name.position = Vector3(0.0, 15.9, 1.34)
 	gate_name.font_size = 38
 	gate_name.pixel_size = 0.018
 	gate_name.modulate = Color(1.0, 0.86, 0.58)
