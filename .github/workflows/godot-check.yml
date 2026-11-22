@@ -438,6 +438,21 @@ jobs:
             exit 1
           fi
 
+      - name: Capture isolated previews from the exact royal gate GLB
+        shell: bash
+        run: |
+          set -euo pipefail
+          GODOT="/tmp/godot/Godot_v4.7.2-stable_linux.x86_64"
+          LOG="/tmp/godot-royal-gate-glb-preview.log"
+          set +e
+          xvfb-run -a "$GODOT" --audio-driver Dummy --path . --rendering-method gl_compatibility --script res://tests/capture_royal_gate_glb_preview.gd 2>&1 | tee "$LOG"
+          GODOT_STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$GODOT_STATUS" -ne 0 ] || grep -E '(^|[[:space:]])(ERROR|SCRIPT ERROR):|Parse Error:|Could not import royal_gate.glb|Could not save the exact GLB preview' "$LOG"; then
+            echo "Exact royal gate GLB preview capture failed."
+            exit 1
+          fi
+
       - name: Upload production-scene render previews
         uses: actions/upload-artifact@v4
         with:
