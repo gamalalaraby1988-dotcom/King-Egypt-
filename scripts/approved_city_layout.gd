@@ -403,13 +403,13 @@ func _build_pyramids() -> void:
 	add_child(sphinx)
 
 func _build_royal_gate_and_square() -> void:
-	# The approved royal square and gate remain at their established coordinates.
+	# The gate now sits 12 m toward the royal square, leaving a wider ceremonial forecourt between it and the palace.
 	_box(self, "RoyalSquare", Vector3(46, 0.22, 30), Vector3(0, 0.03, -42), SAND)
 	_add_static_box_collision(self, "RoyalSquareWalkable", Vector3(46, 0.22, 30), Vector3(0, 0.03, -42))
 
 	var gate := Node3D.new()
 	gate.name = "RoyalFounderGate"
-	gate.position = Vector3(0.0, 0.0, -60.0)
+	gate.position = Vector3(0.0, 0.0, -48.0)
 	gate.add_to_group("city_world_geometry")
 	gate.add_to_group("approved_city_landmarks")
 	add_child(gate)
