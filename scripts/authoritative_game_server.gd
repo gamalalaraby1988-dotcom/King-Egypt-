@@ -2385,7 +2385,8 @@ func receive_remote_players(players: Array) -> void:
 		var safe_jet_position: Vector3 = jet_position_variant if jet_position_variant is Vector3 else Vector3.ZERO
 		var safe_jet_velocity: Vector3 = jet_velocity_variant if jet_velocity_variant is Vector3 else Vector3.ZERO
 		var safe_jet_rotation := float(jet_rotation_variant) if jet_rotation_variant is float or jet_rotation_variant is int else 0.0
-		var safe_jet_riding := riding_variant is bool and bool(riding_variant) and jet_position_variant is Vector3 and jet_velocity_variant is Vector3 and is_finite(safe_jet_rotation)
+		var safe_jet_vectors_finite := jet_position_variant is Vector3 and jet_velocity_variant is Vector3 and is_finite(safe_jet_position.x) and is_finite(safe_jet_position.y) and is_finite(safe_jet_position.z) and is_finite(safe_jet_velocity.x) and is_finite(safe_jet_velocity.y) and is_finite(safe_jet_velocity.z)
+		var safe_jet_riding := riding_variant is bool and bool(riding_variant) and safe_jet_vectors_finite and is_finite(safe_jet_rotation)
 		seen_peer_ids[int(peer_id_variant)] = true
 		safe_players.append({
 			"peer_id": int(peer_id_variant),
