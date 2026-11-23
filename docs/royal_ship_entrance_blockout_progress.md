@@ -116,3 +116,13 @@
 - Latest script commit: `e7b33846521666e416cb90dae8ed9618179cb96e`.
 - This newest deck-detail pass still requires a fresh Godot validation, render, artifact retrieval and visual inspection before it can be called verified.
 - This remains a primitive-mesh blockout, not the final ship asset. No collision, vehicle physics, player interaction trigger, or network-authoritative ship-entry logic is claimed. No merge to `main`.
+
+
+## Render review and Tutankhamun mask refinement — 2026-11-23
+
+- Reviewed the exact-scene render artifact `14811935992` from run `45162241626` at commit `e7b33846521666e416cb90dae8ed9618179cb96e`. Both the Godot check (`45162241636`) and render workflow (`45162241626`) completed successfully.
+- The render shows the ship silhouette, central gate, stepped deck rows and bridge. The mask is recognizable as a gold-and-blue royal headdress concept, but the current face still reads as simple blockout geometry and does not yet match the fine sculpted Tutankhamun funerary mask in the supplied reference.
+- Following the user's explicit confirmation that the centerpiece is Tutankhamun's mask, added another refinement pass: layered broad gold/blue ceremonial collar and a clearer cobra-and-vulture brow insignia with feather details.
+- Latest script commit: `f14e15fe69b19a2569748af2cbc53286361f6dd3`.
+- This latest addition requires fresh Godot validation, rendering, artifact retrieval and visual inspection before it can be called verified.
+- All work remains on `feature/royal-waterfront-blockout-preview`. The ship is still primitive-mesh blockout geometry; no final production asset, gameplay collision, vehicle physics, player interaction, or server-authoritative entry logic is claimed. No merge to `main`.
