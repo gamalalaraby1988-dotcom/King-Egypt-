@@ -260,31 +260,51 @@ func _build_five_civilizations_ship_blockout() -> void:
 		_box("ShipGate_GuardStatue_Head", Vector3(1.05, 1.15, 0.82), Vector3(x, 8.35, 95.8), ivory)
 		_box("ShipGate_GuardStatue_Headdress", Vector3(1.45, 1.2, 0.92), Vector3(x, 9.15, 95.8), gold)
 
-	# Giant pharaoh mask and striped nemes crown above the gate.
+	# Monumental pharaoh mask: sculptural face, nemes side lobes, brows, eyes and ceremonial beard.
 	var head := MeshInstance3D.new()
 	head.name = "ShipPharaoh_MaskFace"
 	var head_mesh := SphereMesh.new()
-	head_mesh.radius = 2.15
-	head_mesh.height = 4.4
+	head_mesh.radius = 2.35
+	head_mesh.height = 4.8
 	head.mesh = head_mesh
-	head.position = Vector3(0.0, 15.0, 95.3)
-	head.material_override = _material(gold, 0.34)
+	head.position = Vector3(0.0, 15.0, 94.35)
+	head.scale = Vector3(0.86, 1.0, 0.42)
+	head.material_override = _material(gold, 0.28)
 	add_child(head)
-	_box("ShipPharaoh_Headdress_Back", Vector3(7.0, 5.6, 0.65), Vector3(0.0, 15.4, 96.2), blue)
-	for stripe in range(5):
-		var y := 13.1 + float(stripe) * 0.95
-		_box("ShipPharaoh_Headdress_GoldStripe_%02d" % stripe, Vector3(7.3 - float(stripe) * 0.55, 0.16, 0.78), Vector3(0.0, y, 96.65), gold)
-	_box("ShipPharaoh_Crown", Vector3(1.0, 1.4, 0.9), Vector3(0.0, 18.0, 95.4), gold)
-	_box("ShipPharaoh_FaceNose", Vector3(0.38, 1.1, 0.42), Vector3(0.0, 14.9, 93.1), ivory)
-	_box("ShipPharaoh_EyeLine", Vector3(2.5, 0.16, 0.18), Vector3(0.0, 15.5, 93.12), dark)
-
-	# Large gold winged-scarab insignia on both visible hull sides.
+	_box("ShipPharaoh_Headdress_Back", Vector3(8.2, 6.6, 0.58), Vector3(0.0, 15.1, 96.0), blue)
 	for side: float in [-1.0, 1.0]:
-		var wing_z := 82.0
-		_box("ShipHull_WingedEmblem_Center", Vector3(2.0, 1.8, 0.28), Vector3(side * 30.5, 0.7, 95.1), gold)
-		for feather in range(6):
-			var feather_mesh := _box("ShipHull_WingFeather", Vector3(0.34, 0.16, 0.22), Vector3(side * 30.5, 0.85 + float(feather) * 0.23, 95.28), gold)
-			feather_mesh.rotation_degrees.y = side * -18.0
+		var lappet := _box("ShipPharaoh_Nemes_SideLappet", Vector3(1.65, 5.8, 0.72), Vector3(side * 3.05, 13.9, 95.5), blue)
+		lappet.rotation_degrees.z = side * -7.0
+		for stripe in range(5):
+			var stripe_y := 11.8 + float(stripe) * 0.95
+			var stripe_node := _box("ShipPharaoh_Nemes_GoldStripe", Vector3(1.78, 0.13, 0.78), Vector3(side * 3.05, stripe_y, 95.02), gold)
+			stripe_node.rotation_degrees.z = side * -7.0
+	for stripe in range(6):
+		var y := 12.6 + float(stripe) * 0.86
+		_box("ShipPharaoh_Headdress_GoldStripe_%02d" % stripe, Vector3(7.8 - float(stripe) * 0.48, 0.14, 0.18), Vector3(0.0, y, 94.85), gold)
+	_box("ShipPharaoh_Crown", Vector3(1.25, 1.55, 0.72), Vector3(0.0, 18.1, 94.55), gold)
+	_box("ShipPharaoh_FaceNose", Vector3(0.42, 1.15, 0.28), Vector3(0.0, 14.9, 93.30), ivory)
+	for side: float in [-1.0, 1.0]:
+		var eye := _box("ShipPharaoh_Eye", Vector3(0.72, 0.22, 0.18), Vector3(side * 0.92, 15.55, 93.38), dark)
+		eye.rotation_degrees.z = side * -5.0
+		var brow := _box("ShipPharaoh_GoldBrow", Vector3(1.05, 0.16, 0.18), Vector3(side * 0.92, 15.88, 93.38), gold)
+		brow.rotation_degrees.z = side * -5.0
+	_box("ShipPharaoh_CeremonialBeard", Vector3(0.72, 1.75, 0.42), Vector3(0.0, 12.65, 93.55), gold)
+	_box("ShipPharaoh_BeardTip", Vector3(0.42, 0.55, 0.34), Vector3(0.0, 11.72, 93.55), gold)
+
+	# Oversized winged-sun emblems on the forward blue fascia, readable from the bridge.
+	for side: float in [-1.0, 1.0]:
+		var emblem_x := side * 21.0
+		var sun := _cylinder("ShipFront_WingedSun_Disc", 0.88, 0.20, Vector3(emblem_x, 0.95, 95.78), gold)
+		sun.rotation_degrees.x = 90.0
+		_box("ShipFront_WingedSun_CentralBody", Vector3(1.15, 1.45, 0.22), Vector3(emblem_x, 0.9, 95.82), gold)
+		for feather_index in range(9):
+			var feather_x := emblem_x + side * (1.15 + float(feather_index) * 0.88)
+			var feather_y := 0.38 + float(feather_index) * 0.17
+			var feather := _box("ShipFront_WingedSun_Feather", Vector3(1.18, 0.20, 0.18), Vector3(feather_x, feather_y, 95.84), gold)
+			feather.rotation_degrees.z = side * -float(feather_index + 1) * 3.2
+		var lower_wing := _box("ShipFront_WingedSun_LowerFeather", Vector3(8.5, 0.18, 0.16), Vector3(emblem_x + side * 4.0, 0.08, 95.82), gold)
+		lower_wing.rotation_degrees.z = side * 7.0
 		_box("ShipHull_GoldSheerLine", Vector3(0.12, 0.16, 22.0), Vector3(side * 33.0, -1.0, 82.5), gold)
 
 	# Broad front-facing promenade fascia: visible from the bridge approach like the reference image.
