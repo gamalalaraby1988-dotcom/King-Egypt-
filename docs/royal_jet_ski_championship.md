@@ -61,3 +61,12 @@
 - The course objects are visual markers only; they do not detect or validate crossings.
 - No drivable jet ski vehicle, water physics, player seating/boarding flow, race lobby, four-player matchmaking, countdown synchronization, server-side checkpoint progression, finish validation, rewards, or race UI has been implemented.
 - No Godot test run has been observed for these new scene changes. The PR remains a draft and must be reviewed and tested before any merge.
+
+
+## Current watercraft foundation (implementation in progress)
+- Added an independent RoyalJetSki scene and controller. Its motion uses forward thrust, speed-dependent steering authority, lateral water damping, water resistance, and gentle buoyancy bob; it does not reuse the car's ground-contact or tire-steering physics.
+- Added a dedicated touch HUD with drive, brake, steering, and right-side drag camera input.
+- Added a headless contract test for steering authority and water-resistance behavior, and wired it into the Godot CI workflow.
+- This is a reusable client-side vehicle foundation only. It is not yet spawned from the Royal Beach Club/bridge, does not yet mount the player's avatar, and is not yet connected to authenticated server movement.
+- The synchronized countdown, server-owned jet ski movement, four-player vehicle snapshots, ordered checkpoint crossing validation, finish adjudication, race results/rewards, and final production-scene preview remain required before the championship can be considered playable.
+- Do not describe the watercraft as multiplayer-ready until server authority and a real multi-client test are implemented.
