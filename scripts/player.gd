@@ -25,6 +25,7 @@ const ARCADE_CAMERA_PITCH_MIN: float = -0.72
 const ARCADE_CAMERA_PITCH_MAX: float = 0.24
 const ARCADE_CAMERA_YAW_LIMIT: float = 1.15
 var animal_riding := false
+var phone_using := false
 var ride_visual: Node3D = null
 @onready var camera_pivot: Node3D = $CameraPivot
 
@@ -316,6 +317,13 @@ func toggle_sit() -> void:
 func _sync_sitting_state() -> void:
 	if GameModeManager.is_online_ready():
 		AuthoritativeGameServer.send_player_sit(sitting)
+
+func set_phone_using(enabled: bool) -> void:
+	phone_using = enabled
+	var avatar := get_node_or_null("AvatarVisual")
+	if is_instance_valid(avatar) and avatar.has_method("set_phone_using"):
+		avatar.call("set_phone_using", enabled)
+
 
 func _update_avatar_animation(state: String, speed: float) -> void:
 	var avatar := get_node_or_null("AvatarVisual")
