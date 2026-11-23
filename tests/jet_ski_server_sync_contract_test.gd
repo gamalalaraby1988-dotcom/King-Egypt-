@@ -31,6 +31,23 @@ func _initialize() -> void:
 	for fragment in required_server_contract:
 		if not server.contains(fragment):
 			failures.append("Authoritative server is missing required jet ski contract: " + fragment)
+	for fragment in [
+		'var peer_id := multiplayer.get_remote_sender_id()',
+		'now_usec - last_jet_input_usec > 250000',
+		'session["jet_ski_mounted"] = false',
+		'session["jet_ski_slot"] = -1',
+		'_sessions.erase(peer_id)',
+		'"is_jet_ski_riding": bool(source_session.get("jet_ski_mounted", false))',
+		'func receive_jet_ski_authoritative_state('
+	]:
+		if not server.contains(fragment):
+			failures.append("Server security, timeout, lifecycle, or snapshot rule is missing: " + fragment)
+	if not server.contains('JetSkiNetworkContract.validate_input(') or not server.contains('"window_count"'):
+		failures.append("Jet ski input rate limiting must be validated and persisted per authenticated peer.")
+	if not server.contains('body.global_position = jet_state["position"]'):
+		failures.append("The server must place the rider from its own simulated craft position.")
+	if not server.contains('body.global_position = craft_position + right * 2.0 + Vector3.UP * 0.15'):
+		failures.append("Server dismount must derive the player's exit position from authoritative craft state.")
 	if server.contains('الجت سكي مشغولة حاليًا'):
 		failures.append("Each authenticated rider must receive an independent jet ski slot.")
 	if not server.contains("var launch_slot := JET_SKI_SERVER_LAUNCH_POSITION"):
