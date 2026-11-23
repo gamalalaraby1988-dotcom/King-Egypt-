@@ -59,3 +59,5 @@ jobs:
             echo "Waterfront preview scene failed to start."
             exit 1
           fi
+
+# Re-run validation whenever this workflow definition changes.
