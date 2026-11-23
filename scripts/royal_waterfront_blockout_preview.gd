@@ -213,62 +213,107 @@ func _build_option_b_southern_roads() -> void:
 
 
 func _build_five_civilizations_ship_blockout() -> void:
-	# Real Godot mesh blockout for review only; deliberately not presented as the final ship asset.
-	# Keep the approved moored position and one accessible main deck (no extra floors or stairs).
-	var hull_color := Color(0.72, 0.73, 0.70)
-	var ivory_color := IVORY
-	var gold_color := GOLD
-	var blue_color := Color(0.035, 0.12, 0.20)
-	_box("FiveCivilizationsShip_Hull_Blockout", Vector3(8.0, 2.2, 18.0), Vector3(0.0, 0.35, 85.0), hull_color)
-	_box("FiveCivilizationsShip_MainDeck_OneLevel", Vector3(9.0, 0.28, 17.0), Vector3(0.0, 1.60, 85.0), ivory_color)
-	_box("FiveCivilizationsShip_RoyalBlueDeckInset", Vector3(6.8, 0.035, 12.0), Vector3(0.0, 1.76, 83.0), blue_color)
-	# Main entrance faces the bridge-side (+Z) approach; the interaction circle remains outside it.
-	for x: float in [-2.2, 2.2]:
-		_box("FiveCivilizationsShip_GatePillar", Vector3(0.48, 3.2, 0.55), Vector3(x, 3.35, 93.8), gold_color)
-	_box("FiveCivilizationsShip_GateLintel", Vector3(5.0, 0.48, 0.65), Vector3(0.0, 4.85, 93.8), gold_color)
-	_box("FiveCivilizationsShip_MainHallFacade", Vector3(6.0, 3.2, 3.0), Vector3(0.0, 3.35, 88.0), ivory_color)
-	_box("FiveCivilizationsShip_MainHallRoof", Vector3(6.8, 0.42, 3.8), Vector3(0.0, 5.15, 88.0), gold_color)
-	# Five restrained civilization markers along the single deck edge.
-	for i in range(5):
-		var x := -3.2 + float(i) * 1.6
-		_box("FiveCivilizationsShip_CivilizationPanel_%02d" % i, Vector3(0.85, 1.15, 0.18), Vector3(x, 2.45, 79.8), gold_color)
-	# Low perimeter rails clarify the vessel edge without creating another deck or floor.
-	for side: float in [-1.0, 1.0]:
-		_box("FiveCivilizationsShip_SideRail", Vector3(0.14, 0.7, 15.0), Vector3(side * 4.35, 2.05, 85.0), gold_color)
-	_label("FIVE CIVILIZATIONS SHIP - GEOMETRY BLOCKOUT", Vector3(0.0, 7.0, 82.0), GOLD, 24)
-	_label("ONE MAIN DECK • STATIONARY • MAIN GATE TO ROYAL BRIDGE", Vector3(0.0, 6.0, 96.0), IVORY, 16)
+	# Reference-matched stationary royal vessel. The uploaded image is the visual authority:
+	# very wide dark-blue cruise-ship silhouette, gold Egyptian ornament, stepped side
+	# superstructure, and a monumental central pharaonic entrance facing the bridge.
+	var hull := Color(0.025, 0.075, 0.14)
+	var blue := Color(0.025, 0.12, 0.23)
+	var blue_light := Color(0.055, 0.22, 0.34)
+	var gold := GOLD
+	var ivory := Color(0.91, 0.86, 0.72)
+	var dark := Color(0.035, 0.045, 0.065)
 
+	# Broad ship body: long axis across the image, with the entrance facing +Z.
+	_box("FiveCivilizationsShip_MainHull_Wide", Vector3(42.0, 5.0, 25.0), Vector3(0.0, -0.15, 82.5), hull)
+	_box("FiveCivilizationsShip_Hull_GoldWaterline", Vector3(42.4, 0.22, 24.0), Vector3(0.0, -2.25, 82.5), gold)
+	_box("FiveCivilizationsShip_Hull_BlueUpperBand", Vector3(41.5, 1.25, 23.5), Vector3(0.0, 2.25, 82.5), blue)
+
+	# Stepped outer superstructure ribbons reproduce the layered cruise-ship profile.
+	# These are visual fascia/overhangs, not extra walkable floors or stair access.
+	for tier in range(4):
+		var width := 39.0 - float(tier) * 3.4
+		var depth := 21.5 - float(tier) * 1.7
+		var y := 3.05 + float(tier) * 1.55
+		var z := 82.5 - float(tier) * 0.25
+		_box("ShipSuperstructure_Tier_%02d_DarkBlue" % tier, Vector3(width, 0.72, depth), Vector3(0.0, y, z), blue if tier % 2 == 0 else blue_light)
+		_box("ShipSuperstructure_Tier_%02d_GoldEdge" % tier, Vector3(width + 0.18, 0.10, depth + 0.12), Vector3(0.0, y + 0.40, z), gold)
+		for side: float in [-1.0, 1.0]:
+			_box("ShipSuperstructure_Tier_%02d_SideBalcony" % tier, Vector3(0.34, 0.34, depth - 1.0), Vector3(side * (width * 0.5 - 0.12), y + 0.55, z), ivory)
+
+	# Monumental central Egyptian gate, intentionally dominant over the side decks.
+	_box("ShipRoyalGate_Backdrop", Vector3(13.5, 10.5, 2.2), Vector3(0.0, 7.4, 94.0), dark)
+	_box("ShipRoyalGate_GoldFrame_Left", Vector3(1.15, 10.0, 1.0), Vector3(-6.2, 7.2, 95.0), gold)
+	_box("ShipRoyalGate_GoldFrame_Right", Vector3(1.15, 10.0, 1.0), Vector3(6.2, 7.2, 95.0), gold)
+	_box("ShipRoyalGate_TopBeam", Vector3(13.5, 1.0, 1.2), Vector3(0.0, 12.0, 95.0), gold)
+	_box("ShipRoyalGate_InnerBluePortal", Vector3(8.8, 7.4, 0.28), Vector3(0.0, 6.3, 96.0), blue_light)
+	_box("ShipRoyalGate_IlluminatedDoorway", Vector3(5.8, 5.8, 0.18), Vector3(0.0, 5.4, 96.2), _emissive_material(Color(0.18, 0.68, 0.95), 1.7))
+	_box("ShipRoyalGate_NamePlate", Vector3(9.6, 1.2, 0.35), Vector3(0.0, 10.0, 96.1), dark)
+	_label("KING OF EGYPT CITY", Vector3(0.0, 10.05, 96.35), gold, 28)
+
+	# Tall flanking pylons and guardian-statue silhouettes.
+	for side: float in [-1.0, 1.0]:
+		var x := side * 8.0
+		_box("ShipGate_GuardPylon_%s" % str(side), Vector3(2.2, 9.2, 1.8), Vector3(x, 6.8, 94.6), blue)
+		_box("ShipGate_GuardPylon_GoldTrim", Vector3(2.35, 0.28, 1.95), Vector3(x, 11.45, 94.6), gold)
+		_box("ShipGate_GuardStatue_Body", Vector3(0.95, 3.7, 0.72), Vector3(x, 5.9, 95.8), gold)
+		_box("ShipGate_GuardStatue_Head", Vector3(1.05, 1.15, 0.82), Vector3(x, 8.35, 95.8), ivory)
+		_box("ShipGate_GuardStatue_Headdress", Vector3(1.45, 1.2, 0.92), Vector3(x, 9.15, 95.8), gold)
+
+	# Giant pharaoh mask and striped nemes crown above the gate.
+	var head := MeshInstance3D.new()
+	head.name = "ShipPharaoh_MaskFace"
+	var head_mesh := SphereMesh.new()
+	head_mesh.radius = 2.15
+	head_mesh.height = 4.4
+	head.mesh = head_mesh
+	head.position = Vector3(0.0, 15.0, 95.3)
+	head.material_override = _material(gold, 0.34)
+	add_child(head)
+	_box("ShipPharaoh_Headdress_Back", Vector3(7.0, 5.6, 0.65), Vector3(0.0, 15.4, 96.2), blue)
+	for stripe in range(5):
+		var y := 13.1 + float(stripe) * 0.95
+		_box("ShipPharaoh_Headdress_GoldStripe_%02d" % stripe, Vector3(7.3 - float(stripe) * 0.55, 0.16, 0.78), Vector3(0.0, y, 96.65), gold)
+	_box("ShipPharaoh_Crown", Vector3(1.0, 1.4, 0.9), Vector3(0.0, 18.0, 95.4), gold)
+	_box("ShipPharaoh_FaceNose", Vector3(0.38, 1.1, 0.42), Vector3(0.0, 14.9, 93.1), ivory)
+	_box("ShipPharaoh_EyeLine", Vector3(2.5, 0.16, 0.18), Vector3(0.0, 15.5, 93.12), dark)
+
+	# Large gold winged-scarab insignia on both visible hull sides.
+	for side: float in [-1.0, 1.0]:
+		var wing_z := 82.0
+		_box("ShipHull_WingedEmblem_Center", Vector3(2.0, 1.8, 0.28), Vector3(side * 21.15, 0.7, wing_z), gold)
+		for feather in range(6):
+			var feather_mesh := _box("ShipHull_WingFeather", Vector3(0.34, 0.16, 0.22), Vector3(side * 21.15, 0.85 + float(feather) * 0.23, wing_z - 2.1 + float(feather) * 0.78), gold)
+			feather_mesh.rotation_degrees.y = side * -18.0
+		_box("ShipHull_GoldSheerLine", Vector3(0.12, 0.16, 22.0), Vector3(side * 21.2, -1.0, 82.5), gold)
+
+	# Broad bow/stern caps keep the vessel silhouette expansive and symmetrical.
+	_box("ShipBow_RoyalBlueCap", Vector3(34.0, 0.65, 2.0), Vector3(0.0, 3.0, 69.8), blue_light)
+	_box("ShipStern_RoyalBlueCap", Vector3(34.0, 0.65, 2.0), Vector3(0.0, 3.0, 95.0), blue_light)
+	_label("FIVE CIVILIZATIONS SHIP - REFERENCE SILHOUETTE BLOCKOUT", Vector3(0.0, 20.5, 82.0), GOLD, 22)
 
 
 func _build_ship_detail_pass() -> void:
-	# Decorative detail pass on the same single-deck, stationary primitive-mesh blockout.
-	# These details improve silhouette/readability without claiming a finished ship asset.
-	var gold_color := GOLD
-	var dark_blue := Color(0.025, 0.09, 0.15)
-	var hull_ivory := Color(0.82, 0.82, 0.77)
-	# Continuous gold sheer-line bands on both visible hull sides.
+	# Gold trim, portholes and lighting reinforce the uploaded royal blue/gold reference.
+	var gold := GOLD
+	var blue := Color(0.035, 0.13, 0.23)
 	for side: float in [-1.0, 1.0]:
-		_box("ShipHull_GoldSheerLine", Vector3(0.10, 0.16, 16.8), Vector3(side * 4.06, 0.78, 85.0), gold_color)
-		# Repeated round portholes along the hull, rotated to face outward.
-		for z: float in [79.5, 82.0, 84.5, 87.0, 89.5]:
-			var porthole := _cylinder("ShipHull_Porthole", 0.22, 0.09, Vector3(side * 4.10, 0.28, z), _emissive_material(Color(0.45, 0.78, 0.88), 0.65))
+		for z: float in [72.0, 76.0, 80.0, 84.0, 88.0, 92.0]:
+			var porthole := _cylinder("ShipHull_IlluminatedPorthole", 0.28, 0.12, Vector3(side * 21.28, 0.1, z), _emissive_material(Color(0.28, 0.72, 0.96), 1.1))
 			porthole.rotation_degrees.z = 90.0
-		# Gold baluster posts clarify the edge of the one main deck.
-		for z: float in [78.2, 81.0, 84.0, 87.0, 90.0, 92.0]:
-			_box("ShipDeck_RailPost", Vector3(0.13, 0.72, 0.13), Vector3(side * 4.35, 2.48, z), gold_color)
-	# A restrained raised bow and stern cap make the vessel silhouette read as a ship, not a box.
-	_box("ShipBow_RoyalIvoryCap", Vector3(6.0, 0.35, 2.2), Vector3(0.0, 1.56, 76.0), hull_ivory)
-	_box("ShipBow_GoldCrest", Vector3(1.1, 0.55, 0.35), Vector3(0.0, 2.00, 75.0), gold_color)
-	_box("ShipStern_RoyalBlueCap", Vector3(6.2, 0.24, 1.4), Vector3(0.0, 1.58, 94.0), dark_blue)
-	# Five separate civilization plaques on the main-hall-facing deck edge.
+		for tier in range(4):
+			var y := 3.55 + float(tier) * 1.55
+			_box("ShipTier_RoyalGoldFrontTrim", Vector3(17.0, 0.12, 0.18), Vector3(side * 10.0, y, 93.5), gold)
+	# Five small insignia plates identify the five-civilization theme without inventing their names.
 	for i in range(5):
-		var x := -3.0 + float(i) * 1.5
-		_box("FiveCivilizationsShip_EmblemPlaque_%02d" % i, Vector3(0.72, 0.82, 0.16), Vector3(x, 2.28, 90.9), gold_color)
-		_box("FiveCivilizationsShip_EmblemInset_%02d" % i, Vector3(0.42, 0.48, 0.05), Vector3(x, 2.30, 90.78), dark_blue)
-	# Slim roof crown over the main hall; it stays part of the same single-level silhouette.
-	_box("ShipMainHall_RoyalCrownBand", Vector3(6.9, 0.18, 3.9), Vector3(0.0, 5.42, 88.0), gold_color)
-	_label("FIVE CIVILIZATIONS • FIVE EMBLEMS", Vector3(0.0, 6.4, 80.0), IVORY, 17)
-
+		var x := -4.0 + float(i) * 2.0
+		_box("FiveCivilizations_EmblemPlate_%02d" % i, Vector3(1.1, 1.35, 0.22), Vector3(x, 2.9, 95.5), gold)
+		_box("FiveCivilizations_EmblemInset_%02d" % i, Vector3(0.72, 0.88, 0.08), Vector3(x, 2.95, 95.34), blue)
+	# Glowing gold portal arch and a soft blue central doorway.
+	var portal_glow := _emissive_material(Color(1.0, 0.62, 0.12), 2.8)
+	for side: float in [-1.0, 1.0]:
+		_box("ShipGate_IlluminatedVertical", Vector3(0.20, 6.4, 0.16), Vector3(side * 3.25, 5.5, 96.55), portal_glow)
+	_box("ShipGate_IlluminatedHeader", Vector3(6.6, 0.20, 0.16), Vector3(0.0, 8.7, 96.55), portal_glow)
+	# The ship remains moored and static; no walkable upper decks, extra floors or stairs are introduced.
 func _mark_preserved_ship_and_conflicts() -> void:
 	# The vessel above is a review blockout only; it does not replace a final approved ship asset.
 	_label("SHIP BLOCKOUT - FINAL ASSET STILL REQUIRED", Vector3(12.0, 3.0, 82.0), GOLD, 18)
