@@ -150,7 +150,7 @@ func _process(delta: float) -> void:
 		if is_instance_valid(phone_visual):
 			# الذراع تحمل الهاتف، لكن موضعه النهائي يبقى أمام أسفل الوجه عند مستوى الذقن.
 			phone_visual.global_position = to_global(Vector3(0.0, 1.43, -0.27))
-			phone_visual.global_rotation = Vector3(-1.05, 0.0, 0.0)
+			_orient_phone_screen_to_head()
 		if parts.has("Head") and is_instance_valid(phone_visual):
 			# وجّه الوجه نحو الهاتف فعليًا بدل زاوية ثابتة؛ يعود الرأس لوضعه الطبيعي عند إخفاء الهاتف.
 			var phone_head := parts["Head"] as MeshInstance3D
