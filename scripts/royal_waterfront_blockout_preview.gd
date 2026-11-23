@@ -51,14 +51,14 @@ func _build_land_and_beach() -> void:
 	# The shoreline is a review boundary, not a final surveyed coastline.
 	_box("LandMass_Blockout", Vector3(220.0, 0.5, 104.0), Vector3(0.0, -0.35, 158.0), Color(0.34, 0.42, 0.31))
 	_box("RoyalCoastalCorniche", Vector3(190.0, 0.24, 7.0), Vector3(0.0, 0.12, 119.0), SAND)
-	_box("ContinuousSandyBeach", Vector3(180.0, 0.18, 10.0), Vector3(0.0, 0.08, 112.0), Color(0.83, 0.72, 0.53))
-	# Preserve the current beach handball footprint as dry land pending shoreline review.
-	_box("PreservedBeachCourtFootprint", Vector3(42.0, 0.20, 36.0), Vector3(40.0, 0.12, 125.0), SAND)
-	_box("CourtOutline_N", Vector3(27.0, 0.05, 0.16), Vector3(40.0, 0.26, 119.0), IVORY)
-	_box("CourtOutline_S", Vector3(27.0, 0.05, 0.16), Vector3(40.0, 0.26, 131.0), IVORY)
-	_box("CourtOutline_W", Vector3(0.16, 0.05, 12.0), Vector3(26.5, 0.26, 125.0), IVORY)
-	_box("CourtOutline_E", Vector3(0.16, 0.05, 12.0), Vector3(53.5, 0.26, 125.0), IVORY)
-	_label("DRY BEACH + EXISTING HANDBALL AREA", Vector3(40.0, 2.0, 139.0), IVORY, 25)
+	_box("ContinuousSandyBeach", Vector3(180.0, 0.18, 46.0), Vector3(0.0, 0.08, 130.0), Color(0.83, 0.72, 0.53))
+	# The handball court is integrated into the same continuous beach surface: no raised pad or separate material.
+	# Its existing footprint and center are retained; only low-profile court markings identify the play area.
+	_box("BeachCourtLine_N", Vector3(27.0, 0.035, 0.12), Vector3(40.0, 0.20, 119.0), IVORY)
+	_box("BeachCourtLine_S", Vector3(27.0, 0.035, 0.12), Vector3(40.0, 0.20, 131.0), IVORY)
+	_box("BeachCourtLine_W", Vector3(0.12, 0.035, 12.0), Vector3(26.5, 0.20, 125.0), IVORY)
+	_box("BeachCourtLine_E", Vector3(0.12, 0.035, 12.0), Vector3(53.5, 0.20, 125.0), IVORY)
+	_label("ROYAL BEACH HANDBALL COURT - INTEGRATED IN THE SAND", Vector3(40.0, 2.0, 139.0), IVORY, 22)
 	_label("ROYAL CORNICHE", Vector3(-58.0, 2.0, 119.0), GOLD, 28)
 
 func _build_open_water() -> void:
