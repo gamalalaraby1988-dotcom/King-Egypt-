@@ -81,6 +81,18 @@ func _physics_process(delta: float) -> void:
 		camera_drag_input = 0.0
 
 
+func reconcile_authoritative_state(server_position: Vector3, server_rotation_y: float, server_velocity: Vector3) -> void:
+	if not is_finite(server_position.x) or not is_finite(server_position.y) or not is_finite(server_position.z):
+		return
+	if not is_finite(server_rotation_y) or not is_finite(server_velocity.x) or not is_finite(server_velocity.y) or not is_finite(server_velocity.z):
+		return
+	# Keep local input prediction responsive, but continuously pull drift toward the server.
+	global_position = global_position.lerp(server_position, 0.35)
+	rotation.y = lerp_angle(rotation.y, server_rotation_y, 0.4)
+	_planar_velocity = _planar_velocity.lerp(Vector3(server_velocity.x, 0.0, server_velocity.z), 0.3)
+	velocity = _planar_velocity
+
+
 func set_drive(value: bool) -> void:
 	drive_pressed = value
 
