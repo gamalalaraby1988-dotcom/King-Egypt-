@@ -438,14 +438,7 @@ func try_enter_summoned_vehicle() -> bool:
 
 func _on_vehicle_interaction_pressed() -> void:
 	if jet_ski_occupied:
-		if GameModeManager.is_online_ready():
-			if not _jet_ski_unmount_pending:
-				_jet_ski_unmount_pending = true
-				if is_instance_valid(vehicle_interaction_button):
-					vehicle_interaction_button.disabled = true
-				AuthoritativeGameServer.request_jet_ski_unmount()
-		else:
-			_exit_player_jet_ski()
+		_request_jet_ski_unmount()
 		return
 	if GameModeManager.is_online_ready():
 		AuthoritativeGameServer.request_jet_ski_mount()
@@ -498,9 +491,8 @@ func _on_jet_ski_authoritative_state_received(position: Vector3, rotation_y: flo
 
 
 func _exit_contextual_state() -> void:
-	_jet_ski_unmount_pending = false
 	if jet_ski_occupied:
-		_exit_player_jet_ski()
+		_request_jet_ski_unmount()
 		return
 	if scooter_occupied:
 		_exit_player_scooter()
@@ -649,6 +641,18 @@ func _toggle_vehicle_use() -> void:
 		vehicle_interaction_button.text = "🚪↗"
 		vehicle_interaction_button.tooltip_text = "النزول من السيارة" if CityLanguage.get_language() == "ar" else "Exit vehicle"
 		vehicle_interaction_button.visible = true
+
+func _request_jet_ski_unmount() -> void:
+	if GameModeManager.is_online_ready():
+		if _jet_ski_unmount_pending:
+			return
+		_jet_ski_unmount_pending = true
+		if is_instance_valid(vehicle_interaction_button):
+			vehicle_interaction_button.disabled = true
+		AuthoritativeGameServer.request_jet_ski_unmount()
+	else:
+		_exit_player_jet_ski()
+
 
 func _mount_player_jet_ski() -> void:
 	if jet_ski_occupied or not is_instance_valid(city_jet_ski):
