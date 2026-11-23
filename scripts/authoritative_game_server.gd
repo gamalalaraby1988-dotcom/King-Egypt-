@@ -34,6 +34,7 @@ const SNAPSHOT_INTERVAL := 0.05
 const MAX_PLAYER_VISIBILITY_DISTANCE := 140.0
 const JET_SKI_RACE_MIN_PARTICIPANTS := 2
 const JET_SKI_RACE_MAX_PARTICIPANTS := 4
+const JET_SKI_RACE_COUNTDOWN_SECONDS := 5
 const SPAWN_POSITION := Vector3(0.0, 1.0, -42.0)
 
 var _server_peer: WebSocketMultiplayerPeer
@@ -51,6 +52,7 @@ var _proof_secret_warning_shown := false
 var _jet_ski_race_participants: Array[int] = []
 var _jet_ski_race_locked_participants: Array[int] = []
 var _jet_ski_race_state := "waiting"
+var _jet_ski_race_countdown_until_usec := 0
 var _arcade_machines: Dictionary = {}
 var _arcade_sessions: Dictionary = {}
 var _peer_arcade_sessions: Dictionary = {}
@@ -363,6 +365,10 @@ func _process(_delta: float) -> void:
 	if not multiplayer.is_server():
 		return
 	var now_usec := Time.get_ticks_usec()
+	if _jet_ski_race_state == "countdown" and now_usec >= _jet_ski_race_countdown_until_usec:
+		_jet_ski_race_state = "racing"
+		_jet_ski_race_countdown_until_usec = 0
+		_notify_jet_ski_race_participants("انطلق السباق! اتبع العوامات بالترتيب.")
 	if _city_directory_enabled and _server_peer != null and now_usec >= _city_directory_next_heartbeat_usec:
 		if _city_directory_registered:
 			_send_city_session_heartbeat()
@@ -454,6 +460,7 @@ func _on_peer_disconnected(peer_id: int) -> void:
 	_jet_ski_race_locked_participants.erase(peer_id)
 	if _jet_ski_race_should_reopen_after_disconnect(was_jet_ski_race_participant, _jet_ski_race_state):
 		_jet_ski_race_state = "waiting"
+		_jet_ski_race_countdown_until_usec = 0
 		_jet_ski_race_locked_participants.clear()
 		_notify_jet_ski_race_participants("غادر متسابق قبل بدء الجولة؛ أُعيد فتح التسجيل.")
 	elif was_jet_ski_race_participant:
@@ -1503,7 +1510,7 @@ func _jet_ski_race_can_start(participant_count: int) -> bool:
 
 
 func _jet_ski_race_should_reopen_after_disconnect(was_participant: bool, race_state: String) -> bool:
-	return was_participant and race_state == "ready"
+	return was_participant and race_state in ["ready", "countdown"]
 
 
 func _notify_jet_ski_race_participants(message: String) -> void:
@@ -1561,8 +1568,9 @@ func request_start_jet_ski_race_rpc() -> void:
 		rpc_id(peer_id, "receive_jet_ski_race_state", _jet_ski_race_state, participant_count, "تم تقديم طلب بدء الجولة بالفعل.")
 		return
 	_jet_ski_race_locked_participants = _jet_ski_race_participants.duplicate()
-	_jet_ski_race_state = "ready"
-	_notify_jet_ski_race_participants("اكتمل الحد الأدنى: الجولة جاهزة لمرحلة العد التنازلي، وتم قفل قائمة المشاركين.")
+	_jet_ski_race_state = "countdown"
+	_jet_ski_race_countdown_until_usec = Time.get_ticks_usec() + JET_SKI_RACE_COUNTDOWN_SECONDS * 1000000
+	_notify_jet_ski_race_participants("تم قفل المتسابقين الأربعة أو أقل. يبدأ السباق بعد 5 ثوانٍ.")
 
 
 @rpc("authority", "call_remote", "reliable")
