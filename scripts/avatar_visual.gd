@@ -116,6 +116,7 @@ func _process(delta: float) -> void:
 	var bob := absf(sin(motion_time * cycle_speed * 2.0)) * 0.045 * intensity
 	_restore_animation_defaults()
 	if phone_using:
+		# تثبيت وضعية الهاتف أثناء الحركة: الذراع اليمنى والرأس يظلان في وضع الاستخدام.
 		if parts.has("RightArm"):
 			var phone_arm := parts["RightArm"] as MeshInstance3D
 			phone_arm.rotation = Vector3(-0.10, 0.0, -0.78)
@@ -123,6 +124,16 @@ func _process(delta: float) -> void:
 			(parts["Head"] as MeshInstance3D).rotation = Vector3(-0.28, 0.08, 0.0)
 		if parts.has("TorsoBase"):
 			(parts["TorsoBase"] as MeshInstance3D).rotation.x = -0.025
+		# استمر في تحريك الساقين والذراع اليسرى عند المشي أو الجري دون إسقاط الهاتف.
+		if motion_state == "walk" or motion_state == "run":
+			var phone_bob := absf(sin(motion_time * cycle_speed * 2.0)) * 0.045 * intensity
+			if parts.has("TorsoBase"):
+				(parts["TorsoBase"] as MeshInstance3D).position.y += phone_bob
+			for limb_name in ["LeftArm", "LeftLeg", "RightLeg"]:
+				if parts.has(limb_name):
+					var limb := parts[limb_name] as MeshInstance3D
+					var limb_sign := -1.0 if limb_name in ["LeftArm", "RightLeg"] else 1.0
+					limb.rotation.x = swing * limb_sign
 		return
 	if motion_state == "talk":
 		if parts.has("TorsoBase"):
