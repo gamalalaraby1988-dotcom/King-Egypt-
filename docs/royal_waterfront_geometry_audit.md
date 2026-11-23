@@ -65,3 +65,27 @@ A 2.4m-wide compacted-sand path links the gym and handball court along the south
 - Rendered screenshot from the actual scene: not captured.
 - Production files, approved layout, existing roads, buildings, and ship: not changed.
 - No merge or deployment performed.
+
+## Cross-check against the current production source (read-only)
+
+The isolated blockout was compared with the existing production geometry in `proposal/compact-city-masterplan` at the time of this audit. This is coordinate arithmetic from source dimensions, not a Godot runtime or visual test.
+
+### Confirmed intersections and access gaps
+
+1. **Bridge vs. southwest road detour:** the proposed bridge deck occupies X=-15.5..-2.5, Z=91..108. The existing `MainRoad_Southwest_Detour` occupies X=-19..-13, Z=95..108. Their intersection is approximately 2.5m × 13m. The bridge cannot be placed as drawn without a road decision.
+2. **Bridge/ramp vs. south basin bypass:** the existing `MainRoad_South_Basin_Bypass` occupies X=-16..16, Z=105..111. It overlaps the bridge deck over approximately X=-15.5..-2.5, Z=105..108, and overlaps the land-ramp footprint over approximately X=-15.5..-2.5, Z=108..111. This is a second independent route conflict.
+3. **Water vs. center-south ground collision:** `Ground_Center_South` spans X=-12..12, Z=102..180. The proposed open sea spans X=-95..95, Z=65..107. Their plan overlap is 24m × 5m (120m²), including the Z=102..107 portion. The production ground has collision; if the water footprint is implemented unchanged, this strip risks retaining a hidden ground collision under water.
+4. **Ship approach connection:** the existing ship hull is 4.8m wide and 17m long at (0,0,85), giving an approximate plan footprint X=-2.4..2.4, Z=76.5..93.5. The proposed arrival platform ends at X=-2.5, leaving a nominal 0.1m horizontal gap to the hull footprint. The existing pier spans X=-10..-2 and Z=77..91, so it overlaps the platform footprint but only reaches the ship hull by a 0.4m plan overlap. A continuous, safe boarding connection is not established by these rectangles; inspect the actual ship scene and access mesh before implementation.
+5. **Existing yacht facilities:** the marina terminal remains centered at (75,0,38) and the royal yacht club at (75,0,58), each with a 13m × 9m footprint. The blockout's sea spans X=-95..95, Z=65..107, so these facilities do not intersect the sea rectangle in Z; preserve their current positions pending a full-scene shoreline review.
+6. **Beach court dimensions:** the production beach court is a 42m × 36m sand apron centered at (40,0,125), with a 27m × 12m marked playing rectangle. The blockout retains the same reserved apron and its 27m × 12m line rectangle. Its schematic court integration is dimensionally consistent with the production source.
+
+### Decisions required before changing production geometry
+
+- Present a revised bridge centerline/landing and southern road route together; do not independently move the bridge or roads.
+- Decide how the center-south ground collision is cut back or replaced at the new shoreline, without creating a hole in the walkable beach.
+- Use the actual approved ship and pier scene to design a continuous boarding connection; do not move the ship.
+- Keep the marina terminal, yacht club, and beach court at their existing positions unless the user explicitly approves a change.
+
+### Validation boundary
+
+This cross-check does not modify production files. It does not establish walkable collision, vehicle clearance, water depth, player access, or a rendered result. Godot validation and a screenshot from the actual scene remain outstanding.
