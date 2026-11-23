@@ -105,3 +105,14 @@
 - Script commit: `38311928acef3c667d4bdaee9ab5c385df6444ae`.
 - Fresh validation run: `45161961858`; fresh render run: `45161961847`. Both were queued/in progress when this note was added. Do not claim the latest face is validated until the workflows finish and the new PNG is inspected.
 - Still a primitive-mesh review blockout. No production asset, collision, vehicle physics, interaction trigger, or network-authoritative entry implementation is claimed. No merge to `main`.
+
+
+## Latest face render reviewed and deck-detail pass — 2026-11-23
+
+- The validation workflow for face-detail commit `38311928acef3c667d4bdaee9ab5c385df6444ae` completed successfully: run `45161961858`.
+- The exact-scene render workflow completed its render step and uploaded artifact `14810374942` in run `45161961847`. The PNG was extracted and visually inspected at 1280x720.
+- Inspection confirms the frontal ship silhouette, central gate, bridge approach and pharaoh mask details are present. However, the face still reads as stylized blockout geometry rather than the detailed sculpted pharaoh in the user's reference image; the side decks also need more convincing cabin/window detail.
+- Added a deck-detail pass: illuminated cabin-window rows, gold window frames, balcony rails and posts across the four stepped tiers, keeping the central gate clear and the vessel stationary.
+- Latest script commit: `e7b33846521666e416cb90dae8ed9618179cb96e`.
+- This newest deck-detail pass still requires a fresh Godot validation, render, artifact retrieval and visual inspection before it can be called verified.
+- This remains a primitive-mesh blockout, not the final ship asset. No collision, vehicle physics, player interaction trigger, or network-authoritative ship-entry logic is claimed. No merge to `main`.
