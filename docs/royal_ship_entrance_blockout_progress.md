@@ -126,3 +126,13 @@
 - Latest script commit: `f14e15fe69b19a2569748af2cbc53286361f6dd3`.
 - This latest addition requires fresh Godot validation, rendering, artifact retrieval and visual inspection before it can be called verified.
 - All work remains on `feature/royal-waterfront-blockout-preview`. The ship is still primitive-mesh blockout geometry; no final production asset, gameplay collision, vehicle physics, player interaction, or server-authoritative entry logic is claimed. No merge to `main`.
+
+
+## Mask render inspection and scale/readability refinement — 2026-11-23
+
+- Render workflow `45162722370` completed successfully and produced artifact `14810953439` from the exact Godot preview scene at commit `f14e15fe69b19a2569748af2cbc53286361f6dd3`.
+- Inspected the extracted 1280x720 PNG. The ship, central gate, bridge, mask, nemes stripes, collar and brow insignia are present. The mask remains highly stylized blockout geometry and reads too small relative to the ship facade compared with the user's reference.
+- Increased the face/head scale and widened/tallened the headdress backing, side lappets and crown to make the Tutankhamun centerpiece more prominent from the bridge approach.
+- Latest script commit: `14695dccc0a2bbaef11e6a111ef8c2c7a1ab4f08`.
+- Fresh validation/render are required before this scale pass is verified.
+- Remains a primitive-mesh blockout; no final sculpted production mask asset or gameplay collision/interaction/network entry implementation is claimed. No merge to `main`.
