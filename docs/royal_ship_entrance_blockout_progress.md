@@ -31,3 +31,13 @@
 - Added `.github/workflows/royal-waterfront-preview-check.yml` to import the project and attempt a headless startup of the exact preview scene on future pushes to this branch.
 - The workflow has been committed, but no GitHub Actions run is visible yet; therefore this is not a passed validation.
 - The interaction circle and vehicle bypass remain visual-only placeholders pending a real Godot render, collision setup, and vehicle/player testing.
+
+
+## Ship geometry blockout follow-up
+
+- Repository asset inspection found no existing Five Civilizations Ship mesh, scene, or vessel model in this branch; only the waterfront preview and design/progress documents were present.
+- Added a native Godot primitive-mesh **ship geometry blockout** to the standalone preview scene at the approved moored reference position. It includes a hull, one main deck, a simplified main hall, a bridge-facing gate, gold perimeter rails, and five small civilization markers.
+- The preview calls this a **blockout**, not the final ship asset. It does not add a second floor, stairs, movement, collision, or gameplay entry logic.
+- The ship gate is placed on the bridge-facing (+Z) end for visual alignment with the existing interaction pad. Exact alignment remains provisional until the final ship model and gate dimensions are supplied/created and inspected together.
+- Only `scripts/royal_waterfront_blockout_preview.gd` was changed, on `feature/royal-waterfront-blockout-preview`. No production scene or `main` branch was changed.
+- Next validation: Godot headless check and a genuine render from the updated preview scene; inspect the resulting image before claiming visual alignment.
