@@ -106,3 +106,17 @@ A coordinated alternative is documented in [royal_waterfront_route_option_b.md](
 Static plan-view check: the centered bridge footprint X=-6.5..6.5 is 9.5m clear of the existing road-arm inner edges at X=±16 and 6.5m clear of the side-detour nearest edges at X=±13. The ramp ends at Z=113; the relocated bypass begins at Z=117, leaving a 4m gap that the proposed spur bridges. The spur overlaps the bypass by 1m in Z to form a T-junction. The extended side detours overlap the bypass by 3m in Z to form the two perimeter-road junctions.
 
 The user approved Option B for the isolated review blockout, and the preview script now represents the centered bridge/platform, ramp, preserved road arms, extended detours, relocated bypass, and access spur. This does not resolve the shoreline/ground-collision overlap, prove a continuous boarding surface to the real ship, or establish vertical clearance, road grades, turning radii, or Godot runtime behavior. No production geometry was changed.
+
+
+## Follow-up shoreline collision and ship access audit
+
+A read-only follow-up is recorded in [royal_waterfront_shoreline_collision_audit.md](royal_waterfront_shoreline_collision_audit.md).
+
+Key findings from the production source:
+- The 190 × 42m preview sea overlaps all four existing collision-backed ground sections by a combined **7,404m²** in plan view, not only the center-south strip.
+- The 180 × 5m shallow band overlaps existing ground by **900m²**; the 180 × 46m beach visual overlaps existing ground by **8,280m²**.
+- Existing ground collision top is about Y=-0.05; preview beach top is Y=0.17, so a dedicated beach collision surface is needed to avoid a player settling below the visible sand.
+- Existing ship main-deck top is Y=2.26 while the pier top is Y=0.16, a vertical difference of about **2.10m**. The Option B arrival platform top is Y=0.825 and does not itself solve boarding.
+- The schematic bridge road top is Y=0.84 while the flat land-ramp top is Y=0.45; the current boxes do not form a smooth sloped transition. The platform and bridge also have a 0.5m plan gap at Z=90.5..91.
+
+These are source-based geometry calculations only. No Godot physics/runtime test or rendered screenshot was performed. No production geometry was changed.
