@@ -25,3 +25,12 @@
 - It does **not** authorize moving the ship, changing production scenes, replacing approved buildings, or merging into `main`.
 - No final 3D model, collision, vehicle handling, interaction code, Godot validation, or in-game render is claimed by this document.
 - The generated image is a concept reference, not a screenshot of the actual game model. The actual model must be rendered from the same final scene/model before approval for integration.
+
+
+## Pharaoh mask identity — user-confirmed reference
+
+- The monumental head centered above the ship gate is specifically the **gold funerary mask of Tutankhamun**, not a generic pharaoh face or an invented pharaoh portrait.
+- Preserve the recognizable mask identity: idealized golden face; blue-and-gold striped nemes headdress; royal forehead cobra (uraeus) and vulture motif; long ceremonial false beard; and the broad blue-and-gold royal collar.
+- Keep the mask frontal, symmetrical, monumental, and clearly readable from the bridge approach, integrated into the central ship-gate facade as shown in the user's supplied reference image.
+- Do not substitute another pharaoh's crown, a sphinx head, or a generic sculpted face.
+- Current Godot geometry remains a primitive-mesh blockout. It must be refined into a recognizable mask-shaped asset and rendered from the exact in-game scene before approval; this note is a design requirement, not a claim that the final mask asset already exists.
