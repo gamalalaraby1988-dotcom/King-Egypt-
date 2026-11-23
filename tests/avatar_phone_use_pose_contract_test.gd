@@ -26,6 +26,13 @@ func _run() -> void:
 	if phone.visible:
 		_fail("Phone should be hidden before phone-use mode starts.")
 		return
+	if phone.get_node_or_null("RightHandThumb") == null:
+		_fail("Visible thumb was not added to the front edge of the phone.")
+		return
+	for finger_index in range(3):
+		if phone.get_node_or_null("RightHandFinger_%d" % finger_index) == null:
+			_fail("A gripping finger is missing from the phone hand.")
+			return
 
 	var default_arm_rotation: Vector3 = right_arm.rotation
 	var default_head_rotation: Vector3 = head.rotation
