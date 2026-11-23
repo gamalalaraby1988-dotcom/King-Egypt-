@@ -63,6 +63,9 @@ func _build_phone_visual() -> void:
 	phone_visual.rotation = Vector3(-0.08, 0.10, 0.42)
 	phone_visual.visible = false
 	right_arm.add_child(phone_visual)
+	# حافظ على مركز الهاتف عند منتصف الصدر حتى مع دوران الذراع حول مفصل الكتف.
+	phone_visual.global_position = to_global(Vector3(0.0, 1.20, -0.27))
+	phone_visual.global_rotation = Vector3(0.0, PI, 0.0)
 	var body := MeshInstance3D.new()
 	body.name = "PhoneBody"
 	var body_mesh := BoxMesh.new()
@@ -135,6 +138,10 @@ func _process(delta: float) -> void:
 		if parts.has("RightArm"):
 			var phone_arm := parts["RightArm"] as MeshInstance3D
 			phone_arm.rotation = Vector3(-0.10, 0.0, -0.78)
+		if is_instance_valid(phone_visual):
+			# الذراع تحمل الهاتف، لكن موضعه النهائي يبقى أمام منتصف الصدر.
+			phone_visual.global_position = to_global(Vector3(0.0, 1.20, -0.27))
+			phone_visual.global_rotation = Vector3(0.0, PI, 0.0)
 		if parts.has("Head") and is_instance_valid(phone_visual):
 			# وجّه الوجه نحو الهاتف فعليًا بدل زاوية ثابتة؛ يعود الرأس لوضعه الطبيعي عند إخفاء الهاتف.
 			var phone_head := parts["Head"] as MeshInstance3D
