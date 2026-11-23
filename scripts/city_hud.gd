@@ -143,6 +143,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	for panel in open_popups:
 		if is_instance_valid(panel):
 			panel.visible = false
+	if is_instance_valid(phone_entry_button):
+		phone_entry_button.visible = true
 
 
 func _build_phone_entry_button() -> void:
