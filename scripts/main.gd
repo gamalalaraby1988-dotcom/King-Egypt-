@@ -400,7 +400,6 @@ func _mount_player_scooter() -> void:
 	player.set_mobile_move(Vector2.ZERO)
 	player.set_mobile_sprint(false)
 	player.velocity = Vector3.ZERO
-	player.set_physics_process(false)
 	player.collision_layer = 0
 	player.collision_mask = 0
 	player.reparent(city_scooter, true)
