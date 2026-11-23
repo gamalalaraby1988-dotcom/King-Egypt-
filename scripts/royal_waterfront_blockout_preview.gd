@@ -367,13 +367,13 @@ func _ship_deck_ribbon(label: String, width: float, depth: float, thickness: flo
 		var t := -1.0 + 2.0 * (float(i) + 0.5) / float(segments)
 		var sweep := pow(abs(t), 2.0)
 		var x := t * width * 0.5
-		var y := 0.35 - 2.65 * pow(abs(t), 1.75)
-		var segment_depth := depth * (1.0 - 0.30 * sweep)
-		var segment := _box(label + "_Segment_%02d" % i, Vector3(segment_width + 0.045, thickness, segment_depth), Vector3(x, y, 0.0), color, root)
-		segment.rotation_degrees.z = -sign(t) * 13.0 * pow(abs(t), 1.25)
+		var y := 0.42 - 3.55 * pow(abs(t), 1.65)
+		var segment_depth := depth * (1.0 - 0.42 * sweep)
+		var segment := _box(label + "_Segment_%02d" % i, Vector3(segment_width + 0.07, thickness, segment_depth), Vector3(x, y, 0.0), color, root)
+		segment.rotation_degrees.z = -sign(t) * 16.0 * pow(abs(t), 1.2)
 		segment.material_override = _material(color, 0.78)
 		# Deep-blue fascia below each deck gives the tier real visual mass.
-		var fascia := _box(label + "_LowerFascia_%02d" % i, Vector3(segment_width + 0.06, thickness * 0.72, segment_depth * 0.94), Vector3(x, y - thickness * 0.76, 0.0), Color(0.012, 0.045, 0.09), root)
+		var fascia := _box(label + "_LowerFascia_%02d" % i, Vector3(segment_width + 0.08, thickness * 0.92, segment_depth * 0.98), Vector3(x, y - thickness * 0.88, 0.0), Color(0.012, 0.045, 0.09), root)
 		fascia.material_override = _material(Color(0.012, 0.045, 0.09), 0.72)
 	return root
 
@@ -406,8 +406,8 @@ func _build_five_civilizations_ship_blockout() -> void:
 		var depth := 26.0 - float(tier) * 1.8
 		var y := 3.05 + float(tier) * 1.55
 		var z := 82.5 - float(tier) * 0.25
-		_ship_deck_ribbon("ShipSuperstructure_Tier_%02d_CurvedDarkBlue" % tier, width, depth, 0.72, Vector3(0.0, y, z), blue if tier % 2 == 0 else blue_light)
-		_ship_deck_ribbon("ShipSuperstructure_Tier_%02d_CurvedGoldEdge" % tier, width + 0.20, depth + 0.12, 0.075, Vector3(0.0, y + 0.40, z), gold)
+		_ship_deck_ribbon("ShipSuperstructure_Tier_%02d_CurvedDarkBlue" % tier, width, depth, 1.12, Vector3(0.0, y, z), blue if tier % 2 == 0 else blue_light)
+		_ship_deck_ribbon("ShipSuperstructure_Tier_%02d_CurvedGoldEdge" % tier, width + 0.20, depth + 0.12, 0.085, Vector3(0.0, y + 0.58, z), gold)
 		for side: float in [-1.0, 1.0]:
 			_box("ShipSuperstructure_Tier_%02d_SideBalcony" % tier, Vector3(0.22, 0.22, depth - 1.6), Vector3(side * (width * 0.5 - 0.12), y + 0.46, z), blue_light)
 
