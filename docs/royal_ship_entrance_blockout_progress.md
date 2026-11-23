@@ -196,3 +196,14 @@
 - The render is a genuine Godot scene capture, not a production-quality asset or final visual match. It verifies scene launch/render only.
 - Next pass should prioritize reshaping the side decks into continuous curved profiles and refining the mask's facial proportions and gold surface detailing, while preserving the central gate, fixed vessel position, bridge, and interaction-ring placement.
 - No final ship/mask production asset, collision, vehicle physics, player interaction trigger, or server-authoritative ship-entry logic is claimed. No merge to `main`.
+
+
+## Vessel scale increase — 2026-11-23
+
+- User noted that the vessel looked too small compared with the approved reference image.
+- Added a dedicated `royal_ship_visuals` group for the hull, superstructure tiers, gate, pharaoh mask, collar, hull trim and ship insignia.
+- Applied a uniform 1.28 scale (28% increase) around a pivot near the gate face, so the vessel grows substantially while the bridge, arrival apron and glowing interaction circle remain unchanged.
+- Gate-centered pivot: `Vector3(0.0, 7.4, 95.5)`.
+- Script commit: `2a40428f3eded0e63af98ef7e8e9ee3ccf5b835b`.
+- Fresh Godot validation and exact-scene render are required to confirm the larger vessel fits the composition and does not overlap the bridge approach.
+- This remains a review blockout, not a final ship asset. No gameplay collision, vehicle physics, player interaction trigger or server-authoritative ship-entry logic is claimed. No merge to `main`.
