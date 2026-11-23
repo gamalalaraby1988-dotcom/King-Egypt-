@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1000" height="700" viewBox="0 0 1000 700">
 <rect width="1000" height="700" fill="#eee9df"/>
 <text x="500" y="30" text-anchor="middle" font-family="Arial" font-size="22" font-weight="bold">ROYAL WATERFRONT — ROUTE OPTION B</text>
-<text x="500" y="53" text-anchor="middle" font-family="Arial" font-size="12">Coordinate diagram • proposal only • not a Godot render</text>
+<text x="500" y="53" text-anchor="middle" font-family="Arial" font-size="12">Coordinate diagram • approved for isolated preview • not a Godot render</text>
 <rect x="80" y="70" width="840" height="560" fill="#d9c59b"/>
 <rect x="80" y="70" width="840" height="280" fill="#15546a"/>
 <rect x="80" y="326" width="840" height="42" fill="#39868a"/>
