@@ -266,3 +266,12 @@
 - Follow-up commit `470505ec162b2edf93ae0ca44269d5399eb2f56f` strengthens the deck-end drop, tapers depth toward the ends, adds a slight segment slope, and tones the portal to a restrained deep blue.
 - This follow-up still requires a fresh Godot validation and rendered preview. It is not yet visually verified.
 - The current image is a genuine scene capture but still only a low-detail blockout. No final ship asset, collision, vehicle physics, interaction trigger or server-authoritative entry logic is claimed. No merge to `main`.
+
+
+## Review of curved-deck render and blue-volume refinement — 2026-11-23
+
+- Validation run `45168794145` and render run `45168793980` both completed successfully on commit `470505ec162b2edf93ae0ca44269d5399eb2f56f`.
+- Retrieved artifact `14815557624` and inspected the exact 1280x720 PNG rendered from the Godot preview scene.
+- The render shows the side tiers, but they still read as thin horizontal gold/blue rails with a broad bright upper surface; the ship does not yet resemble the reference's deep navy multi-deck hull.
+- Follow-up commit `39539a4f6c11adcb476d554b7d4a5adecc61b35a` adds dark navy lower fascia under each tier, increases the downward slope at the deck ends, narrows gold edge bands and changes balcony strips from ivory to blue.
+- Fresh validation and rendering are required to assess this correction. The vessel remains procedural blockout geometry, not the final reference-matched ship. No production collision, vehicle physics, player interaction trigger, or server-authoritative entry system is claimed. No merge to `main`.
