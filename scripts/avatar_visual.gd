@@ -135,8 +135,10 @@ func _process(delta: float) -> void:
 		if parts.has("RightArm"):
 			var phone_arm := parts["RightArm"] as MeshInstance3D
 			phone_arm.rotation = Vector3(-0.10, 0.0, -0.78)
-		if parts.has("Head"):
-			(parts["Head"] as MeshInstance3D).rotation = Vector3(-0.62, 0.08, 0.0)
+		if parts.has("Head") and is_instance_valid(phone_visual):
+			# وجّه الوجه نحو الهاتف فعليًا بدل زاوية ثابتة؛ يعود الرأس لوضعه الطبيعي عند إخفاء الهاتف.
+			var phone_head := parts["Head"] as MeshInstance3D
+			phone_head.look_at(phone_visual.global_position, Vector3.UP)
 		if parts.has("TorsoBase"):
 			(parts["TorsoBase"] as MeshInstance3D).rotation.x = -0.025
 		# استمر في تحريك الساقين والذراع اليسرى عند المشي أو الجري دون إسقاط الهاتف.
