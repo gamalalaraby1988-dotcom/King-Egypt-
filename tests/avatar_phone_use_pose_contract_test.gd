@@ -20,7 +20,7 @@ func _run() -> void:
 	if phone.get_parent() != right_arm:
 		_fail("Phone visual is not attached to the right arm.")
 		return
-	if not is_equal_approx(phone.position.y, 0.12) or not is_equal_approx(phone.position.x, -0.32):
+	if not is_equal_approx(phone.position.y, 0.22) or not is_equal_approx(phone.position.x, -0.23):
 		_fail("Phone was not placed inward at the chest-level grip position.")
 		return
 	if phone.visible:
