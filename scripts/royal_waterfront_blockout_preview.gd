@@ -24,10 +24,10 @@ func _ready() -> void:
 	_build_ship_detail_pass()
 	_build_option_b_southern_roads()
 	_mark_preserved_ship_and_conflicts()
-	# Close 3/4 review angle: keep the bridge, glowing interaction pad, and ship reference footprint in one readable frame.
-	$PreviewCamera.position = Vector3(27.0, 22.0, 119.0)
-	$PreviewCamera.fov = 56.0
-	$PreviewCamera.look_at(Vector3(0.0, 0.5, 91.0), Vector3.UP)
+	# Centered frontal review angle: show the ship gate symmetrically, its full wide silhouette, and the bridge approach.
+	$PreviewCamera.position = Vector3(0.0, 27.0, 142.0)
+	$PreviewCamera.fov = 58.0
+	$PreviewCamera.look_at(Vector3(0.0, 7.0, 83.0), Vector3.UP)
 
 func _material(color: Color, roughness: float = 0.82) -> StandardMaterial3D:
 	var material := StandardMaterial3D.new()
