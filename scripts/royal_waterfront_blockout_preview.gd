@@ -18,6 +18,8 @@ func _ready() -> void:
 	_build_beach_activity_path()
 	_build_open_water()
 	_build_bridge_and_arrival()
+	_build_bridge_details()
+	_build_ship_gate_interaction()
 	_build_option_b_southern_roads()
 	_mark_preserved_ship_and_conflicts()
 	$PreviewCamera.look_at(Vector3(-3.0, 0.0, 99.0), Vector3.UP)
@@ -122,6 +124,77 @@ func _build_bridge_and_arrival() -> void:
 	_label("PROTECTED WALKWAYS", Vector3(center_x - 8.0, 2.0, 98.0), IVORY, 19)
 	_label("ARRIVAL PLATFORM", Vector3(center_x, 2.0, 87.0), GOLD, 22)
 
+
+func _emissive_material(color: Color, energy: float = 2.5) -> StandardMaterial3D:
+	var material := StandardMaterial3D.new()
+	material.albedo_color = color
+	material.emission_enabled = true
+	material.emission = color
+	material.emission_energy_multiplier = energy
+	material.roughness = 0.28
+	return material
+
+func _cylinder(label: String, radius: float, height: float, position: Vector3, material: Material, parent: Node = null) -> MeshInstance3D:
+	var target: Node = self if parent == null else parent
+	var node := MeshInstance3D.new()
+	node.name = label
+	var mesh := CylinderMesh.new()
+	mesh.top_radius = radius
+	mesh.bottom_radius = radius
+	mesh.height = height
+	node.mesh = mesh
+	node.position = position
+	node.material_override = material
+	target.add_child(node)
+	return node
+
+func _build_bridge_details() -> void:
+	# Decorative/readability pass on the same 13m two-way bridge blockout.
+	for side in [-1.0, 1.0]:
+		var x := side * 2.1
+		_box("BridgeCenterDoubleGoldLine", Vector3(0.10, 0.025, 17.0), Vector3(x, 0.855, 99.5), GOLD)
+		for z in [94.0, 99.0, 104.0]:
+			var lamp_x := side * 5.7
+			_box("BridgeLampPedestal", Vector3(0.55, 0.45, 0.55), Vector3(lamp_x, 1.12, z), GOLD)
+			_box("BridgeLampPost", Vector3(0.12, 2.0, 0.12), Vector3(lamp_x, 2.25, z), GOLD)
+			_box("BridgeLampHead", Vector3(0.48, 0.22, 0.48), Vector3(lamp_x, 3.35, z), IVORY)
+
+func _build_ship_gate_interaction() -> void:
+	# The ship-facing end widens into a terminal apron. Cars bypass the central
+	# pedestrian interaction pad on two flanking lanes; the ring is not in a live lane.
+	var apron_z := 91.5
+	_box("ShipApproachFlaredApron", Vector3(22.0, 0.42, 11.0), Vector3(0.0, 0.78, apron_z), IVORY)
+	_box("ShipApproachVehicleLane_Left", Vector3(6.0, 0.09, 11.0), Vector3(-8.0, 1.035, apron_z), ROAD)
+	_box("ShipApproachVehicleLane_Right", Vector3(6.0, 0.09, 11.0), Vector3(8.0, 1.035, apron_z), ROAD)
+	_box("ShipApproachPedestrianIsland", Vector3(8.0, 0.16, 9.0), Vector3(0.0, 1.07, 91.5), SAND)
+	var glow := _emissive_material(Color(1.0, 0.62, 0.12), 3.5)
+	var inner_glow := _emissive_material(Color(1.0, 0.88, 0.42), 4.0)
+	_cylinder("ShipInteractionPad_Base", 3.2, 0.12, Vector3(0.0, 1.20, 91.5), _material(Color(0.12, 0.10, 0.07), 0.3))
+	var outer_ring := MeshInstance3D.new()
+	outer_ring.name = "ShipInteractionPad_OuterGlowingRing"
+	var outer_mesh := TorusMesh.new()
+	outer_mesh.inner_radius = 3.05
+	outer_mesh.outer_radius = 3.22
+	outer_ring.mesh = outer_mesh
+	outer_ring.position = Vector3(0.0, 1.30, 91.5)
+	outer_ring.rotation.x = PI * 0.5
+	outer_ring.material_override = glow
+	add_child(outer_ring)
+	var inner_ring := MeshInstance3D.new()
+	inner_ring.name = "ShipInteractionPad_InnerGlowingRing"
+	var inner_mesh := TorusMesh.new()
+	inner_mesh.inner_radius = 2.55
+	inner_mesh.outer_radius = 2.64
+	inner_ring.mesh = inner_mesh
+	inner_ring.position = Vector3(0.0, 1.31, 91.5)
+	inner_ring.rotation.x = PI * 0.5
+	inner_ring.material_override = inner_glow
+	add_child(inner_ring)
+	for side in [-1.0, 1.0]:
+		_box("InteractionIslandGoldEdge", Vector3(0.16, 0.22, 9.0), Vector3(side * 4.05, 1.20, 91.5), GOLD)
+	_label("GLOWING INTERACTION CIRCLE - DIRECTLY BEFORE SHIP GATE", Vector3(0.0, 3.3, 86.5), GOLD, 19)
+	_label("PLAYER ENTERS CIRCLE  >  INTERACT  >  CONFIRM SHIP ENTRY", Vector3(0.0, 2.8, 96.5), IVORY, 15)
+	_label("VEHICLE BYPASS LANES - KEEP PAD CLEAR", Vector3(0.0, 3.0, 99.0), GOLD, 15)
 
 func _build_option_b_southern_roads() -> void:
 	# Option B review geometry only: side arms remain in place; detours extend to the relocated bypass.
