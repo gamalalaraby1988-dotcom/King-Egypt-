@@ -320,7 +320,7 @@ func _on_scooter_toggle_pressed() -> void:
 		city_scooter = null
 		if is_instance_valid(scooter_toggle_button):
 			scooter_toggle_button.text = "🛴"
-			 scooter_toggle_button.tooltip_text = "استدعاء السكوتر الكهربائي"
+			scooter_toggle_button.tooltip_text = "استدعاء السكوتر الكهربائي"
 		return
 	_summon_electric_scooter()
 
