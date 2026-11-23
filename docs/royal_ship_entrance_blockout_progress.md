@@ -96,3 +96,12 @@
 - New Godot validation run: `45102664415`; new render run: `45102664444`. Both were queued/in progress at the time of this note. The new render must be downloaded and visually inspected before confirming the occlusion fix.
 - Remains a primitive-mesh blockout only. No production ship asset, gameplay collision, vehicle physics, interaction trigger, or network-authoritative entry logic is claimed.
 - No merge to `main`.
+
+
+## Pharaoh facial-feature visibility pass — 2026-11-23
+
+- Inspected the actual PNG from artifact `14785664538` (render run `45102664444`, source SHA `b6222c281a97d105d8ebd495db34f86fa9b42b2f`). The face still read as a blank gold oval because the eyes, nose and beard were embedded behind the front surface of the scaled sphere mesh.
+- Moved the facial features to the camera-facing side of the mask and added visible eye sockets/eyes/pupils, brows, cheeks, ears, stepped nose, mouth, ribbed ceremonial beard and uraeus crest.
+- Script commit: `38311928acef3c667d4bdaee9ab5c385df6444ae`.
+- Fresh validation run: `45161961858`; fresh render run: `45161961847`. Both were queued/in progress when this note was added. Do not claim the latest face is validated until the workflows finish and the new PNG is inspected.
+- Still a primitive-mesh review blockout. No production asset, collision, vehicle physics, interaction trigger, or network-authoritative entry implementation is claimed. No merge to `main`.
