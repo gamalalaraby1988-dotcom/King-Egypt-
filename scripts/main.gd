@@ -474,8 +474,11 @@ func _on_jet_ski_mount_result_received(success: bool, message: String) -> void:
 func _on_jet_ski_authoritative_state_received(position: Vector3, rotation_y: float, _velocity: Vector3) -> void:
 	if not jet_ski_occupied or not is_instance_valid(city_jet_ski):
 		return
-	city_jet_ski.global_position = position
-	city_jet_ski.global_rotation.y = rotation_y
+	if city_jet_ski.has_method("reconcile_authoritative_state"):
+		city_jet_ski.call("reconcile_authoritative_state", position, rotation_y, _velocity)
+	else:
+		city_jet_ski.global_position = position
+		city_jet_ski.global_rotation.y = rotation_y
 
 
 func _exit_contextual_state() -> void:
@@ -659,7 +662,8 @@ func _mount_player_jet_ski() -> void:
 	var jet_hud := city_jet_ski.get_node_or_null("JetSkiHUDLayer") as CanvasLayer
 	if is_instance_valid(jet_hud):
 		jet_hud.visible = true
-	city_jet_ski.set_physics_process(not GameModeManager.is_online_ready())
+	# Online mode predicts locally from the same water controls, then reconciles against server snapshots.
+	city_jet_ski.set_physics_process(true)
 	jet_ski_occupied = true
 	if is_instance_valid(vehicle_interaction_button):
 		vehicle_interaction_button.text = "🚪↗"
