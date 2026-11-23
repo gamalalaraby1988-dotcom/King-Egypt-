@@ -61,3 +61,16 @@
 - The current camera/render is a broad blockout view; labels and the approach apron make the interaction circle less distinct than desired. The next visual pass should improve camera framing and pad readability before asking for approval of final ship detailing.
 - This is still primitive-mesh review geometry, not a production-ready detailed vessel. Collision, turning physics, player interaction, and online entry logic remain unimplemented and untested.
 - No production scene was modified and nothing was merged into `main`.
+
+
+## Uploaded approved reference applied — 2026-11-23
+
+- The user re-uploaded the exact approved ship concept image. It is now the visual source of truth for the next ship-mesh pass; no substitute web image or newly invented civilization identities are used.
+- Reworked the standalone Godot ship blockout to match the reference's dominant silhouette: a very wide dark royal-blue hull, gold waterline and trim, stepped side-superstructure fascia, large side winged-emblem motifs, illuminated portholes, and a monumental central Egyptian gate.
+- Added a large gold pharaoh-mask/headdress silhouette above the gate, flanking guardian-statue/pylon forms, a blue illuminated doorway, and the KING OF EGYPT CITY nameplate.
+- The central gate remains oriented toward the bridge approach and the interaction circle remains in front of the gate at the bridge terminal. The ship remains stationary.
+- The stepped side bands are visual fascia/overhangs only; this pass does not add walkable upper decks, stairs, or gameplay floors.
+- Script update committed on `feature/royal-waterfront-blockout-preview`: `a5f9d5c9a4a3ec69f7ae306fc32d2f948e34a0c8`.
+- This is still a primitive-mesh visual blockout, not the final production ship asset. Collision, vehicle physics, player interaction, network-authoritative entry, and final material/lighting polish are not implemented or validated by this change.
+- The new commit must pass the Godot check workflow and produce a genuine render from the same preview scene. The rendered image must be visually inspected before claiming the reference match is validated.
+- No production scene was changed and nothing was merged into `main`.
