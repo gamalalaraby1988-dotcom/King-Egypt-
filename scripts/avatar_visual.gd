@@ -27,6 +27,8 @@ var motion_state := "idle"
 var motion_speed := 0.0
 var motion_time := 0.0
 var animated_defaults: Dictionary = {}
+var phone_using := false
+var phone_visual: Node3D
 
 func _ready() -> void:
 	_build_base_character()
@@ -35,10 +37,51 @@ func _ready() -> void:
 	apply_outfit(current_outfit)
 	apply_hairstyle(current_hairstyle)
 	_cache_animation_defaults()
+	_build_phone_visual()
 
 func set_motion_state(state: String, speed: float = 0.0) -> void:
 	motion_state = state if ["idle", "walk", "run", "sit", "talk", "wave", "celebrate", "disappointed", "clap", "dance", "cry", "heart"].has(state) else "idle"
 	motion_speed = maxf(speed, 0.0)
+
+
+func set_phone_using(enabled: bool) -> void:
+	phone_using = enabled
+	if is_instance_valid(phone_visual):
+		phone_visual.visible = enabled
+
+
+func _build_phone_visual() -> void:
+	# هاتف صغير داكن بواجهة مضيئة، موضوع أمام كف اليد اليمنى.
+	phone_visual = Node3D.new()
+	phone_visual.name = "PlayerPhoneVisual"
+	phone_visual.position = Vector3(0.49, 0.91, -0.245)
+	phone_visual.rotation = Vector3(-0.18, 0.10, -0.16)
+	phone_visual.visible = false
+	add_child(phone_visual)
+	var body := MeshInstance3D.new()
+	body.name = "PhoneBody"
+	var body_mesh := BoxMesh.new()
+	body_mesh.size = Vector3(0.13, 0.22, 0.025)
+	body.mesh = body_mesh
+	var body_material := StandardMaterial3D.new()
+	body_material.albedo_color = Color("#171a20")
+	body_material.metallic = 0.48
+	body_material.roughness = 0.32
+	body.material_override = body_material
+	phone_visual.add_child(body)
+	var screen := MeshInstance3D.new()
+	screen.name = "PhoneScreen"
+	var screen_mesh := BoxMesh.new()
+	screen_mesh.size = Vector3(0.112, 0.192, 0.003)
+	screen.mesh = screen_mesh
+	screen.position.z = -0.014
+	var screen_material := StandardMaterial3D.new()
+	screen_material.albedo_color = Color("#6d9db8")
+	screen_material.emission_enabled = true
+	screen_material.emission = Color("#294c63")
+	screen_material.emission_energy_multiplier = 0.35
+	screen.material_override = screen_material
+	phone_visual.add_child(screen)
 
 func _process(delta: float) -> void:
 	motion_time += delta
@@ -47,6 +90,15 @@ func _process(delta: float) -> void:
 	var swing := sin(motion_time * cycle_speed) * 0.48 * intensity
 	var bob := absf(sin(motion_time * cycle_speed * 2.0)) * 0.045 * intensity
 	_restore_animation_defaults()
+	if phone_using:
+		if parts.has("RightArm"):
+			var phone_arm := parts["RightArm"] as MeshInstance3D
+			phone_arm.rotation = Vector3(-0.12, 0.0, -0.62)
+		if parts.has("Head"):
+			(parts["Head"] as MeshInstance3D).rotation.x = -0.22
+		if parts.has("TorsoBase"):
+			(parts["TorsoBase"] as MeshInstance3D).rotation.x = -0.025
+		return
 	if motion_state == "talk":
 		if parts.has("TorsoBase"):
 			(parts["TorsoBase"] as MeshInstance3D).rotation.x = sin(motion_time * 3.2) * 0.035
