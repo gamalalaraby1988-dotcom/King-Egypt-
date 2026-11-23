@@ -295,7 +295,7 @@ func _build_five_civilizations_ship_blockout() -> void:
 	# Oversized winged-sun emblems on the forward blue fascia, readable from the bridge.
 	for side: float in [-1.0, 1.0]:
 		var emblem_x := side * 21.0
-		var sun := _cylinder("ShipFront_WingedSun_Disc", 0.88, 0.20, Vector3(emblem_x, 0.95, 95.78), gold)
+		var sun := _cylinder("ShipFront_WingedSun_Disc", 0.88, 0.20, Vector3(emblem_x, 0.95, 95.78), _material(gold, 0.28))
 		sun.rotation_degrees.x = 90.0
 		_box("ShipFront_WingedSun_CentralBody", Vector3(1.15, 1.45, 0.22), Vector3(emblem_x, 0.9, 95.82), gold)
 		for feather_index in range(9):
