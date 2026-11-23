@@ -50,6 +50,15 @@ func _run() -> void:
 	if head_forward.dot(head_to_phone) < 0.95:
 		_fail("Head is not facing the phone during phone-use mode.")
 		return
+	var phone_screen := phone.get_node_or_null("PhoneScreen") as MeshInstance3D
+	if not is_instance_valid(phone_screen):
+		_fail("Phone screen mesh is missing.")
+		return
+	var phone_to_head := (head.global_position - phone.global_position).normalized()
+	var screen_forward := phone_screen.global_transform.basis.z.normalized()
+	if screen_forward.dot(phone_to_head) < 0.97:
+		_fail("Phone screen is not facing the avatar face.")
+		return
 
 	# Verify that phone-use pose remains active during both walking and running.
 	var left_leg: MeshInstance3D = parts.get("LeftLeg") as MeshInstance3D
