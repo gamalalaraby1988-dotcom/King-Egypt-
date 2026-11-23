@@ -159,9 +159,11 @@ func _process(_delta: float) -> void:
 
 
 func return_player_to_start_position() -> bool:
-	# This local recovery never overrides server-owned online positions.
-	if GameModeManager.is_online_ready() or interior_transition_busy or is_instance_valid(interior_root) or vehicle_occupied or scooter_occupied:
+	if interior_transition_busy or is_instance_valid(interior_root) or vehicle_occupied or scooter_occupied:
 		return false
+	if GameModeManager.is_online_ready():
+		# Online recovery is requested from the authority; never teleport locally.
+		return AuthoritativeGameServer.request_safe_return()
 	var player := get_node_or_null("Player") as CharacterBody3D
 	if not is_instance_valid(player) or not _initial_player_spawn_captured:
 		return false
