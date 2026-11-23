@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="700" viewBox="0 0 1000 700">
+<rect width="1000" height="700" fill="#eee9df"/>
+<text x="500" y="30" text-anchor="middle" font-family="Arial" font-size="22" font-weight="bold">ROYAL WATERFRONT — ROUTE OPTION B</text>
+<text x="500" y="53" text-anchor="middle" font-family="Arial" font-size="12">Coordinate diagram • proposal only • not a Godot render</text>
+<rect x="80" y="70" width="840" height="560" fill="#d9c59b"/>
+<rect x="80" y="70" width="840" height="280" fill="#15546a"/>
+<rect x="80" y="326" width="840" height="42" fill="#39868a"/>
+<text x="500" y="200" text-anchor="middle" font-family="Arial" font-size="28" fill="#fff">OPEN SEA</text>
+<text x="500" y="353" text-anchor="middle" font-family="Arial" font-size="14" fill="#fff">SHALLOW / SHORE TRANSITION</text>
+<!-- bridge -->
+<rect x="475" y="238" width="50" height="136" fill="#d8c7a0" stroke="#9b762f" stroke-width="3"/>
+<rect x="483" y="238" width="34" height="136" fill="#42464a"/>
+<path d="M500 238V374" stroke="#f4df9a" stroke-width="2" stroke-dasharray="8 7"/>
+<rect x="475" y="374" width="50" height="40" fill="#d8c7a0" stroke="#9b762f" stroke-width="3"/>
+<rect x="483" y="374" width="34" height="40" fill="#42464a"/>
+<text x="540" y="260" font-family="Arial" font-size="14" font-weight="bold" fill="#fff">13m bridge</text>
+<text x="540" y="280" font-family="Arial" font-size="12" fill="#fff">8.5m road + 2.25m</text><text x="540" y="297" font-family="Arial" font-size="12" fill="#fff">walkway each side</text>
+<!-- ship/pier -->
+<rect x="468" y="155" width="64" height="150" rx="16" fill="#eee4cd" stroke="#c39a42" stroke-width="4"/>
+<text x="500" y="210" text-anchor="middle" font-family="Arial" font-size="12" font-weight="bold" fill="#584317">FIVE</text>
+<text x="500" y="228" text-anchor="middle" font-family="Arial" font-size="12" font-weight="bold" fill="#584317">CIVILIZATIONS</text><text x="500" y="246" text-anchor="middle" font-family="Arial" font-size="12" font-weight="bold" fill="#584317">SHIP</text>
+<text x="500" y="143" text-anchor="middle" font-family="Arial" font-size="11" fill="#fff">Existing ship fixed at (0,85)</text>
+<!-- south road arms at z95 -->
+<g fill="#42464a" stroke="#e7cb87" stroke-width="2">
+ <rect x="122" y="360" width="302" height="48" rx="4"/><rect x="576" y="360" width="302" height="48" rx="4"/>
+ <!-- detours x+-16 -->
+ <rect x="438" y="360" width="24" height="200" rx="3"/><rect x="538" y="360" width="24" height="200" rx="3"/>
+ <rect x="433" y="536" width="134" height="48" rx="4"/>
+ <!-- short connector -->
+ <rect x="483" y="414" width="34" height="130" fill="#55595b" opacity=".8"/>
+</g>
+<g fill="#fff" font-family="Arial" font-size="11" text-anchor="middle">
+ <text x="270" y="389">WEST ROAD • EXISTING</text><text x="730" y="389">EAST ROAD • EXISTING</text>
+ <text x="500" y="566">BYPASS MOVED TO Z=120</text>
+ <text x="450" y="525" transform="rotate(-90 450 525)">WEST DETOUR EXTENDED</text>
+ <text x="550" y="525" transform="rotate(-90 550 525)">EAST DETOUR EXTENDED</text>
+</g>
+<rect x="670" y="86" width="230" height="135" rx="8" fill="#fff" opacity=".94" stroke="#777"/>
+<text x="686" y="110" font-family="Arial" font-size="13" font-weight="bold">Option B</text>
+<text x="686" y="133" font-family="Arial" font-size="11">• Bridge centered at X=0</text>
+<text x="686" y="153" font-family="Arial" font-size="11">• Side road arms preserved</text>
+<text x="686" y="173" font-family="Arial" font-size="11">• Detours extended to Z=120</text>
+<text x="686" y="193" font-family="Arial" font-size="11">• Bypass shifted to Z=120</text>
+<text x="500" y="665" text-anchor="middle" font-family="Arial" font-size="12" fill="#444">Not to scale for vertical elevation; exact footprints are listed in the accompanying Markdown proposal.</text>
+</svg>
