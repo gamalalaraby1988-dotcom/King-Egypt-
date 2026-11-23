@@ -82,7 +82,8 @@ func _build_phone_visual() -> void:
 	palm_mesh.height = 2.0
 	palm.mesh = palm_mesh
 	palm.scale = Vector3(0.078, 0.092, 0.052)
-	palm.position = Vector3(0.0, -0.005, 0.043)
+	# راحة اليد خلف الهاتف، على الجهة البعيدة عن وجه الشخصية.
+	palm.position = Vector3(0.0, -0.005, -0.043)
 	palm.material_override = _material(SKIN)
 	phone_visual.add_child(palm)
 	var thumb := MeshInstance3D.new()
@@ -91,7 +92,7 @@ func _build_phone_visual() -> void:
 	thumb_mesh.radius = 0.018
 	thumb_mesh.height = 0.075
 	thumb.mesh = thumb_mesh
-	thumb.position = Vector3(-0.066, -0.005, -0.031)
+	thumb.position = Vector3(-0.066, -0.005, 0.031)
 	thumb.rotation.z = -0.35
 	thumb.material_override = _material(SKIN)
 	phone_visual.add_child(thumb)
@@ -103,7 +104,7 @@ func _build_phone_visual() -> void:
 		finger_mesh.radius = 0.012
 		finger_mesh.height = 0.064
 		finger.mesh = finger_mesh
-		finger.position = Vector3(0.061, -0.067 + float(finger_index) * 0.062, -0.031)
+		finger.position = Vector3(0.061, -0.067 + float(finger_index) * 0.062, 0.031)
 		finger.rotation.z = 0.16
 		finger.material_override = _material(SKIN)
 		phone_visual.add_child(finger)
@@ -112,7 +113,8 @@ func _build_phone_visual() -> void:
 	var screen_mesh := BoxMesh.new()
 	screen_mesh.size = Vector3(0.112, 0.192, 0.003)
 	screen.mesh = screen_mesh
-	screen.position.z = -0.014
+	# الشاشة على جهة +Z لتواجه وجه الشخصية الموجود أمام الهاتف.
+	screen.position.z = 0.014
 	var screen_material := StandardMaterial3D.new()
 	screen_material.albedo_color = Color("#6d9db8")
 	screen_material.emission_enabled = true
