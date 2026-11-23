@@ -436,6 +436,7 @@ func _on_peer_connected(peer_id: int) -> void:
 		"velocity": Vector3.ZERO,
 		"last_sequence": -1,
 		"jet_ski_mounted": false,
+		"jet_ski_slot": -1,
 		"jet_ski_position": Vector3.ZERO,
 		"jet_ski_rotation_y": 0.0,
 		"jet_ski_velocity": Vector3.ZERO,
@@ -670,18 +671,25 @@ func request_jet_ski_mount_rpc() -> void:
 	if not is_instance_valid(body) or body.global_position.distance_to(JET_SKI_SERVER_LAUNCH_POSITION) > JET_SKI_SERVER_BOARDING_RADIUS:
 		rpc_id(peer_id, "receive_jet_ski_mount_result", false, "اقترب من بوابة الجت سكي الملكية أولًا.")
 		return
-	var occupied_slots := 0
+	var used_jet_ski_slots: Dictionary = {}
 	for other_variant in _sessions.keys():
-		if bool((_sessions[int(other_variant)] as Dictionary).get("jet_ski_mounted", false)):
-			occupied_slots += 1
-	var slot_column := occupied_slots % 5
-	var slot_row := floori(float(occupied_slots) / 5.0)
+		var other_session: Dictionary = _sessions[int(other_variant)]
+		if bool(other_session.get("jet_ski_mounted", false)):
+			var occupied_slot := int(other_session.get("jet_ski_slot", -1))
+			if occupied_slot >= 0:
+				used_jet_ski_slots[occupied_slot] = true
+	var slot_index := 0
+	while used_jet_ski_slots.has(slot_index):
+		slot_index += 1
+	var slot_column := slot_index % 5
+	var slot_row := floori(float(slot_index) / 5.0)
 	var launch_slot := JET_SKI_SERVER_LAUNCH_POSITION + Vector3(float(slot_column - 2) * 2.2, 0.0, float(slot_row) * 3.2)
 	var now_usec := Time.get_ticks_usec()
 	session["jet_ski_last_sequence"] = 0
 	session["jet_ski_input_window_usec"] = now_usec
 	session["jet_ski_input_count"] = 0
 	session["jet_ski_mounted"] = true
+	session["jet_ski_slot"] = slot_index
 	session["jet_ski_position"] = launch_slot
 	session["jet_ski_rotation_y"] = body.rotation.y
 	session["jet_ski_velocity"] = Vector3.ZERO
@@ -724,6 +732,7 @@ func request_jet_ski_unmount_rpc() -> void:
 	body.global_position = craft_position + right * 2.0 + Vector3.UP * 0.15
 	body.velocity = Vector3.ZERO
 	session["jet_ski_mounted"] = false
+	session["jet_ski_slot"] = -1
 	session["jet_ski_throttle"] = 0.0
 	session["jet_ski_brake"] = 0.0
 	session["jet_ski_steering"] = 0.0
