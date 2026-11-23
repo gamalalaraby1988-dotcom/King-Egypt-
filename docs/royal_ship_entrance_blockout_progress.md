@@ -227,3 +227,13 @@
 - Script commit: `888f636599a44a569aaddb4ca92a275a53b20936`.
 - Fresh Godot validation and rendered capture are required; mesh winding, appearance and framing have not yet been visually verified.
 - This remains procedural review geometry, not a final ship asset. No merge to `main`; no production collision, vehicle physics, interaction trigger or online entry logic is claimed.
+
+
+## Curved deck render review — 2026-11-23
+
+- Godot validation run `45167850399` completed successfully.
+- Render workflow `45167850600` completed its render and artifact upload successfully; artifact `14816140916` was downloaded and inspected as the exact 1280x720 PNG from the waterfront preview scene.
+- The new tier ribbons are visible, but the render exposes a geometry/material issue: broad bright upper surfaces dominate the ship and the decks still read as flat horizontal wings rather than a convincing curved multi-deck cruise vessel. Some trim appears thin and disconnected at the outer ends.
+- The frontal composition shows the gate and enlarged mask clearly, but the overall ship remains a stylized low-detail blockout, not a visual match for the user's reference image.
+- Next pass must correct the deck ribbon surface construction and tone down the large bright surfaces, strengthen the blue hull/deck volumes, and create continuous rounded balcony profiles before another render is reviewed.
+- This is a scene-render verification only. No final ship asset, gameplay collision, vehicle physics, player interaction trigger, or server-authoritative entry system is claimed. No merge to `main`.
