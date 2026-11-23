@@ -26,6 +26,12 @@ var vehicle_summon_button: Button = null
 var scooter_toggle_button: Button = null
 var city_scooter: CharacterBody3D = null
 var scooter_occupied := false
+var city_jet_ski: CharacterBody3D = null
+var jet_ski_occupied := false
+var _jet_ski_saved_collision_layer := 1
+var _jet_ski_saved_collision_mask := 1
+const JET_SKI_LAUNCH_POSITION := Vector3(0.0, 0.34, 91.0)
+const JET_SKI_BOARDING_RADIUS := 8.0
 var _scooter_saved_collision_layer := 1
 var _scooter_saved_collision_mask := 1
 var vehicle_occupied := false
@@ -131,9 +137,11 @@ func _process(_delta: float) -> void:
 		_recover_vehicle_occupancy()
 	if scooter_occupied and (not is_instance_valid(city_scooter) or not is_instance_valid(city_scooter.get_node_or_null("Player"))):
 		_recover_scooter_occupancy()
+	if jet_ski_occupied and (not is_instance_valid(city_jet_ski) or not is_instance_valid(city_jet_ski.get_node_or_null("Player"))):
+		_recover_jet_ski_occupancy()
 	var player := get_node_or_null("Player") as CharacterBody3D
 	var player_needs_exit: bool = is_instance_valid(player) and (player.get("sitting") == true or player.get("animal_riding") == true)
-	if vehicle_occupied or scooter_occupied or player_needs_exit:
+	if vehicle_occupied or scooter_occupied or jet_ski_occupied or player_needs_exit:
 		if is_instance_valid(vehicle_interaction_button):
 			vehicle_interaction_button.visible = true
 			vehicle_interaction_button.text = "🚪↗"
@@ -159,7 +167,7 @@ func _process(_delta: float) -> void:
 
 
 func return_player_to_start_position() -> bool:
-	if interior_transition_busy or is_instance_valid(interior_root) or vehicle_occupied or scooter_occupied:
+	if interior_transition_busy or is_instance_valid(interior_root) or vehicle_occupied or scooter_occupied or jet_ski_occupied:
 		return false
 	if GameModeManager.is_online_ready():
 		# Online recovery is requested from the authority; never teleport locally.
@@ -179,7 +187,7 @@ func return_player_to_start_position() -> bool:
 
 func _guard_player_safety() -> void:
 	# Offline recovery only; online movement remains server-authoritative.
-	if interior_transition_busy or is_instance_valid(interior_root) or vehicle_occupied:
+	if interior_transition_busy or is_instance_valid(interior_root) or vehicle_occupied or jet_ski_occupied:
 		return
 	var player := get_node_or_null("Player") as CharacterBody3D
 	if not is_instance_valid(player) or not player.is_physics_processing():
@@ -385,9 +393,28 @@ func _summon_electric_scooter() -> void:
 			scooter_toggle_button.tooltip_text = "استدعاء السكوتر الكهربائي" if CityLanguage.get_language() == "ar" else "Call electric scooter"
 
 func try_enter_summoned_vehicle() -> bool:
-	# Shared contextual interaction: prefer the nearby standing scooter, then the car.
+	# Board the personal watercraft only from the marked start gate on the royal sea course.
+	if jet_ski_occupied:
+		return true
 	if scooter_occupied:
 		return true
+	if not vehicle_occupied and not scooter_occupied and _is_local_city_interaction_allowed():
+		var launch_player := get_node_or_null("Player") as CharacterBody3D
+		if is_instance_valid(launch_player) and launch_player.global_position.distance_to(JET_SKI_LAUNCH_POSITION) <= JET_SKI_BOARDING_RADIUS:
+			if not is_instance_valid(city_jet_ski):
+				var jet_ski_scene := load("res://scenes/jet_ski.tscn") as PackedScene
+				if jet_ski_scene == null:
+					push_warning("تعذر تحميل الجت سكي الملكي.")
+					return false
+				city_jet_ski = jet_ski_scene.instantiate() as CharacterBody3D
+				if city_jet_ski == null:
+					return false
+				city_jet_ski.name = "PlayerRoyalJetSki"
+				add_child(city_jet_ski)
+			city_jet_ski.global_position = JET_SKI_LAUNCH_POSITION
+			city_jet_ski.global_rotation.y = launch_player.global_rotation.y
+			_mount_player_jet_ski()
+			return jet_ski_occupied
 	if is_instance_valid(city_scooter) and not vehicle_occupied and _is_local_city_interaction_allowed():
 		var scooter_player := get_node_or_null("Player") as CharacterBody3D
 		if is_instance_valid(scooter_player) and scooter_player.global_position.distance_to(city_scooter.global_position) <= 5.0:
@@ -402,6 +429,9 @@ func try_enter_summoned_vehicle() -> bool:
 	return vehicle_occupied
 
 func _exit_contextual_state() -> void:
+	if jet_ski_occupied:
+		_exit_player_jet_ski()
+		return
 	if scooter_occupied:
 		_exit_player_scooter()
 		return
@@ -549,6 +579,110 @@ func _toggle_vehicle_use() -> void:
 		vehicle_interaction_button.text = "🚪↗"
 		vehicle_interaction_button.tooltip_text = "النزول من السيارة" if CityLanguage.get_language() == "ar" else "Exit vehicle"
 		vehicle_interaction_button.visible = true
+
+func _mount_player_jet_ski() -> void:
+	if jet_ski_occupied or not is_instance_valid(city_jet_ski):
+		return
+	var player := get_node_or_null("Player") as CharacterBody3D
+	if not is_instance_valid(player) or player.get("animal_riding") == true or player.get("sitting") == true:
+		return
+	_jet_ski_saved_collision_layer = player.collision_layer
+	_jet_ski_saved_collision_mask = player.collision_mask
+	_set_mobile_hud_active(false)
+	player.set_mobile_move(Vector2.ZERO)
+	player.set_mobile_sprint(false)
+	player.velocity = Vector3.ZERO
+	player.collision_layer = 0
+	player.collision_mask = 0
+	player.set_physics_process(false)
+	player.reparent(city_jet_ski, true)
+	player.position = Vector3(0.0, 0.88, 0.28)
+	player.rotation = Vector3.ZERO
+	player.visible = true
+	player.sitting = true
+	var player_camera := player.get_node_or_null("CameraPivot/SpringArm3D/Camera3D") as Camera3D
+	if is_instance_valid(player_camera):
+		player_camera.current = false
+	var jet_camera := city_jet_ski.get_node_or_null("CameraPivot/SpringArm3D/JetSkiCamera") as Camera3D
+	if is_instance_valid(jet_camera):
+		jet_camera.current = true
+	var jet_hud := city_jet_ski.get_node_or_null("JetSkiHUDLayer") as CanvasLayer
+	if is_instance_valid(jet_hud):
+		jet_hud.visible = true
+	city_jet_ski.set_physics_process(true)
+	jet_ski_occupied = true
+	if is_instance_valid(vehicle_interaction_button):
+		vehicle_interaction_button.text = "🚪↗"
+		vehicle_interaction_button.tooltip_text = "النزول من الجت سكي" if CityLanguage.get_language() == "ar" else "Exit jet ski"
+		vehicle_interaction_button.visible = true
+	if is_instance_valid(vehicle_summon_button):
+		vehicle_summon_button.visible = false
+	if is_instance_valid(scooter_toggle_button):
+		scooter_toggle_button.visible = false
+
+
+func _exit_player_jet_ski() -> void:
+	if not jet_ski_occupied or not is_instance_valid(city_jet_ski):
+		return
+	var player := city_jet_ski.get_node_or_null("Player") as CharacterBody3D
+	if not is_instance_valid(player):
+		_recover_jet_ski_occupancy()
+		return
+	var exit_position := city_jet_ski.global_position + city_jet_ski.global_transform.basis.x.normalized() * 2.0 + Vector3.UP * 0.15
+	player.reparent(self, true)
+	player.global_position = exit_position
+	player.velocity = Vector3.ZERO
+	player.sitting = false
+	player.collision_layer = _jet_ski_saved_collision_layer
+	player.collision_mask = _jet_ski_saved_collision_mask
+	player.set_physics_process(true)
+	var jet_camera := city_jet_ski.get_node_or_null("CameraPivot/SpringArm3D/JetSkiCamera") as Camera3D
+	if is_instance_valid(jet_camera):
+		jet_camera.current = false
+	var player_camera := player.get_node_or_null("CameraPivot/SpringArm3D/Camera3D") as Camera3D
+	if is_instance_valid(player_camera):
+		player_camera.current = true
+	var jet_hud := city_jet_ski.get_node_or_null("JetSkiHUDLayer") as CanvasLayer
+	if is_instance_valid(jet_hud):
+		var controls := jet_hud.get_node_or_null("JetSkiHUD") as Control
+		if is_instance_valid(controls) and controls.has_method("_clear_controls"):
+			controls.call("_clear_controls")
+		jet_hud.visible = false
+	city_jet_ski.call("clear_controls")
+	city_jet_ski.set_physics_process(false)
+	jet_ski_occupied = false
+	_set_mobile_hud_active(true)
+	if is_instance_valid(vehicle_interaction_button):
+		vehicle_interaction_button.visible = false
+	if is_instance_valid(vehicle_summon_button):
+		vehicle_summon_button.visible = true
+	if is_instance_valid(scooter_toggle_button):
+		scooter_toggle_button.visible = true
+
+
+func _recover_jet_ski_occupancy() -> void:
+	var player := city_jet_ski.get_node_or_null("Player") as CharacterBody3D if is_instance_valid(city_jet_ski) else null
+	if is_instance_valid(player):
+		player.reparent(self, true)
+		player.sitting = false
+		player.collision_layer = _jet_ski_saved_collision_layer
+		player.collision_mask = _jet_ski_saved_collision_mask
+		player.set_physics_process(true)
+		var player_camera := player.get_node_or_null("CameraPivot/SpringArm3D/Camera3D") as Camera3D
+		if is_instance_valid(player_camera):
+			player_camera.current = true
+	if is_instance_valid(city_jet_ski):
+		city_jet_ski.call("clear_controls")
+		city_jet_ski.set_physics_process(false)
+		var jet_camera := city_jet_ski.get_node_or_null("CameraPivot/SpringArm3D/JetSkiCamera") as Camera3D
+		if is_instance_valid(jet_camera):
+			jet_camera.current = false
+		var jet_hud := city_jet_ski.get_node_or_null("JetSkiHUDLayer") as CanvasLayer
+		if is_instance_valid(jet_hud):
+			jet_hud.visible = false
+	jet_ski_occupied = false
+	_set_mobile_hud_active(is_instance_valid(player))
+
 
 func _recover_vehicle_occupancy() -> void:
 	# لا تترك حالة الركوب عالقة إذا حُذفت السيارة أو اللاعب أثناء القيادة.
