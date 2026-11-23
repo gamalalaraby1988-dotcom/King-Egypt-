@@ -217,3 +217,13 @@
 - Visual review also reveals the current blockout still has broad flat bright deck slabs and a simplified low-poly face; the new size alone does not reproduce the reference image's elegant curved multi-deck ship. The camera framing also makes the foreground bridge prominent and the ship read as a wide, flat facade.
 - The scale change is therefore an intermediate review result, not final approval. Next pass should refine the curved side-deck silhouettes and hull volume and rebalance the camera composition so the enlarged vessel reads as a majestic ship rather than a flat facade.
 - No final ship asset, collision, vehicle physics, interaction trigger or server-authoritative ship-entry logic is claimed. No merge to `main`.
+
+
+## Curved stepped deck and camera-composition pass — 2026-11-23
+
+- Replaced the four rectangular side-deck tier slabs with custom extruded ribbon meshes. Each tier now sweeps downward toward both bow/stern ends, with matching curved gold edge bands; the side-balcony trim remains.
+- Added helper functions `_ship_deck_ribbon_mesh` and `_ship_deck_ribbon`; all deck ribbons join the same `royal_ship_visuals` scale group.
+- Rebalanced the review camera to position `(0, 22, 135)`, FOV `56`, looking toward `(0, 9, 88)`, reducing some foreground bridge dominance while retaining the bridge-to-gate relationship.
+- Script commit: `888f636599a44a569aaddb4ca92a275a53b20936`.
+- Fresh Godot validation and rendered capture are required; mesh winding, appearance and framing have not yet been visually verified.
+- This remains procedural review geometry, not a final ship asset. No merge to `main`; no production collision, vehicle physics, interaction trigger or online entry logic is claimed.
