@@ -30,6 +30,20 @@ func _run() -> void:
 	if phone.get_node_or_null("RightHandThumb") == null:
 		_fail("Visible thumb was not added to the front edge of the phone.")
 		return
+
+	var screen_viewport := phone.get_node_or_null("PhoneScreenViewport") as SubViewport
+	if not is_instance_valid(screen_viewport) or screen_viewport.size != Vector2i(256, 448):
+		_fail("Phone screen does not contain its portrait app viewport.")
+		return
+	if phone.get_node_or_null("PhoneScreen") == null:
+		_fail("Phone screen surface is missing.")
+		return
+	avatar.call("set_phone_screen_content", "متجر المركبات", ["المال: 100", "سيارة Horus — مملوكة"])
+	await process_frame
+	var screen_content: VBoxContainer = avatar.get("phone_screen_content") as VBoxContainer
+	if not is_instance_valid(screen_content) or screen_content.get_child_count() < 4:
+		_fail("Phone screen did not render the supplied menu entries.")
+		return
 	for finger_index in range(3):
 		if phone.get_node_or_null("RightHandFinger_%d" % finger_index) == null:
 			_fail("A gripping finger is missing from the phone hand.")
