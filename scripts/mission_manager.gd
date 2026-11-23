@@ -641,14 +641,7 @@ func _process(_delta: float) -> void:
 	_update_rescue_interaction_prompt()
 	var interaction_key_down := Input.is_key_pressed(KEY_E)
 	var city_root := get_tree().current_scene
-	var vehicle_has_priority := false
-	if interaction_key_down and is_instance_valid(city_root):
-		if bool(city_root.get("vehicle_occupied")):
-			vehicle_has_priority = true
-		else:
-			var city_vehicle := city_root.get("city_vehicle") as Node3D
-			if is_instance_valid(city_vehicle) and player.global_position.distance_to(city_vehicle.global_position) <= 5.0:
-				vehicle_has_priority = true
+	var vehicle_has_priority := is_instance_valid(city_root) and bool(city_root.get("vehicle_occupied"))
 	if interaction_key_down and not _key_was_down and not mission_running and not job_running and not vehicle_has_priority:
 		interact()
 	_key_was_down = interaction_key_down
@@ -773,7 +766,7 @@ func _update_interaction_hud() -> void:
 	var player_is_busy: bool = is_instance_valid(player) and (bool(player.get("sitting")) or bool(player.get("animal_riding")))
 	var city_root := get_tree().current_scene
 	var nearby_vehicle: Node3D = city_root.get("city_vehicle") as Node3D if is_instance_valid(city_root) else null
-	var vehicle_in_range := not player_is_busy and is_instance_valid(nearby_vehicle) and is_instance_valid(player) and player.global_position.distance_to(nearby_vehicle.global_position) <= 5.0
+	var vehicle_in_range := not GameModeManager.is_online_ready() and not player_is_busy and is_instance_valid(nearby_vehicle) and is_instance_valid(player) and player.global_position.distance_to(nearby_vehicle.global_position) <= 5.0
 	var has_interaction: bool = (is_instance_valid(nearest_interactable) or vehicle_in_range) and not player_is_busy
 	interact_button.visible = true
 	interact_button.text = "✋"
