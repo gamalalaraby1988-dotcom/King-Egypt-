@@ -5,6 +5,7 @@ extends Node
 
 signal authentication_completed(success: bool, message: String)
 signal authoritative_state_received(position: Vector3, rotation_y: float, velocity: Vector3)
+signal safe_return_completed(success: bool, message: String)
 signal remote_players_received(players: Array)
 signal server_objective_reached(user_id: String, activity_kind: String, activity_id: String)
 signal job_start_result(success: bool, job_id: String, target: Vector3, message: String)
@@ -610,9 +611,11 @@ func request_safe_return_rpc() -> void:
 		return
 	var now_usec := Time.get_ticks_usec()
 	if now_usec - int(session.get("last_safe_return_usec", 0)) < 5000000:
+		rpc_id(peer_id, "receive_safe_return_result", false, "انتظر قليلًا قبل طلب عودة آمنة أخرى.")
 		return
 	var body := session.get("body") as CharacterBody3D
 	if not is_instance_valid(body):
+		rpc_id(peer_id, "receive_safe_return_result", false, "تعذر العثور على شخصية اللاعب على الخادم.")
 		return
 	# Server-owned relocation: reset movement only; keep account, inventory,
 	# friends, wallet, mission and all persisted progression untouched.
@@ -627,6 +630,14 @@ func request_safe_return_rpc() -> void:
 	session["last_safe_position"] = SPAWN_POSITION
 	session["last_safe_return_usec"] = now_usec
 	_sessions[peer_id] = session
+	rpc_id(peer_id, "receive_safe_return_result", true, "تمت إعادتك إلى نقطة بداية المدينة. حسابك وممتلكاتك وتقدمك محفوظة.")
+
+
+@rpc("authority", "call_remote", "reliable")
+func receive_safe_return_result(success: bool, message: String) -> void:
+	if multiplayer.is_server() or not is_authenticated():
+		return
+	safe_return_completed.emit(success, message)
 
 
 func send_player_sit(is_sitting: bool) -> void:
