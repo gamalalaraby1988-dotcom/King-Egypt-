@@ -15,6 +15,7 @@ func _ready() -> void:
 	_build_districts()
 	_build_main_street_wall_ads()
 	_build_nile_waterfront()
+	_build_jet_ski_course()
 	_build_pyramids()
 	_build_royal_gate_and_square()
 	_build_royal_square_mosaic_mural()
@@ -278,18 +279,17 @@ func _build_districts() -> void:
 		["apartment_palace_2","قصر الشقق الثاني",Vector3(-30,0,30),Vector2(12,12),12.0],
 		["apartment_palace_3","قصر الشقق الثالث",Vector3(0,0,30),Vector2(12,12),12.0],
 		["apartment_palace_4","قصر الشقق الرابع",Vector3(30,0,30),Vector2(12,12),12.0],
-		["cinema","السينما",Vector3(60,0,30),Vector2(12,10),7.0],
-		["royal_theater","المسرح الملكي",Vector3(-60,0,60),Vector2(13,11),9.0],
-		["stadium","الملعب الرياضي",Vector3(-30,0,60),Vector2(16,12),8.0],
-		["sports_club","النادي الرياضي",Vector3(0,0,60),Vector2(12,10),7.0],
-		["water_city","المدينة المائية",Vector3(30,0,60),Vector2(14,12),6.0],
-		["daily_arcade","مركز DAILY ARCADE",Vector3(60,0,60),Vector2(13,10),8.0],
+		["cinema","السينما",Vector3(0,0,-150),Vector2(12,10),7.0],
+		["royal_theater","المسرح الملكي",Vector3(-35,0,-120),Vector2(13,11),9.0],
+		["stadium","الملعب الرياضي",Vector3(0,0,-120),Vector2(16,12),8.0],
+		["sports_club","النادي الرياضي",Vector3(35,0,-120),Vector2(12,10),7.0],
+		["water_city","المدينة المائية",Vector3(-35,0,-150),Vector2(14,12),6.0],
+		["daily_arcade","مركز DAILY ARCADE",Vector3(35,0,-150),Vector2(13,10),8.0],
 		["police_station","مركز الشرطة",Vector3(-75,0,-5),Vector2(10,9),7.0],
 		["courthouse","المحكمة",Vector3(75,0,-5),Vector2(11,9),8.0],
 		["fire_rescue","مركز الإطفاء والإنقاذ",Vector3(-75,0,15),Vector2(11,9),7.0],
 		["train_station","محطة القطار",Vector3(75,0,15),Vector2(13,9),7.0],
-		["marina_terminal","محطة المارينا البحرية",Vector3(75,0,38),Vector2(13,9),7.0],
-		["royal_yacht_club","نادي اليخوت الملكي",Vector3(75,0,58),Vector2(13,9),7.0],
+				["royal_yacht_club","النادي الشاطئي الملكي",Vector3(75,0,58),Vector2(13,9),7.0],
 		["adventure_center","مركز المغامرات",Vector3(-75,0,58),Vector2(11,9),7.0],
 		["desert_lodge","نزل المخيم الصحراوي الملكي",Vector3(-75,0,75),Vector2(12,10),6.0],
 		["mountain_temple","المعبد الملكي أعلى الجبل",Vector3(75,0,75),Vector2(13,11),10.0]
@@ -345,22 +345,61 @@ func _build_open_fuel_station() -> void:
 
 
 func _build_nile_waterfront() -> void:
-	# A real open basin: the matching ground section is omitted in main.gd, so
-	# the player cannot walk on a hidden terrain floor beneath the water.
-	var water := _box(self, "NileWaterfront", Vector3(24.0, 0.18, 24.0), Vector3(0, -0.12, 90.0), Color(0.025, 0.24, 0.34))
+	# The former enclosed marina basin is replaced by open sea. main.gd removes
+	# the matching terrain footprint so there is no hidden walkable floor.
+	var water := _box(self, "RoyalOpenSea", Vector3(120.0, 0.18, 72.0), Vector3(0.0, -0.12, 114.0), Color(0.025, 0.24, 0.34))
 	var water_material := _mat(Color(0.025, 0.24, 0.34), 0.12)
 	water_material.roughness = 0.2
 	water.material_override = water_material
-	# Low sandstone quay edges define the basin without moving the promenade,
-	# ship, pier, or the service roads that pass outside the basin.
+	# A continuous promenade forms the northern edge of the open-water beach.
+	_box(self, "WaterfrontPromenade", Vector3(180.0, 0.28, 3.0), Vector3(0.0, 0.02, 76.0), SAND)
+	for x in [-65.0, -45.0, -25.0, 25.0, 45.0, 65.0]:
+		_box(self, "PromenadeLamp", Vector3(0.18, 3.0, 0.18), Vector3(x, 1.5, 74.0), GOLD)
+		_box(self, "PromenadeLampHead", Vector3(0.8, 0.18, 0.8), Vector3(x, 3.0, 74.0), GOLD)
+		_add_city_night_light(self, "PromenadeNightLight", Vector3(x, 2.9, 74.0), 8.0)
+
+
+func _build_jet_ski_course() -> void:
+	# Visual course layout only: authoritative watercraft movement and race
+	# validation are implemented in a later gameplay stage.
+	var course := Node3D.new()
+	course.name = "RoyalJetSkiCourse"
+	course.add_to_group("city_world_geometry")
+	course.add_to_group("royal_jet_ski_course")
+	add_child(course)
+	_add_jet_ski_gate(course, "Start", 96.0, "START")
+	_add_jet_ski_gate(course, "Checkpoint1", 111.0, "CHECKPOINT 1")
+	_add_jet_ski_gate(course, "Checkpoint2", 126.0, "CHECKPOINT 2")
+	_add_jet_ski_gate(course, "Checkpoint3", 141.0, "CHECKPOINT 3")
+	_add_jet_ski_gate(course, "Finish", 148.0, "FINISH")
+
+
+func _add_jet_ski_gate(parent: Node3D, gate_id: String, z_position: float, label_text: String) -> void:
+	var gate := Node3D.new()
+	gate.name = "JetSkiGate_" + gate_id
+	gate.position = Vector3(0.0, 0.0, z_position)
+	parent.add_child(gate)
 	for side in [-1.0, 1.0]:
-		_box(self, "MarinaQuayEdge", Vector3(0.8, 0.55, 24.0), Vector3(side * 12.4, 0.12, 90.0), SAND)
-	_box(self, "MarinaSouthQuay", Vector3(24.0, 0.55, 0.8), Vector3(0, 0.12, 102.4), SAND)
-	_box(self, "WaterfrontPromenade", Vector3(180, 0.28, 3.0), Vector3(0, 0.02, 76), SAND)
-	for x in [-65.0,-45.0,-25.0,25.0,45.0,65.0]:
-		_box(self, "PromenadeLamp", Vector3(0.18, 3.0, 0.18), Vector3(x, 1.5, 74), GOLD)
-		_box(self, "PromenadeLampHead", Vector3(0.8, 0.18, 0.8), Vector3(x, 3.0, 74), GOLD)
-		_add_city_night_light(self, "PromenadeNightLight", Vector3(x, 2.9, 74), 8.0)
+		var buoy := MeshInstance3D.new()
+		buoy.name = "GateBuoy"
+		var sphere := SphereMesh.new()
+		sphere.radius = 0.8 if gate_id == "Start" or gate_id == "Finish" else 0.65
+		sphere.height = sphere.radius * 2.0
+		buoy.mesh = sphere
+		buoy.position = Vector3(side * 21.0, 0.15, 0.0)
+		buoy.material_override = _mat(GOLD if gate_id == "Start" or gate_id == "Finish" else TEAL, 0.18)
+		buoy.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		gate.add_child(buoy)
+	var marker := Label3D.new()
+	marker.name = "GateLabel"
+	marker.text = label_text
+	marker.position = Vector3(0.0, 3.0, 0.0)
+	marker.font_size = 26
+	marker.pixel_size = 0.012
+	marker.modulate = Color(1.0, 0.88, 0.58)
+	marker.outline_size = 5
+	marker.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	gate.add_child(marker)
 
 func _build_pyramids() -> void:
 	# Place the Giza landmarks beyond the northern city skyline so they read as a distant desert region.
@@ -737,11 +776,11 @@ func _build_waterfront_landscaping() -> void:
 
 
 func _build_beach_handball_court() -> void:
-	# Open sandy beach-handball area beside the marina's south-east shoreline.
+	# Open sandy beach-handball area on the expanded eastern beach.
 	# It is a walkable outdoor court, not an enclosed building or interaction point.
 	var beach := Node3D.new()
 	beach.name = "BeachHandballCourt"
-	beach.position = Vector3(40.0, 0.0, 125.0)
+	beach.position = Vector3(90.0, 0.0, 130.0)
 	beach.add_to_group("city_world_geometry")
 	add_child(beach)
 
@@ -901,14 +940,11 @@ func _build_access_roads_and_parking() -> void:
 	_path_segment(self, "WestAdventureAccess_02", Vector3(-84.0, 0.12, 58.0), Vector3(-84.0, 0.12, 75.0), 3.6, SAND)
 	_path_segment(self, "AdventureCenterEntranceWalk", Vector3(-84.0, 0.12, 62.5), Vector3(-75.0, 0.12, 62.6), 3.0, SAND)
 	_path_segment(self, "DesertLodgeEntranceWalk", Vector3(-84.0, 0.12, 75.0), Vector3(-75.0, 0.12, 80.7), 3.0, SAND)
-	# Marina terminal and yacht club: a clear pedestrian spine runs beside the building fronts.
-	_path_segment(self, "MarinaTerminalAccess_01", Vector3(95.0, 0.12, 38.0), Vector3(84.0, 0.12, 38.0), 3.6, SAND)
-	_path_segment(self, "MarinaPromenadeSpine", Vector3(84.0, 0.12, 38.0), Vector3(84.0, 0.12, 62.0), 3.6, SAND)
-	_path_segment(self, "MarinaTerminalEntranceWalk", Vector3(84.0, 0.12, 42.5), Vector3(75.0, 0.12, 42.6), 3.0, SAND)
-	_path_segment(self, "YachtClubEntranceWalk", Vector3(84.0, 0.12, 62.0), Vector3(75.0, 0.12, 62.6), 3.0, SAND)
-	# Beach handball court access joins the waterfront promenade to the open sand apron.
-	_path_segment(self, "BeachHandballPromenadeConnector", Vector3(32.0, 0.12, 76.0), Vector3(32.0, 0.12, 106.0), 3.6, SAND)
-	_path_segment(self, "BeachHandballApronEntry", Vector3(32.0, 0.12, 106.0), Vector3(40.0, 0.12, 107.0), 3.6, SAND)
+	# The former yacht-club building is now the Royal Beach Club; no marina terminal remains.
+	_path_segment(self, "RoyalBeachClubEntranceWalk", Vector3(84.0, 0.12, 62.0), Vector3(75.0, 0.12, 62.6), 3.0, SAND)
+	# Beach handball access stays on dry land east of the expanded open sea.
+	_path_segment(self, "BeachHandballPromenadeConnector", Vector3(72.0, 0.12, 76.0), Vector3(72.0, 0.12, 106.0), 3.6, SAND)
+	_path_segment(self, "BeachHandballApronEntry", Vector3(72.0, 0.12, 106.0), Vector3(90.0, 0.12, 112.0), 3.6, SAND)
 	# Temple approach branches from the mountain trail without moving the temple or summit.
 	_path_segment(self, "MountainTempleEntranceWalk", Vector3(83.0, 0.12, 68.0), Vector3(75.0, 0.12, 80.7), 3.2, SAND)
 	# Short, collision-backed approaches connect visible entrances to the nearest public walk.
@@ -925,12 +961,12 @@ func _build_access_roads_and_parking() -> void:
 		["ApartmentTwoEntranceWalk", Vector3(-30.0, 0.12, 37.4), Vector3(-30.0, 0.12, 40.0)],
 		["ApartmentThreeEntranceWalk", Vector3(0.0, 0.12, 37.4), Vector3(0.0, 0.12, 40.0)],
 		["ApartmentFourEntranceWalk", Vector3(30.0, 0.12, 37.4), Vector3(30.0, 0.12, 40.0)],
-		["CinemaEntranceWalk", Vector3(60.0, 0.12, 36.4), Vector3(60.0, 0.12, 40.0)],
-		["TheaterEntranceWalk", Vector3(-60.0, 0.12, 66.9), Vector3(-60.0, 0.12, 74.0)],
-		["StadiumEntranceWalk", Vector3(-30.0, 0.12, 66.9), Vector3(-30.0, 0.12, 74.0)],
-		["SportsClubEntranceWalk", Vector3(0.0, 0.12, 66.9), Vector3(0.0, 0.12, 74.0)],
-		["WaterCityEntranceWalk", Vector3(30.0, 0.12, 66.9), Vector3(30.0, 0.12, 74.0)],
-		["DailyArcadeEntranceWalk", Vector3(60.0, 0.12, 66.9), Vector3(60.0, 0.12, 74.0)]
+		["CinemaEntranceWalk", Vector3(0.0, 0.12, -143.6), Vector3(0.0, 0.12, -138.0)],
+		["TheaterEntranceWalk", Vector3(-35.0, 0.12, -113.1), Vector3(-35.0, 0.12, -108.0)],
+		["StadiumEntranceWalk", Vector3(0.0, 0.12, -113.1), Vector3(0.0, 0.12, -108.0)],
+		["SportsClubEntranceWalk", Vector3(35.0, 0.12, -113.1), Vector3(35.0, 0.12, -108.0)],
+		["WaterCityEntranceWalk", Vector3(-35.0, 0.12, -143.1), Vector3(-35.0, 0.12, -138.0)],
+		["DailyArcadeEntranceWalk", Vector3(35.0, 0.12, -143.1), Vector3(35.0, 0.12, -138.0)]
 	]
 	for walk in entrance_walks:
 		_path_segment(self, str(walk[0]), walk[1], walk[2], 2.6, SAND)
