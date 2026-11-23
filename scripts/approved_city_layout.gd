@@ -278,12 +278,12 @@ func _build_districts() -> void:
 		["apartment_palace_2","قصر الشقق الثاني",Vector3(-30,0,30),Vector2(12,12),12.0],
 		["apartment_palace_3","قصر الشقق الثالث",Vector3(0,0,30),Vector2(12,12),12.0],
 		["apartment_palace_4","قصر الشقق الرابع",Vector3(30,0,30),Vector2(12,12),12.0],
-		["cinema","السينما",Vector3(0,0,-195),Vector2(12,10),7.0],
-		["royal_theater","المسرح الملكي",Vector3(-35,0,-165),Vector2(13,11),9.0],
-		["stadium","الملعب الرياضي",Vector3(0,0,-165),Vector2(16,12),8.0],
-		["sports_club","النادي الرياضي",Vector3(35,0,-165),Vector2(12,10),7.0],
-		["water_city","المدينة المائية",Vector3(-35,0,-195),Vector2(14,12),6.0],
-		["daily_arcade","مركز DAILY ARCADE",Vector3(35,0,-195),Vector2(13,10),8.0],
+		["cinema","السينما",Vector3(0,0,-150),Vector2(12,10),7.0],
+		["royal_theater","المسرح الملكي",Vector3(-35,0,-120),Vector2(13,11),9.0],
+		["stadium","الملعب الرياضي",Vector3(0,0,-120),Vector2(16,12),8.0],
+		["sports_club","النادي الرياضي",Vector3(35,0,-120),Vector2(12,10),7.0],
+		["water_city","المدينة المائية",Vector3(-35,0,-150),Vector2(14,12),6.0],
+		["daily_arcade","مركز DAILY ARCADE",Vector3(35,0,-150),Vector2(13,10),8.0],
 		["police_station","مركز الشرطة",Vector3(-75,0,-5),Vector2(10,9),7.0],
 		["courthouse","المحكمة",Vector3(75,0,-5),Vector2(11,9),8.0],
 		["fire_rescue","مركز الإطفاء والإنقاذ",Vector3(-75,0,15),Vector2(11,9),7.0],
@@ -925,16 +925,16 @@ func _build_access_roads_and_parking() -> void:
 		["ApartmentTwoEntranceWalk", Vector3(-30.0, 0.12, 37.4), Vector3(-30.0, 0.12, 40.0)],
 		["ApartmentThreeEntranceWalk", Vector3(0.0, 0.12, 37.4), Vector3(0.0, 0.12, 40.0)],
 		["ApartmentFourEntranceWalk", Vector3(30.0, 0.12, 37.4), Vector3(30.0, 0.12, 40.0)],
-		["CinemaEntranceWalk", Vector3(0.0, 0.12, -189.8), Vector3(0.0, 0.12, -180.0)],
-		["TheaterEntranceWalk", Vector3(-35.0, 0.12, -159.5), Vector3(-35.0, 0.12, -180.0)],
-		["StadiumEntranceWalk", Vector3(0.0, 0.12, -158.5), Vector3(0.0, 0.12, -180.0)],
-		["SportsClubEntranceWalk", Vector3(35.0, 0.12, -159.5), Vector3(35.0, 0.12, -180.0)],
-		["WaterCityEntranceWalk", Vector3(-35.0, 0.12, -188.5), Vector3(-35.0, 0.12, -180.0)],
-		["DailyArcadeEntranceWalk", Vector3(35.0, 0.12, -189.5), Vector3(35.0, 0.12, -180.0)]
+		["CinemaEntranceWalk", Vector3(0.0, 0.12, -144.8), Vector3(0.0, 0.12, -135.0)],
+		["TheaterEntranceWalk", Vector3(-35.0, 0.12, -114.5), Vector3(-35.0, 0.12, -135.0)],
+		["StadiumEntranceWalk", Vector3(0.0, 0.12, -113.5), Vector3(0.0, 0.12, -135.0)],
+		["SportsClubEntranceWalk", Vector3(35.0, 0.12, -114.5), Vector3(35.0, 0.12, -135.0)],
+		["WaterCityEntranceWalk", Vector3(-35.0, 0.12, -143.5), Vector3(-35.0, 0.12, -135.0)],
+		["DailyArcadeEntranceWalk", Vector3(35.0, 0.12, -144.5), Vector3(35.0, 0.12, -135.0)]
 	]
 	# Shared north-district access lane joins all six entrances without changing
 	# the existing perimeter road or the approved pyramid/mountain landmarks.
-	_path_segment(self, "NorthDistrictAccessLane", Vector3(-39.0, 0.12, -180.0), Vector3(39.0, 0.12, -180.0), 4.2, DARK)
+	_path_segment(self, "NorthDistrictAccessLane", Vector3(-39.0, 0.12, -135.0), Vector3(39.0, 0.12, -135.0), 4.2, DARK)
 	for walk in entrance_walks:
 		_path_segment(self, str(walk[0]), walk[1], walk[2], 2.6, SAND)
 	_path_segment(self, "PoliceServiceAccess", Vector3(-95.0, 0.12, -5.0), Vector3(-84.0, 0.12, -5.0), 3.2, SAND)
