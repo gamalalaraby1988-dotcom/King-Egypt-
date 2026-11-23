@@ -21,8 +21,8 @@ func _run() -> void:
 		_fail("Phone visual is not attached to the right arm.")
 		return
 	var phone_world_position := phone.global_position
-	if absf(phone_world_position.x) > 0.04 or absf(phone_world_position.y - 1.20) > 0.05:
-		_fail("Phone was not positioned at the center of the chest in the rendered avatar pose.")
+	if absf(phone_world_position.x) > 0.04 or absf(phone_world_position.y - 1.43) > 0.05:
+		_fail("Phone was not positioned at the in front of the lower face in the rendered avatar pose.")
 		return
 	if phone.visible:
 		_fail("Phone should be hidden before phone-use mode starts.")
