@@ -37,3 +37,15 @@
 - النتيجة النهائية وترتيب الفائزين يصدران من الخادم فقط.
 - لا تتغير بيانات الحساب أو الممتلكات أو الأصدقاء أو التقدم بسبب السباق.
 - تُعرض معاينة المسار الفعلي المبني داخل اللعبة قبل اعتماد الدمج، ولا تُدمج تغييرات هذا العمل إلى `main` دون موافقة المؤسس.
+## Layout preparation now present on the feature branch
+- The six public buildings (cinema, royal theater, stadium, sports club, water city, DAILY ARCADE) are moved into two northern rows at Z=-120 and Z=-150 to clear the southern waterfront.
+- The former marina terminal entry is removed. The former yacht-club building is relabeled as the Royal Beach Club; the building ID is retained for compatibility.
+- The enclosed 24×24 basin and quay edges are replaced by a 120×72 open-sea surface centered at (0, 0, 114).
+- The matching central southern ground collision slab is removed; east/west dry-land strips remain, and shoreline access roads are routed outside the water.
+- The beach-handball court is relocated to the eastern dry beach at (90, 0, 130).
+- A visible course layout is placed in the open sea: start at Z=96, checkpoints at Z=111, 126, and 141, finish at Z=148. Each gate has two marker buoys and a label.
+
+## What this does not implement yet
+- The course objects are visual markers only; they do not detect or validate crossings.
+- No drivable jet ski vehicle, water physics, player seating/boarding flow, race lobby, four-player matchmaking, countdown synchronization, server-side checkpoint progression, finish validation, rewards, or race UI has been implemented.
+- No Godot test run has been observed for these new scene changes. The PR remains a draft and must be reviewed and tested before any merge.
