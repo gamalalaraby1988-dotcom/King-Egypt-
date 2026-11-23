@@ -27,6 +27,11 @@ var motion_state := "idle"
 var motion_speed := 0.0
 var motion_time := 0.0
 var animated_defaults: Dictionary = {}
+var phone_using := false
+var phone_visual: Node3D
+var phone_screen_viewport: SubViewport
+var phone_screen_content: VBoxContainer
+signal phone_app_pressed(app_id: String)
 
 func _ready() -> void:
 	_build_base_character()
@@ -35,10 +40,216 @@ func _ready() -> void:
 	apply_outfit(current_outfit)
 	apply_hairstyle(current_hairstyle)
 	_cache_animation_defaults()
+	_build_phone_visual()
 
 func set_motion_state(state: String, speed: float = 0.0) -> void:
 	motion_state = state if ["idle", "walk", "run", "sit", "talk", "wave", "celebrate", "disappointed", "clap", "dance", "cry", "heart"].has(state) else "idle"
 	motion_speed = maxf(speed, 0.0)
+
+
+func set_phone_using(enabled: bool) -> void:
+	phone_using = enabled
+	if is_instance_valid(phone_visual):
+		phone_visual.visible = enabled
+
+
+func _build_phone_visual() -> void:
+	# الهاتف مثبت في اليد اليمنى نفسها، وليس عائمًا في موضع مستقل من الجسم.
+	var right_arm := parts.get("RightArm") as MeshInstance3D
+	if not is_instance_valid(right_arm):
+		return
+	phone_visual = Node3D.new()
+	phone_visual.name = "PlayerPhoneVisual"
+	# إزاحة معكوسة لدوران الذراع: تنقل الهاتف من مستوى الكتف إلى مركز الصدر.
+	# دوران الذراع حول Z يرفع الإحداثي المحلي الموجب Y نحو الكتف؛ لذلك نستخدم Y سالبًا.
+	phone_visual.position = Vector3(-0.36, -0.13, -0.27)
+	phone_visual.rotation = Vector3(-0.08, 0.10, 0.42)
+	phone_visual.visible = false
+	right_arm.add_child(phone_visual)
+	# حافظ على مركز الهاتف عند أمام أسفل الوجه حتى مع دوران الذراع حول مفصل الكتف.
+	phone_visual.global_position = to_global(Vector3(0.0, 1.43, -0.27))
+	_orient_phone_screen_to_head()
+	var body := MeshInstance3D.new()
+	body.name = "PhoneBody"
+	var body_mesh := BoxMesh.new()
+	body_mesh.size = Vector3(0.13, 0.22, 0.025)
+	body.mesh = body_mesh
+	var body_material := StandardMaterial3D.new()
+	body_material.albedo_color = Color("#171a20")
+	body_material.metallic = 0.48
+	body_material.roughness = 0.32
+	body.material_override = body_material
+	phone_visual.add_child(body)
+	# كف اليد خلف الهاتف والإبهام على الحافة، لإظهار مسكة طبيعية.
+	var palm := MeshInstance3D.new()
+	palm.name = "RightHandPalm"
+	var palm_mesh := SphereMesh.new()
+	palm_mesh.radius = 1.0
+	palm_mesh.height = 2.0
+	palm.mesh = palm_mesh
+	palm.scale = Vector3(0.078, 0.092, 0.052)
+	# راحة اليد خلف الهاتف، على الجهة البعيدة عن وجه الشخصية.
+	palm.position = Vector3(0.0, -0.005, -0.043)
+	palm.material_override = _material(SKIN)
+	phone_visual.add_child(palm)
+	var thumb := MeshInstance3D.new()
+	thumb.name = "RightHandThumb"
+	var thumb_mesh := CapsuleMesh.new()
+	thumb_mesh.radius = 0.018
+	thumb_mesh.height = 0.075
+	thumb.mesh = thumb_mesh
+	thumb.position = Vector3(-0.066, -0.005, 0.031)
+	thumb.rotation.z = -0.35
+	thumb.material_override = _material(SKIN)
+	phone_visual.add_child(thumb)
+	# أصابع ملتفة فوق الحافة الأمامية لتظهر قبضة واضحة بدل هاتف عائم.
+	for finger_index in range(3):
+		var finger := MeshInstance3D.new()
+		finger.name = "RightHandFinger_%d" % finger_index
+		var finger_mesh := CapsuleMesh.new()
+		finger_mesh.radius = 0.012
+		finger_mesh.height = 0.064
+		finger.mesh = finger_mesh
+		finger.position = Vector3(0.061, -0.067 + float(finger_index) * 0.062, 0.031)
+		finger.rotation.z = 0.16
+		finger.material_override = _material(SKIN)
+		phone_visual.add_child(finger)
+	var screen := MeshInstance3D.new()
+	screen.name = "PhoneScreen"
+	var screen_mesh := BoxMesh.new()
+	screen_mesh.size = Vector3(0.112, 0.192, 0.003)
+	screen.mesh = screen_mesh
+	# الشاشة على جهة +Z لتواجه وجه الشخصية الموجود أمام الهاتف.
+	screen.position.z = 0.014
+	phone_visual.add_child(screen)
+
+	# شاشة فعلية داخل المجسم: تعرض نفس بيانات قائمة الهاتف التي ترسلها واجهة المدينة.
+	phone_screen_viewport = SubViewport.new()
+	phone_screen_viewport.name = "PhoneScreenViewport"
+	phone_screen_viewport.size = Vector2i(256, 448)
+	phone_screen_viewport.transparent_bg = false
+	phone_screen_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	var screen_root := PanelContainer.new()
+	screen_root.name = "PhoneScreenRoot"
+	screen_root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	screen_root.add_theme_stylebox_override("panel", _make_phone_screen_style())
+	phone_screen_viewport.add_child(screen_root)
+	phone_screen_content = VBoxContainer.new()
+	phone_screen_content.add_theme_constant_override("separation", 8)
+	screen_root.add_child(phone_screen_content)
+	var screen_material := StandardMaterial3D.new()
+	screen_material.albedo_texture = phone_screen_viewport.get_texture()
+	screen_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	screen_material.emission_enabled = true
+	screen_material.emission_energy_multiplier = 0.8
+	screen.material_override = screen_material
+	phone_visual.add_child(phone_screen_viewport)
+	var phone_screen_area := Area3D.new()
+	phone_screen_area.name = "PhoneScreenTouchArea"
+	phone_screen_area.input_ray_pickable = true
+	phone_screen_area.position.z = 0.016
+	var touch_shape := CollisionShape3D.new()
+	var touch_box := BoxShape3D.new()
+	touch_box.size = Vector3(0.112, 0.192, 0.008)
+	touch_shape.shape = touch_box
+	phone_screen_area.add_child(touch_shape)
+	phone_visual.add_child(phone_screen_area)
+	phone_screen_area.input_event.connect(_on_phone_screen_input_event)
+	set_phone_screen_content("هاتف اللاعب", ["الأصدقاء", "المحادثات", "المركبات", "الحيوانات الأليفة"])
+
+
+func _make_phone_screen_style() -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color("#101a25")
+	style.border_color = Color("#c6a45b")
+	style.set_border_width_all(3)
+	style.set_corner_radius_all(8)
+	return style
+
+
+func set_phone_screen_content(title: String, entries: Array[String]) -> void:
+	# التوافق مع النداءات القديمة: شاشة الجهاز تعرض رموز التطبيقات فقط دون نصوص.
+	set_phone_screen_icons(["🚘", "👥", "⚙️", "🏠", "🗺️", "💬", "📋", "🎁", "👤"])
+
+
+func set_phone_screen_icons(icons: Array[String]) -> void:
+	if not is_instance_valid(phone_screen_content):
+		return
+	for child in phone_screen_content.get_children():
+		phone_screen_content.remove_child(child)
+		child.free()
+	var icon_grid := GridContainer.new()
+	icon_grid.name = "PhoneAppIconGrid"
+	icon_grid.columns = 3
+	icon_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	icon_grid.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	icon_grid.add_theme_constant_override("h_separation", 7)
+	icon_grid.add_theme_constant_override("v_separation", 9)
+	phone_screen_content.add_child(icon_grid)
+	var app_ids := ["garage", "friends", "settings", "safe_return", "map", "messages", "missions", "rewards", "profile"]
+	for index in range(icons.size()):
+		var glyph: String = icons[index]
+		var app_id: String = app_ids[index] if index < app_ids.size() else ""
+		var icon_button := Button.new()
+		icon_button.text = glyph
+		icon_button.tooltip_text = app_id
+		icon_button.pressed.connect(_emit_phone_app_pressed.bind(app_id))
+		icon_button.custom_minimum_size = Vector2(58, 66)
+		icon_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		icon_button.add_theme_font_size_override("font_size", 29)
+		icon_button.add_theme_color_override("font_color", Color("#f5e6c5"))
+		icon_button.add_theme_stylebox_override("normal", _make_phone_icon_style())
+		icon_button.add_theme_stylebox_override("hover", _make_phone_icon_style())
+		icon_button.add_theme_stylebox_override("pressed", _make_phone_icon_style())
+		icon_button.focus_mode = Control.FOCUS_NONE
+		icon_grid.add_child(icon_button)
+
+
+func _emit_phone_app_pressed(app_id: String) -> void:
+	if not app_id.is_empty():
+		phone_app_pressed.emit(app_id)
+
+
+func _on_phone_screen_input_event(_camera: Camera3D, event: InputEvent, world_position: Vector3, _normal: Vector3, _shape_idx: int) -> void:
+	if not is_instance_valid(phone_screen_viewport):
+		return
+	var local_position := phone_visual.to_local(world_position)
+	var forwarded := event.duplicate() as InputEvent
+	var screen_point := Vector2(
+		(local_position.x / 0.112 + 0.5) * float(phone_screen_viewport.size.x),
+		(0.5 - local_position.y / 0.192) * float(phone_screen_viewport.size.y)
+	)
+	if forwarded is InputEventMouse:
+		(forwarded as InputEventMouse).position = screen_point
+		phone_screen_viewport.push_input(forwarded, true)
+	elif forwarded is InputEventScreenTouch:
+		(forwarded as InputEventScreenTouch).position = screen_point
+		phone_screen_viewport.push_input(forwarded, true)
+	elif forwarded is InputEventScreenDrag:
+		(forwarded as InputEventScreenDrag).position = screen_point
+		phone_screen_viewport.push_input(forwarded, true)
+
+
+func _make_phone_icon_style() -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color("#172535")
+	style.border_color = Color("#c6a45b")
+	style.set_border_width_all(1)
+	style.set_corner_radius_all(8)
+	style.content_margin_left = 3
+	style.content_margin_right = 3
+	style.content_margin_top = 3
+	style.content_margin_bottom = 3
+	return style
+
+
+func _orient_phone_screen_to_head() -> void:
+	if not is_instance_valid(phone_visual) or not parts.has("Head"):
+		return
+	var phone_head := parts["Head"] as MeshInstance3D
+	# look_at يجعل المحور -Z نحو الهدف؛ نعكس الهدف كي يصبح +Z، وهو اتجاه سطح الشاشة، نحو الوجه.
+	phone_visual.look_at(phone_visual.global_position * 2.0 - phone_head.global_position, Vector3.UP)
+
 
 func _process(delta: float) -> void:
 	motion_time += delta
@@ -47,6 +258,32 @@ func _process(delta: float) -> void:
 	var swing := sin(motion_time * cycle_speed) * 0.48 * intensity
 	var bob := absf(sin(motion_time * cycle_speed * 2.0)) * 0.045 * intensity
 	_restore_animation_defaults()
+	if phone_using:
+		# تثبيت وضعية الهاتف أثناء الحركة: الذراع اليمنى والرأس يظلان في وضع الاستخدام.
+		if parts.has("RightArm"):
+			var phone_arm := parts["RightArm"] as MeshInstance3D
+			phone_arm.rotation = Vector3(-0.10, 0.0, -0.78)
+		if is_instance_valid(phone_visual):
+			# الذراع تحمل الهاتف، لكن موضعه النهائي يبقى أمام أسفل الوجه عند مستوى الذقن.
+			phone_visual.global_position = to_global(Vector3(0.0, 1.43, -0.27))
+			_orient_phone_screen_to_head()
+		if parts.has("Head") and is_instance_valid(phone_visual):
+			# وجّه الوجه نحو الهاتف فعليًا بدل زاوية ثابتة؛ يعود الرأس لوضعه الطبيعي عند إخفاء الهاتف.
+			var phone_head := parts["Head"] as MeshInstance3D
+			phone_head.look_at(phone_visual.global_position, Vector3.UP)
+		if parts.has("TorsoBase"):
+			(parts["TorsoBase"] as MeshInstance3D).rotation.x = -0.025
+		# استمر في تحريك الساقين والذراع اليسرى عند المشي أو الجري دون إسقاط الهاتف.
+		if motion_state == "walk" or motion_state == "run":
+			var phone_bob := absf(sin(motion_time * cycle_speed * 2.0)) * 0.045 * intensity
+			if parts.has("TorsoBase"):
+				(parts["TorsoBase"] as MeshInstance3D).position.y += phone_bob
+			for limb_name in ["LeftArm", "LeftLeg", "RightLeg"]:
+				if parts.has(limb_name):
+					var limb := parts[limb_name] as MeshInstance3D
+					var limb_sign := -1.0 if limb_name in ["LeftArm", "RightLeg"] else 1.0
+					limb.rotation.x = swing * limb_sign
+		return
 	if motion_state == "talk":
 		if parts.has("TorsoBase"):
 			(parts["TorsoBase"] as MeshInstance3D).rotation.x = sin(motion_time * 3.2) * 0.035
@@ -207,6 +444,13 @@ func _build_face() -> void:
 	_add_box("Mouth", Vector3(0.09, 0.018, 0.018), Vector3(0, 1.565, -0.211), mouth)
 	_add_sphere("LeftEar", Vector3(0.045, 0.09, 0.07), Vector3(-0.218, 1.66, 0), _material(SKIN))
 	_add_sphere("RightEar", Vector3(0.045, 0.09, 0.07), Vector3(0.218, 1.66, 0), _material(SKIN))
+	# اجمع ملامح الوجه تحت الرأس حتى تتحرك العينان والأنف والفم معه عند النظر للهاتف.
+	var head := parts.get("Head") as Node3D
+	if is_instance_valid(head):
+		for part_name in ["LeftEyeWhite", "RightEyeWhite", "LeftPupil", "RightPupil", "LeftEyebrow", "RightEyebrow", "Nose", "Mouth", "LeftEar", "RightEar"]:
+			var face_part := parts.get(part_name) as Node3D
+			if is_instance_valid(face_part):
+				face_part.reparent(head, true)
 
 func _build_hair_placeholders() -> void:
 	_add_sphere("ShortHairCap", Vector3(0.235, 0.13, 0.235), Vector3(0, 1.88, 0.005), _material(HAIR))
@@ -215,6 +459,13 @@ func _build_hair_placeholders() -> void:
 	for i in range(5):
 		var x := -0.16 + float(i) * 0.08
 		_add_sphere("Curl_%d" % i, Vector3(0.07, 0.07, 0.07), Vector3(x, 1.91, -0.09), _material(Color("#35251f")))
+	# اربط الشعر بالرأس أيضًا كي تبقى تفاصيله متناسقة مع حركة النظر.
+	var head := parts.get("Head") as Node3D
+	if is_instance_valid(head):
+		for part_name in ["ShortHairCap", "LongHairBack", "CurlyHairCap", "Curl_0", "Curl_1", "Curl_2", "Curl_3", "Curl_4"]:
+			var hair_part := parts.get(part_name) as Node3D
+			if is_instance_valid(hair_part):
+				hair_part.reparent(head, true)
 
 
 func _set_part_color(part_name: String, color: Color) -> void:

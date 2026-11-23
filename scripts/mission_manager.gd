@@ -641,14 +641,7 @@ func _process(_delta: float) -> void:
 	_update_rescue_interaction_prompt()
 	var interaction_key_down := Input.is_key_pressed(KEY_E)
 	var city_root := get_tree().current_scene
-	var vehicle_has_priority := false
-	if interaction_key_down and is_instance_valid(city_root):
-		if bool(city_root.get("vehicle_occupied")):
-			vehicle_has_priority = true
-		else:
-			var city_vehicle := city_root.get("city_vehicle") as Node3D
-			if is_instance_valid(city_vehicle) and player.global_position.distance_to(city_vehicle.global_position) <= 5.0:
-				vehicle_has_priority = true
+	var vehicle_has_priority := is_instance_valid(city_root) and bool(city_root.get("vehicle_occupied"))
 	if interaction_key_down and not _key_was_down and not mission_running and not job_running and not vehicle_has_priority:
 		interact()
 	_key_was_down = interaction_key_down
@@ -771,7 +764,12 @@ func _update_interaction_hud() -> void:
 	if not is_instance_valid(interact_button) or not is_instance_valid(prompt_label):
 		return
 	var player_is_busy: bool = is_instance_valid(player) and (bool(player.get("sitting")) or bool(player.get("animal_riding")))
-	var has_interaction: bool = is_instance_valid(nearest_interactable) and not player_is_busy
+	var city_root := get_tree().current_scene
+	var nearby_vehicle: Node3D = city_root.get("city_vehicle") as Node3D if is_instance_valid(city_root) else null
+	var nearby_scooter: Node3D = city_root.get("city_scooter") as Node3D if is_instance_valid(city_root) else null
+	var vehicle_in_range := not GameModeManager.is_online_ready() and not player_is_busy and is_instance_valid(nearby_vehicle) and is_instance_valid(player) and player.global_position.distance_to(nearby_vehicle.global_position) <= 5.0
+	var scooter_in_range := not GameModeManager.is_online_ready() and not player_is_busy and is_instance_valid(nearby_scooter) and is_instance_valid(player) and player.global_position.distance_to(nearby_scooter.global_position) <= 5.0
+	var has_interaction: bool = (is_instance_valid(nearest_interactable) or vehicle_in_range or scooter_in_range) and not player_is_busy
 	interact_button.visible = true
 	interact_button.text = "✋"
 	interact_button.add_theme_font_size_override("font_size", 28)
@@ -779,8 +777,14 @@ func _update_interaction_hud() -> void:
 	interact_button.add_theme_color_override("font_color", hand_color)
 	interact_button.add_theme_color_override("font_hover_color", hand_color)
 	interact_button.add_theme_color_override("font_pressed_color", hand_color)
-	interact_button.tooltip_text = CityLanguage.translate(_interaction_action_key(nearest_interactable)) if has_interaction else CityLanguage.translate("interaction_approach")
-	if has_interaction:
+	if scooter_in_range:
+		interact_button.tooltip_text = "ركوب السكوتر" if CityLanguage.get_language() == "ar" else "Ride scooter"
+		prompt_label.text = "اقتربت من السكوتر — اضغط زر التفاعل للركوب."
+	elif vehicle_in_range:
+		interact_button.tooltip_text = "ركوب السيارة" if CityLanguage.get_language() == "ar" else "Enter vehicle"
+		prompt_label.text = "اقتربت من السيارة — اضغط زر التفاعل للركوب."
+	elif has_interaction:
+		interact_button.tooltip_text = CityLanguage.translate(_interaction_action_key(nearest_interactable))
 		var display_name := CityLanguage.translate("interaction_place")
 		if nearest_interactable.has_meta("palace_portal_label"):
 			display_name = str(nearest_interactable.get_meta("palace_portal_label"))
@@ -804,9 +808,10 @@ func _update_interaction_hud() -> void:
 			display_name = str(interaction_data.get("title", nearest_interactable.get("character_name")))
 		else:
 			display_name = str(nearest_interactable.get("character_name"))
-		interact_button.text = "جلوس" if nearest_interactable.has_method("sit_player") else CityLanguage.translate(_interaction_action_key(nearest_interactable))
+		interact_button.text = "✋"
 		prompt_label.text = "%s %s — %s" % [CityLanguage.translate("interaction_near"), display_name, CityLanguage.translate("interaction_press_hint")]
 	else:
+		interact_button.tooltip_text = CityLanguage.translate("interaction_approach")
 		if is_instance_valid(player) and player.get("animal_riding") == true:
 			prompt_label.text = CityLanguage.translate("interaction_riding_prompt") + " — استخدم زر الباب للنزول."
 		elif is_instance_valid(player) and player.get("sitting") == true:
@@ -815,6 +820,10 @@ func _update_interaction_hud() -> void:
 			prompt_label.text = CityLanguage.translate("interaction_approach")
 
 func interact() -> void:
+	var city_root := get_tree().current_scene
+	if is_instance_valid(city_root) and city_root.has_method("try_enter_summoned_vehicle"):
+		if bool(city_root.call("try_enter_summoned_vehicle")):
+			return
 	_update_interaction_target()
 	if is_instance_valid(player) and (player.get("animal_riding") == true or player.get("sitting") == true):
 		_update_interaction_hud()

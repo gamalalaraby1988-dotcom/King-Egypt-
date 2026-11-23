@@ -23,11 +23,18 @@ var interior_hidden_world_states: Dictionary = {}
 var city_vehicle: CharacterBody3D = null
 var vehicle_interaction_button: Button = null
 var vehicle_summon_button: Button = null
+var scooter_toggle_button: Button = null
+var city_scooter: CharacterBody3D = null
+var scooter_occupied := false
+var _scooter_saved_collision_layer := 1
+var _scooter_saved_collision_mask := 1
 var vehicle_occupied := false
 var _vehicle_key_was_down := false
 var _player_saved_collision_layer := 1
 var _player_saved_collision_mask := 1
 var _last_safe_player_position := Vector3(0.0, 1.0, -42.0)
+var _initial_player_spawn_position := Vector3(0.0, 1.0, -42.0)
+var _initial_player_spawn_captured := false
 var _remote_player_views: Dictionary = {}
 var _city_matchmaking_request: HTTPRequest
 var _pending_city_reservation_id := ""
@@ -59,6 +66,8 @@ func _ready() -> void:
 	var initial_player := get_node_or_null("Player") as CharacterBody3D
 	if is_instance_valid(initial_player):
 		_last_safe_player_position = initial_player.global_position
+		_initial_player_spawn_position = initial_player.global_position
+		_initial_player_spawn_captured = true
 	var key_light := get_node_or_null("DirectionalLight3D")
 	if key_light:
 		key_light.add_to_group("quality_shadow_light")
@@ -120,36 +129,52 @@ func _process(_delta: float) -> void:
 		return
 	if vehicle_occupied and (not is_instance_valid(city_vehicle) or not is_instance_valid(get_node_or_null("Player"))):
 		_recover_vehicle_occupancy()
-	if vehicle_occupied:
-		if is_instance_valid(vehicle_interaction_button):
-			vehicle_interaction_button.visible = true
-			vehicle_interaction_button.text = "🚪↗"
-			vehicle_interaction_button.tooltip_text = "النزول" if CityLanguage.get_language() == "ar" else "Exit"
-		if is_instance_valid(vehicle_summon_button):
-			vehicle_summon_button.visible = false
-		return
+	if scooter_occupied and (not is_instance_valid(city_scooter) or not is_instance_valid(city_scooter.get_node_or_null("Player"))):
+		_recover_scooter_occupancy()
 	var player := get_node_or_null("Player") as CharacterBody3D
-	if is_instance_valid(player) and (player.get("sitting") == true or player.get("animal_riding") == true):
+	var player_needs_exit: bool = is_instance_valid(player) and (player.get("sitting") == true or player.get("animal_riding") == true)
+	if vehicle_occupied or scooter_occupied or player_needs_exit:
 		if is_instance_valid(vehicle_interaction_button):
 			vehicle_interaction_button.visible = true
 			vehicle_interaction_button.text = "🚪↗"
-			vehicle_interaction_button.tooltip_text = "الوقوف / النزول" if CityLanguage.get_language() == "ar" else "Stand / Exit"
+			vehicle_interaction_button.tooltip_text = "الخروج" if CityLanguage.get_language() == "ar" else "Exit"
 		if is_instance_valid(vehicle_summon_button):
 			vehicle_summon_button.visible = false
+		if is_instance_valid(scooter_toggle_button):
+			scooter_toggle_button.visible = scooter_occupied
+			if scooter_occupied:
+				scooter_toggle_button.text = "👣"
+				scooter_toggle_button.tooltip_text = "العودة للمشي"
 		return
+	# زر الباب مخصص للخروج فقط؛ ركوب المركبات يتم من زر التفاعل الموحد داخل MissionManager.
+	if is_instance_valid(vehicle_interaction_button):
+		vehicle_interaction_button.visible = false
 	if is_instance_valid(vehicle_summon_button):
 		vehicle_summon_button.visible = true
 		vehicle_summon_button.text = "إحضار السيارة" if CityLanguage.get_language() == "ar" else "Call vehicle"
-	if not is_instance_valid(city_vehicle):
-		if is_instance_valid(vehicle_interaction_button):
-			vehicle_interaction_button.visible = false
-		return
-	if not is_instance_valid(player):
-		return
-	var close_enough := player.global_position.distance_to(city_vehicle.global_position) <= 5.0
-	if is_instance_valid(vehicle_interaction_button):
-		vehicle_interaction_button.visible = close_enough
-		vehicle_interaction_button.text = "🚪 ركوب السيارة" if CityLanguage.get_language() == "ar" else "Enter vehicle"
+	if is_instance_valid(scooter_toggle_button):
+		scooter_toggle_button.visible = true
+		scooter_toggle_button.text = "👣" if is_instance_valid(city_scooter) else "🛴"
+		scooter_toggle_button.tooltip_text = ("العودة للمشي" if CityLanguage.get_language() == "ar" else "Walk") if is_instance_valid(city_scooter) else ("استدعاء السكوتر الكهربائي" if CityLanguage.get_language() == "ar" else "Call electric scooter")
+
+
+func return_player_to_start_position() -> bool:
+	if interior_transition_busy or is_instance_valid(interior_root) or vehicle_occupied or scooter_occupied:
+		return false
+	if GameModeManager.is_online_ready():
+		# Online recovery is requested from the authority; never teleport locally.
+		return AuthoritativeGameServer.request_safe_return()
+	var player := get_node_or_null("Player") as CharacterBody3D
+	if not is_instance_valid(player) or not _initial_player_spawn_captured:
+		return false
+	player.velocity = Vector3.ZERO
+	player.mobile_move = Vector2.ZERO
+	player.mobile_sprint = false
+	player.sitting = false
+	player.global_position = _initial_player_spawn_position
+	player.reset_physics_interpolation()
+	_last_safe_player_position = _initial_player_spawn_position
+	return true
 
 
 func _guard_player_safety() -> void:
@@ -189,7 +214,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.keycode == KEY_E:
 		if event.pressed and not event.echo and not _vehicle_key_was_down:
 			_vehicle_key_was_down = true
-			_toggle_vehicle_use()
+			if vehicle_occupied:
+				_exit_player_vehicle()
 		elif not event.pressed:
 			_vehicle_key_was_down = false
 
@@ -225,9 +251,26 @@ func _create_player_vehicle() -> void:
 	vehicle_summon_button.pressed.connect(_summon_player_vehicle)
 	layer.add_child(vehicle_summon_button)
 
+	scooter_toggle_button = Button.new()
+	scooter_toggle_button.name = "ElectricScooterToggleButton"
+	scooter_toggle_button.text = "🛴"
+	scooter_toggle_button.custom_minimum_size = Vector2(control_width, control_height)
+	scooter_toggle_button.anchor_left = 1.0
+	scooter_toggle_button.anchor_right = 1.0
+	scooter_toggle_button.anchor_top = 1.0
+	scooter_toggle_button.anchor_bottom = 1.0
+	scooter_toggle_button.offset_left = -control_width - right_margin
+	scooter_toggle_button.offset_right = -right_margin
+	scooter_toggle_button.offset_top = -(bottom_margin + control_height * 3.0 + control_gap * 2.0)
+	scooter_toggle_button.offset_bottom = -(bottom_margin + control_height * 2.0 + control_gap * 2.0)
+	scooter_toggle_button.add_theme_font_size_override("font_size", 18)
+	scooter_toggle_button.tooltip_text = "استدعاء السكوتر الكهربائي"
+	scooter_toggle_button.pressed.connect(_on_scooter_toggle_pressed)
+	layer.add_child(scooter_toggle_button)
+
 	vehicle_interaction_button = Button.new()
 	vehicle_interaction_button.name = "VehicleInteractionButton"
-	vehicle_interaction_button.text = "🚪 ركوب السيارة"
+	vehicle_interaction_button.text = "🚪↗"
 	vehicle_interaction_button.custom_minimum_size = Vector2(control_width, control_height)
 	vehicle_interaction_button.anchor_left = 1.0
 	vehicle_interaction_button.anchor_right = 1.0
@@ -239,7 +282,7 @@ func _create_player_vehicle() -> void:
 	vehicle_interaction_button.offset_bottom = -bottom_margin
 	vehicle_interaction_button.add_theme_font_size_override("font_size", 12)
 	vehicle_interaction_button.visible = false
-	vehicle_interaction_button.pressed.connect(_toggle_vehicle_use)
+	vehicle_interaction_button.pressed.connect(_exit_contextual_state)
 	layer.add_child(vehicle_interaction_button)
 
 func _summon_player_vehicle() -> void:
@@ -289,7 +332,164 @@ func _summon_player_vehicle() -> void:
 	city_vehicle.call("set_reverse", false)
 	city_vehicle.call("set_steering", 0.0)
 	if is_instance_valid(vehicle_interaction_button):
+		vehicle_interaction_button.visible = false
+	# Vehicle summon now completes the entry action: place the player inside immediately.
+	_toggle_vehicle_use()
+
+func _on_scooter_toggle_pressed() -> void:
+	if scooter_occupied:
+		# Foot button means return to walking and dismiss the scooter completely.
+		_exit_player_scooter(true)
+		return
+	if is_instance_valid(city_scooter):
+		city_scooter.queue_free()
+		city_scooter = null
+		if is_instance_valid(scooter_toggle_button):
+			scooter_toggle_button.text = "🛴"
+			scooter_toggle_button.tooltip_text = "استدعاء السكوتر الكهربائي"
+		return
+	_summon_electric_scooter()
+
+func _summon_electric_scooter() -> void:
+	if not _is_local_city_interaction_allowed() or scooter_occupied or vehicle_occupied:
+		return
+	if interior_transition_busy or is_instance_valid(interior_root):
+		return
+	var player := get_node_or_null("Player") as CharacterBody3D
+	if not is_instance_valid(player):
+		return
+	if not is_instance_valid(city_scooter):
+		var packed := load("res://scenes/electric_scooter.tscn") as PackedScene
+		if packed == null:
+			push_warning("تعذر تحميل مشهد السكوتر الكهربائي.")
+			return
+		city_scooter = packed.instantiate() as CharacterBody3D
+		if city_scooter == null:
+			return
+		city_scooter.name = "PlayerElectricScooter"
+		add_child(city_scooter)
+		city_scooter.set_physics_process(false)
+	var side := player.global_transform.basis.x.normalized()
+	city_scooter.global_position = player.global_position + side * 2.2
+	city_scooter.global_position.y = player.global_position.y
+	city_scooter.global_rotation.y = player.global_rotation.y
+	city_scooter.velocity = Vector3.ZERO
+	city_scooter.call("clear_controls")
+	# Calling the scooter now places the player directly on it.
+	_mount_player_scooter()
+	if not scooter_occupied:
+		city_scooter.queue_free()
+		city_scooter = null
+		if is_instance_valid(scooter_toggle_button):
+			scooter_toggle_button.text = "🛴"
+			scooter_toggle_button.tooltip_text = "استدعاء السكوتر الكهربائي" if CityLanguage.get_language() == "ar" else "Call electric scooter"
+
+func try_enter_summoned_vehicle() -> bool:
+	# Shared contextual interaction: prefer the nearby standing scooter, then the car.
+	if scooter_occupied:
+		return true
+	if is_instance_valid(city_scooter) and not vehicle_occupied and _is_local_city_interaction_allowed():
+		var scooter_player := get_node_or_null("Player") as CharacterBody3D
+		if is_instance_valid(scooter_player) and scooter_player.global_position.distance_to(city_scooter.global_position) <= 5.0:
+			_mount_player_scooter()
+			return scooter_occupied
+	if vehicle_occupied or not _is_local_city_interaction_allowed() or not is_instance_valid(city_vehicle):
+		return false
+	var player := get_node_or_null("Player") as CharacterBody3D
+	if not is_instance_valid(player) or player.global_position.distance_to(city_vehicle.global_position) > 5.0:
+		return false
+	_toggle_vehicle_use()
+	return vehicle_occupied
+
+func _exit_contextual_state() -> void:
+	if scooter_occupied:
+		_exit_player_scooter()
+		return
+	if vehicle_occupied:
+		_exit_player_vehicle()
+		return
+	var player := get_node_or_null("Player") as CharacterBody3D
+	if not is_instance_valid(player):
+		return
+	if player.get("animal_riding") == true and player.has_method("end_animal_ride"):
+		player.call("end_animal_ride")
+	elif player.get("sitting") == true and player.has_method("toggle_sit"):
+		player.call("toggle_sit")
+	if is_instance_valid(vehicle_interaction_button):
+		vehicle_interaction_button.visible = false
+	if is_instance_valid(vehicle_summon_button):
+		vehicle_summon_button.visible = true
+
+func _mount_player_scooter() -> void:
+	if scooter_occupied or not is_instance_valid(city_scooter):
+		return
+	var player := get_node_or_null("Player") as CharacterBody3D
+	if not is_instance_valid(player) or player.get("animal_riding") == true or player.get("sitting") == true:
+		return
+	_scooter_saved_collision_layer = player.collision_layer
+	_scooter_saved_collision_mask = player.collision_mask
+	player.set_mobile_move(Vector2.ZERO)
+	player.set_mobile_sprint(false)
+	player.velocity = Vector3.ZERO
+	player.collision_layer = 0
+	player.collision_mask = 0
+	player.reparent(city_scooter, true)
+	player.position = Vector3(0.0, 0.48, 0.0)
+	player.rotation = Vector3.ZERO
+	player.call("set_mounted_scooter", city_scooter)
+	city_scooter.set_physics_process(true)
+	scooter_occupied = true
+	if is_instance_valid(vehicle_summon_button):
+		vehicle_summon_button.visible = false
+	if is_instance_valid(scooter_toggle_button):
+		scooter_toggle_button.visible = true
+		scooter_toggle_button.text = "👣"
+	if is_instance_valid(vehicle_interaction_button):
 		vehicle_interaction_button.visible = true
+		vehicle_interaction_button.text = "🚪↗"
+		vehicle_interaction_button.tooltip_text = "النزول من السكوتر" if CityLanguage.get_language() == "ar" else "Dismount scooter"
+
+func _exit_player_scooter(remove_scooter: bool = false) -> void:
+	if not scooter_occupied or not is_instance_valid(city_scooter):
+		return
+	var player := city_scooter.get_node_or_null("Player") as CharacterBody3D
+	if not is_instance_valid(player):
+		return
+	var exit_position := city_scooter.global_position + city_scooter.global_transform.basis.x.normalized() * 1.35 + Vector3.UP * 0.1
+	player.call("set_mounted_scooter", null)
+	player.reparent(self, true)
+	player.global_position = exit_position
+	player.velocity = Vector3.ZERO
+	player.collision_layer = _scooter_saved_collision_layer
+	player.collision_mask = _scooter_saved_collision_mask
+	player.set_physics_process(true)
+	city_scooter.call("clear_controls")
+	city_scooter.set_physics_process(false)
+	scooter_occupied = false
+	if remove_scooter:
+		city_scooter.queue_free()
+		city_scooter = null
+	if is_instance_valid(vehicle_interaction_button):
+		vehicle_interaction_button.visible = false
+	if is_instance_valid(scooter_toggle_button):
+		scooter_toggle_button.visible = true
+		scooter_toggle_button.text = "👣" if is_instance_valid(city_scooter) else "🛴"
+		scooter_toggle_button.tooltip_text = ("العودة للمشي" if CityLanguage.get_language() == "ar" else "Walk") if is_instance_valid(city_scooter) else ("استدعاء السكوتر الكهربائي" if CityLanguage.get_language() == "ar" else "Call electric scooter")
+	if is_instance_valid(vehicle_summon_button):
+		vehicle_summon_button.visible = true
+
+func _recover_scooter_occupancy() -> void:
+	var player := city_scooter.get_node_or_null("Player") as CharacterBody3D if is_instance_valid(city_scooter) else null
+	if is_instance_valid(player):
+		player.call("set_mounted_scooter", null)
+		player.reparent(self, true)
+		player.collision_layer = _scooter_saved_collision_layer
+		player.collision_mask = _scooter_saved_collision_mask
+		player.set_physics_process(true)
+	if is_instance_valid(city_scooter):
+		city_scooter.call("clear_controls")
+		city_scooter.set_physics_process(false)
+	scooter_occupied = false
 
 func _toggle_vehicle_use() -> void:
 	if not _is_local_city_interaction_allowed():
@@ -417,9 +617,7 @@ func _exit_player_vehicle() -> void:
 	vehicle_occupied = false
 	_set_mobile_hud_active(true)
 	if is_instance_valid(vehicle_interaction_button):
-		vehicle_interaction_button.text = "🚪 ركوب السيارة" if CityLanguage.get_language() == "ar" else "Enter vehicle"
-		vehicle_interaction_button.tooltip_text = "ركوب السيارة" if CityLanguage.get_language() == "ar" else "Enter vehicle"
-		vehicle_interaction_button.visible = player.global_position.distance_to(city_vehicle.global_position) <= 5.0
+		vehicle_interaction_button.visible = false
 
 func _create_interior_transition_ui() -> void:
 	interior_loading_layer = CanvasLayer.new()

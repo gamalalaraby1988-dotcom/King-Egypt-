@@ -22,8 +22,12 @@ var money_label: Button
 var chips_label: Button
 var gems_label: Button
 var phone_popup: PanelContainer
+var phone_entry_button: Button
 var vehicle_store_list: VBoxContainer
 var vehicle_store_status: Label
+var safe_return_position := Vector3.ZERO
+var safe_return_position_captured := false
+var safe_return_dialog: ConfirmationDialog
 var player_popup: PanelContainer
 var player_name_label: Label
 var player_level_label: Label
@@ -86,11 +90,15 @@ func _ready() -> void:
 	self.layer = 40
 	main_scene = get_parent()
 	mission_manager = main_scene.get_node_or_null("MissionManager") if is_instance_valid(main_scene) else null
+	if not AuthoritativeGameServer.safe_return_completed.is_connected(_on_safe_return_completed):
+		AuthoritativeGameServer.safe_return_completed.connect(_on_safe_return_completed)
 	_build()
 	_build_player_interaction_popup()
 	_build_group_popup()
 	_build_group_chat_popup()
 	_build_social_popup()
+	_build_phone_entry_button()
+	call_deferred("_capture_safe_spawn")
 	if not PlayerFriendsClient.friends_updated.is_connected(_on_social_friends_updated):
 		PlayerFriendsClient.friends_updated.connect(_on_social_friends_updated)
 	if not PlayerFriendsClient.requests_updated.is_connected(_on_social_requests_updated):
@@ -120,6 +128,8 @@ func _exit_tree() -> void:
 func _process(_delta: float) -> void:
 	if not is_instance_valid(mission_manager) and is_instance_valid(main_scene):
 		mission_manager = main_scene.get_node_or_null("MissionManager")
+	if not safe_return_position_captured:
+		_capture_safe_spawn()
 	_refresh_wallet()
 
 
@@ -138,9 +148,45 @@ func _unhandled_input(event: InputEvent) -> void:
 	for panel in open_popups:
 		if is_instance_valid(panel) and panel.visible and panel.get_global_rect().has_point(pointer_position):
 			return
+	var closing_phone := is_instance_valid(phone_popup) and phone_popup.visible
 	for panel in open_popups:
 		if is_instance_valid(panel):
 			panel.visible = false
+	if closing_phone:
+		_set_local_player_phone_pose(false)
+	if is_instance_valid(phone_entry_button):
+		phone_entry_button.visible = true
+
+
+func _build_phone_entry_button() -> void:
+	# أيقونة هاتف اللاعب ثابتة في الزاوية العليا اليمنى.
+	phone_entry_button = Button.new()
+	phone_entry_button.name = "PlayerPhoneEntryButton"
+	phone_entry_button.text = "📱"
+	phone_entry_button.tooltip_text = "هاتف اللاعب"
+	phone_entry_button.custom_minimum_size = Vector2(48, 48)
+	phone_entry_button.anchor_left = 1.0
+	phone_entry_button.anchor_right = 1.0
+	phone_entry_button.anchor_top = 0.0
+	phone_entry_button.anchor_bottom = 0.0
+	phone_entry_button.offset_left = -58.0
+	phone_entry_button.offset_right = -10.0
+	phone_entry_button.offset_top = 10.0
+	phone_entry_button.offset_bottom = 58.0
+	phone_entry_button.add_theme_font_size_override("font_size", 22)
+	phone_entry_button.add_theme_stylebox_override("normal", _make_hud_panel_style())
+	phone_entry_button.pressed.connect(_on_phone_entry_pressed)
+	root.add_child(phone_entry_button)
+
+
+func _on_phone_entry_pressed() -> void:
+	_open_vehicle_store_phone()
+
+
+func _set_local_player_phone_pose(enabled: bool) -> void:
+	var player := main_scene.find_child("Player", true, false) as Node if is_instance_valid(main_scene) else null
+	if is_instance_valid(player) and player.has_method("set_phone_using"):
+		player.call("set_phone_using", enabled)
 
 
 func _build() -> void:
@@ -466,9 +512,14 @@ func _open_social_popup(tab: String = "friends") -> void:
 		_build_social_popup()
 	_show_social_tab(tab)
 	social_popup.visible = true
+	var closing_phone := is_instance_valid(phone_popup) and phone_popup.visible
 	for panel in [popup, phone_popup, player_popup, group_popup, group_chat_popup]:
 		if is_instance_valid(panel):
 			panel.visible = false
+	if closing_phone:
+		_set_local_player_phone_pose(false)
+		if is_instance_valid(phone_entry_button):
+			phone_entry_button.visible = true
 
 
 func _show_social_tab(tab: String) -> void:
@@ -802,6 +853,16 @@ func _open_vehicle_store_phone() -> void:
 		_build_vehicle_store_phone()
 	_refresh_vehicle_store_phone()
 	phone_popup.visible = true
+	_set_local_player_phone_pose(true)
+	if is_instance_valid(phone_entry_button):
+		phone_entry_button.visible = false
+
+func _close_vehicle_store_phone() -> void:
+	if is_instance_valid(phone_popup):
+		phone_popup.visible = false
+	_set_local_player_phone_pose(false)
+	if is_instance_valid(phone_entry_button):
+		phone_entry_button.visible = true
 
 func _build_vehicle_store_phone() -> void:
 	phone_popup = PanelContainer.new()
@@ -835,8 +896,15 @@ func _build_vehicle_store_phone() -> void:
 	var close_phone := Button.new()
 	close_phone.text = "✕"
 	close_phone.custom_minimum_size = Vector2(38, 34)
-	close_phone.pressed.connect(func(): phone_popup.visible = false)
+	close_phone.pressed.connect(_close_vehicle_store_phone)
 	header.add_child(close_phone)
+	var safe_return_button := Button.new()
+	safe_return_button.name = "SafeReturnHomeButton"
+	safe_return_button.text = "🏠 العودة الآمنة"
+	safe_return_button.tooltip_text = "العودة إلى نقطة بداية آمنة عند حدوث خلل"
+	safe_return_button.custom_minimum_size.y = 42
+	safe_return_button.pressed.connect(_request_safe_return)
+	content.add_child(safe_return_button)
 	var wallet_line := Label.new()
 	wallet_line.name = "VehicleStoreWalletLine"
 	wallet_line.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -853,8 +921,16 @@ func _build_vehicle_store_phone() -> void:
 	content.add_child(vehicle_store_status)
 	var close_button := Button.new()
 	close_button.text = "إغلاق الهاتف"
-	close_button.pressed.connect(func(): phone_popup.visible = false)
+	close_button.pressed.connect(_close_vehicle_store_phone)
 	content.add_child(close_button)
+	safe_return_dialog = ConfirmationDialog.new()
+	safe_return_dialog.name = "SafeReturnConfirmation"
+	safe_return_dialog.title = "تأكيد العودة الآمنة"
+	safe_return_dialog.dialog_text = "هل تريد العودة إلى نقطة بداية اللعبة؟ لن يتم حذف حسابك أو ممتلكاتك أو تقدمك."
+	safe_return_dialog.ok_button_text = "العودة الآن"
+	safe_return_dialog.cancel_button_text = "إلغاء"
+	safe_return_dialog.confirmed.connect(_perform_safe_return)
+	root.add_child(safe_return_dialog)
 
 func _refresh_vehicle_store_phone() -> void:
 	if not is_instance_valid(vehicle_store_list):
@@ -914,6 +990,92 @@ func _refresh_vehicle_store_phone() -> void:
 			WalletManager.get_balance("chips"),
 			WalletManager.get_balance("gems")
 		]
+	_sync_local_phone_screen(catalog, owned, selected)
+
+
+func _sync_local_phone_screen(catalog: Dictionary, owned: Array, selected: String) -> void:
+	var player := main_scene.find_child("Player", true, false) as Node if is_instance_valid(main_scene) else null
+	if not is_instance_valid(player):
+		return
+	var avatar := player.get_node_or_null("AvatarVisual")
+	if not is_instance_valid(avatar) or not avatar.has_method("set_phone_screen_content"):
+		return
+	if avatar.has_signal("phone_app_pressed"):
+		var app_callback := Callable(self, "_on_avatar_phone_app_pressed")
+		if not avatar.phone_app_pressed.is_connected(app_callback):
+			avatar.phone_app_pressed.connect(app_callback)
+	# ترتيب التطبيقات ثابت على شاشة الهاتف الفعلية التي تحملها الشخصية.
+	avatar.call("set_phone_screen_icons", ["🚘", "👥", "⚙️", "🏠", "🗺️", "💬", "📋", "🎁", "👤"])
+
+
+func _on_avatar_phone_app_pressed(app_id: String) -> void:
+	match app_id:
+		"garage":
+			_open_vehicle_store_phone()
+		"friends":
+			_open_social_popup("friends")
+		"settings":
+			_open_section("settings")
+		"safe_return":
+			_request_safe_return()
+		"map":
+			_open_section("map")
+		"messages":
+			_open_social_popup("public")
+		"missions":
+			_open_section("missions")
+		"rewards":
+			_open_section("rewards")
+		"profile":
+			_open_section("profile")
+
+
+func _capture_safe_spawn() -> void:
+	if safe_return_position_captured or not is_instance_valid(main_scene):
+		return
+	var player := main_scene.find_child("Player", true, false) as Node3D
+	if not is_instance_valid(player) or not player.global_position.is_finite():
+		return
+	safe_return_position = player.global_position
+	safe_return_position_captured = true
+
+
+func _request_safe_return() -> void:
+	if not safe_return_position_captured:
+		_capture_safe_spawn()
+	if not safe_return_position_captured:
+		if is_instance_valid(vehicle_store_status):
+			vehicle_store_status.text = "لم يتم تحديد نقطة بداية آمنة بعد؛ لم يتم تحريك اللاعب."
+		return
+	if is_instance_valid(safe_return_dialog):
+		safe_return_dialog.popup_centered()
+
+
+func _perform_safe_return() -> void:
+	if not is_instance_valid(main_scene) or not main_scene.has_method("return_player_to_start_position"):
+		if is_instance_valid(vehicle_store_status):
+			vehicle_store_status.text = "العودة الآمنة غير متاحة حاليًا؛ لم يتم تغيير موقعك."
+		return
+	var returned: bool = bool(main_scene.call("return_player_to_start_position"))
+	if not returned:
+		if is_instance_valid(vehicle_store_status):
+			vehicle_store_status.text = "تعذرت العودة الآن: قد تكون في جلسة Online أو داخل مركبة/مبنى. لم يتم تغيير موقعك."
+		return
+	if GameModeManager.is_online_ready():
+		if is_instance_valid(vehicle_store_status):
+			vehicle_store_status.text = "تم إرسال طلب العودة الآمنة إلى خادم المدينة؛ بانتظار تأكيده..."
+		return
+	if is_instance_valid(vehicle_store_status):
+		vehicle_store_status.text = "تمت إعادتك إلى نقطة بداية اللعبة. حسابك وممتلكاتك وتقدمك محفوظة."
+	_close_vehicle_store_phone()
+
+
+func _on_safe_return_completed(success: bool, message: String) -> void:
+	if is_instance_valid(vehicle_store_status):
+		vehicle_store_status.text = message
+	if success:
+		_close_vehicle_store_phone()
+
 
 func _buy_vehicle_from_phone(vehicle_id: String) -> void:
 	if VehicleStoreManager.purchase_vehicle(vehicle_id):

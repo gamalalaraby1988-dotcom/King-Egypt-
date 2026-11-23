@@ -5,6 +5,7 @@ extends Node
 
 signal authentication_completed(success: bool, message: String)
 signal authoritative_state_received(position: Vector3, rotation_y: float, velocity: Vector3)
+signal safe_return_completed(success: bool, message: String)
 signal remote_players_received(players: Array)
 signal server_objective_reached(user_id: String, activity_kind: String, activity_id: String)
 signal job_start_result(success: bool, job_id: String, target: Vector3, message: String)
@@ -394,6 +395,7 @@ func _on_peer_connected(peer_id: int) -> void:
 		"is_sitting": false,
 		"last_sit_usec": 0,
 		"last_safe_position": SPAWN_POSITION,
+		"last_safe_return_usec": 0,
 		"input_window_usec": Time.get_ticks_usec(),
 		"input_count": 0,
 		"reached_objectives": {},
@@ -588,6 +590,54 @@ func send_movement_input(world_direction: Vector3, sprint: bool) -> void:
 		direction = direction.normalized()
 	_input_sequence += 1
 	submit_movement_input.rpc_id(1, _input_sequence, direction, sprint)
+
+
+func request_safe_return() -> bool:
+	if _is_dedicated_server or not is_authenticated() or not multiplayer.has_multiplayer_peer():
+		return false
+	request_safe_return_rpc.rpc_id(1)
+	return true
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func request_safe_return_rpc() -> void:
+	if not multiplayer.is_server():
+		return
+	var peer_id := multiplayer.get_remote_sender_id()
+	if not _sessions.has(peer_id):
+		return
+	var session: Dictionary = _sessions[peer_id]
+	if not bool(session.get("authenticated", false)):
+		return
+	var now_usec := Time.get_ticks_usec()
+	if now_usec - int(session.get("last_safe_return_usec", 0)) < 5000000:
+		rpc_id(peer_id, "receive_safe_return_result", false, "انتظر قليلًا قبل طلب عودة آمنة أخرى.")
+		return
+	var body := session.get("body") as CharacterBody3D
+	if not is_instance_valid(body):
+		rpc_id(peer_id, "receive_safe_return_result", false, "تعذر العثور على شخصية اللاعب على الخادم.")
+		return
+	# Server-owned relocation: reset movement only; keep account, inventory,
+	# friends, wallet, mission and all persisted progression untouched.
+	body.global_position = SPAWN_POSITION
+	body.velocity = Vector3.ZERO
+	body.reset_physics_interpolation()
+	session["velocity"] = Vector3.ZERO
+	session["direction"] = Vector3.ZERO
+	session["sprint"] = false
+	session["is_sitting"] = false
+	session["last_input_usec"] = now_usec
+	session["last_safe_position"] = SPAWN_POSITION
+	session["last_safe_return_usec"] = now_usec
+	_sessions[peer_id] = session
+	rpc_id(peer_id, "receive_safe_return_result", true, "تمت إعادتك إلى نقطة بداية المدينة. حسابك وممتلكاتك وتقدمك محفوظة.")
+
+
+@rpc("authority", "call_remote", "reliable")
+func receive_safe_return_result(success: bool, message: String) -> void:
+	if multiplayer.is_server() or not is_authenticated():
+		return
+	safe_return_completed.emit(success, message)
 
 
 func send_player_sit(is_sitting: bool) -> void:

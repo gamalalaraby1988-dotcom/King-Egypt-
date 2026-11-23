@@ -11,6 +11,7 @@ extends CharacterBody3D
 
 var mobile_move: Vector2 = Vector2.ZERO
 var mobile_sprint: bool = false
+var mounted_scooter: CharacterBody3D = null
 var sitting := false
 var _active_emote := ""
 var _emote_remaining := 0.0
@@ -24,6 +25,7 @@ const ARCADE_CAMERA_PITCH_MIN: float = -0.72
 const ARCADE_CAMERA_PITCH_MAX: float = 0.24
 const ARCADE_CAMERA_YAW_LIMIT: float = 1.15
 var animal_riding := false
+var phone_using := false
 var ride_visual: Node3D = null
 @onready var camera_pivot: Node3D = $CameraPivot
 
@@ -104,6 +106,11 @@ func _apply_arcade_camera_drag(relative: Vector2) -> void:
 	)
 
 func _physics_process(delta: float) -> void:
+	if is_instance_valid(mounted_scooter):
+		velocity = Vector3.ZERO
+		var scooter_speed := Vector2(mounted_scooter.velocity.x, mounted_scooter.velocity.z).length()
+		_update_avatar_animation("run" if scooter_speed > 0.25 else "idle", scooter_speed)
+		return
 	if arcade_seated:
 		velocity = Vector3.ZERO
 		mobile_move = Vector2.ZERO
@@ -311,6 +318,13 @@ func _sync_sitting_state() -> void:
 	if GameModeManager.is_online_ready():
 		AuthoritativeGameServer.send_player_sit(sitting)
 
+func set_phone_using(enabled: bool) -> void:
+	phone_using = enabled
+	var avatar := get_node_or_null("AvatarVisual")
+	if is_instance_valid(avatar) and avatar.has_method("set_phone_using"):
+		avatar.call("set_phone_using", enabled)
+
+
 func _update_avatar_animation(state: String, speed: float) -> void:
 	var avatar := get_node_or_null("AvatarVisual")
 	if avatar != null and avatar.has_method("set_motion_state"):
@@ -318,9 +332,21 @@ func _update_avatar_animation(state: String, speed: float) -> void:
 
 func set_mobile_move(value: Vector2) -> void:
 	mobile_move = value
+	if is_instance_valid(mounted_scooter):
+		mounted_scooter.call("set_throttle", value.y < -0.16)
+		mounted_scooter.call("set_brake", value.y > 0.16)
+		mounted_scooter.call("set_steering", value.x)
 
 func set_mobile_sprint(value: bool) -> void:
-	mobile_sprint = value
+	mobile_sprint = false if is_instance_valid(mounted_scooter) else value
+
+func set_mounted_scooter(scooter: CharacterBody3D) -> void:
+	mounted_scooter = scooter
+	if is_instance_valid(mounted_scooter):
+		mounted_scooter.call("clear_controls")
+	else:
+		mobile_move = Vector2.ZERO
+		mobile_sprint = false
 
 
 func _try_step_up(delta: float) -> void:

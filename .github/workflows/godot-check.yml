@@ -2,7 +2,7 @@ name: Godot project check
 
 on:
   push:
-    branches: [main, sync-latest-approved-decisions-77-79]
+    branches: [main, sync-latest-approved-decisions-77-79, feature/approved-mobile-controls]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -292,6 +292,25 @@ jobs:
             exit 1
           fi
 
+      - name: Run avatar phone-use pose contract test
+        shell: bash
+        run: |
+          set -euo pipefail
+          GODOT="/tmp/godot/Godot_v4.7.2-stable_linux.x86_64"
+          LOG="/tmp/godot-avatar-phone-use-pose.log"
+          set +e
+          timeout 60s "$GODOT" --headless --path . --script res://tests/avatar_phone_use_pose_contract_test.gd 2>&1 | tee "$LOG"
+          GODOT_STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$GODOT_STATUS" -eq 124 ]; then
+            echo "Avatar phone-use pose contract test exceeded its 60-second limit."
+            exit 124
+          fi
+          if [ "$GODOT_STATUS" -ne 0 ] || grep -E '(^|[[:space:]])(ERROR|SCRIPT ERROR):|Parse Error:|Avatar phone-use pose contract test failed' "$LOG"; then
+            echo "Avatar phone-use pose contract test failed."
+            exit 1
+          fi
+
       - name: Run player sitting synchronization contract test
         shell: bash
         run: |
@@ -443,6 +462,29 @@ jobs:
         with:
           name: king-egypt-city-production-previews
           path: artifacts/*.png
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Capture actual avatar phone-use pose preview
+        shell: bash
+        run: |
+          set -euo pipefail
+          GODOT="/tmp/godot/Godot_v4.7.2-stable_linux.x86_64"
+          LOG="/tmp/godot-avatar-phone-pose-render.log"
+          set +e
+          xvfb-run -a "$GODOT" --audio-driver Dummy --path . --rendering-method gl_compatibility --script res://tests/capture_avatar_phone_use_pose_preview.gd 2>&1 | tee "$LOG"
+          GODOT_STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$GODOT_STATUS" -ne 0 ] || grep -E '(^|[[:space:]])(ERROR|SCRIPT ERROR):|Parse Error:|Could not save avatar phone-use pose preview' "$LOG"; then
+            echo "Actual avatar phone-use pose preview capture failed."
+            exit 1
+          fi
+
+      - name: Upload avatar phone-use pose preview
+        uses: actions/upload-artifact@v4
+        with:
+          name: king-egypt-avatar-phone-use-pose-preview
+          path: artifacts/avatar_phone_use_pose_*.png
           if-no-files-found: error
           retention-days: 7
 
