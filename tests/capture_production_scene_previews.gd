@@ -102,6 +102,51 @@ func _capture_previews() -> void:
 		quit(1)
 		return
 
+	# Review the six relocated public buildings from the actual production scene.
+	# Fail the capture if any approved node or its approved transform is missing.
+	var north_specs := [
+		["Approved_royal_theater", Vector3(-35.0, 0.0, -165.0)],
+		["Approved_stadium", Vector3(0.0, 0.0, -165.0)],
+		["Approved_sports_club", Vector3(35.0, 0.0, -165.0)],
+		["Approved_water_city", Vector3(-35.0, 0.0, -195.0)],
+		["Approved_cinema", Vector3(0.0, 0.0, -195.0)],
+		["Approved_daily_arcade", Vector3(35.0, 0.0, -195.0)]
+	]
+	for spec in north_specs:
+		var building := current_scene.get_node_or_null("ApprovedCityLayout/" + str(spec[0])) as Node3D
+		if building == null:
+			push_error("North district production building is missing: " + str(spec[0]))
+			quit(1)
+			return
+		if building.position.distance_to(spec[1]) > 0.05:
+			push_error("North district production building is not at its approved position: " + str(spec[0]))
+			quit(1)
+			return
+	var access_lane := current_scene.get_node_or_null("ApprovedCityLayout/NorthDistrictAccessLane")
+	if access_lane == null:
+		push_error("The shared north district access lane is missing from the production scene.")
+		quit(1)
+		return
+
+	var north_overview_ok := await _capture_view(
+		"north_district_overview_preview.png",
+		Vector3(0.0, 48.0, -112.0),
+		Vector3(0.0, 0.0, -180.0),
+		76.0
+	)
+	if not north_overview_ok:
+		quit(1)
+		return
+	var north_entrance_ok := await _capture_view(
+		"north_district_access_lane_preview.png",
+		Vector3(0.0, 20.0, -140.0),
+		Vector3(0.0, 2.0, -180.0),
+		70.0
+	)
+	if not north_entrance_ok:
+		quit(1)
+		return
+
 	print("Production-scene previews saved in ", OUTPUT_DIR)
 	quit(0)
 
