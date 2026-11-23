@@ -35,6 +35,8 @@ const MAX_PLAYER_VISIBILITY_DISTANCE := 140.0
 const JET_SKI_RACE_MIN_PARTICIPANTS := 2
 const JET_SKI_RACE_MAX_PARTICIPANTS := 4
 const JET_SKI_RACE_COUNTDOWN_SECONDS := 5
+const JET_SKI_RACE_DURATION_SECONDS := 300
+const JET_SKI_RACE_OFF_COURSE_LIMIT_SECONDS := 300
 const SPAWN_POSITION := Vector3(0.0, 1.0, -42.0)
 
 var _server_peer: WebSocketMultiplayerPeer
@@ -54,6 +56,7 @@ var _jet_ski_race_locked_participants: Array[int] = []
 var _jet_ski_race_spectators: Array[int] = []
 var _jet_ski_race_state := "waiting"
 var _jet_ski_race_countdown_until_usec := 0
+var _jet_ski_race_ends_at_usec := 0
 var _arcade_machines: Dictionary = {}
 var _arcade_sessions: Dictionary = {}
 var _peer_arcade_sessions: Dictionary = {}
@@ -369,7 +372,12 @@ func _process(_delta: float) -> void:
 	if _jet_ski_race_state == "countdown" and now_usec >= _jet_ski_race_countdown_until_usec:
 		_jet_ski_race_state = "racing"
 		_jet_ski_race_countdown_until_usec = 0
-		_notify_jet_ski_race_participants("انطلق السباق! اتبع العوامات بالترتيب.")
+		_jet_ski_race_ends_at_usec = now_usec + JET_SKI_RACE_DURATION_SECONDS * 1000000
+		_notify_jet_ski_race_participants("انطلق السباق! مدة المسابقة خمس دقائق.")
+	elif _jet_ski_race_state == "racing" and _jet_ski_race_duration_expired(now_usec, _jet_ski_race_ends_at_usec):
+		_jet_ski_race_state = "finished"
+		_jet_ski_race_ends_at_usec = 0
+		_notify_jet_ski_race_participants("انتهت مدة المسابقة (خمس دقائق). انتهت الجولة.")
 	if _city_directory_enabled and _server_peer != null and now_usec >= _city_directory_next_heartbeat_usec:
 		if _city_directory_registered:
 			_send_city_session_heartbeat()
@@ -1525,6 +1533,10 @@ func _jet_ski_race_can_start(participant_count: int) -> bool:
 	return participant_count >= JET_SKI_RACE_MIN_PARTICIPANTS and participant_count <= JET_SKI_RACE_MAX_PARTICIPANTS
 
 
+func _jet_ski_race_duration_expired(now_usec: int, ends_at_usec: int) -> bool:
+	return ends_at_usec > 0 and now_usec >= ends_at_usec
+
+
 func _jet_ski_race_should_reopen_after_disconnect(was_participant: bool, race_state: String) -> bool:
 	return was_participant and race_state in ["ready", "countdown"]
 
@@ -1621,7 +1633,8 @@ func request_start_jet_ski_race_rpc() -> void:
 	_jet_ski_race_locked_participants = _jet_ski_race_participants.duplicate()
 	_jet_ski_race_state = "countdown"
 	_jet_ski_race_countdown_until_usec = Time.get_ticks_usec() + JET_SKI_RACE_COUNTDOWN_SECONDS * 1000000
-	_notify_jet_ski_race_participants("تم قفل المتسابقين الأربعة أو أقل. يبدأ السباق بعد 5 ثوانٍ.")
+	_jet_ski_race_ends_at_usec = 0
+	_notify_jet_ski_race_participants("تم قفل المتسابقين الأربعة أو أقل. يبدأ السباق بعد 5 ثوانٍ، ومدة المسابقة خمس دقائق.")
 
 
 @rpc("authority", "call_remote", "reliable")
