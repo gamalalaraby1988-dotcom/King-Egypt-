@@ -15,6 +15,7 @@ func _ready() -> void:
 	_build_districts()
 	_build_main_street_wall_ads()
 	_build_nile_waterfront()
+	_build_royal_sea_bridge()
 	_build_jet_ski_course()
 	_build_pyramids()
 	_build_royal_gate_and_square()
@@ -357,6 +358,70 @@ func _build_nile_waterfront() -> void:
 		_box(self, "PromenadeLamp", Vector3(0.18, 3.0, 0.18), Vector3(x, 1.5, 74.0), GOLD)
 		_box(self, "PromenadeLampHead", Vector3(0.8, 0.18, 0.8), Vector3(x, 3.0, 74.0), GOLD)
 		_add_city_night_light(self, "PromenadeNightLight", Vector3(x, 2.9, 74.0), 8.0)
+
+
+func _build_royal_sea_bridge() -> void:
+	# Extended vehicle-capable copy of the Royal Ship Pier's ivory-and-gold visual language.
+	# This is scene geometry only; boarding and vehicle availability are a later gameplay task.
+	var bridge := Node3D.new()
+	bridge.name = "RoyalShipStyleSeaBridge"
+	bridge.position = Vector3(48.0, 0.0, 0.0)
+	bridge.add_to_group("city_world_geometry")
+	bridge.add_to_group("royal_sea_bridge")
+	add_child(bridge)
+
+	# The bridge begins at the eastern waterfront promenade and extends over open water.
+	var deck_length := 60.0
+	var deck_width := 10.0
+	var deck_center_z := 106.0
+	_box(bridge, "RoyalSeaBridgeFoundation", Vector3(deck_width + 0.8, 0.55, deck_length + 1.0), Vector3(0.0, -0.30, deck_center_z), DARK)
+	_box(bridge, "RoyalSeaBridgeDeck", Vector3(deck_width, 0.32, deck_length), Vector3(0.0, 0.08, deck_center_z), IVORY)
+	_box(bridge, "RoyalSeaBridgeGoldCenterLine", Vector3(0.16, 0.035, deck_length - 1.0), Vector3(0.0, 0.255, deck_center_z), GOLD)
+	# Raised curbs separate the vehicle carriageway from the pedestrian strip.
+	for side in [-1.0, 1.0]:
+		_box(bridge, "RoyalSeaBridgeSafetyCurb", Vector3(0.24, 0.42, deck_length), Vector3(side * 3.35, 0.38, deck_center_z), GOLD)
+		_box(bridge, "RoyalSeaBridgePedestrianLane", Vector3(2.75, 0.12, deck_length - 0.5), Vector3(side * 3.95, 0.30, deck_center_z), SAND)
+		_box(bridge, "RoyalSeaBridgeOuterRailBase", Vector3(0.32, 0.38, deck_length), Vector3(side * 4.82, 0.40, deck_center_z), GOLD)
+		_box(bridge, "RoyalSeaBridgeTopHandrail", Vector3(0.22, 0.22, deck_length), Vector3(side * 4.82, 1.65, deck_center_z), GOLD)
+		for post_index in range(16):
+			var post_z := 77.5 + float(post_index) * 3.8
+			_box(bridge, "RoyalSeaBridgeSafetyPost", Vector3(0.22, 1.35, 0.22), Vector3(side * 4.82, 0.92, post_z), IVORY)
+			_box(bridge, "RoyalSeaBridgePostCap", Vector3(0.42, 0.12, 0.42), Vector3(side * 4.82, 1.66, post_z), GOLD)
+		for lamp_z in [80.0, 92.0, 104.0, 116.0, 128.0]:
+			_box(bridge, "RoyalSeaBridgeWarmGuideLight", Vector3(0.22, 0.18, 0.22), Vector3(side * 4.45, 0.42, lamp_z), GOLD)
+
+	_add_static_box_collision(bridge, "RoyalSeaBridgeVehicleAndPedestrianCollision", Vector3(deck_width, 0.48, deck_length), Vector3(0.0, 0.0, deck_center_z))
+	# Wider end platform with a marked stop line and a short stair run to the floating dock.
+	_box(bridge, "RoyalJetSkiArrivalPlatform", Vector3(18.0, 0.38, 14.0), Vector3(0.0, 0.08, 139.0), IVORY)
+	_box(bridge, "RoyalJetSkiStopStrip", Vector3(15.0, 0.07, 0.55), Vector3(0.0, 0.32, 134.0), GOLD)
+	for step_index in range(5):
+		_box(bridge, "RoyalJetSkiAccessStep", Vector3(8.0, 0.22, 1.0), Vector3(0.0, 0.42 + float(step_index) * 0.18, 141.0 + float(step_index) * 0.95), SAND)
+	# Glowing circular interaction marker is a visual placeholder until the boarding system is built.
+	var interaction_ring := MeshInstance3D.new()
+	interaction_ring.name = "RoyalJetSkiInteractionCirclePreview"
+	var ring_mesh := TorusMesh.new()
+	ring_mesh.inner_radius = 1.05
+	ring_mesh.outer_radius = 1.35
+	ring_mesh.rings = 8
+	ring_mesh.ring_segments = 24
+	interaction_ring.mesh = ring_mesh
+	interaction_ring.position = Vector3(0.0, 0.42, 132.0)
+	var ring_material := StandardMaterial3D.new()
+	ring_material.albedo_color = Color(0.20, 0.82, 0.92)
+	ring_material.emission_enabled = true
+	ring_material.emission = Color(0.10, 0.72, 1.0)
+	ring_material.emission_energy_multiplier = 2.0
+	interaction_ring.material_override = ring_material
+	bridge.add_child(interaction_ring)
+	var title := Label3D.new()
+	title.name = "RoyalJetSkiBoardingLabel"
+	title.text = "ROYAL JET SKI"
+	title.position = Vector3(0.0, 2.2, 130.0)
+	title.font_size = 34
+	title.pixel_size = 0.012
+	title.modulate = Color(1.0, 0.88, 0.58)
+	title.outline_size = 6
+	bridge.add_child(title)
 
 
 func _build_jet_ski_course() -> void:
