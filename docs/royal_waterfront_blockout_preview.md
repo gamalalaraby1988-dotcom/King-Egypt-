@@ -12,6 +12,7 @@ Open the scene directly in Godot 4.7+ to inspect the schematic blockout. It is d
 - A continuous open-water area replacing the old promenade/enclosed-marina concept.
 - A visual shallow-water transition band and a continuous sandy beach extended around the existing handball area.
 - The handball court integrated into the beach as a marked play zone on the same sand surface, with no separate raised pad; its current center and reserved footprint are retained.
+- A new open-air beach fitness zone on the western side of the beach, separated from the handball play area. It has an open-sided shade pergola, pull-up bar, parallel bars, stretching rail, and bench silhouettes, with a direct sea-facing open layout.
 - A royal bridge concept with an 8.5m two-way carriageway, 2.25m protected pedestrian paths on each side, barriers, and an arrival platform.
 - The current ship and pier location shown as reference outlines only; the approved ship asset is not recreated or moved.
 - The existing southern road at approximately Z=95 marked as a conflict requiring a later route redesign.
@@ -21,9 +22,10 @@ Open the scene directly in Godot 4.7+ to inspect the schematic blockout. It is d
 - Bridge length in this blockout: 17m, provisional only.
 - Shoreline and beach extents are schematic, not surveyed or approved final coordinates.
 - The beach court is a schematic 42m × 36m reserved area with low-profile boundary lines; sports clearances and equipment are not finalized.
+- The open-air gym visual footprint is 26m × 16m, centered approximately at X=-48m, Z=132m. It is a beach activity zone, not an enclosed building; equipment dimensions and accessibility clearances are provisional.
 - No boat clearance is assumed below the bridge.
 - The visual shallow-water band is not walkable gameplay geometry.
-- No collision, vehicle handling, water-depth logic, server-side boundary protection, or Android performance validation is included.
+- No collision, equipment interaction, vehicle handling, water-depth logic, server-side boundary protection, or Android performance validation is included.
 
 ## Not changed
 - `scenes/main.tscn`
@@ -33,7 +35,7 @@ Open the scene directly in Godot 4.7+ to inspect the schematic blockout. It is d
 - No merge or production deployment was performed.
 
 ## Required before production implementation
-1. Review the coastline, integrated beach-court footprint and run-off, marina terminal/yacht club, and road connections against the full live scene.
+1. Review the coastline, integrated beach-court footprint and run-off, beach-gym placement, marina terminal/yacht club, and road connections against the full live scene.
 2. Adjust bridge dimensions against actual player and vehicle dimensions.
 3. Build real walkable shallow-water collision and clear deep-water boundaries.
 4. Replace the reference ship outline with the existing approved ship asset in a dedicated test scene.
