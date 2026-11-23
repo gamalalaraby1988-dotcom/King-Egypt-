@@ -1216,13 +1216,13 @@ func _create_box(parent: Node3D, name: String, size: Vector3, pos: Vector3, colo
 		parent.add_child(body)
 
 func _create_ground() -> void:
-	# Split the terrain around a dedicated marina basin. The outer land strips retain
-	# the original world bounds; only the protected ship-water footprint is removed.
+	# Keep the full northern city ground while opening a broad, collision-free
+	# sea footprint from the promenade southward. East/west land strips remain
+	# continuous and provide dry beach-club and sports access.
 	var ground_color := Color(0.34, 0.42, 0.31)
-	_create_box(self, "Ground_West", Vector3(148, 1, 520), Vector3(-86, -0.55, -80), ground_color, true)
-	_create_box(self, "Ground_East", Vector3(148, 1, 520), Vector3(86, -0.55, -80), ground_color, true)
-	_create_box(self, "Ground_Center_North", Vector3(24, 1, 418), Vector3(0, -0.55, -131), ground_color, true)
-	_create_box(self, "Ground_Center_South", Vector3(24, 1, 78), Vector3(0, -0.55, 141), ground_color, true)
+	_create_box(self, "Ground_West", Vector3(100, 1, 520), Vector3(-110, -0.55, -80), ground_color, true)
+	_create_box(self, "Ground_East", Vector3(100, 1, 520), Vector3(110, -0.55, -80), ground_color, true)
+	_create_box(self, "Ground_Center_North", Vector3(120, 1, 418), Vector3(0, -0.55, -131), ground_color, true)
 
 func _create_city() -> void:
 	# المباني المرئية تُنشأ من قائمة المدينة المعتمدة في ApprovedCityLayout.
@@ -1232,15 +1232,14 @@ func _create_city() -> void:
 	var side_road_color := Color(0.15, 0.16, 0.17)
 	# طريق محيطي مستطيل يحيط بالمدينة مع خلوّ مسافة عن مباني الأطراف.
 	_create_box(self, "MainRoad_North", Vector3(190, 0.08, 6), Vector3(0, 0.0, -95), road_color)
-	# Route the southern perimeter road around the outside of the marina basin.
-	# Keep a clear buffer from the basin's side and south quay edges.
-	_create_box(self, "MainRoad_South_West", Vector3(79, 0.08, 6), Vector3(-55.5, 0.0, 95), road_color)
-	_create_box(self, "MainRoad_South_East", Vector3(79, 0.08, 6), Vector3(55.5, 0.0, 95), road_color)
-	_create_box(self, "MainRoad_Southwest_Detour", Vector3(6, 0.08, 13), Vector3(-16, 0.0, 101.5), road_color)
-	_create_box(self, "MainRoad_Southeast_Detour", Vector3(6, 0.08, 13), Vector3(16, 0.0, 101.5), road_color)
-	_create_box(self, "MainRoad_South_Basin_Bypass", Vector3(32, 0.08, 6), Vector3(0, 0.0, 108), road_color)
-	_create_box(self, "MainRoad_West", Vector3(6, 0.08, 190), Vector3(-95, 0.0, 0), road_color)
-	_create_box(self, "MainRoad_East", Vector3(6, 0.08, 190), Vector3(95, 0.0, 0), road_color)
+	# Perimeter roads continue along the dry east/west shoreline strips;
+	# no road or collision surface crosses the open-water race area.
+	_create_box(self, "MainRoad_West", Vector3(6, 0.08, 260), Vector3(-95, 0.0, 35), road_color)
+	_create_box(self, "MainRoad_East", Vector3(6, 0.08, 260), Vector3(95, 0.0, 35), road_color)
+	_create_box(self, "BeachAccessRoad_West", Vector3(6, 0.08, 70), Vector3(-65, 0.0, 115), road_color)
+	_create_box(self, "BeachAccessRoad_East", Vector3(6, 0.08, 70), Vector3(65, 0.0, 115), road_color)
+	_create_box(self, "BeachAccessConnector_West", Vector3(30, 0.08, 6), Vector3(-80, 0.0, 115), road_color)
+	_create_box(self, "BeachAccessConnector_East", Vector3(30, 0.08, 6), Vector3(80, 0.0, 115), road_color)
 	# الشارع العرضي الشمالي يلتف حول الميدان الملكي ويترك ساحته مفتوحة للتجمع.
 	for side in [-1.0, 1.0]:
 		_create_box(self, "MainRoad_X_%s" % str(side), Vector3(72, 0.08, 6), Vector3(side * 59, 0.0, -45), road_color)
