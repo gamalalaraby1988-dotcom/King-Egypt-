@@ -22,6 +22,7 @@ func _ready() -> void:
 	_build_ship_gate_interaction()
 	_build_five_civilizations_ship_blockout()
 	_build_ship_detail_pass()
+	_scale_royal_ship_visuals(1.28)
 	_build_option_b_southern_roads()
 	_mark_preserved_ship_and_conflicts()
 	# Centered frontal review angle: show the ship gate symmetrically, its full wide silhouette, and the bridge approach.
@@ -44,6 +45,8 @@ func _box(label: String, size: Vector3, position: Vector3, color: Color, parent:
 	node.mesh = mesh
 	node.position = position
 	node.material_override = _material(color)
+	if label.begins_with("FiveCivilizationsShip_") or label.begins_with("ShipSuperstructure_") or label.begins_with("ShipRoyalGate_") or label.begins_with("ShipGate_") or label.begins_with("ShipPharaoh_") or label.begins_with("Tutankhamun_") or label.begins_with("ShipHull_") or label.begins_with("ShipTier_"):
+		node.add_to_group("royal_ship_visuals")
 	target.add_child(node)
 	return node
 
@@ -58,6 +61,8 @@ func _ellipsoid(label: String, radii: Vector3, position: Vector3, color: Color, 
 	node.position = position
 	node.scale = radii
 	node.material_override = _material(color, 0.28)
+	if label.begins_with("ShipPharaoh_") or label.begins_with("Tutankhamun_"):
+		node.add_to_group("royal_ship_visuals")
 	target.add_child(node)
 	return node
 
@@ -71,6 +76,8 @@ func _label(text: String, position: Vector3, color: Color = IVORY, font_size: in
 	node.modulate = color
 	node.outline_size = 8
 	node.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	if text == "KING OF EGYPT CITY":
+		node.add_to_group("royal_ship_visuals")
 	add_child(node)
 
 func _build_land_and_beach() -> void:
@@ -164,6 +171,8 @@ func _cylinder(label: String, radius: float, height: float, position: Vector3, m
 	node.mesh = mesh
 	node.position = position
 	node.material_override = material
+	if label.begins_with("ShipHull_") or label.begins_with("ShipPharaoh_"):
+		node.add_to_group("royal_ship_visuals")
 	target.add_child(node)
 	return node
 
@@ -313,6 +322,7 @@ func _build_five_civilizations_ship_blockout() -> void:
 	sculpted_hull.mesh = _royal_ship_hull_mesh()
 	sculpted_hull.position = Vector3(0.0, -0.15, 82.5)
 	sculpted_hull.material_override = _material(hull, 0.48)
+	sculpted_hull.add_to_group("royal_ship_visuals")
 	add_child(sculpted_hull)
 	_box("FiveCivilizationsShip_Hull_GoldWaterline", Vector3(66.4, 0.22, 29.0), Vector3(0.0, -2.25, 82.5), gold)
 	_box("FiveCivilizationsShip_Hull_BlueUpperBand", Vector3(65.5, 1.25, 28.5), Vector3(0.0, 2.25, 82.5), blue)
@@ -463,6 +473,16 @@ func _build_five_civilizations_ship_blockout() -> void:
 	_box("ShipStern_RoyalBlueCap", Vector3(34.0, 0.65, 2.0), Vector3(0.0, 3.0, 95.0), blue_light)
 	_label("FIVE CIVILIZATIONS SHIP - REFERENCE SILHOUETTE BLOCKOUT", Vector3(0.0, 20.5, 82.0), GOLD, 22)
 
+
+func _scale_royal_ship_visuals(factor: float) -> void:
+	# Enlarge the complete vessel while keeping the gate aligned with the bridge approach.
+	# Pivot is near the gate face so the glowing interaction circle and bridge remain untouched.
+	var pivot := Vector3(0.0, 7.4, 95.5)
+	for node in get_tree().get_nodes_in_group("royal_ship_visuals"):
+		if node is Node3D:
+			var visual := node as Node3D
+			visual.position = pivot + (visual.position - pivot) * factor
+			visual.scale *= factor
 
 func _build_ship_detail_pass() -> void:
 	# Gold trim, portholes and lighting reinforce the uploaded royal blue/gold reference.
