@@ -246,7 +246,8 @@ func _build_five_civilizations_ship_blockout() -> void:
 	_box("ShipRoyalGate_GoldFrame_Right", Vector3(1.15, 10.0, 1.0), Vector3(6.2, 7.2, 95.0), gold)
 	_box("ShipRoyalGate_TopBeam", Vector3(13.5, 1.0, 1.2), Vector3(0.0, 12.0, 95.0), gold)
 	_box("ShipRoyalGate_InnerBluePortal", Vector3(8.8, 7.4, 0.28), Vector3(0.0, 6.3, 96.0), blue_light)
-	_box("ShipRoyalGate_IlluminatedDoorway", Vector3(5.8, 5.8, 0.18), Vector3(0.0, 5.4, 96.2), _emissive_material(Color(0.18, 0.68, 0.95), 1.7))
+	var gate_door := _box("ShipRoyalGate_IlluminatedDoorway", Vector3(5.8, 5.8, 0.18), Vector3(0.0, 5.4, 96.2), Color(0.18, 0.68, 0.95))
+	gate_door.material_override = _emissive_material(Color(0.18, 0.68, 0.95), 1.7)
 	_box("ShipRoyalGate_NamePlate", Vector3(9.6, 1.2, 0.35), Vector3(0.0, 10.0, 96.1), dark)
 	_label("KING OF EGYPT CITY", Vector3(0.0, 10.05, 96.35), gold, 28)
 
