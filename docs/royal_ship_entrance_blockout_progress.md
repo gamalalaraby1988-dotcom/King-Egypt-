@@ -284,3 +284,14 @@
 - Follow-up commit `80444032acf62c161a793ca6f08526de6ac73fa1` increases deck thickness from 0.72m to 1.12m, deepens the navy lower fascia, strengthens the downward sweep at the outer ends, tapers deck depth more strongly, and raises the gold edge trim to sit above the thicker deck.
 - This follow-up requires fresh validation and an exact-scene render before its visual effect can be accepted.
 - No final production ship asset, collision, vehicle physics, player interaction trigger, or server-authoritative ship-entry system is claimed. No merge to `main`.
+
+
+## External ready-made ship asset candidate — 2026-11-23
+
+- User authorized sourcing a ready-made ship model if a suitable asset can match the approved Five Civilizations Ship requirements.
+- Candidate identified: Innerscene “Cruise ship” GLB, 9.5 MB, CC0 public-domain dedication. Source page: https://www.innerscene.com/tools/library/3d-parts/cruise-ship-d142a65c
+- Published model dimensions: 289.4 m overall length, 33.4 m overall width, 62.4 m overall height; described with a hull, porthole decks, balcony cabins, promenade glazing, recessed lifeboats, pool/sun deck and rounded bridge front.
+- This is a generic modern cruise ship, not the Egyptian royal ship shown in the user's reference. It does not include the pharaoh/Tutankhamun mask gate, navy-and-gold Egyptian styling, royal insignia, or the approved entrance interaction.
+- It is a candidate base only. Do not replace the current ship blockout or merge it until the exact GLB is acquired, imported into Godot, inspected from multiple angles, and checked against the approved reference. If its superstructure conflicts with the user's no-extra-interior-floors/stairs requirement, modify or reject it rather than accepting that mismatch.
+- Planned custom work if accepted: navy/ivory hull palette with gold trim, Egyptian royal gate and Tutankhamun mask, Five Civilizations emblems, entrance alignment to the bridge, and preservation of the fixed ship and gate interaction area.
+- No purchase authorized or made. No asset download/import or visual match is claimed yet; the source page is identified but the binary download URL could not be verified in this pass. No merge to `main`.
