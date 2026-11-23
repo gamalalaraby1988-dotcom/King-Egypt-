@@ -247,3 +247,12 @@
 - Script commit: `d4c5754e97e046d408b83ae95635087007a04816`.
 - New Godot validation and exact-scene render are required before accepting the geometry.
 - The vessel remains a procedural blockout; no production asset, collision, vehicle physics, player interaction, or network-authoritative entry implementation is claimed. No merge to `main`.
+
+
+## Curved deck helper return-type fix — 2026-11-23
+
+- The validation run `45168289287` exposed a GDScript runtime type mismatch: the segmented deck helper returned a `Node3D` while its signature declared `MeshInstance3D`.
+- Corrected the helper return annotation to `Node3D` in commit `2438306cc6b99fca9c790b0bb0d4640b37bbbf82`.
+- The earlier render run `45168289013` was still running at the time of this note and is not treated as valid verification of the corrected script.
+- Push of the fix triggers fresh Godot validation and render workflows. No visual approval is claimed until the new render is inspected.
+- No merge to `main`; no production collision, vehicle physics, interaction trigger or server-authoritative entry logic is claimed.
