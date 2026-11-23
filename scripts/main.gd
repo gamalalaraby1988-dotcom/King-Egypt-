@@ -467,8 +467,6 @@ func _on_jet_ski_mount_result_received(success: bool, message: String) -> void:
 		city_jet_ski.global_position = JET_SKI_LAUNCH_POSITION
 		city_jet_ski.global_rotation.y = local_player.global_rotation.y
 	_mount_player_jet_ski()
-	if is_instance_valid(city_jet_ski):
-		city_jet_ski.set_physics_process(false)
 
 
 func _on_jet_ski_authoritative_state_received(position: Vector3, rotation_y: float, _velocity: Vector3) -> void:
