@@ -22,6 +22,7 @@ var interior_loading_message_key := "interior_loading"
 var interior_hidden_world_states: Dictionary = {}
 var city_vehicle: CharacterBody3D = null
 var vehicle_interaction_button: Button = null
+var vehicle_exit_button: Button = null
 var vehicle_summon_button: Button = null
 var scooter_toggle_button: Button = null
 var city_scooter: CharacterBody3D = null
@@ -132,12 +133,20 @@ func _process(_delta: float) -> void:
 	if scooter_occupied and (not is_instance_valid(city_scooter) or not is_instance_valid(city_scooter.get_node_or_null("Player"))):
 		_recover_scooter_occupancy()
 	var player := get_node_or_null("Player") as CharacterBody3D
+	if vehicle_occupied:
+		_sync_vehicle_occupant_pose()
 	var player_needs_exit: bool = is_instance_valid(player) and (player.get("sitting") == true or player.get("animal_riding") == true)
 	if vehicle_occupied or scooter_occupied or player_needs_exit:
 		if is_instance_valid(vehicle_interaction_button):
 			vehicle_interaction_button.visible = true
-			vehicle_interaction_button.text = "🚪↗"
-			vehicle_interaction_button.tooltip_text = "الخروج" if CityLanguage.get_language() == "ar" else "Exit"
+			if vehicle_occupied:
+				vehicle_interaction_button.text = "⏹"
+				vehicle_interaction_button.tooltip_text = "فرامل" if CityLanguage.get_language() == "ar" else "Brake"
+			else:
+				vehicle_interaction_button.text = "🚪↗"
+				vehicle_interaction_button.tooltip_text = "الخروج" if CityLanguage.get_language() == "ar" else "Exit"
+		if is_instance_valid(vehicle_exit_button):
+			vehicle_exit_button.visible = vehicle_occupied
 		if is_instance_valid(vehicle_summon_button):
 			vehicle_summon_button.visible = false
 		if is_instance_valid(scooter_toggle_button):
@@ -149,6 +158,8 @@ func _process(_delta: float) -> void:
 	# زر الباب مخصص للخروج فقط؛ ركوب المركبات يتم من زر التفاعل الموحد داخل MissionManager.
 	if is_instance_valid(vehicle_interaction_button):
 		vehicle_interaction_button.visible = false
+	if is_instance_valid(vehicle_exit_button):
+		vehicle_exit_button.visible = false
 	if is_instance_valid(vehicle_summon_button):
 		vehicle_summon_button.visible = true
 		vehicle_summon_button.text = "إحضار السيارة" if CityLanguage.get_language() == "ar" else "Call vehicle"
@@ -282,8 +293,28 @@ func _create_player_vehicle() -> void:
 	vehicle_interaction_button.offset_bottom = -bottom_margin
 	vehicle_interaction_button.add_theme_font_size_override("font_size", 12)
 	vehicle_interaction_button.visible = false
-	vehicle_interaction_button.pressed.connect(_exit_contextual_state)
+	vehicle_interaction_button.pressed.connect(_on_contextual_interaction_pressed)
+	vehicle_interaction_button.button_down.connect(_on_contextual_interaction_down)
+	vehicle_interaction_button.button_up.connect(_on_contextual_interaction_up)
 	layer.add_child(vehicle_interaction_button)
+
+	vehicle_exit_button = Button.new()
+	vehicle_exit_button.name = "VehicleExitButton"
+	vehicle_exit_button.text = "🚪"
+	vehicle_exit_button.custom_minimum_size = Vector2(control_width, control_height)
+	vehicle_exit_button.anchor_left = 1.0
+	vehicle_exit_button.anchor_right = 1.0
+	vehicle_exit_button.anchor_top = 1.0
+	vehicle_exit_button.anchor_bottom = 1.0
+	vehicle_exit_button.offset_left = -control_width - right_margin
+	vehicle_exit_button.offset_right = -right_margin
+	vehicle_exit_button.offset_top = -(bottom_margin + control_height * 2.0 + control_gap)
+	vehicle_exit_button.offset_bottom = -(bottom_margin + control_height + control_gap)
+	vehicle_exit_button.add_theme_font_size_override("font_size", 18)
+	vehicle_exit_button.tooltip_text = "الخروج من السيارة"
+	vehicle_exit_button.visible = false
+	vehicle_exit_button.pressed.connect(_exit_player_vehicle)
+	layer.add_child(vehicle_exit_button)
 
 func _summon_player_vehicle() -> void:
 	if not _is_local_city_interaction_allowed():
@@ -400,6 +431,31 @@ func try_enter_summoned_vehicle() -> bool:
 		return false
 	_toggle_vehicle_use()
 	return vehicle_occupied
+
+func _on_contextual_interaction_pressed() -> void:
+	if vehicle_occupied:
+		return
+	_exit_contextual_state()
+
+func _on_contextual_interaction_down() -> void:
+	if vehicle_occupied and is_instance_valid(city_vehicle):
+		city_vehicle.call("set_brake", true)
+
+func _on_contextual_interaction_up() -> void:
+	if vehicle_occupied and is_instance_valid(city_vehicle):
+		city_vehicle.call("set_brake", false)
+
+func _sync_vehicle_occupant_pose() -> void:
+	if not vehicle_occupied or not is_instance_valid(city_vehicle):
+		return
+	var player := get_node_or_null("Player") as CharacterBody3D
+	if not is_instance_valid(player):
+		return
+	player.global_position = city_vehicle.to_global(Vector3(0.0, 1.05, -0.18))
+	player.global_rotation.y = city_vehicle.global_rotation.y
+	var avatar_visual := player.get_node_or_null("AvatarVisual")
+	if is_instance_valid(avatar_visual) and avatar_visual.has_method("set_motion_state"):
+		avatar_visual.call("set_motion_state", "sit", 0.0)
 
 func _exit_contextual_state() -> void:
 	if scooter_occupied:
@@ -530,9 +586,13 @@ func _toggle_vehicle_use() -> void:
 	player.set_mobile_sprint(false)
 	player.velocity = Vector3.ZERO
 	player.set_physics_process(false)
-	player.visible = false
+	player.visible = true
 	player.collision_layer = 0
 	player.collision_mask = 0
+	_sync_vehicle_occupant_pose()
+	var avatar_visual := player.get_node_or_null("AvatarVisual")
+	if is_instance_valid(avatar_visual) and avatar_visual.has_method("set_motion_state"):
+		avatar_visual.call("set_motion_state", "sit", 0.0)
 	var player_camera := player.get_node_or_null("CameraPivot/SpringArm3D/Camera3D") as Camera3D
 	if is_instance_valid(player_camera):
 		player_camera.current = false
@@ -546,9 +606,11 @@ func _toggle_vehicle_use() -> void:
 	if is_instance_valid(vehicle_camera):
 		vehicle_camera.current = true
 	if is_instance_valid(vehicle_interaction_button):
-		vehicle_interaction_button.text = "🚪↗"
-		vehicle_interaction_button.tooltip_text = "النزول من السيارة" if CityLanguage.get_language() == "ar" else "Exit vehicle"
+		vehicle_interaction_button.text = "⏹"
+		vehicle_interaction_button.tooltip_text = "فرامل" if CityLanguage.get_language() == "ar" else "Brake"
 		vehicle_interaction_button.visible = true
+	if is_instance_valid(vehicle_exit_button):
+		vehicle_exit_button.visible = true
 
 func _recover_vehicle_occupancy() -> void:
 	# لا تترك حالة الركوب عالقة إذا حُذفت السيارة أو اللاعب أثناء القيادة.
@@ -581,6 +643,8 @@ func _recover_vehicle_occupancy() -> void:
 		vehicle_interaction_button.visible = false
 		vehicle_interaction_button.text = "🚪 ركوب السيارة" if CityLanguage.get_language() == "ar" else "Enter vehicle"
 		vehicle_interaction_button.tooltip_text = "ركوب السيارة" if CityLanguage.get_language() == "ar" else "Enter vehicle"
+	if is_instance_valid(vehicle_exit_button):
+		vehicle_exit_button.visible = false
 	if is_instance_valid(vehicle_summon_button):
 		vehicle_summon_button.visible = is_instance_valid(player)
 
@@ -595,6 +659,9 @@ func _exit_player_vehicle() -> void:
 	player.global_position = exit_position
 	player.velocity = Vector3.ZERO
 	player.visible = true
+	var avatar_visual := player.get_node_or_null("AvatarVisual")
+	if is_instance_valid(avatar_visual) and avatar_visual.has_method("set_motion_state"):
+		avatar_visual.call("set_motion_state", "idle", 0.0)
 	player.collision_layer = _player_saved_collision_layer
 	player.collision_mask = _player_saved_collision_mask
 	player.set_physics_process(true)
@@ -618,6 +685,8 @@ func _exit_player_vehicle() -> void:
 	_set_mobile_hud_active(true)
 	if is_instance_valid(vehicle_interaction_button):
 		vehicle_interaction_button.visible = false
+	if is_instance_valid(vehicle_exit_button):
+		vehicle_exit_button.visible = false
 
 func _create_interior_transition_ui() -> void:
 	interior_loading_layer = CanvasLayer.new()
