@@ -185,3 +185,14 @@
 - Script commit: `3cbe5ab814c7a7846d8a7ae00b93e12a980f75ad`.
 - Fresh Godot validation and rendered preview are required before visual verification.
 - This is still procedural blockout geometry. The full ship silhouette and mask remain below the detail/finish of the user's reference image. No gameplay collision, vehicle physics, player interaction trigger, or server-authoritative ship-entry logic is claimed. No merge to `main`.
+
+
+## Sculpted hull / refined mask render inspection — 2026-11-23
+
+- Validation run `45164181033` completed successfully.
+- Render run `45164181130` completed successfully and produced artifact `14814396455` from commit `3cbe5ab814c7a7846d8a7ae00b93e12a980f75ad`.
+- Downloaded and inspected the exact 1280x720 PNG rendered from `royal_waterfront_blockout_preview.tscn`.
+- The custom hull silhouette is present, but the current camera angle and blockout construction still make the hull/deck stack read as broad flat stepped slabs rather than the elegant curved multi-deck vessel in the user's supplied reference. The face has recognizable mask cues and blue/gold nemes, but remains stylized low-poly geometry with visibly simplified eyes/nose/beard.
+- The render is a genuine Godot scene capture, not a production-quality asset or final visual match. It verifies scene launch/render only.
+- Next pass should prioritize reshaping the side decks into continuous curved profiles and refining the mask's facial proportions and gold surface detailing, while preserving the central gate, fixed vessel position, bridge, and interaction-ring placement.
+- No final ship/mask production asset, collision, vehicle physics, player interaction trigger, or server-authoritative ship-entry logic is claimed. No merge to `main`.
