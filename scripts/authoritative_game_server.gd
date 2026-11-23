@@ -452,7 +452,7 @@ func _on_peer_disconnected(peer_id: int) -> void:
 	var was_jet_ski_race_participant := _jet_ski_race_participants.has(peer_id)
 	_jet_ski_race_participants.erase(peer_id)
 	_jet_ski_race_locked_participants.erase(peer_id)
-	if _jet_ski_race_state == "ready":
+	if was_jet_ski_race_participant and _jet_ski_race_state == "ready":
 		_jet_ski_race_state = "waiting"
 		_jet_ski_race_locked_participants.clear()
 		_notify_jet_ski_race_participants("غادر متسابق قبل بدء الجولة؛ أُعيد فتح التسجيل.")
