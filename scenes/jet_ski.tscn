@@ -1,0 +1,86 @@
+[gd_scene load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://scripts/jet_ski_controller.gd" id="1_controller"]
+[ext_resource type="Script" path="res://scripts/jet_ski_hud.gd" id="2_hud"]
+
+[sub_resource type="BoxShape3D" id="HullCollision"]
+size = Vector3(1.05, 0.38, 2.65)
+
+[sub_resource type="BoxMesh" id="HullMesh"]
+size = Vector3(1.05, 0.38, 2.65)
+
+[sub_resource type="StandardMaterial3D" id="HullMaterial"]
+albedo_color = Color(0.82, 0.68, 0.31, 1)
+metallic = 0.38
+roughness = 0.27
+
+[sub_resource type="BoxMesh" id="SeatMesh"]
+size = Vector3(0.58, 0.24, 0.92)
+
+[sub_resource type="StandardMaterial3D" id="SeatMaterial"]
+albedo_color = Color(0.055, 0.065, 0.075, 1)
+roughness = 0.72
+
+[node name="RoyalJetSki" type="CharacterBody3D"]
+collision_layer = 0
+collision_mask = 0
+script = ExtResource("1_controller")
+
+[node name="HullCollision" type="CollisionShape3D" parent="."]
+position = Vector3(0, 0.05, 0)
+shape = SubResource("HullCollision")
+
+[node name="VisualRoot" type="Node3D" parent="."]
+
+[node name="Hull" type="MeshInstance3D" parent="VisualRoot"]
+position = Vector3(0, 0.08, 0)
+mesh = SubResource("HullMesh")
+material_override = SubResource("HullMaterial")
+
+[node name="Nose" type="MeshInstance3D" parent="VisualRoot"]
+position = Vector3(0, 0.13, -1.28)
+scale = Vector3(0.55, 0.72, 0.5)
+mesh = SubResource("HullMesh")
+material_override = SubResource("HullMaterial")
+
+[node name="Seat" type="MeshInstance3D" parent="VisualRoot"]
+position = Vector3(0, 0.42, 0.28)
+mesh = SubResource("SeatMesh")
+material_override = SubResource("SeatMaterial")
+
+[node name="HandlebarStem" type="MeshInstance3D" parent="VisualRoot"]
+position = Vector3(0, 0.48, -0.42)
+scale = Vector3(0.12, 0.72, 0.12)
+mesh = SubResource("SeatMesh")
+material_override = SubResource("HullMaterial")
+
+[node name="Handlebar" type="MeshInstance3D" parent="VisualRoot"]
+position = Vector3(0, 0.72, -0.42)
+scale = Vector3(0.9, 0.12, 0.12)
+mesh = SubResource("SeatMesh")
+material_override = SubResource("SeatMaterial")
+
+[node name="CameraPivot" type="Node3D" parent="."]
+position = Vector3(0, 2.25, 0.75)
+rotation = Vector3(-0.2, 0, 0)
+
+[node name="SpringArm3D" type="SpringArm3D" parent="CameraPivot"]
+spring_length = 7.2
+collision_mask = 1
+
+[node name="JetSkiCamera" type="Camera3D" parent="CameraPivot/SpringArm3D"]
+current = false
+far = 450.0
+
+[node name="JetSkiHUDLayer" type="CanvasLayer" parent="."]
+visible = false
+layer = 10
+
+[node name="JetSkiHUD" type="Control" parent="JetSkiHUDLayer"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("2_hud")
