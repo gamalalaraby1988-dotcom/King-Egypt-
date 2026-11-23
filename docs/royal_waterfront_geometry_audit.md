@@ -89,3 +89,17 @@ The isolated blockout was compared with the existing production geometry in `pro
 ### Validation boundary
 
 This cross-check does not modify production files. It does not establish walkable collision, vehicle clearance, water depth, player access, or a rendered result. Godot validation and a screenshot from the actual scene remain outstanding.
+
+## Coordinated route option B (proposal, not implemented)
+
+A coordinated alternative is documented in [royal_waterfront_route_option_b.md](royal_waterfront_route_option_b.md), with a coordinate sketch in [royal_waterfront_route_option_b.svg](royal_waterfront_route_option_b.svg).
+
+- Center the 13m bridge at X=0, retaining the existing ship at (0,0,85).
+- Keep the existing west/east southern road arms at Z=95.
+- Extend both side detours at X=±16 from Z=95 to Z=120.
+- Move the 32m-wide southern bypass from Z=108 to Z=120.
+- Add an 8.5m-wide short land access spur from the ramp toward the relocated bypass, subject to turning-radius and grade review.
+
+Static plan-view check: the centered bridge footprint X=-6.5..6.5 is 9.5m clear of the existing road-arm inner edges at X=±16 and 6.5m clear of the side-detour nearest edges at X=±13. The ramp ends at Z=113; the relocated bypass begins at Z=117, leaving a 4m gap that the proposed spur bridges. The spur overlaps the bypass by 1m in Z to form a T-junction. The extended side detours overlap the bypass by 3m in Z to form the two perimeter-road junctions.
+
+This is a geometry proposal only. It does not resolve the shoreline/ground-collision overlap, prove a continuous boarding surface to the real ship, or establish vertical clearance, road grades, turning radii, or Godot runtime behavior. No production geometry was changed and no approval to implement has been inferred.
