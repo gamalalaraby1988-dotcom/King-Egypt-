@@ -12,6 +12,7 @@ var brake_rect := Rect2()
 var steering_rect := Rect2()
 var camera_last_position := Vector2.ZERO
 var _ui_scale := 1.0
+var _network_send_elapsed := 0.0
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -31,7 +32,7 @@ func _notification(what: int) -> void:
 		_clear_controls()
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	if not visible:
 		_clear_controls()
 		return
@@ -39,6 +40,13 @@ func _process(_delta: float) -> void:
 		jet_ski.call("set_drive", drive_touch != -1)
 		jet_ski.call("set_brake", brake_touch != -1)
 		jet_ski.call("set_steering", steering_value)
+		if GameModeManager.is_online_ready():
+			_network_send_elapsed += maxf(delta, 0.0)
+			if _network_send_elapsed >= 0.05:
+				_network_send_elapsed = 0.0
+				AuthoritativeGameServer.send_jet_ski_input(1.0 if drive_touch != -1 else 0.0, 1.0 if brake_touch != -1 else 0.0, steering_value)
+		else:
+			_network_send_elapsed = 0.0
 
 
 func _update_layout() -> void:
