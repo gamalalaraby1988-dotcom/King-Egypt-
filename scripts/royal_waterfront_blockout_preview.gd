@@ -336,6 +336,22 @@ func _build_five_civilizations_ship_blockout() -> void:
 		for post_index in range(12):
 			var post_x := side * (10.0 + float(post_index) * 1.85)
 			_box("ShipFront_PromenadeRailPost", Vector3(0.12, 0.72, 0.12), Vector3(post_x, 2.35, 95.72), gold)
+	# Illuminated cabin rows and fine balcony rails make the stepped cruise-ship decks readable from the bridge.
+	for tier in range(4):
+		var deck_y := 3.65 + float(tier) * 1.55
+		var deck_width := 58.0 - float(tier) * 4.6
+		for side: float in [-1.0, 1.0]:
+			var rail := _box("ShipDeck_FrontGoldBalconyRail", Vector3(deck_width * 0.5 - 7.0, 0.12, 0.16), Vector3(side * (deck_width * 0.25 + 3.5), deck_y + 0.72, 95.68 - float(tier) * 0.35), gold)
+			for window_index in range(7):
+				var window_x := side * (9.0 + float(window_index) * 2.75)
+				var window := _box("ShipDeck_IlluminatedCabinWindow", Vector3(1.35, 0.76, 0.14), Vector3(window_x, deck_y + 0.12, 95.48 - float(tier) * 0.35), Color(0.24, 0.62, 0.82))
+				window.material_override = _emissive_material(Color(0.24, 0.62, 0.82), 0.42)
+				_box("ShipDeck_WindowGoldFrame_Top", Vector3(1.48, 0.10, 0.18), Vector3(window_x, deck_y + 0.56, 95.58 - float(tier) * 0.35), gold)
+				_box("ShipDeck_WindowGoldFrame_Bottom", Vector3(1.48, 0.10, 0.18), Vector3(window_x, deck_y - 0.32, 95.58 - float(tier) * 0.35), gold)
+			for post_index in range(9):
+				var post_x := side * (9.0 + float(post_index) * 3.25)
+				_box("ShipDeck_BalconyPost", Vector3(0.10, 0.55, 0.10), Vector3(post_x, deck_y + 0.43, 95.82 - float(tier) * 0.35), gold)
+
 	# Broad bow/stern caps keep the vessel silhouette expansive and symmetrical.
 	_box("ShipBow_RoyalBlueCap", Vector3(52.0, 0.65, 2.0), Vector3(0.0, 3.0, 69.8), blue_light)
 	_box("ShipStern_RoyalBlueCap", Vector3(34.0, 0.65, 2.0), Vector3(0.0, 3.0, 95.0), blue_light)
