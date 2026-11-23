@@ -105,12 +105,12 @@ func _capture_previews() -> void:
 	# Review the six relocated public buildings from the actual production scene.
 	# Fail the capture if any approved node or its approved transform is missing.
 	var north_specs := [
-		["Approved_royal_theater", Vector3(-35.0, 0.0, -165.0)],
-		["Approved_stadium", Vector3(0.0, 0.0, -165.0)],
-		["Approved_sports_club", Vector3(35.0, 0.0, -165.0)],
-		["Approved_water_city", Vector3(-35.0, 0.0, -195.0)],
-		["Approved_cinema", Vector3(0.0, 0.0, -195.0)],
-		["Approved_daily_arcade", Vector3(35.0, 0.0, -195.0)]
+		["Approved_royal_theater", Vector3(-35.0, 0.0, -120.0)],
+		["Approved_stadium", Vector3(0.0, 0.0, -120.0)],
+		["Approved_sports_club", Vector3(35.0, 0.0, -120.0)],
+		["Approved_water_city", Vector3(-35.0, 0.0, -150.0)],
+		["Approved_cinema", Vector3(0.0, 0.0, -150.0)],
+		["Approved_daily_arcade", Vector3(35.0, 0.0, -150.0)]
 	]
 	for spec in north_specs:
 		var building := current_scene.get_node_or_null("ApprovedCityLayout/" + str(spec[0])) as Node3D
@@ -130,8 +130,8 @@ func _capture_previews() -> void:
 
 	var north_overview_ok := await _capture_view(
 		"north_district_overview_preview.png",
-		Vector3(0.0, 48.0, -112.0),
-		Vector3(0.0, 0.0, -180.0),
+		Vector3(0.0, 48.0, -67.0),
+		Vector3(0.0, 0.0, -135.0),
 		76.0
 	)
 	if not north_overview_ok:
@@ -139,8 +139,8 @@ func _capture_previews() -> void:
 		return
 	var north_entrance_ok := await _capture_view(
 		"north_district_access_lane_preview.png",
-		Vector3(0.0, 20.0, -140.0),
-		Vector3(0.0, 2.0, -180.0),
+		Vector3(0.0, 20.0, -95.0),
+		Vector3(0.0, 2.0, -135.0),
 		70.0
 	)
 	if not north_entrance_ok:
