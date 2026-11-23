@@ -54,7 +54,7 @@ func _draw() -> void:
 	draw_arc(joystick_center, joystick_draw_radius, 0.0, TAU, 48, Color(1, 1, 1, 0.58), 3.0 * minf(1.0, joystick_draw_radius / 72.0))
 	draw_circle(joystick_center + joystick_vector * joystick_draw_radius, maxf(17.0, 26.0 * joystick_draw_radius / 72.0), Color(0.91, 0.75, 0.38, 0.90))
 
-func _input(event: InputEvent) -> void:
+func _unhandled_input(event: InputEvent) -> void:
 	if not visible:
 		return
 	if event is InputEventScreenTouch:
