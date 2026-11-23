@@ -70,3 +70,9 @@
 - This is a reusable client-side vehicle foundation only. It is not yet spawned from the Royal Beach Club/bridge, does not yet mount the player's avatar, and is not yet connected to authenticated server movement.
 - The synchronized countdown, server-owned jet ski movement, four-player vehicle snapshots, ordered checkpoint crossing validation, finish adjudication, race results/rewards, and final production-scene preview remain required before the championship can be considered playable.
 - Do not describe the watercraft as multiplayer-ready until server authority and a real multi-client test are implemented.
+
+
+## Synchronized countdown foundation
+- The dedicated server now changes a valid locked roster into a `countdown` phase for five seconds, then advances the phase to `racing` using the server monotonic clock and notifies the locked participants.
+- If a registered participant disconnects during `ready` or `countdown`, the server reopens registration and clears the countdown deadline; a non-participant disconnect does not cancel the countdown.
+- This phase transition does not yet implement server-authoritative jet ski movement, checkpoint crossing validation, finish adjudication, or multiplayer vehicle snapshots. Those remain required before the race is playable.
