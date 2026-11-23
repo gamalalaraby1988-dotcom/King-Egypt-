@@ -214,16 +214,16 @@ func _build_option_b_southern_roads() -> void:
 func _build_five_civilizations_ship_blockout() -> void:
 	# Real Godot mesh blockout for review only; deliberately not presented as the final ship asset.
 	# Keep the approved moored position and one accessible main deck (no extra floors or stairs).
-	var hull_mat := _material(Color(0.72, 0.73, 0.70), 0.42)
-	var ivory_mat := _material(IVORY, 0.38)
-	var gold_mat := _material(GOLD, 0.32)
-	var blue_mat := _material(Color(0.035, 0.12, 0.20), 0.34)
-	_box("FiveCivilizationsShip_Hull_Blockout", Vector3(8.0, 2.2, 18.0), Vector3(0.0, 0.35, 85.0), hull_mat)
-	_box("FiveCivilizationsShip_MainDeck_OneLevel", Vector3(9.0, 0.28, 17.0), Vector3(0.0, 1.60, 85.0), ivory_mat)
-	_box("FiveCivilizationsShip_RoyalBlueDeckInset", Vector3(6.8, 0.035, 12.0), Vector3(0.0, 1.76, 83.0), blue_mat)
+	var hull_color := Color(0.72, 0.73, 0.70)
+	var ivory_color := IVORY
+	var gold_color := GOLD
+	var blue_color := Color(0.035, 0.12, 0.20)
+	_box("FiveCivilizationsShip_Hull_Blockout", Vector3(8.0, 2.2, 18.0), Vector3(0.0, 0.35, 85.0), hull_color)
+	_box("FiveCivilizationsShip_MainDeck_OneLevel", Vector3(9.0, 0.28, 17.0), Vector3(0.0, 1.60, 85.0), ivory_color)
+	_box("FiveCivilizationsShip_RoyalBlueDeckInset", Vector3(6.8, 0.035, 12.0), Vector3(0.0, 1.76, 83.0), blue_color)
 	# Main entrance faces the bridge-side (+Z) approach; the interaction circle remains outside it.
 	for x: float in [-2.2, 2.2]:
-		_box("FiveCivilizationsShip_GatePillar", Vector3(0.48, 3.2, 0.55), Vector3(x, 3.35, 93.8), gold_mat)
+		_box("FiveCivilizationsShip_GatePillar", Vector3(0.48, 3.2, 0.55), Vector3(x, 3.35, 93.8), gold_color)
 	_box("FiveCivilizationsShip_GateLintel", Vector3(5.0, 0.48, 0.65), Vector3(0.0, 4.85, 93.8), gold_mat)
 	_box("FiveCivilizationsShip_MainHallFacade", Vector3(6.0, 3.2, 3.0), Vector3(0.0, 3.35, 88.0), ivory_mat)
 	_box("FiveCivilizationsShip_MainHallRoof", Vector3(6.8, 0.42, 3.8), Vector3(0.0, 5.15, 88.0), gold_mat)
