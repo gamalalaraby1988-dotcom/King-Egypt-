@@ -165,3 +165,13 @@
 - Script commit: `40b83370857ab19614ba0cd4b0656e5fe9b8cd91`.
 - Fresh validation and exact-scene rendering are required. The custom face mesh is a procedural blockout refinement, not a final sculpted or photogrammetric Tutankhamun mask.
 - No merge to `main`; no gameplay collision, vehicle physics, interaction trigger or online entry logic is claimed.
+
+
+## Custom tapered mask render verification — 2026-11-23
+
+- Godot validation run `45163805999` completed successfully.
+- Exact-scene render run `45163806017` completed successfully and uploaded artifact `14812692472` from commit `40b83370857ab19614ba0cd4b0656e5fe9b8cd91`.
+- Retrieved and visually inspected the rendered 1280x720 PNG. The custom tapered face mesh renders and the mask is centered above the gate, but the full ship remains a low-detail blockout with visibly primitive geometry; the mask is not yet at the reference image's sculpted detail or photoreal quality.
+- This render verifies scene execution and the procedural mesh change only. It does not constitute visual approval or a final asset.
+- Next work should prioritize a properly sculpted mask mesh/material and richer ship silhouette/deck detail, then render again for user review.
+- No merge to `main`; no production collision, vehicle physics, player interaction trigger, or server-authoritative ship-entry logic is claimed.
