@@ -21,6 +21,7 @@ func _ready() -> void:
 	_build_bridge_details()
 	_build_ship_gate_interaction()
 	_build_five_civilizations_ship_blockout()
+	_build_ship_detail_pass()
 	_build_option_b_southern_roads()
 	_mark_preserved_ship_and_conflicts()
 	# Close 3/4 review angle: keep the bridge, glowing interaction pad, and ship reference footprint in one readable frame.
@@ -237,6 +238,36 @@ func _build_five_civilizations_ship_blockout() -> void:
 	_label("FIVE CIVILIZATIONS SHIP - GEOMETRY BLOCKOUT", Vector3(0.0, 7.0, 82.0), GOLD, 24)
 	_label("ONE MAIN DECK • STATIONARY • MAIN GATE TO ROYAL BRIDGE", Vector3(0.0, 6.0, 96.0), IVORY, 16)
 
+
+
+func _build_ship_detail_pass() -> void:
+	# Decorative detail pass on the same single-deck, stationary primitive-mesh blockout.
+	# These details improve silhouette/readability without claiming a finished ship asset.
+	var gold_color := GOLD
+	var dark_blue := Color(0.025, 0.09, 0.15)
+	var hull_ivory := Color(0.82, 0.82, 0.77)
+	# Continuous gold sheer-line bands on both visible hull sides.
+	for side: float in [-1.0, 1.0]:
+		_box("ShipHull_GoldSheerLine", Vector3(0.10, 0.16, 16.8), Vector3(side * 4.06, 0.78, 85.0), gold_color)
+		# Repeated round portholes along the hull, rotated to face outward.
+		for z: float in [79.5, 82.0, 84.5, 87.0, 89.5]:
+			var porthole := _cylinder("ShipHull_Porthole", 0.22, 0.09, Vector3(side * 4.10, 0.28, z), _emissive_material(Color(0.45, 0.78, 0.88), 0.65))
+			porthole.rotation_degrees.z = 90.0
+		# Gold baluster posts clarify the edge of the one main deck.
+		for z: float in [78.2, 81.0, 84.0, 87.0, 90.0, 92.0]:
+			_box("ShipDeck_RailPost", Vector3(0.13, 0.72, 0.13), Vector3(side * 4.35, 2.48, z), gold_color)
+	# A restrained raised bow and stern cap make the vessel silhouette read as a ship, not a box.
+	_box("ShipBow_RoyalIvoryCap", Vector3(6.0, 0.35, 2.2), Vector3(0.0, 1.56, 76.0), hull_ivory)
+	_box("ShipBow_GoldCrest", Vector3(1.1, 0.55, 0.35), Vector3(0.0, 2.00, 75.0), gold_color)
+	_box("ShipStern_RoyalBlueCap", Vector3(6.2, 0.24, 1.4), Vector3(0.0, 1.58, 94.0), dark_blue)
+	# Five separate civilization plaques on the main-hall-facing deck edge.
+	for i in range(5):
+		var x := -3.0 + float(i) * 1.5
+		_box("FiveCivilizationsShip_EmblemPlaque_%02d" % i, Vector3(0.72, 0.82, 0.16), Vector3(x, 2.28, 90.9), gold_color)
+		_box("FiveCivilizationsShip_EmblemInset_%02d" % i, Vector3(0.42, 0.48, 0.05), Vector3(x, 2.30, 90.78), dark_blue)
+	# Slim roof crown over the main hall; it stays part of the same single-level silhouette.
+	_box("ShipMainHall_RoyalCrownBand", Vector3(6.9, 0.18, 3.9), Vector3(0.0, 5.42, 88.0), gold_color)
+	_label("FIVE CIVILIZATIONS • FIVE EMBLEMS", Vector3(0.0, 6.4, 80.0), IVORY, 17)
 
 func _mark_preserved_ship_and_conflicts() -> void:
 	# The vessel above is a review blockout only; it does not replace a final approved ship asset.
