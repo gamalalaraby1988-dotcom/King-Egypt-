@@ -51,6 +51,7 @@ var _proof_hmac_secret := PackedByteArray()
 var _proof_secret_warning_shown := false
 var _jet_ski_race_participants: Array[int] = []
 var _jet_ski_race_locked_participants: Array[int] = []
+var _jet_ski_race_spectators: Array[int] = []
 var _jet_ski_race_state := "waiting"
 var _jet_ski_race_countdown_until_usec := 0
 var _arcade_machines: Dictionary = {}
@@ -457,6 +458,7 @@ func _on_peer_disconnected(peer_id: int) -> void:
 	_sessions.erase(peer_id)
 	var was_jet_ski_race_participant := _jet_ski_race_participants.has(peer_id)
 	_jet_ski_race_participants.erase(peer_id)
+	_jet_ski_race_spectators.erase(peer_id)
 	_jet_ski_race_locked_participants.erase(peer_id)
 	if _jet_ski_race_should_reopen_after_disconnect(was_jet_ski_race_participant, _jet_ski_race_state):
 		_jet_ski_race_state = "waiting"
@@ -1505,6 +1507,20 @@ func request_start_jet_ski_race() -> bool:
 	return true
 
 
+func request_watch_jet_ski_race() -> bool:
+	if _is_dedicated_server or not is_authenticated() or not multiplayer.has_multiplayer_peer():
+		return false
+	request_watch_jet_ski_race_rpc.rpc_id(1)
+	return true
+
+
+func request_stop_watching_jet_ski_race() -> bool:
+	if _is_dedicated_server or not is_authenticated() or not multiplayer.has_multiplayer_peer():
+		return false
+	request_stop_watching_jet_ski_race_rpc.rpc_id(1)
+	return true
+
+
 func _jet_ski_race_can_start(participant_count: int) -> bool:
 	return participant_count >= JET_SKI_RACE_MIN_PARTICIPANTS and participant_count <= JET_SKI_RACE_MAX_PARTICIPANTS
 
@@ -1513,8 +1529,16 @@ func _jet_ski_race_should_reopen_after_disconnect(was_participant: bool, race_st
 	return was_participant and race_state in ["ready", "countdown"]
 
 
+func _jet_ski_race_can_watch(peer_id: int, participant_ids: Array[int]) -> bool:
+	return peer_id > 0 and not participant_ids.has(peer_id)
+
+
 func _notify_jet_ski_race_participants(message: String) -> void:
-	for peer_id in _jet_ski_race_participants:
+	var audience: Array[int] = _jet_ski_race_participants.duplicate()
+	for spectator_peer_id in _jet_ski_race_spectators:
+		if not audience.has(spectator_peer_id):
+			audience.append(spectator_peer_id)
+	for peer_id in audience:
 		if _sessions.has(peer_id) and bool(_sessions[peer_id].get("authenticated", false)):
 			rpc_id(peer_id, "receive_jet_ski_race_state", _jet_ski_race_state, _jet_ski_race_participants.size(), message)
 
@@ -1537,6 +1561,32 @@ func request_join_jet_ski_race_rpc() -> void:
 		return
 	_jet_ski_race_participants.append(peer_id)
 	_notify_jet_ski_race_participants("تم تسجيلك في بطولة الجت سكي الملكية.")
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func request_watch_jet_ski_race_rpc() -> void:
+	if not multiplayer.is_server():
+		return
+	var peer_id := multiplayer.get_remote_sender_id()
+	if not _sessions.has(peer_id) or not bool(_sessions[peer_id].get("authenticated", false)):
+		return
+	if not _jet_ski_race_can_watch(peer_id, _jet_ski_race_participants):
+		rpc_id(peer_id, "receive_jet_ski_race_state", _jet_ski_race_state, _jet_ski_race_participants.size(), "أنت متسابق في هذه الجولة ولا يمكنك دخول وضع المشاهدة.")
+		return
+	if not _jet_ski_race_spectators.has(peer_id):
+		_jet_ski_race_spectators.append(peer_id)
+	rpc_id(peer_id, "receive_jet_ski_race_state", _jet_ski_race_state, _jet_ski_race_participants.size(), "تم تفعيل وضع المشاهدة. لن تتمكن من قيادة الجت سكي أو التأثير في نتيجة السباق.")
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func request_stop_watching_jet_ski_race_rpc() -> void:
+	if not multiplayer.is_server():
+		return
+	var peer_id := multiplayer.get_remote_sender_id()
+	if not _sessions.has(peer_id) or not bool(_sessions[peer_id].get("authenticated", false)):
+		return
+	_jet_ski_race_spectators.erase(peer_id)
+	rpc_id(peer_id, "receive_jet_ski_race_state", _jet_ski_race_state, _jet_ski_race_participants.size(), "تم إيقاف وضع مشاهدة السباق.")
 
 
 @rpc("any_peer", "call_remote", "reliable")
