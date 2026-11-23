@@ -30,7 +30,7 @@ var city_jet_ski: CharacterBody3D = null
 var jet_ski_occupied := false
 var _jet_ski_saved_collision_layer := 1
 var _jet_ski_saved_collision_mask := 1
-const JET_SKI_LAUNCH_POSITION := Vector3(0.0, 0.34, 91.0)
+const JET_SKI_LAUNCH_POSITION := Vector3(0.0, 0.34, 82.0)
 const JET_SKI_BOARDING_RADIUS := 8.0
 var _scooter_saved_collision_layer := 1
 var _scooter_saved_collision_mask := 1
@@ -145,7 +145,7 @@ func _process(_delta: float) -> void:
 		if is_instance_valid(vehicle_interaction_button):
 			vehicle_interaction_button.visible = true
 			vehicle_interaction_button.text = "🚪↗"
-			vehicle_interaction_button.tooltip_text = "الخروج" if CityLanguage.get_language() == "ar" else "Exit"
+			vehicle_interaction_button.tooltip_text = ("النزول من الجت سكي" if CityLanguage.get_language() == "ar" else "Exit jet ski") if jet_ski_occupied else (("الخروج" if CityLanguage.get_language() == "ar" else "Exit"))
 		if is_instance_valid(vehicle_summon_button):
 			vehicle_summon_button.visible = false
 		if is_instance_valid(scooter_toggle_button):
