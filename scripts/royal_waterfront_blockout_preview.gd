@@ -312,8 +312,10 @@ func _build_ship_detail_pass() -> void:
 	# Glowing gold portal arch and a soft blue central doorway.
 	var portal_glow := _emissive_material(Color(1.0, 0.62, 0.12), 2.8)
 	for side: float in [-1.0, 1.0]:
-		_box("ShipGate_IlluminatedVertical", Vector3(0.20, 6.4, 0.16), Vector3(side * 3.25, 5.5, 96.55), portal_glow)
-	_box("ShipGate_IlluminatedHeader", Vector3(6.6, 0.20, 0.16), Vector3(0.0, 8.7, 96.55), portal_glow)
+		var portal_side := _box("ShipGate_IlluminatedVertical", Vector3(0.20, 6.4, 0.16), Vector3(side * 3.25, 5.5, 96.55), Color(1.0, 0.62, 0.12))
+		portal_side.material_override = portal_glow
+	var portal_header := _box("ShipGate_IlluminatedHeader", Vector3(6.6, 0.20, 0.16), Vector3(0.0, 8.7, 96.55), Color(1.0, 0.62, 0.12))
+	portal_header.material_override = portal_glow
 	# The ship remains moored and static; no walkable upper decks, extra floors or stairs are introduced.
 func _mark_preserved_ship_and_conflicts() -> void:
 	# The vessel above is a review blockout only; it does not replace a final approved ship asset.
