@@ -90,6 +90,8 @@ func _ready() -> void:
 	self.layer = 40
 	main_scene = get_parent()
 	mission_manager = main_scene.get_node_or_null("MissionManager") if is_instance_valid(main_scene) else null
+	if not AuthoritativeGameServer.safe_return_completed.is_connected(_on_safe_return_completed):
+		AuthoritativeGameServer.safe_return_completed.connect(_on_safe_return_completed)
 	_build()
 	_build_player_interaction_popup()
 	_build_group_popup()
@@ -1059,9 +1061,20 @@ func _perform_safe_return() -> void:
 		if is_instance_valid(vehicle_store_status):
 			vehicle_store_status.text = "تعذرت العودة الآن: قد تكون في جلسة Online أو داخل مركبة/مبنى. لم يتم تغيير موقعك."
 		return
+	if GameModeManager.is_online_ready():
+		if is_instance_valid(vehicle_store_status):
+			vehicle_store_status.text = "تم إرسال طلب العودة الآمنة إلى خادم المدينة؛ بانتظار تأكيده..."
+		return
 	if is_instance_valid(vehicle_store_status):
 		vehicle_store_status.text = "تمت إعادتك إلى نقطة بداية اللعبة. حسابك وممتلكاتك وتقدمك محفوظة."
 	_close_vehicle_store_phone()
+
+
+func _on_safe_return_completed(success: bool, message: String) -> void:
+	if is_instance_valid(vehicle_store_status):
+		vehicle_store_status.text = message
+	if success:
+		_close_vehicle_store_phone()
 
 
 func _buy_vehicle_from_phone(vehicle_id: String) -> void:
