@@ -504,9 +504,14 @@ func _open_social_popup(tab: String = "friends") -> void:
 		_build_social_popup()
 	_show_social_tab(tab)
 	social_popup.visible = true
+	var closing_phone := is_instance_valid(phone_popup) and phone_popup.visible
 	for panel in [popup, phone_popup, player_popup, group_popup, group_chat_popup]:
 		if is_instance_valid(panel):
 			panel.visible = false
+	if closing_phone:
+		_set_local_player_phone_pose(false)
+		if is_instance_valid(phone_entry_button):
+			phone_entry_button.visible = true
 
 
 func _show_social_tab(tab: String) -> void:
