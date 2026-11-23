@@ -224,16 +224,16 @@ func _build_five_civilizations_ship_blockout() -> void:
 	# Main entrance faces the bridge-side (+Z) approach; the interaction circle remains outside it.
 	for x: float in [-2.2, 2.2]:
 		_box("FiveCivilizationsShip_GatePillar", Vector3(0.48, 3.2, 0.55), Vector3(x, 3.35, 93.8), gold_color)
-	_box("FiveCivilizationsShip_GateLintel", Vector3(5.0, 0.48, 0.65), Vector3(0.0, 4.85, 93.8), gold_mat)
-	_box("FiveCivilizationsShip_MainHallFacade", Vector3(6.0, 3.2, 3.0), Vector3(0.0, 3.35, 88.0), ivory_mat)
-	_box("FiveCivilizationsShip_MainHallRoof", Vector3(6.8, 0.42, 3.8), Vector3(0.0, 5.15, 88.0), gold_mat)
+	_box("FiveCivilizationsShip_GateLintel", Vector3(5.0, 0.48, 0.65), Vector3(0.0, 4.85, 93.8), gold_color)
+	_box("FiveCivilizationsShip_MainHallFacade", Vector3(6.0, 3.2, 3.0), Vector3(0.0, 3.35, 88.0), ivory_color)
+	_box("FiveCivilizationsShip_MainHallRoof", Vector3(6.8, 0.42, 3.8), Vector3(0.0, 5.15, 88.0), gold_color)
 	# Five restrained civilization markers along the single deck edge.
 	for i in range(5):
 		var x := -3.2 + float(i) * 1.6
-		_box("FiveCivilizationsShip_CivilizationPanel_%02d" % i, Vector3(0.85, 1.15, 0.18), Vector3(x, 2.45, 79.8), gold_mat)
+		_box("FiveCivilizationsShip_CivilizationPanel_%02d" % i, Vector3(0.85, 1.15, 0.18), Vector3(x, 2.45, 79.8), gold_color)
 	# Low perimeter rails clarify the vessel edge without creating another deck or floor.
 	for side: float in [-1.0, 1.0]:
-		_box("FiveCivilizationsShip_SideRail", Vector3(0.14, 0.7, 15.0), Vector3(side * 4.35, 2.05, 85.0), gold_mat)
+		_box("FiveCivilizationsShip_SideRail", Vector3(0.14, 0.7, 15.0), Vector3(side * 4.35, 2.05, 85.0), gold_color)
 	_label("FIVE CIVILIZATIONS SHIP - GEOMETRY BLOCKOUT", Vector3(0.0, 7.0, 82.0), GOLD, 24)
 	_label("ONE MAIN DECK • STATIONARY • MAIN GATE TO ROYAL BRIDGE", Vector3(0.0, 6.0, 96.0), IVORY, 16)
 
