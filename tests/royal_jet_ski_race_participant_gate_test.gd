@@ -13,6 +13,12 @@ func _initialize() -> void:
 			failures.append("Race start incorrectly rejected with %d participant(s)." % count)
 	if server._jet_ski_race_can_start(5):
 		failures.append("Race start incorrectly allowed with five participants.")
+	if server._jet_ski_race_should_reopen_after_disconnect(false, "ready"):
+		failures.append("A non-participant disconnect incorrectly reopened a ready race.")
+	if not server._jet_ski_race_should_reopen_after_disconnect(true, "ready"):
+		failures.append("A participant disconnect did not reopen a ready race.")
+	if server._jet_ski_race_should_reopen_after_disconnect(true, "waiting"):
+		failures.append("A participant disconnect changed a lobby that was already waiting.")
 	server.free()
 	if not failures.is_empty():
 		for failure in failures:
