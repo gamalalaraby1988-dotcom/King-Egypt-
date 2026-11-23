@@ -44,4 +44,4 @@ The ship remains fixed. The marina terminal, yacht club, beach handball area, be
 
 ## Change boundary
 
-Only this proposal document is intended for the isolated review branch. No production scene, production road, approved building, ship, or gameplay collision is edited. No merge or deployment is performed.
+Only the proposal document and coordinate diagram are added to the isolated review branch. No production scene, production road, approved building, ship, or gameplay collision is edited. No merge or deployment is performed.
