@@ -308,6 +308,24 @@ func _build_five_civilizations_ship_blockout() -> void:
 	_box("ShipPharaoh_UraeusStem", Vector3(0.20, 0.88, 0.20), Vector3(0.0, 17.20, 97.62), gold)
 	_box("ShipPharaoh_UraeusHead", Vector3(0.58, 0.52, 0.28), Vector3(0.0, 17.60, 97.78), ivory)
 
+	# Tutankhamun's broad ceremonial collar, rendered as layered gold-and-blue arcs beneath the mask.
+	for collar_layer in range(4):
+		var collar_width := 5.8 - float(collar_layer) * 0.58
+		var collar_y := 11.25 - float(collar_layer) * 0.34
+		var collar_band := _box("Tutankhamun_Collar_GoldBand", Vector3(collar_width, 0.28, 0.30), Vector3(0.0, collar_y, 98.05 + float(collar_layer) * 0.035), gold)
+		collar_band.rotation_degrees.z = 0.0
+		_box("Tutankhamun_Collar_BlueInlay", Vector3(collar_width - 0.22, 0.12, 0.12), Vector3(0.0, collar_y - 0.08, 98.23 + float(collar_layer) * 0.035), blue)
+	for side: float in [-1.0, 1.0]:
+		# Stylized vulture wings framing the cobra on the brow, matching the royal mask insignia.
+		var wing := _box("Tutankhamun_Uraeus_VultureWing", Vector3(0.78, 0.22, 0.18), Vector3(side * 0.52, 17.42, 98.06), gold)
+		wing.rotation_degrees.z = side * -18.0
+		for feather_index in range(3):
+			var feather := _box("Tutankhamun_Uraeus_WingFeather", Vector3(0.42, 0.10, 0.12), Vector3(side * (0.70 + float(feather_index) * 0.12), 17.18 - float(feather_index) * 0.12, 98.10), ivory)
+			feather.rotation_degrees.z = side * -22.0
+	_box("Tutankhamun_Uraeus_CobraBody", Vector3(0.24, 0.82, 0.22), Vector3(0.0, 17.48, 98.18), gold)
+	_box("Tutankhamun_Uraeus_CobraHood", Vector3(0.56, 0.42, 0.24), Vector3(0.0, 17.92, 98.18), gold)
+	_box("Tutankhamun_Uraeus_CobraHead", Vector3(0.32, 0.32, 0.24), Vector3(0.0, 18.20, 98.20), ivory)
+
 	# Oversized winged-sun emblems on the forward blue fascia, readable from the bridge.
 	for side: float in [-1.0, 1.0]:
 		var emblem_x := side * 21.0
