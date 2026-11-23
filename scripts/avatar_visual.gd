@@ -128,18 +128,13 @@ func _build_phone_visual() -> void:
 	phone_screen_viewport.size = Vector2i(256, 448)
 	phone_screen_viewport.transparent_bg = false
 	phone_screen_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
-	var screen_root := Control.new()
+	var screen_root := PanelContainer.new()
 	screen_root.name = "PhoneScreenRoot"
 	screen_root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	screen_root.add_theme_stylebox_override("panel", _make_phone_screen_style())
 	phone_screen_viewport.add_child(screen_root)
 	phone_screen_content = VBoxContainer.new()
-	phone_screen_content.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	phone_screen_content.add_theme_constant_override("separation", 8)
-	phone_screen_content.add_theme_constant_override("margin_left", 12)
-	phone_screen_content.add_theme_constant_override("margin_right", 12)
-	phone_screen_content.add_theme_constant_override("margin_top", 14)
-	phone_screen_content.add_theme_constant_override("margin_bottom", 14)
 	screen_root.add_child(phone_screen_content)
 	var screen_material := StandardMaterial3D.new()
 	screen_material.albedo_texture = phone_screen_viewport.get_texture()
