@@ -267,30 +267,30 @@ func _build_five_civilizations_ship_blockout() -> void:
 	head_mesh.radius = 2.35
 	head_mesh.height = 4.8
 	head.mesh = head_mesh
-	head.position = Vector3(0.0, 15.0, 94.35)
+	head.position = Vector3(0.0, 15.0, 97.15)
 	head.scale = Vector3(0.86, 1.0, 0.42)
 	head.material_override = _material(gold, 0.28)
 	add_child(head)
 	_box("ShipPharaoh_Headdress_Back", Vector3(8.2, 6.6, 0.58), Vector3(0.0, 15.1, 96.0), blue)
 	for side: float in [-1.0, 1.0]:
-		var lappet := _box("ShipPharaoh_Nemes_SideLappet", Vector3(1.65, 5.8, 0.72), Vector3(side * 3.05, 13.9, 95.5), blue)
+		var lappet := _box("ShipPharaoh_Nemes_SideLappet", Vector3(1.65, 5.8, 0.72), Vector3(side * 3.05, 13.9, 97.05), blue)
 		lappet.rotation_degrees.z = side * -7.0
 		for stripe in range(5):
 			var stripe_y := 11.8 + float(stripe) * 0.95
-			var stripe_node := _box("ShipPharaoh_Nemes_GoldStripe", Vector3(1.78, 0.13, 0.78), Vector3(side * 3.05, stripe_y, 95.02), gold)
+			var stripe_node := _box("ShipPharaoh_Nemes_GoldStripe", Vector3(1.78, 0.13, 0.78), Vector3(side * 3.05, stripe_y, 97.18), gold)
 			stripe_node.rotation_degrees.z = side * -7.0
 	for stripe in range(6):
 		var y := 12.6 + float(stripe) * 0.86
-		_box("ShipPharaoh_Headdress_GoldStripe_%02d" % stripe, Vector3(7.8 - float(stripe) * 0.48, 0.14, 0.18), Vector3(0.0, y, 94.85), gold)
-	_box("ShipPharaoh_Crown", Vector3(1.25, 1.55, 0.72), Vector3(0.0, 18.1, 94.55), gold)
-	_box("ShipPharaoh_FaceNose", Vector3(0.42, 1.15, 0.28), Vector3(0.0, 14.9, 93.30), ivory)
+		_box("ShipPharaoh_Headdress_GoldStripe_%02d" % stripe, Vector3(7.8 - float(stripe) * 0.48, 0.14, 0.18), Vector3(0.0, y, 97.08), gold)
+	_box("ShipPharaoh_Crown", Vector3(1.25, 1.55, 0.72), Vector3(0.0, 18.1, 97.0), gold)
+	_box("ShipPharaoh_FaceNose", Vector3(0.42, 1.15, 0.28), Vector3(0.0, 14.9, 97.58), ivory)
 	for side: float in [-1.0, 1.0]:
-		var eye := _box("ShipPharaoh_Eye", Vector3(0.72, 0.22, 0.18), Vector3(side * 0.92, 15.55, 93.38), dark)
+		var eye := _box("ShipPharaoh_Eye", Vector3(0.72, 0.22, 0.18), Vector3(side * 0.92, 15.55, 97.58), dark)
 		eye.rotation_degrees.z = side * -5.0
-		var brow := _box("ShipPharaoh_GoldBrow", Vector3(1.05, 0.16, 0.18), Vector3(side * 0.92, 15.88, 93.38), gold)
+		var brow := _box("ShipPharaoh_GoldBrow", Vector3(1.05, 0.16, 0.18), Vector3(side * 0.92, 15.88, 97.58), gold)
 		brow.rotation_degrees.z = side * -5.0
-	_box("ShipPharaoh_CeremonialBeard", Vector3(0.72, 1.75, 0.42), Vector3(0.0, 12.65, 93.55), gold)
-	_box("ShipPharaoh_BeardTip", Vector3(0.42, 0.55, 0.34), Vector3(0.0, 11.72, 93.55), gold)
+	_box("ShipPharaoh_CeremonialBeard", Vector3(0.72, 1.75, 0.42), Vector3(0.0, 12.65, 97.48), gold)
+	_box("ShipPharaoh_BeardTip", Vector3(0.42, 0.55, 0.34), Vector3(0.0, 11.72, 97.48), gold)
 
 	# Oversized winged-sun emblems on the forward blue fascia, readable from the bridge.
 	for side: float in [-1.0, 1.0]:
@@ -320,16 +320,6 @@ func _build_five_civilizations_ship_blockout() -> void:
 		for post_index in range(12):
 			var post_x := side * (10.0 + float(post_index) * 1.85)
 			_box("ShipFront_PromenadeRailPost", Vector3(0.12, 0.72, 0.12), Vector3(post_x, 2.35, 95.72), gold)
-	# Large winged Egyptian insignia face the bridge, not the outer side walls.
-	for side: float in [-1.0, 1.0]:
-		var emblem_x := side * 21.5
-		_box("ShipFront_WingedEmblem_Scarab", Vector3(1.25, 1.55, 0.24), Vector3(emblem_x, 0.25, 95.72), gold)
-		for feather_index in range(7):
-			var feather_x := emblem_x + side * (1.0 + float(feather_index) * 0.72)
-			var feather_y := 0.30 + float(feather_index) * 0.22
-			var feather := _box("ShipFront_WingedEmblem_Feather", Vector3(0.95, 0.16, 0.18), Vector3(feather_x, feather_y, 95.74), gold)
-			feather.rotation_degrees.z = side * -float(feather_index + 1) * 5.0
-
 	# Broad bow/stern caps keep the vessel silhouette expansive and symmetrical.
 	_box("ShipBow_RoyalBlueCap", Vector3(52.0, 0.65, 2.0), Vector3(0.0, 3.0, 69.8), blue_light)
 	_box("ShipStern_RoyalBlueCap", Vector3(34.0, 0.65, 2.0), Vector3(0.0, 3.0, 95.0), blue_light)
