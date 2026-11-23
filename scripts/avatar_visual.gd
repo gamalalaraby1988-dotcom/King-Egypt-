@@ -156,26 +156,48 @@ func _make_phone_screen_style() -> StyleBoxFlat:
 
 
 func set_phone_screen_content(title: String, entries: Array[String]) -> void:
+	# التوافق مع النداءات القديمة: شاشة الجهاز تعرض رموز التطبيقات فقط دون نصوص.
+	set_phone_screen_icons(["👤", "📜", "🎁", "🏆", "👑", "📱", "🗺", "🐈", "💬", "👥", "🛡", "😊", "🎉", "⚙️"])
+
+
+func set_phone_screen_icons(icons: Array[String]) -> void:
 	if not is_instance_valid(phone_screen_content):
 		return
 	for child in phone_screen_content.get_children():
 		child.queue_free()
-	var heading := Label.new()
-	heading.text = title
-	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	heading.add_theme_color_override("font_color", Color("#f0d18a"))
-	heading.add_theme_font_size_override("font_size", 20)
-	phone_screen_content.add_child(heading)
-	var separator := HSeparator.new()
-	phone_screen_content.add_child(separator)
-	for entry in entries:
-		var item := Label.new()
-		item.text = "• " + entry
-		item.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-		item.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		item.add_theme_color_override("font_color", Color("#f3f5f7"))
-		item.add_theme_font_size_override("font_size", 15)
-		phone_screen_content.add_child(item)
+	var icon_grid := GridContainer.new()
+	icon_grid.name = "PhoneAppIconGrid"
+	icon_grid.columns = 3
+	icon_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	icon_grid.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	icon_grid.add_theme_constant_override("h_separation", 7)
+	icon_grid.add_theme_constant_override("v_separation", 9)
+	phone_screen_content.add_child(icon_grid)
+	for glyph in icons:
+		var icon_button := Button.new()
+		icon_button.text = glyph
+		icon_button.custom_minimum_size = Vector2(58, 66)
+		icon_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		icon_button.add_theme_font_size_override("font_size", 29)
+		icon_button.add_theme_color_override("font_color", Color("#f5e6c5"))
+		icon_button.add_theme_stylebox_override("normal", _make_phone_icon_style())
+		icon_button.add_theme_stylebox_override("hover", _make_phone_icon_style())
+		icon_button.add_theme_stylebox_override("pressed", _make_phone_icon_style())
+		icon_button.focus_mode = Control.FOCUS_NONE
+		icon_grid.add_child(icon_button)
+
+
+func _make_phone_icon_style() -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color("#172535")
+	style.border_color = Color("#c6a45b")
+	style.set_border_width_all(1)
+	style.set_corner_radius_all(8)
+	style.content_margin_left = 3
+	style.content_margin_right = 3
+	style.content_margin_top = 3
+	style.content_margin_bottom = 3
+	return style
 
 
 func _orient_phone_screen_to_head() -> void:
