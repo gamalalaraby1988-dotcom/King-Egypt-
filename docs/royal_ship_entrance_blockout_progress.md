@@ -175,3 +175,13 @@
 - This render verifies scene execution and the procedural mesh change only. It does not constitute visual approval or a final asset.
 - Next work should prioritize a properly sculpted mask mesh/material and richer ship silhouette/deck detail, then render again for user review.
 - No merge to `main`; no production collision, vehicle physics, player interaction trigger, or server-authoritative ship-entry logic is claimed.
+
+
+## Sculpted hull silhouette and refined mask eyes — 2026-11-23
+
+- Inspected the latest actual-scene PNG. The hull read as a flat rectangular slab and the mask eyes appeared too large and schematic.
+- Replaced the plain main hull box with a custom extruded front-elevation mesh: raised bow/stern ends, a deeper rounded keel profile, and a dark-blue hull material.
+- Refined the mask eye sockets and eyes to narrower almond-like forms, added lower kohl lines, and tightened the brow shapes.
+- Script commit: `3cbe5ab814c7a7846d8a7ae00b93e12a980f75ad`.
+- Fresh Godot validation and rendered preview are required before visual verification.
+- This is still procedural blockout geometry. The full ship silhouette and mask remain below the detail/finish of the user's reference image. No gameplay collision, vehicle physics, player interaction trigger, or server-authoritative ship-entry logic is claimed. No merge to `main`.
