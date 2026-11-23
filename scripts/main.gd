@@ -310,6 +310,8 @@ func _summon_player_vehicle() -> void:
 	city_vehicle.call("set_steering", 0.0)
 	if is_instance_valid(vehicle_interaction_button):
 		vehicle_interaction_button.visible = false
+	# Vehicle summon now completes the entry action: place the player inside immediately.
+	_toggle_vehicle_use()
 
 func _on_scooter_toggle_pressed() -> void:
 	if scooter_occupied:
