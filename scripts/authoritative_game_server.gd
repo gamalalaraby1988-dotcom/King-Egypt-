@@ -849,7 +849,7 @@ func submit_player_sit(is_sitting: bool) -> void:
 		return
 	var peer_id := multiplayer.get_remote_sender_id()
 	var session: Dictionary = _sessions[peer_id]
-	if not bool(session.get("authenticated", false)) or typeof(is_sitting) != TYPE_BOOL:
+	if not bool(session.get("authenticated", false)) or bool(session.get("jet_ski_mounted", false)) or typeof(is_sitting) != TYPE_BOOL:
 		return
 	var now_usec := Time.get_ticks_usec()
 	if now_usec - int(session.get("last_sit_usec", 0)) < 200000:
