@@ -155,3 +155,13 @@
 - The new ellipsoid facial forms and tapered beard are visible, but the mask still reads as a simplified oval gold face with stylized raised features; it does not yet match the detailed sculpted Tutankhamun mask in the user's supplied image. The surrounding vessel remains a low-detail blockout.
 - This confirms the geometry smoothing pass rendered, but visual acceptance is still pending. Next visual milestone should replace the generic oval/primitive face treatment with a dedicated mask-shaped asset or a substantially more sculpted custom mesh, while retaining the approved blue-and-gold nemes, cobra/vulture insignia, collar, central gate, fixed ship position and bridge approach.
 - No production-ready mask or ship asset is claimed. No collision, vehicle physics, player interaction, or network-authoritative ship entry implementation is claimed. No merge to `main`.
+
+
+## Custom tapered Tutankhamun mask face mesh — 2026-11-23
+
+- The previous Godot render (`14813530656`) was inspected directly. It showed the face still reading as a smooth oval rather than a recognizable sculpted funerary mask.
+- Replaced the generic SphereMesh face base with a custom ArrayMesh generated from tapered horizontal profile rings: broader brow/cheek area, narrowed jaw and rounded chin, with smooth generated normals.
+- Existing facial features, nemes stripes, cobra/vulture insignia, beard and collar remain in place.
+- Script commit: `40b83370857ab19614ba0cd4b0656e5fe9b8cd91`.
+- Fresh validation and exact-scene rendering are required. The custom face mesh is a procedural blockout refinement, not a final sculpted or photogrammetric Tutankhamun mask.
+- No merge to `main`; no gameplay collision, vehicle physics, interaction trigger or online entry logic is claimed.
