@@ -73,6 +73,7 @@ current = false
 far = 450.0
 
 [node name="JetSkiHUDLayer" type="CanvasLayer" parent="."]
+visible = false
 layer = 10
 
 [node name="JetSkiHUD" type="Control" parent="JetSkiHUDLayer"]
