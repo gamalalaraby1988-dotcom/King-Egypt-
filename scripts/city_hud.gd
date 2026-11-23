@@ -25,6 +25,9 @@ var phone_popup: PanelContainer
 var phone_entry_button: Button
 var vehicle_store_list: VBoxContainer
 var vehicle_store_status: Label
+var safe_return_position := Vector3.ZERO
+var safe_return_position_captured := false
+var safe_return_dialog: ConfirmationDialog
 var player_popup: PanelContainer
 var player_name_label: Label
 var player_level_label: Label
@@ -93,6 +96,7 @@ func _ready() -> void:
 	_build_group_chat_popup()
 	_build_social_popup()
 	_build_phone_entry_button()
+	call_deferred("_capture_safe_spawn")
 	if not PlayerFriendsClient.friends_updated.is_connected(_on_social_friends_updated):
 		PlayerFriendsClient.friends_updated.connect(_on_social_friends_updated)
 	if not PlayerFriendsClient.requests_updated.is_connected(_on_social_requests_updated):
@@ -122,6 +126,8 @@ func _exit_tree() -> void:
 func _process(_delta: float) -> void:
 	if not is_instance_valid(mission_manager) and is_instance_valid(main_scene):
 		mission_manager = main_scene.get_node_or_null("MissionManager")
+	if not safe_return_position_captured:
+		_capture_safe_spawn()
 	_refresh_wallet()
 
 
@@ -890,6 +896,13 @@ func _build_vehicle_store_phone() -> void:
 	close_phone.custom_minimum_size = Vector2(38, 34)
 	close_phone.pressed.connect(_close_vehicle_store_phone)
 	header.add_child(close_phone)
+	var safe_return_button := Button.new()
+	safe_return_button.name = "SafeReturnHomeButton"
+	safe_return_button.text = "🏠 العودة الآمنة"
+	safe_return_button.tooltip_text = "العودة إلى نقطة بداية آمنة عند حدوث خلل"
+	safe_return_button.custom_minimum_size.y = 42
+	safe_return_button.pressed.connect(_request_safe_return)
+	content.add_child(safe_return_button)
 	var wallet_line := Label.new()
 	wallet_line.name = "VehicleStoreWalletLine"
 	wallet_line.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -908,6 +921,14 @@ func _build_vehicle_store_phone() -> void:
 	close_button.text = "إغلاق الهاتف"
 	close_button.pressed.connect(_close_vehicle_store_phone)
 	content.add_child(close_button)
+	safe_return_dialog = ConfirmationDialog.new()
+	safe_return_dialog.name = "SafeReturnConfirmation"
+	safe_return_dialog.title = "تأكيد العودة الآمنة"
+	safe_return_dialog.dialog_text = "هل تريد العودة إلى نقطة بداية اللعبة؟ لن يتم حذف حسابك أو ممتلكاتك أو تقدمك."
+	safe_return_dialog.ok_button_text = "العودة الآن"
+	safe_return_dialog.cancel_button_text = "إلغاء"
+	safe_return_dialog.confirmed.connect(_perform_safe_return)
+	root.add_child(safe_return_dialog)
 
 func _refresh_vehicle_store_phone() -> void:
 	if not is_instance_valid(vehicle_store_list):
@@ -979,6 +1000,47 @@ func _sync_local_phone_screen(catalog: Dictionary, owned: Array, selected: Strin
 		return
 	# نفس رموز تطبيقات قائمة المدينة، مع إظهار الأيقونات فقط على شاشة الهاتف ثلاثية الأبعاد.
 	avatar.call("set_phone_screen_icons", ["👤", "📜", "🎁", "🏆", "👑", "📱", "🗺", "🐈", "💬", "👥", "🛡", "😊", "🎉", "⚙️"])
+
+
+func _capture_safe_spawn() -> void:
+	if safe_return_position_captured or not is_instance_valid(main_scene):
+		return
+	var player := main_scene.find_child("Player", true, false) as Node3D
+	if not is_instance_valid(player) or not player.global_position.is_finite():
+		return
+	safe_return_position = player.global_position
+	safe_return_position_captured = true
+
+
+func _request_safe_return() -> void:
+	if not safe_return_position_captured:
+		_capture_safe_spawn()
+	if not safe_return_position_captured:
+		if is_instance_valid(vehicle_store_status):
+			vehicle_store_status.text = "لم يتم تحديد نقطة بداية آمنة بعد؛ لم يتم تحريك اللاعب."
+		return
+	if is_instance_valid(safe_return_dialog):
+		safe_return_dialog.popup_centered()
+
+
+func _perform_safe_return() -> void:
+	var player := main_scene.find_child("Player", true, false) as Node3D if is_instance_valid(main_scene) else null
+	if not is_instance_valid(player) or not safe_return_position_captured:
+		if is_instance_valid(vehicle_store_status):
+			vehicle_store_status.text = "تعذرت العودة الآمنة؛ لم يتم العثور على اللاعب أو نقطة البداية."
+		return
+	# في اللعب المتصل يجب أن يعتمد الخادم النقل؛ لا ننفذ انتقالًا محليًا قد يرفضه الخادم.
+	if multiplayer.multiplayer_peer != null:
+		if is_instance_valid(vehicle_store_status):
+			vehicle_store_status.text = "العودة الآمنة عبر الخادم غير مربوطة بعد؛ لم يتم تغيير موقعك."
+		return
+	if player is CharacterBody3D:
+		(player as CharacterBody3D).velocity = Vector3.ZERO
+	player.global_position = safe_return_position
+	player.reset_physics_interpolation()
+	if is_instance_valid(vehicle_store_status):
+		vehicle_store_status.text = "تمت العودة إلى نقطة بداية آمنة. حسابك وممتلكاتك وتقدمك لم تتغير."
+	_close_vehicle_store_phone()
 
 
 func _buy_vehicle_from_phone(vehicle_id: String) -> void:
