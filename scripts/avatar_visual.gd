@@ -176,7 +176,8 @@ func set_phone_screen_icons(icons: Array[String]) -> void:
 	if not is_instance_valid(phone_screen_content):
 		return
 	for child in phone_screen_content.get_children():
-		child.queue_free()
+		phone_screen_content.remove_child(child)
+		child.free()
 	var icon_grid := GridContainer.new()
 	icon_grid.name = "PhoneAppIconGrid"
 	icon_grid.columns = 3
