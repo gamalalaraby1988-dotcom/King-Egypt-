@@ -207,3 +207,13 @@
 - Script commit: `2a40428f3eded0e63af98ef7e8e9ee3ccf5b835b`.
 - Fresh Godot validation and exact-scene render are required to confirm the larger vessel fits the composition and does not overlap the bridge approach.
 - This remains a review blockout, not a final ship asset. No gameplay collision, vehicle physics, player interaction trigger or server-authoritative ship-entry logic is claimed. No merge to `main`.
+
+
+## 28% enlarged vessel render review — 2026-11-23
+
+- Godot validation run `45165064202` completed successfully.
+- Exact-scene render run `45165064196` completed successfully; artifact `14813063449` was retrieved and the PNG inspected at 1280x720.
+- The 1.28 visual scale pass clearly makes the ship occupy much more of the frame. The gate, pharaoh mask and side decks are substantially larger relative to the bridge.
+- Visual review also reveals the current blockout still has broad flat bright deck slabs and a simplified low-poly face; the new size alone does not reproduce the reference image's elegant curved multi-deck ship. The camera framing also makes the foreground bridge prominent and the ship read as a wide, flat facade.
+- The scale change is therefore an intermediate review result, not final approval. Next pass should refine the curved side-deck silhouettes and hull volume and rebalance the camera composition so the enlarged vessel reads as a majestic ship rather than a flat facade.
+- No final ship asset, collision, vehicle physics, interaction trigger or server-authoritative ship-entry logic is claimed. No merge to `main`.
