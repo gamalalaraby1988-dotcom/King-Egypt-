@@ -1,22 +1,22 @@
 extends Control
-## واجهة قيادة لمس: قيادة بالضغط، فرامل مستقلة، رجوع للخلف بالسحب لأسفل.
-## الأزرار مؤقتة مرسومة برمجيًا ويمكن استبدالها بأيقونات لاحقًا.
+## عصا القيادة والكاميرا بنفس أسلوب تحكم الشخصية؛ زر الفرامل مستقل في واجهة المدينة.
+
+@export var joystick_radius: float = 72.0
+@export var camera_sensitivity: float = 0.006
 
 var vehicle: CharacterBody3D
-var drive_touch := -1
-var brake_touch := -1
-var steering_touch := -1
-var steering_value := 0.0
-var drive_rect := Rect2()
-var brake_rect := Rect2()
-var steering_rect := Rect2()
-var reverse_start := Vector2.ZERO
-var reverse_active := false
-var _ui_scale := 1.0
+var joystick_center := Vector2.ZERO
+var joystick_vector := Vector2.ZERO
+var joystick_finger := -1
+var camera_finger := -1
+var mouse_camera_active := false
+var last_camera_pos := Vector2.ZERO
+var joystick_draw_radius := 72.0
+var camera_drag_scale := 1.0
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	mouse_filter = Control.MOUSE_FILTER_STOP
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var layer := get_parent() as CanvasLayer
 	if is_instance_valid(layer):
 		vehicle = layer.get_parent() as CharacterBody3D
@@ -32,101 +32,92 @@ func _notification(what: int) -> void:
 
 func _process(_delta: float) -> void:
 	if not visible:
-		# لا تسمح ببقاء أي أمر قيادة عالق إذا أُخفيت الواجهة أثناء لمس أحد الأزرار.
-		if drive_touch != -1 or brake_touch != -1 or steering_touch != -1 or reverse_active or absf(steering_value) > 0.001:
-			_clear_controls()
+		_clear_controls()
 		return
 	if is_instance_valid(vehicle):
-		vehicle.call("set_drive", drive_touch != -1)
-		vehicle.call("set_brake", brake_touch != -1)
-		vehicle.call("set_reverse", reverse_active)
-		vehicle.call("set_steering", steering_value)
+		var keyboard_input := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
+		var active_input := joystick_vector if not joystick_vector.is_zero_approx() else keyboard_input
+		vehicle.call("set_move_input", active_input)
 
 func _update_layout() -> void:
-	var s := get_viewport_rect().size
-	var short_side := maxf(1.0, minf(s.x, s.y))
-	_ui_scale = clampf(short_side / 720.0, 0.58, 1.0)
-	var margin := 18.0 * _ui_scale
-	var drive_size := 100.0 * _ui_scale
-	var brake_size := 78.0 * _ui_scale
-	var steer_width := 142.0 * _ui_scale
-	var steer_height := 112.0 * _ui_scale
-	drive_rect = Rect2(Vector2(s.x - margin - drive_size - brake_size * 0.25, s.y - margin - drive_size), Vector2(drive_size, drive_size))
-	brake_rect = Rect2(Vector2(s.x - margin - brake_size, s.y - margin - brake_size), Vector2(brake_size, brake_size))
-	steering_rect = Rect2(Vector2(margin, s.y - margin - steer_height), Vector2(steer_width, steer_height))
-
-func _layout() -> void:
-	_update_layout()
+	var size := get_viewport_rect().size
+	var short_side := maxf(1.0, minf(size.x, size.y))
+	var scale_factor := clampf(short_side / 720.0, 0.58, 1.0)
+	var margin := 24.0 * scale_factor
+	joystick_draw_radius = joystick_radius * scale_factor
+	joystick_center = Vector2(maxf(margin + joystick_draw_radius, size.x * 0.12), size.y - margin - joystick_draw_radius)
+	camera_drag_scale = clampf(720.0 / maxf(360.0, size.y), 0.5, 1.8)
 
 func _draw() -> void:
-	_layout()
-	_draw_button(drive_rect, "DRIVE", Color(0.12, 0.42, 0.2, 0.78))
-	_draw_button(brake_rect, "BRAKE", Color(0.65, 0.12, 0.1, 0.82))
-	_draw_button(steering_rect, "STEER", Color(0.08, 0.12, 0.2, 0.65))
-	if reverse_active:
-		draw_string(ThemeDB.fallback_font, drive_rect.position + Vector2(8, -10), "REVERSE", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color.WHITE)
+	_update_layout()
+	draw_circle(joystick_center, joystick_draw_radius, Color(0.04, 0.06, 0.09, 0.30))
+	draw_arc(joystick_center, joystick_draw_radius, 0.0, TAU, 48, Color(1, 1, 1, 0.58), 3.0 * minf(1.0, joystick_draw_radius / 72.0))
+	draw_circle(joystick_center + joystick_vector * joystick_draw_radius, maxf(17.0, 26.0 * joystick_draw_radius / 72.0), Color(0.91, 0.75, 0.38, 0.90))
 
-func _draw_button(rect: Rect2, label: String, color: Color) -> void:
-	draw_rounded_rect(rect, color, 22.0 * _ui_scale)
-	var font_size := maxi(12, roundi(18.0 * _ui_scale))
-	var width := ThemeDB.fallback_font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
-	draw_string(ThemeDB.fallback_font, rect.position + Vector2((rect.size.x - width) * 0.5, rect.size.y * 0.56), label, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, Color.WHITE)
-
-func draw_rounded_rect(rect: Rect2, color: Color, radius: float) -> void:
-	draw_rect(rect, color, true)
-	draw_rect(rect, Color(1, 1, 1, 0.55), false, 2.0)
-
-func _input(event: InputEvent) -> void:
-	# لا تستقبل واجهة القيادة أي لمسات أثناء إخفائها أو خارج حالة القيادة.
+func _unhandled_input(event: InputEvent) -> void:
 	if not visible:
 		return
 	if event is InputEventScreenTouch:
 		if event.pressed:
-			_press(event.index, event.position)
+			_handle_touch_press(event.index, event.position)
 		else:
-			_release(event.index)
+			_handle_touch_release(event.index)
 	elif event is InputEventScreenDrag:
-		if event.index == drive_touch:
-			var delta := event.position - reverse_start
-			reverse_active = delta.y > 65.0
-		elif event.index == steering_touch:
-			var center := steering_rect.position.x + steering_rect.size.x / 2.0
-			steering_value = clampf((event.position.x - center) / 65.0, -1.0, 1.0)
-		queue_redraw()
+		if event.index == joystick_finger:
+			_update_joystick(event.position)
+		elif event.index == camera_finger:
+			_apply_camera_drag(event.position - last_camera_pos)
+			last_camera_pos = event.position
+	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+		if event.pressed:
+			mouse_camera_active = event.position.x > get_viewport_rect().size.x * 0.38 and not _is_over_joystick(event.position)
+			last_camera_pos = event.position
+		else:
+			mouse_camera_active = false
+	elif event is InputEventMouseMotion and mouse_camera_active and Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
+		_apply_camera_drag(event.position - last_camera_pos)
+		last_camera_pos = event.position
 
-func _press(index: int, pos: Vector2) -> void:
-	_layout()
-	if drive_rect.has_point(pos) and drive_touch == -1:
-		drive_touch = index
-		reverse_start = pos
-	elif brake_rect.has_point(pos) and brake_touch == -1:
-		brake_touch = index
-	elif steering_rect.has_point(pos) and steering_touch == -1:
-		steering_touch = index
-		var center := steering_rect.position.x + steering_rect.size.x / 2.0
-		steering_value = clampf((pos.x - center) / 65.0, -1.0, 1.0)
+func _handle_touch_press(index: int, pos: Vector2) -> void:
+	_update_layout()
+	if pos.distance_to(joystick_center) <= joystick_draw_radius * 1.55 and joystick_finger == -1:
+		joystick_finger = index
+		_update_joystick(pos)
+	elif pos.x > get_viewport_rect().size.x * 0.38 and camera_finger == -1:
+		camera_finger = index
+		last_camera_pos = pos
 	queue_redraw()
+
+func _handle_touch_release(index: int) -> void:
+	if index == joystick_finger:
+		joystick_finger = -1
+		joystick_vector = Vector2.ZERO
+	if index == camera_finger:
+		camera_finger = -1
+	queue_redraw()
+
+func _update_joystick(pos: Vector2) -> void:
+	var offset := pos - joystick_center
+	if offset.length() > joystick_draw_radius:
+		offset = offset.normalized() * joystick_draw_radius
+	joystick_vector = offset / maxf(1.0, joystick_draw_radius)
+	queue_redraw()
+
+func _apply_camera_drag(delta_pos: Vector2) -> void:
+	var pivot := vehicle.get_node_or_null("VehicleCameraPivot") as Node3D if is_instance_valid(vehicle) else null
+	if not is_instance_valid(pivot):
+		return
+	var sensitivity := camera_sensitivity * camera_drag_scale
+	pivot.rotation.y -= delta_pos.x * sensitivity
+	pivot.rotation.x = clampf(pivot.rotation.x - delta_pos.y * sensitivity, deg_to_rad(-60.0), deg_to_rad(25.0))
+
+func _is_over_joystick(pos: Vector2) -> bool:
+	return pos.distance_to(joystick_center) <= joystick_draw_radius * 1.55
 
 func _clear_controls() -> void:
-	drive_touch = -1
-	brake_touch = -1
-	steering_touch = -1
-	reverse_active = false
-	steering_value = 0.0
+	joystick_finger = -1
+	camera_finger = -1
+	joystick_vector = Vector2.ZERO
+	mouse_camera_active = false
 	if is_instance_valid(vehicle):
-		vehicle.call("set_drive", false)
-		vehicle.call("set_brake", false)
-		vehicle.call("set_reverse", false)
-		vehicle.call("set_steering", 0.0)
-	queue_redraw()
-
-func _release(index: int) -> void:
-	if index == drive_touch:
-		drive_touch = -1
-		reverse_active = false
-	if index == brake_touch:
-		brake_touch = -1
-	if index == steering_touch:
-		steering_touch = -1
-		steering_value = 0.0
-	queue_redraw()
+		vehicle.call("set_move_input", Vector2.ZERO)
