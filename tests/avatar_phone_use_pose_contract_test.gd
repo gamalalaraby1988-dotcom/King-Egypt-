@@ -45,8 +45,10 @@ func _run() -> void:
 	if not is_equal_approx(right_arm.rotation.z, -0.78):
 		_fail("Right arm did not enter the configured phone-use pose.")
 		return
-	if not is_equal_approx(head.rotation.x, -0.62):
-		_fail("Head did not tilt toward the phone.")
+	var head_to_phone := (phone.global_position - head.global_position).normalized()
+	var head_forward := -head.global_transform.basis.z.normalized()
+	if head_forward.dot(head_to_phone) < 0.95:
+		_fail("Head is not facing the phone during phone-use mode.")
 		return
 
 	# Verify that phone-use pose remains active during both walking and running.
