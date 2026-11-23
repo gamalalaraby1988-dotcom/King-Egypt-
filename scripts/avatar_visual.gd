@@ -65,7 +65,7 @@ func _build_phone_visual() -> void:
 	right_arm.add_child(phone_visual)
 	# حافظ على مركز الهاتف عند منتصف الصدر حتى مع دوران الذراع حول مفصل الكتف.
 	phone_visual.global_position = to_global(Vector3(0.0, 1.20, -0.27))
-	phone_visual.global_rotation = Vector3(0.0, PI, 0.0)
+	phone_visual.global_rotation = Vector3(-1.05, 0.0, 0.0)
 	var body := MeshInstance3D.new()
 	body.name = "PhoneBody"
 	var body_mesh := BoxMesh.new()
