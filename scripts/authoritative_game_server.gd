@@ -28,6 +28,7 @@ signal arcade_slot_spin_settled(session_id: String, result: Dictionary)
 signal arcade_slot_spin_failed(session_id: String, message: String)
 signal jet_ski_race_state_changed(state: String, participant_count: int, message: String)
 signal jet_ski_mount_result_received(success: bool, message: String)
+signal jet_ski_unmount_result_received(success: bool, server_position: Vector3)
 signal jet_ski_authoritative_state_received(position: Vector3, rotation_y: float, velocity: Vector3)
 
 const DEFAULT_PORT := 2456
@@ -723,9 +724,11 @@ func request_jet_ski_unmount_rpc() -> void:
 		return
 	var session: Dictionary = _sessions[peer_id]
 	if not bool(session.get("authenticated", false)) or not bool(session.get("jet_ski_mounted", false)):
+		rpc_id(peer_id, "receive_jet_ski_unmount_result", false, Vector3.ZERO)
 		return
 	var body := session.get("body") as CharacterBody3D
 	if not is_instance_valid(body):
+		rpc_id(peer_id, "receive_jet_ski_unmount_result", false, Vector3.ZERO)
 		return
 	var craft_position: Vector3 = session.get("jet_ski_position", JET_SKI_SERVER_LAUNCH_POSITION)
 	var craft_rotation := float(session.get("jet_ski_rotation_y", 0.0))
@@ -742,6 +745,16 @@ func request_jet_ski_unmount_rpc() -> void:
 	session["velocity"] = Vector3.ZERO
 	session["last_input_usec"] = Time.get_ticks_usec()
 	_sessions[peer_id] = session
+	rpc_id(peer_id, "receive_jet_ski_unmount_result", true, body.global_position)
+
+
+@rpc("authority", "call_remote", "reliable")
+func receive_jet_ski_unmount_result(success: bool, server_position: Vector3) -> void:
+	if multiplayer.is_server() or not is_authenticated():
+		return
+	if not is_finite(server_position.x) or not is_finite(server_position.y) or not is_finite(server_position.z):
+		return
+	jet_ski_unmount_result_received.emit(success, server_position)
 
 
 func send_jet_ski_input(throttle: float, brake: float, steering: float) -> void:
