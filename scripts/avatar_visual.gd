@@ -139,8 +139,8 @@ func _process(delta: float) -> void:
 			var phone_arm := parts["RightArm"] as MeshInstance3D
 			phone_arm.rotation = Vector3(-0.10, 0.0, -0.78)
 		if is_instance_valid(phone_visual):
-			# الذراع تحمل الهاتف، لكن موضعه النهائي يبقى أمام الوجه عند مستوى الذقن.
-			phone_visual.global_position = to_global(Vector3(0.0, 1.20, -0.27))
+			# الذراع تحمل الهاتف، لكن موضعه النهائي يبقى أمام أسفل الوجه عند مستوى الذقن.
+			phone_visual.global_position = to_global(Vector3(0.0, 1.43, -0.27))
 			phone_visual.global_rotation = Vector3(-1.05, 0.0, 0.0)
 		if parts.has("Head") and is_instance_valid(phone_visual):
 			# وجّه الوجه نحو الهاتف فعليًا بدل زاوية ثابتة؛ يعود الرأس لوضعه الطبيعي عند إخفاء الهاتف.
