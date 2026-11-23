@@ -58,7 +58,7 @@ func _build_phone_visual() -> void:
 	phone_visual = Node3D.new()
 	phone_visual.name = "PlayerPhoneVisual"
 	# إزاحة محلية محسوبة لتعويض زاوية رفع الذراع، ووضع الهاتف أمام الصدر.
-	phone_visual.position = Vector3(-0.339, -0.168, -0.27)
+	phone_visual.position = Vector3(-0.36, 0.12, -0.27)
 	phone_visual.rotation = Vector3(-0.08, 0.10, 0.42)
 	phone_visual.visible = false
 	right_arm.add_child(phone_visual)
