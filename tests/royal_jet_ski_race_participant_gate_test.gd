@@ -27,6 +27,24 @@ func _initialize() -> void:
 		failures.append("The server race duration must be exactly five minutes.")
 	if SERVER_SCRIPT.JET_SKI_RACE_OFF_COURSE_LIMIT_SECONDS != 300:
 		failures.append("The off-course return allowance must be exactly five minutes.")
+	if SERVER_SCRIPT.JET_SKI_RACE_WEEKLY_DAYS != [1, 4, 6]:
+		failures.append("The weekly jet ski championship days must be Monday, Thursday, and Saturday.")
+	if SERVER_SCRIPT.JET_SKI_RACE_START_HOUR_EGYPT != 20 or SERVER_SCRIPT.JET_SKI_RACE_START_MINUTE_EGYPT != 0:
+		failures.append("The weekly jet ski championship must start at 8:00 PM Egypt time.")
+	if SERVER_SCRIPT.JET_SKI_RACE_ANNOUNCEMENT_MINUTES != 15:
+		failures.append("The championship announcement must be scheduled 15 minutes before start.")
+	for weekday in [1, 4, 6]:
+		if not server._jet_ski_race_is_scheduled_day({"weekday": weekday}):
+			failures.append("An approved championship weekday was not recognized: %d." % weekday)
+	for weekday in [0, 2, 3, 5]:
+		if server._jet_ski_race_is_scheduled_day({"weekday": weekday}):
+			failures.append("An unapproved championship weekday was recognized: %d." % weekday)
+	if not server._jet_ski_race_is_announcement_time({"weekday": 6, "hour": 19, "minute": 45}):
+		failures.append("The 15-minute pre-race announcement window did not open at 7:45 PM.")
+	if server._jet_ski_race_is_announcement_time({"weekday": 1, "hour": 20, "minute": 0}):
+		failures.append("The announcement window must end at the 8:00 PM start time.")
+	if server._jet_ski_race_is_announcement_time({"weekday": 2, "hour": 19, "minute": 50}):
+		failures.append("A non-championship day incorrectly triggered an announcement.")
 	if SERVER_SCRIPT.JET_SKI_RACE_DAILY_REWARD_WINNING_RANKS != 3:
 		failures.append("Daily jet ski rewards must be limited to the top three ranks.")
 	for rank in [1, 2, 3]:
