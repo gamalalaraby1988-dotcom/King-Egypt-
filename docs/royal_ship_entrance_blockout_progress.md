@@ -85,3 +85,14 @@
 - A fresh Godot validation and render are required for this latest detail pass. Do not describe the new details as validated until those workflows finish and the resulting render is visually inspected.
 - Still a primitive-mesh blockout. No final production ship asset, gameplay collision, vehicle physics, player interaction, or network-authoritative entry logic is claimed.
 - No production scene changed and no merge to `main`.
+
+
+## Render inspection: pharaoh mask occlusion found and corrected — 2026-11-23
+
+- Retrieved artifact `14785664348` from successful render run `45102569177` (source commit `694252f5d1a516f0af08a356ae032656cf210bd8`) and inspected the actual PNG from the Godot scene.
+- The render showed a large blue headdress backing occluding the pharaoh face; the intended facial features were behind the backing plane from the bridge camera view. The earlier render was therefore not acceptable as a reference-matching preview.
+- Corrected the depth placement so the face, eyes, brows, nose, beard, nemes side lappets, and stripes sit in front of the backing. Removed a second overlapping winged-emblem pass to avoid duplicated geometry.
+- Fix committed to the test branch as `b6222c281a97d105d8ebd495db34f86fa9b42b2f`.
+- New Godot validation run: `45102664415`; new render run: `45102664444`. Both were queued/in progress at the time of this note. The new render must be downloaded and visually inspected before confirming the occlusion fix.
+- Remains a primitive-mesh blockout only. No production ship asset, gameplay collision, vehicle physics, interaction trigger, or network-authoritative entry logic is claimed.
+- No merge to `main`.
