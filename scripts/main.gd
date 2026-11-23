@@ -725,6 +725,9 @@ func _exit_player_jet_ski(server_position: Variant = null) -> void:
 	city_jet_ski.call("clear_controls")
 	city_jet_ski.set_physics_process(false)
 	jet_ski_occupied = false
+	_jet_ski_unmount_pending = false
+	if is_instance_valid(vehicle_interaction_button):
+		vehicle_interaction_button.disabled = false
 	_set_mobile_hud_active(true)
 	if is_instance_valid(vehicle_interaction_button):
 		vehicle_interaction_button.visible = false
