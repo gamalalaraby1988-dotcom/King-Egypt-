@@ -45,6 +45,15 @@
 - The beach-handball court is relocated to the eastern dry beach at (90, 0, 130).
 - A visible course layout is placed in the open sea: start at Z=96, checkpoints at Z=111, 126, and 141, finish at Z=148. Each gate has two marker buoys and a label.
 
+## جسر الجت سكي الملكي — اعتماد التصميم
+- اعتماد نسخ اللغة التصميمية لجسر/رصيف السفينة الملكية (العاجي والذهبي) وتطويرها إلى جسر أطول وأعرض.
+- يبدأ الجسر من ممشى الواجهة البحرية الشرقية، ويمتد فوق البحر المفتوح إلى منصة الوصول البحرية.
+- سطح واسع لعبور السيارات والمشاة، مع فصل ممر المشاة بحافة مرتفعة، وحواجز جانبية وأعمدة أمان وإرشاد ضوئي.
+- في النهاية منصة وصول عريضة، وشريط توقف، ودرجات وصول، ودائرة مضيئة تمثل موضع التفاعل المقترح.
+- أضيفت هندسة مرئية أولية للجسر في `scripts/approved_city_layout.gd` على فرع العمل.
+- الدائرة والشريط والدرجات حاليًا عناصر مرئية فقط؛ لم يُنفذ بعد زر التفاعل أو فحص توفر الجت سكي أو الحجز الذري أو الركوب الفوري.
+- يجب مراجعة نقطة البداية والنهاية والارتفاعات والتصادمات داخل Godot، ثم التقاط معاينة من المشهد الفعلي قبل اعتماد الدمج.
+
 ## What this does not implement yet
 - The course objects are visual markers only; they do not detect or validate crossings.
 - No drivable jet ski vehicle, water physics, player seating/boarding flow, race lobby, four-player matchmaking, countdown synchronization, server-side checkpoint progression, finish validation, rewards, or race UI has been implemented.
