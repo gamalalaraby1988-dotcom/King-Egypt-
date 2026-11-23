@@ -90,10 +90,22 @@ func _build_phone_visual() -> void:
 	thumb_mesh.radius = 0.018
 	thumb_mesh.height = 0.075
 	thumb.mesh = thumb_mesh
-	thumb.position = Vector3(-0.071, -0.005, 0.004)
+	thumb.position = Vector3(-0.071, -0.005, -0.027)
 	thumb.rotation.z = -0.35
 	thumb.material_override = _material(SKIN)
 	phone_visual.add_child(thumb)
+	# أصابع ملتفة فوق الحافة الأمامية لتظهر قبضة واضحة بدل هاتف عائم.
+	for finger_index in range(3):
+		var finger := MeshInstance3D.new()
+		finger.name = "RightHandFinger_%d" % finger_index
+		var finger_mesh := CapsuleMesh.new()
+		finger_mesh.radius = 0.012
+		finger_mesh.height = 0.064
+		finger.mesh = finger_mesh
+		finger.position = Vector3(0.064, -0.067 + float(finger_index) * 0.062, -0.027)
+		finger.rotation.z = 0.16
+		finger.material_override = _material(SKIN)
+		phone_visual.add_child(finger)
 	var screen := MeshInstance3D.new()
 	screen.name = "PhoneScreen"
 	var screen_mesh := BoxMesh.new()
