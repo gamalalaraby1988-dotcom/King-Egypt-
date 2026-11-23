@@ -292,6 +292,21 @@ jobs:
             exit 1
           fi
 
+      - name: Run avatar phone-use pose contract test
+        shell: bash
+        run: |
+          set -euo pipefail
+          GODOT="/tmp/godot/Godot_v4.7.2-stable_linux.x86_64"
+          LOG="/tmp/godot-avatar-phone-use-pose.log"
+          set +e
+          "$GODOT" --headless --path . --script res://tests/avatar_phone_use_pose_contract_test.gd 2>&1 | tee "$LOG"
+          GODOT_STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$GODOT_STATUS" -ne 0 ] || grep -E '(^|[[:space:]])(ERROR|SCRIPT ERROR):|Parse Error:|Avatar phone-use pose contract test failed' "$LOG"; then
+            echo "Avatar phone-use pose contract test failed."
+            exit 1
+          fi
+
       - name: Run player sitting synchronization contract test
         shell: bash
         run: |
