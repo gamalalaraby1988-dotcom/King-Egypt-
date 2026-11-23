@@ -2,7 +2,7 @@ name: Godot project check
 
 on:
   push:
-    branches: [main, sync-latest-approved-decisions-77-79, feature/approved-mobile-controls]
+    branches: [main, sync-latest-approved-decisions-77-79, feature/approved-mobile-controls, feature/unified-vehicle-driving]
   pull_request:
     branches: [main]
   workflow_dispatch:
