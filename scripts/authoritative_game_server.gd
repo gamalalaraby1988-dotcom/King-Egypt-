@@ -38,6 +38,10 @@ const JET_SKI_RACE_COUNTDOWN_SECONDS := 5
 const JET_SKI_RACE_DURATION_SECONDS := 300
 const JET_SKI_RACE_OFF_COURSE_LIMIT_SECONDS := 300
 const JET_SKI_RACE_DAILY_REWARD_WINNING_RANKS := 3
+const JET_SKI_RACE_WEEKLY_DAYS := [1, 4, 6] # Godot weekday: Monday=1, Thursday=4, Saturday=6.
+const JET_SKI_RACE_START_HOUR_EGYPT := 20
+const JET_SKI_RACE_START_MINUTE_EGYPT := 0
+const JET_SKI_RACE_ANNOUNCEMENT_MINUTES := 15
 const SPAWN_POSITION := Vector3(0.0, 1.0, -42.0)
 
 var _server_peer: WebSocketMultiplayerPeer
@@ -91,6 +95,19 @@ const WEEKLY_JOB_SCHEDULE := {}
 
 func _egypt_datetime() -> Dictionary:
 	return Time.get_datetime_dict_from_unix_time(int(Time.get_unix_time_from_system()) + EGYPT_UTC_OFFSET_SECONDS)
+
+func _jet_ski_race_is_scheduled_day(date_time: Dictionary) -> bool:
+	return JET_SKI_RACE_WEEKLY_DAYS.has(int(date_time.get("weekday", -1)))
+
+
+func _jet_ski_race_is_announcement_time(date_time: Dictionary) -> bool:
+	if not _jet_ski_race_is_scheduled_day(date_time):
+		return false
+	var minutes_since_midnight := int(date_time.get("hour", -1)) * 60 + int(date_time.get("minute", -1))
+	var announcement_start := JET_SKI_RACE_START_HOUR_EGYPT * 60 + JET_SKI_RACE_START_MINUTE_EGYPT - JET_SKI_RACE_ANNOUNCEMENT_MINUTES
+	var race_start := JET_SKI_RACE_START_HOUR_EGYPT * 60 + JET_SKI_RACE_START_MINUTE_EGYPT
+	return minutes_since_midnight >= announcement_start and minutes_since_midnight < race_start
+
 
 func _egypt_day_key() -> String:
 	var date := _egypt_datetime()
