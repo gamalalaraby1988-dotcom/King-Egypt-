@@ -105,6 +105,11 @@ func _apply_arcade_camera_drag(relative: Vector2) -> void:
 	)
 
 func _physics_process(delta: float) -> void:
+	if is_instance_valid(mounted_scooter):
+		velocity = Vector3.ZERO
+		var scooter_speed := Vector2(mounted_scooter.velocity.x, mounted_scooter.velocity.z).length()
+		_update_avatar_animation("run" if scooter_speed > 0.25 else "idle", scooter_speed)
+		return
 	if arcade_seated:
 		velocity = Vector3.ZERO
 		mobile_move = Vector2.ZERO
