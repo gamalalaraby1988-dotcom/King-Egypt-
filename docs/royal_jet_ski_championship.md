@@ -59,7 +59,7 @@
 
 ## What this does not implement yet
 - The course objects are visual markers only; they do not detect or validate crossings.
-- No drivable jet ski vehicle, water physics, player seating/boarding flow, race lobby, four-player matchmaking, countdown synchronization, server-side checkpoint progression, finish validation, rewards, or race UI has been implemented.
+- A standalone jet ski scene, client controller, and touch HUD now exist, but they are not integrated into city spawning/boarding or authenticated multiplayer. The server-authoritative race countdown, vehicle movement/snapshots, checkpoint progression, finish validation, rewards, and race UI are still not implemented.
 - No Godot test run has been observed for these new scene changes. The PR remains a draft and must be reviewed and tested before any merge.
 
 
