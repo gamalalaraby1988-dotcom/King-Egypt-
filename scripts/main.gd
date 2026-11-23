@@ -1984,7 +1984,12 @@ func _on_remote_players_received(players: Array) -> void:
 			remote_view.name = "RemotePlayer_%d" % peer_id
 			add_child(remote_view)
 			_remote_player_views[peer_id] = remote_view
-		remote_view.call("apply_snapshot", player_position, float(player_rotation), player_velocity, active_emote, emote_remaining, is_sitting)
+		var is_jet_ski_riding := bool(player_data.get("is_jet_ski_riding", false))
+		var jet_ski_position: Variant = player_data.get("jet_ski_position", Vector3.ZERO)
+		var jet_ski_rotation: Variant = player_data.get("jet_ski_rotation_y", 0.0)
+		if not (jet_ski_position is Vector3) or not (jet_ski_rotation is float or jet_ski_rotation is int):
+			is_jet_ski_riding = false
+		remote_view.call("apply_snapshot", player_position, float(player_rotation), player_velocity, active_emote, emote_remaining, is_sitting, is_jet_ski_riding, jet_ski_position if jet_ski_position is Vector3 else Vector3.ZERO, float(jet_ski_rotation) if jet_ski_rotation is float or jet_ski_rotation is int else 0.0)
 	for peer_id_variant in _remote_player_views.keys():
 		var peer_id := int(peer_id_variant)
 		if not active_peer_ids.has(peer_id):
