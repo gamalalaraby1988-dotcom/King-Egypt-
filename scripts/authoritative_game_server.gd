@@ -1559,6 +1559,7 @@ func request_join_jet_ski_race_rpc() -> void:
 	if _jet_ski_race_participants.size() >= JET_SKI_RACE_MAX_PARTICIPANTS:
 		rpc_id(peer_id, "receive_jet_ski_race_state", _jet_ski_race_state, _jet_ski_race_participants.size(), "اكتملت خانات المتسابقين الأربعة.")
 		return
+	_jet_ski_race_spectators.erase(peer_id)
 	_jet_ski_race_participants.append(peer_id)
 	_notify_jet_ski_race_participants("تم تسجيلك في بطولة الجت سكي الملكية.")
 
