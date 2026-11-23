@@ -311,7 +311,7 @@ func _build_five_civilizations_ship_blockout() -> void:
 	_ellipsoid("ShipPharaoh_NoseTip", Vector3(0.30, 0.20, 0.20), Vector3(0.0, 14.62, 98.51), gold)
 	_ellipsoid("ShipPharaoh_MouthLine", Vector3(0.34, 0.055, 0.07), Vector3(0.0, 14.12, 98.47), Color(0.20, 0.10, 0.05))
 	_ellipsoid("ShipPharaoh_LowerLip", Vector3(0.30, 0.075, 0.07), Vector3(0.0, 13.98, 98.46), Color(0.91, 0.72, 0.37))
-	var beard := _cylinder("ShipPharaoh_CeremonialBeard", 0.46, 1.55, Vector3(0.0, 12.86, 98.34), gold)
+	var beard := _cylinder("ShipPharaoh_CeremonialBeard", 0.46, 1.55, Vector3(0.0, 12.86, 98.34), _material(gold, 0.28))
 	var beard_mesh := beard.mesh as CylinderMesh
 	beard_mesh.top_radius = 0.22
 	beard_mesh.bottom_radius = 0.40
