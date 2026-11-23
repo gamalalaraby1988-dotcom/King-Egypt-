@@ -31,6 +31,10 @@ func _initialize() -> void:
 	for fragment in required_server_contract:
 		if not server.contains(fragment):
 			failures.append("Authoritative server is missing required jet ski contract: " + fragment)
+	if server.contains('الجت سكي مشغولة حاليًا'):
+		failures.append("Each authenticated rider must receive an independent jet ski slot.")
+	if not server.contains("var launch_slot := JET_SKI_SERVER_LAUNCH_POSITION"):
+		failures.append("The server must allocate a distinct launch slot per mounted rider.")
 	if server.contains('func submit_jet_ski_input(sequence: int, position: Vector3'):
 		failures.append("Client jet ski RPC must not accept a client-supplied position.")
 	if not main.contains('AuthoritativeGameServer.request_jet_ski_mount()') or not main.contains('AuthoritativeGameServer.request_jet_ski_unmount()'):
