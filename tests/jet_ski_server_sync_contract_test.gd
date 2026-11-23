@@ -39,6 +39,8 @@ func _initialize() -> void:
 		failures.append("Client jet ski RPC must not accept a client-supplied position.")
 	if not main.contains('AuthoritativeGameServer.request_jet_ski_mount()') or not main.contains('AuthoritativeGameServer.request_jet_ski_unmount()'):
 		failures.append("Online mount and dismount must request server-authoritative lifecycle changes.")
+	if main.contains('_mount_player_jet_ski()\n\tif is_instance_valid(city_jet_ski):\n\t\tcity_jet_ski.set_physics_process(false)'):
+		failures.append("Online local prediction must not be disabled immediately after mounting.")
 	if not main.contains('jet_ski_authoritative_state_received.connect(_on_jet_ski_authoritative_state_received)'):
 		failures.append("Local rider must receive authoritative jet ski corrections.")
 	if not remote.contains('JET_SKI_SCENE.instantiate()') or not remote.contains('is_jet_ski_riding'):
