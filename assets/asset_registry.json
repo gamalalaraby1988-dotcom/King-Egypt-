@@ -10,6 +10,16 @@
       "license": "يحتاج إلى توثيق قبل إعادة التوزيع",
       "preview": "",
       "notes": "أصل موجود مسبقًا في المستودع؛ لا يعني إدراجه اعتماده لتصميم جديد."
+    },
+    {
+      "id": "electric_standing_scooter_prototype",
+      "path": "res://scenes/electric_scooter.tscn",
+      "format": "godot_scene",
+      "status": "procedural_prototype_unverified",
+      "source": "Procedural Godot scene authored for KING OF EGYPT CITY",
+      "license": "project-created",
+      "preview": "",
+      "notes": "Electric kick scooter, standing deck, two wheels and handlebar; no seat. Controller is local prototype and is not yet wired into the shared interaction/summon UI."
     }
   ]
 }
