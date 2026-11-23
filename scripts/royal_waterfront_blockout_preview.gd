@@ -162,21 +162,21 @@ func _build_bridge_details() -> void:
 func _build_ship_gate_interaction() -> void:
 	# The ship-facing end widens into a terminal apron. Cars bypass the central
 	# pedestrian interaction pad on two flanking lanes; the ring is not in a live lane.
-	var apron_z := 91.5
+	var apron_z := 98.5
 	_box("ShipApproachFlaredApron", Vector3(22.0, 0.42, 11.0), Vector3(0.0, 0.78, apron_z), IVORY)
 	_box("ShipApproachVehicleLane_Left", Vector3(6.0, 0.09, 11.0), Vector3(-8.0, 1.035, apron_z), ROAD)
 	_box("ShipApproachVehicleLane_Right", Vector3(6.0, 0.09, 11.0), Vector3(8.0, 1.035, apron_z), ROAD)
-	_box("ShipApproachPedestrianIsland", Vector3(8.0, 0.16, 9.0), Vector3(0.0, 1.07, 91.5), SAND)
+	_box("ShipApproachPedestrianIsland", Vector3(8.0, 0.16, 9.0), Vector3(0.0, 1.07, 98.5), SAND)
 	var glow := _emissive_material(Color(1.0, 0.62, 0.12), 3.5)
 	var inner_glow := _emissive_material(Color(1.0, 0.88, 0.42), 4.0)
-	_cylinder("ShipInteractionPad_Base", 3.2, 0.12, Vector3(0.0, 1.20, 91.5), _material(Color(0.12, 0.10, 0.07), 0.3))
+	_cylinder("ShipInteractionPad_Base", 3.2, 0.12, Vector3(0.0, 1.20, 98.5), _material(Color(0.12, 0.10, 0.07), 0.3))
 	var outer_ring := MeshInstance3D.new()
 	outer_ring.name = "ShipInteractionPad_OuterGlowingRing"
 	var outer_mesh := TorusMesh.new()
 	outer_mesh.inner_radius = 3.05
 	outer_mesh.outer_radius = 3.22
 	outer_ring.mesh = outer_mesh
-	outer_ring.position = Vector3(0.0, 1.30, 91.5)
+	outer_ring.position = Vector3(0.0, 1.30, 98.5)
 	outer_ring.material_override = glow
 	add_child(outer_ring)
 	var inner_ring := MeshInstance3D.new()
@@ -185,14 +185,14 @@ func _build_ship_gate_interaction() -> void:
 	inner_mesh.inner_radius = 2.55
 	inner_mesh.outer_radius = 2.64
 	inner_ring.mesh = inner_mesh
-	inner_ring.position = Vector3(0.0, 1.31, 91.5)
+	inner_ring.position = Vector3(0.0, 1.31, 98.5)
 	inner_ring.material_override = inner_glow
 	add_child(inner_ring)
 	for side in [-1.0, 1.0]:
-		_box("InteractionIslandGoldEdge", Vector3(0.16, 0.22, 9.0), Vector3(side * 4.05, 1.20, 91.5), GOLD)
-	_label("GLOWING INTERACTION CIRCLE - DIRECTLY BEFORE SHIP GATE", Vector3(0.0, 3.3, 86.5), GOLD, 19)
-	_label("PLAYER ENTERS CIRCLE  >  INTERACT  >  CONFIRM SHIP ENTRY", Vector3(0.0, 2.8, 96.5), IVORY, 15)
-	_label("VEHICLE BYPASS LANES - KEEP PAD CLEAR", Vector3(0.0, 3.0, 99.0), GOLD, 15)
+		_box("InteractionIslandGoldEdge", Vector3(0.16, 0.22, 9.0), Vector3(side * 4.05, 1.20, 98.5), GOLD)
+	_label("GLOWING INTERACTION CIRCLE - DIRECTLY BEFORE SHIP GATE", Vector3(0.0, 3.3, 93.5), GOLD, 19)
+	_label("PLAYER ENTERS CIRCLE  >  INTERACT  >  CONFIRM SHIP ENTRY", Vector3(0.0, 2.8, 103.5), IVORY, 15)
+	_label("VEHICLE BYPASS LANES - KEEP PAD CLEAR", Vector3(0.0, 3.0, 106.0), GOLD, 15)
 
 func _build_option_b_southern_roads() -> void:
 	# Option B review geometry only: side arms remain in place; detours extend to the relocated bypass.
