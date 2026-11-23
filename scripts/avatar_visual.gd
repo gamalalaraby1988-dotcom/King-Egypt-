@@ -284,6 +284,13 @@ func _build_face() -> void:
 	_add_box("Mouth", Vector3(0.09, 0.018, 0.018), Vector3(0, 1.565, -0.211), mouth)
 	_add_sphere("LeftEar", Vector3(0.045, 0.09, 0.07), Vector3(-0.218, 1.66, 0), _material(SKIN))
 	_add_sphere("RightEar", Vector3(0.045, 0.09, 0.07), Vector3(0.218, 1.66, 0), _material(SKIN))
+	# اجمع ملامح الوجه تحت الرأس حتى تتحرك العينان والأنف والفم معه عند النظر للهاتف.
+	var head := parts.get("Head") as Node3D
+	if is_instance_valid(head):
+		for part_name in ["LeftEyeWhite", "RightEyeWhite", "LeftPupil", "RightPupil", "LeftEyebrow", "RightEyebrow", "Nose", "Mouth", "LeftEar", "RightEar"]:
+			var face_part := parts.get(part_name) as Node3D
+			if is_instance_valid(face_part):
+				face_part.reparent(head, true)
 
 func _build_hair_placeholders() -> void:
 	_add_sphere("ShortHairCap", Vector3(0.235, 0.13, 0.235), Vector3(0, 1.88, 0.005), _material(HAIR))
@@ -292,6 +299,13 @@ func _build_hair_placeholders() -> void:
 	for i in range(5):
 		var x := -0.16 + float(i) * 0.08
 		_add_sphere("Curl_%d" % i, Vector3(0.07, 0.07, 0.07), Vector3(x, 1.91, -0.09), _material(Color("#35251f")))
+	# اربط الشعر بالرأس أيضًا كي تبقى تفاصيله متناسقة مع حركة النظر.
+	var head := parts.get("Head") as Node3D
+	if is_instance_valid(head):
+		for part_name in ["ShortHairCap", "LongHairBack", "CurlyHairCap", "Curl_0", "Curl_1", "Curl_2", "Curl_3", "Curl_4"]:
+			var hair_part := parts.get(part_name) as Node3D
+			if is_instance_valid(hair_part):
+				hair_part.reparent(head, true)
 
 
 func _set_part_color(part_name: String, color: Color) -> void:
