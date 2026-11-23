@@ -37,6 +37,7 @@ const JET_SKI_RACE_MAX_PARTICIPANTS := 4
 const JET_SKI_RACE_COUNTDOWN_SECONDS := 5
 const JET_SKI_RACE_DURATION_SECONDS := 300
 const JET_SKI_RACE_OFF_COURSE_LIMIT_SECONDS := 300
+const JET_SKI_RACE_DAILY_REWARD_WINNING_RANKS := 3
 const SPAWN_POSITION := Vector3(0.0, 1.0, -42.0)
 
 var _server_peer: WebSocketMultiplayerPeer
@@ -1535,6 +1536,18 @@ func _jet_ski_race_can_start(participant_count: int) -> bool:
 
 func _jet_ski_race_duration_expired(now_usec: int, ends_at_usec: int) -> bool:
 	return ends_at_usec > 0 and now_usec >= ends_at_usec
+
+
+func _jet_ski_race_reward_rank_eligible(rank: int) -> bool:
+	return rank >= 1 and rank <= JET_SKI_RACE_DAILY_REWARD_WINNING_RANKS
+
+
+func _jet_ski_race_daily_reward_claim_key(user_id: String, utc_day_key: String) -> String:
+	var normalized_user_id := user_id.strip_edges()
+	var normalized_day_key := utc_day_key.strip_edges()
+	if normalized_user_id.is_empty() or normalized_day_key.is_empty():
+		return ""
+	return "%s:%s" % [normalized_user_id, normalized_day_key]
 
 
 func _jet_ski_race_should_reopen_after_disconnect(was_participant: bool, race_state: String) -> bool:
