@@ -25,6 +25,13 @@ func _initialize() -> void:
 		failures.append("The synchronized server countdown must be five seconds.")
 	if server._jet_ski_race_should_reopen_after_disconnect(true, "waiting"):
 		failures.append("A participant disconnect changed a lobby that was already waiting.")
+	var participant_ids: Array[int] = [11, 12]
+	if server._jet_ski_race_can_watch(11, participant_ids):
+		failures.append("A registered racer was incorrectly allowed into spectator mode.")
+	if not server._jet_ski_race_can_watch(13, participant_ids):
+		failures.append("A non-participant was incorrectly blocked from spectator mode.")
+	if server._jet_ski_race_can_watch(0, participant_ids):
+		failures.append("An invalid peer ID was incorrectly allowed into spectator mode.")
 	server.free()
 	if not failures.is_empty():
 		for failure in failures:
