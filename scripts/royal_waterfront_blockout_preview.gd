@@ -18,6 +18,7 @@ func _ready() -> void:
 	_build_beach_activity_path()
 	_build_open_water()
 	_build_bridge_and_arrival()
+	_build_option_b_southern_roads()
 	_mark_preserved_ship_and_conflicts()
 	$PreviewCamera.look_at(Vector3(-3.0, 0.0, 99.0), Vector3.UP)
 
@@ -107,7 +108,7 @@ func _build_open_water() -> void:
 
 func _build_bridge_and_arrival() -> void:
 	# Overall 13m concept width: 8.5m two-way carriageway + 2.25m protected walkways each side.
-	var center_x := -9.0
+	var center_x := 0.0
 	_box("RoyalBridgeDeck", Vector3(13.0, 0.45, 17.0), Vector3(center_x, 0.52, 99.5), IVORY)
 	_box("BridgeTwoWayRoad", Vector3(8.5, 0.08, 17.0), Vector3(center_x, 0.80, 99.5), ROAD)
 	for side in [-1.0, 1.0]:
@@ -121,12 +122,23 @@ func _build_bridge_and_arrival() -> void:
 	_label("PROTECTED WALKWAYS", Vector3(center_x - 8.0, 2.0, 98.0), IVORY, 19)
 	_label("ARRIVAL PLATFORM", Vector3(center_x, 2.0, 87.0), GOLD, 22)
 
+
+func _build_option_b_southern_roads() -> void:
+	# Option B review geometry only: side arms remain in place; detours extend to the relocated bypass.
+	for side in [-1.0, 1.0]:
+		var x := side * 55.5
+		_box("PreservedSouthRoadArm", Vector3(79.0, 0.08, 6.0), Vector3(x, 0.22, 95.0), ROAD)
+		var detour_x := side * 16.0
+		_box("ExtendedSouthSideDetour", Vector3(6.0, 0.08, 25.0), Vector3(detour_x, 0.24, 107.5), ROAD)
+	_box("RelocatedSouthBasinBypass", Vector3(32.0, 0.08, 6.0), Vector3(0.0, 0.26, 120.0), ROAD)
+	_box("OptionB_LandAccessSpur", Vector3(8.5, 0.08, 7.0), Vector3(0.0, 0.28, 114.5), ROAD)
+	_label("OPTION B - PRESERVED SOUTH ROAD ARMS", Vector3(-58.0, 2.0, 91.0), GOLD, 16)
+	_label("RELOCATED SOUTH BYPASS - Z=120", Vector3(0.0, 2.0, 125.0), GOLD, 18)
+
 func _mark_preserved_ship_and_conflicts() -> void:
 	# Outline only: the approved Five Civilizations Ship asset remains untouched.
 	_box("ExistingShipFootprint_ReferenceOnly", Vector3(5.8, 0.16, 19.0), Vector3(0.0, 0.18, 85.0), GOLD)
 	_box("ExistingPierReferenceOnly", Vector3(8.0, 0.18, 14.0), Vector3(-6.0, 0.30, 84.0), IVORY)
 	_label("PRESERVE APPROVED SHIP POSITION", Vector3(12.0, 3.0, 82.0), GOLD, 24)
-	# Red marker records the known southern road conflict; no existing road is edited here.
-	_box("ExistingSouthRoadConflictMarker", Vector3(190.0, 0.12, 1.0), Vector3(0.0, 0.28, 95.0), WARNING)
-	_label("EXISTING ROAD AT Z≈95 - RE-ROUTE REQUIRED BEFORE IMPLEMENTATION", Vector3(45.0, 3.0, 94.0), Color(1.0, 0.72, 0.66), 18)
+	_label("OPTION B ROUTE - REVIEW BLOCKOUT ONLY", Vector3(45.0, 3.0, 94.0), Color(1.0, 0.72, 0.66), 18)
 	_label("SCHEMATIC BLOCKOUT - NOT GAMEPLAY COLLISION", Vector3(0.0, 5.0, 151.0), GOLD, 32)
