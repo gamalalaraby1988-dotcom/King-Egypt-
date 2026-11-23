@@ -23,7 +23,8 @@ func _material(color: Color, roughness: float = 0.82) -> StandardMaterial3D:
 	material.roughness = roughness
 	return material
 
-func _box(label: String, size: Vector3, position: Vector3, color: Color, parent: Node = self) -> MeshInstance3D:
+func _box(label: String, size: Vector3, position: Vector3, color: Color, parent: Node = null) -> MeshInstance3D:
+	var target: Node = self if parent == null else parent
 	var node := MeshInstance3D.new()
 	node.name = label
 	var mesh := BoxMesh.new()
@@ -31,7 +32,7 @@ func _box(label: String, size: Vector3, position: Vector3, color: Color, parent:
 	node.mesh = mesh
 	node.position = position
 	node.material_override = _material(color)
-	parent.add_child(node)
+	target.add_child(node)
 	return node
 
 func _label(text: String, position: Vector3, color: Color = IVORY, font_size: int = 34) -> void:
