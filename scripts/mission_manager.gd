@@ -771,7 +771,10 @@ func _update_interaction_hud() -> void:
 	if not is_instance_valid(interact_button) or not is_instance_valid(prompt_label):
 		return
 	var player_is_busy: bool = is_instance_valid(player) and (bool(player.get("sitting")) or bool(player.get("animal_riding")))
-	var has_interaction: bool = is_instance_valid(nearest_interactable) and not player_is_busy
+	var city_root := get_tree().current_scene
+	var nearby_vehicle: Node3D = city_root.get("city_vehicle") as Node3D if is_instance_valid(city_root) else null
+	var vehicle_in_range := not player_is_busy and is_instance_valid(nearby_vehicle) and is_instance_valid(player) and player.global_position.distance_to(nearby_vehicle.global_position) <= 5.0
+	var has_interaction: bool = (is_instance_valid(nearest_interactable) or vehicle_in_range) and not player_is_busy
 	interact_button.visible = true
 	interact_button.text = "✋"
 	interact_button.add_theme_font_size_override("font_size", 28)
@@ -779,30 +782,33 @@ func _update_interaction_hud() -> void:
 	interact_button.add_theme_color_override("font_color", hand_color)
 	interact_button.add_theme_color_override("font_hover_color", hand_color)
 	interact_button.add_theme_color_override("font_pressed_color", hand_color)
-	interact_button.tooltip_text = CityLanguage.translate(_interaction_action_key(nearest_interactable)) if has_interaction else CityLanguage.translate("interaction_approach")
+	interact_button.tooltip_text = ("ركوب السيارة" if CityLanguage.get_language() == "ar" else "Enter vehicle") if vehicle_in_range else (CityLanguage.translate(_interaction_action_key(nearest_interactable)) if has_interaction and is_instance_valid(nearest_interactable) else CityLanguage.translate("interaction_approach"))
 	if has_interaction:
-		var display_name := CityLanguage.translate("interaction_place")
-		if nearest_interactable.has_meta("palace_portal_label"):
+		var display_name := "السيارة" if vehicle_in_range else CityLanguage.translate("interaction_place")
+		if vehicle_in_range:
+			interact_button.text = "✋"
+		else:
+			if nearest_interactable.has_meta("palace_portal_label"):
 			display_name = str(nearest_interactable.get_meta("palace_portal_label"))
 			if nearest_interactable.has_meta("palace_room_center"):
 				var portal_position := nearest_interactable.global_position
 				var actor_position := player.global_position
 				var door_side := str(nearest_interactable.get_meta("palace_door_side", "south"))
 				var inside_room := actor_position.z < portal_position.z if door_side == "south" else actor_position.z > portal_position.z
-				if inside_room:
+					if inside_room:
 					display_name = "الخروج إلى الردهة"
-		elif nearest_interactable.has_method("get_development_data"):
+			elif nearest_interactable.has_method("get_development_data"):
 			display_name = str(nearest_interactable.get_development_data().get("title", "مبنى التطوير"))
-		elif nearest_interactable.has_method("get_job_data"):
+			elif nearest_interactable.has_method("get_job_data"):
 			display_name = str(nearest_interactable.get_job_data().get("title", CityLanguage.translate("interaction_job_name")))
-		elif nearest_building:
+			elif nearest_building:
 			display_name = str(nearest_interactable.get("building_title"))
-		elif nearest_interactable.has_method("get_animal_rental_data"):
+			elif nearest_interactable.has_method("get_animal_rental_data"):
 			display_name = CityLanguage.translate("interaction_animal_staff")
-		elif nearest_interactable.has_method("get_interaction_data"):
-			var interaction_data: Dictionary = nearest_interactable.get_interaction_data()
+			elif nearest_interactable.has_method("get_interaction_data"):
+				var interaction_data: Dictionary = nearest_interactable.get_interaction_data()
 			display_name = str(interaction_data.get("title", nearest_interactable.get("character_name")))
-		else:
+			else:
 			display_name = str(nearest_interactable.get("character_name"))
 		interact_button.text = "جلوس" if nearest_interactable.has_method("sit_player") else CityLanguage.translate(_interaction_action_key(nearest_interactable))
 		prompt_label.text = "%s %s — %s" % [CityLanguage.translate("interaction_near"), display_name, CityLanguage.translate("interaction_press_hint")]
@@ -815,6 +821,10 @@ func _update_interaction_hud() -> void:
 			prompt_label.text = CityLanguage.translate("interaction_approach")
 
 func interact() -> void:
+	var city_root := get_tree().current_scene
+	if is_instance_valid(city_root) and city_root.has_method("try_enter_summoned_vehicle"):
+		if bool(city_root.call("try_enter_summoned_vehicle")):
+			return
 	_update_interaction_target()
 	if is_instance_valid(player) and (player.get("animal_riding") == true or player.get("sitting") == true):
 		_update_interaction_hud()
