@@ -1050,22 +1050,17 @@ func _request_safe_return() -> void:
 
 
 func _perform_safe_return() -> void:
-	var player := main_scene.find_child("Player", true, false) as Node3D if is_instance_valid(main_scene) else null
-	if not is_instance_valid(player) or not safe_return_position_captured:
+	if not is_instance_valid(main_scene) or not main_scene.has_method("return_player_to_start_position"):
 		if is_instance_valid(vehicle_store_status):
-			vehicle_store_status.text = "تعذرت العودة الآمنة؛ لم يتم العثور على اللاعب أو نقطة البداية."
+			vehicle_store_status.text = "العودة الآمنة غير متاحة حاليًا؛ لم يتم تغيير موقعك."
 		return
-	# في اللعب المتصل يجب أن يعتمد الخادم النقل؛ لا ننفذ انتقالًا محليًا قد يرفضه الخادم.
-	if multiplayer.multiplayer_peer != null:
+	var returned: bool = bool(main_scene.call("return_player_to_start_position"))
+	if not returned:
 		if is_instance_valid(vehicle_store_status):
-			vehicle_store_status.text = "العودة الآمنة عبر الخادم غير مربوطة بعد؛ لم يتم تغيير موقعك."
+			vehicle_store_status.text = "تعذرت العودة الآن: قد تكون في جلسة Online أو داخل مركبة/مبنى. لم يتم تغيير موقعك."
 		return
-	if player is CharacterBody3D:
-		(player as CharacterBody3D).velocity = Vector3.ZERO
-	player.global_position = safe_return_position
-	player.reset_physics_interpolation()
 	if is_instance_valid(vehicle_store_status):
-		vehicle_store_status.text = "تمت العودة إلى نقطة بداية آمنة. حسابك وممتلكاتك وتقدمك لم تتغير."
+		vehicle_store_status.text = "تمت إعادتك إلى نقطة بداية اللعبة. حسابك وممتلكاتك وتقدمك محفوظة."
 	_close_vehicle_store_phone()
 
 
