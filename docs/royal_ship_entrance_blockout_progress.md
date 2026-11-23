@@ -51,3 +51,13 @@
 - Godot 4.7.2 import/script validation and headless startup both passed on this commit (workflow run `45101305293`).
 - A genuine render from the same updated scene is running in workflow `45101305010`; its image must be inspected before visual alignment or appearance is reported as confirmed.
 - No merge to `main`.
+
+
+## Rendered ship-detail review — 2026-11-23
+
+- The updated scene was rendered by GitHub Actions from the exact Godot preview scene on commit `1c98ed04331cb140e700906f1c3b76d63d7a69f1`.
+- Render workflow `45101305010` completed successfully and uploaded artifact `14785398210` (`royal-waterfront-rendered-preview`, PNG extracted from the scene render).
+- Visual inspection confirms the added hull bands, portholes, bow/stern caps, deck rail posts, five emblem plaques, and crowned main-hall roof are present in the rendered image, together with the bridge and arrival apron.
+- The current camera/render is a broad blockout view; labels and the approach apron make the interaction circle less distinct than desired. The next visual pass should improve camera framing and pad readability before asking for approval of final ship detailing.
+- This is still primitive-mesh review geometry, not a production-ready detailed vessel. Collision, turning physics, player interaction, and online entry logic remain unimplemented and untested.
+- No production scene was modified and nothing was merged into `main`.
