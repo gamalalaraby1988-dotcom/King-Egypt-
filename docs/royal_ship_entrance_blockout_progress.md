@@ -136,3 +136,13 @@
 - Latest script commit: `14695dccc0a2bbaef11e6a111ef8c2c7a1ab4f08`.
 - Fresh validation/render are required before this scale pass is verified.
 - Remains a primitive-mesh blockout; no final sculpted production mask asset or gameplay collision/interaction/network entry implementation is claimed. No merge to `main`.
+
+
+## Smooth mask facial-form pass — 2026-11-23
+
+- Reviewed the actual Godot render from artifact `14814415086` (run `45163099074`, source commit `14695dccc0a2bbaef11e6a111ef8c2c7a1ab4f08`). The larger mask is more prominent, but the box-based facial features still looked angular and schematic.
+- Replaced the block-shaped cheeks, ears, eye forms, nose, lips and beard detailing with smooth ellipsoid geometry and a tapered cylindrical ceremonial beard. Added a reusable `_ellipsoid` mesh helper.
+- Latest script commit: `08c4a1d5084dafe4834b115c1c6a6e9fb3219bf5`.
+- Fresh Godot validation run `45163355882` completed successfully, including import/script validation and headless startup of the exact waterfront preview scene.
+- Fresh render run `45163355847` was still running its environment-install step when this note was added; the revised PNG has not yet been inspected.
+- This remains a stylized primitive-mesh blockout, not a final sculpted Tutankhamun mask asset. No collision, vehicle physics, player interaction or network-authoritative ship entry implementation is claimed. No merge to `main`.
