@@ -58,8 +58,8 @@ func _build_phone_visual() -> void:
 	phone_visual = Node3D.new()
 	phone_visual.name = "PlayerPhoneVisual"
 	# إزاحة محلية محسوبة لتعويض زاوية رفع الذراع، ووضع الهاتف أمام الصدر.
-	phone_visual.position = Vector3(0.0, 0.12, -0.27)
-	phone_visual.rotation = Vector3(-0.08, 0.10, 0.62)
+	phone_visual.position = Vector3(-0.42, 0.12, -0.27)
+	phone_visual.rotation = Vector3(-0.08, 0.10, 0.24)
 	phone_visual.visible = false
 	right_arm.add_child(phone_visual)
 	var body := MeshInstance3D.new()
@@ -80,7 +80,7 @@ func _build_phone_visual() -> void:
 	palm_mesh.radius = 1.0
 	palm_mesh.height = 2.0
 	palm.mesh = palm_mesh
-	palm.scale = Vector3(0.075, 0.085, 0.045)
+	palm.scale = Vector3(0.078, 0.092, 0.052)
 	palm.position = Vector3(0.0, -0.005, 0.043)
 	palm.material_override = _material(SKIN)
 	phone_visual.add_child(palm)
@@ -90,7 +90,7 @@ func _build_phone_visual() -> void:
 	thumb_mesh.radius = 0.018
 	thumb_mesh.height = 0.075
 	thumb.mesh = thumb_mesh
-	thumb.position = Vector3(-0.071, -0.005, -0.027)
+	thumb.position = Vector3(-0.066, -0.005, -0.031)
 	thumb.rotation.z = -0.35
 	thumb.material_override = _material(SKIN)
 	phone_visual.add_child(thumb)
@@ -102,7 +102,7 @@ func _build_phone_visual() -> void:
 		finger_mesh.radius = 0.012
 		finger_mesh.height = 0.064
 		finger.mesh = finger_mesh
-		finger.position = Vector3(0.064, -0.067 + float(finger_index) * 0.062, -0.027)
+		finger.position = Vector3(0.061, -0.067 + float(finger_index) * 0.062, -0.031)
 		finger.rotation.z = 0.16
 		finger.material_override = _material(SKIN)
 		phone_visual.add_child(finger)
