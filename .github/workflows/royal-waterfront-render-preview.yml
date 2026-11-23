@@ -1,0 +1,57 @@
+name: Royal waterfront rendered preview
+
+on:
+  push:
+    branches: [feature/royal-waterfront-blockout-preview]
+    paths:
+      - "scripts/royal_waterfront_blockout_preview.gd"
+      - "scenes/royal_waterfront_blockout_preview.tscn"
+      - ".github/workflows/royal-waterfront-render-preview.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  render-preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install Godot and rendering utilities
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y xvfb ffmpeg libgl1-mesa-dri
+          curl -fL --retry 3 \
+            "https://github.com/godotengine/godot/releases/download/4.7.2-stable/Godot_v4.7.2-stable_linux.x86_64.zip" \
+            -o /tmp/godot.zip
+          unzip -q /tmp/godot.zip -d /tmp/godot
+          chmod +x /tmp/godot/Godot_v4.7.2-stable_linux.x86_64
+
+      - name: Render the exact waterfront preview scene
+        shell: bash
+        run: |
+          set -euo pipefail
+          GODOT="/tmp/godot/Godot_v4.7.2-stable_linux.x86_64"
+          xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 "$GODOT" \
+            --path . \
+            --write-movie /tmp/royal-waterfront-preview.avi \
+            --fixed-fps 1 \
+            res://scenes/royal_waterfront_blockout_preview.tscn \
+            --quit-after 3
+          test -s /tmp/royal-waterfront-preview.avi
+          ffmpeg -y -i /tmp/royal-waterfront-preview.avi -frames:v 1 \
+            /tmp/royal-waterfront-preview.png
+          test -s /tmp/royal-waterfront-preview.png
+
+      - name: Upload rendered preview image
+        uses: actions/upload-artifact@v4
+        with:
+          name: royal-waterfront-rendered-preview
+          path: /tmp/royal-waterfront-preview.png
+          if-no-files-found: error
+          retention-days: 14
