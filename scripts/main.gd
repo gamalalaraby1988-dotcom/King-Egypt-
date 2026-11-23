@@ -28,6 +28,7 @@ var city_scooter: CharacterBody3D = null
 var scooter_occupied := false
 var city_jet_ski: CharacterBody3D = null
 var jet_ski_occupied := false
+var _jet_ski_unmount_pending := false
 var _jet_ski_saved_collision_layer := 1
 var _jet_ski_saved_collision_mask := 1
 const JET_SKI_LAUNCH_POSITION := Vector3(0.0, 0.34, 82.0)
@@ -92,6 +93,7 @@ func _ready() -> void:
 	AuthoritativeGameServer.authentication_completed.connect(_on_player_server_authenticated)
 	AuthoritativeGameServer.remote_players_received.connect(_on_remote_players_received)
 	AuthoritativeGameServer.jet_ski_mount_result_received.connect(_on_jet_ski_mount_result_received)
+	AuthoritativeGameServer.jet_ski_unmount_result_received.connect(_on_jet_ski_unmount_result_received)
 	AuthoritativeGameServer.jet_ski_authoritative_state_received.connect(_on_jet_ski_authoritative_state_received)
 	GameModeManager.online_disconnected.connect(_on_mode_disconnected)
 
@@ -437,8 +439,13 @@ func try_enter_summoned_vehicle() -> bool:
 func _on_vehicle_interaction_pressed() -> void:
 	if jet_ski_occupied:
 		if GameModeManager.is_online_ready():
-			AuthoritativeGameServer.request_jet_ski_unmount()
-		_exit_player_jet_ski()
+			if not _jet_ski_unmount_pending:
+				_jet_ski_unmount_pending = true
+				if is_instance_valid(vehicle_interaction_button):
+					vehicle_interaction_button.disabled = true
+				AuthoritativeGameServer.request_jet_ski_unmount()
+		else:
+			_exit_player_jet_ski()
 		return
 	if GameModeManager.is_online_ready():
 		AuthoritativeGameServer.request_jet_ski_mount()
@@ -469,6 +476,17 @@ func _on_jet_ski_mount_result_received(success: bool, message: String) -> void:
 	_mount_player_jet_ski()
 
 
+func _on_jet_ski_unmount_result_received(success: bool, server_position: Vector3) -> void:
+	_jet_ski_unmount_pending = false
+	if is_instance_valid(vehicle_interaction_button):
+		vehicle_interaction_button.disabled = false
+	if not success:
+		_on_mode_status_changed("تعذر تأكيد النزول من الخادم. ما زلت على الجت سكي.")
+		return
+	if jet_ski_occupied:
+		_exit_player_jet_ski(server_position)
+
+
 func _on_jet_ski_authoritative_state_received(position: Vector3, rotation_y: float, _velocity: Vector3) -> void:
 	if not jet_ski_occupied or not is_instance_valid(city_jet_ski):
 		return
@@ -480,6 +498,7 @@ func _on_jet_ski_authoritative_state_received(position: Vector3, rotation_y: flo
 
 
 func _exit_contextual_state() -> void:
+	_jet_ski_unmount_pending = false
 	if jet_ski_occupied:
 		_exit_player_jet_ski()
 		return
@@ -673,7 +692,7 @@ func _mount_player_jet_ski() -> void:
 		scooter_toggle_button.visible = false
 
 
-func _exit_player_jet_ski() -> void:
+func _exit_player_jet_ski(server_position: Variant = null) -> void:
 	if not jet_ski_occupied or not is_instance_valid(city_jet_ski):
 		return
 	var player := city_jet_ski.get_node_or_null("Player") as CharacterBody3D
@@ -681,8 +700,11 @@ func _exit_player_jet_ski() -> void:
 		_recover_jet_ski_occupancy()
 		return
 	var exit_position := city_jet_ski.global_position + city_jet_ski.global_transform.basis.x.normalized() * 2.0 + Vector3.UP * 0.15
+	if server_position is Vector3 and is_finite(server_position.x) and is_finite(server_position.y) and is_finite(server_position.z):
+		exit_position = server_position
 	player.reparent(self, true)
 	player.global_position = exit_position
+	_jet_ski_unmount_pending = false
 	player.velocity = Vector3.ZERO
 	player.sitting = false
 	player.collision_layer = _jet_ski_saved_collision_layer
