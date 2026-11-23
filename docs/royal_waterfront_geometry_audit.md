@@ -18,12 +18,15 @@ Coordinates are axis-aligned ranges derived from the dimensions and positions in
 | Gym path connector | -49.2 to -46.8 | 140 to 146 |
 | Court path connector | 38.8 to 41.2 | 143 to 146 |
 | Beach gym pergola posts/beams | within gym footprint | within gym footprint |
-| Bridge deck | -15.5 to -2.5 | 91 to 108 |
-| Land-ramp transition | -15.5 to -2.5 | 108 to 113 |
-| Arrival platform | -15.5 to -2.5 | 80.5 to 90.5 |
+| Bridge deck | -6.5 to 6.5 | 91 to 108 |
+| Land-ramp transition | -6.5 to 6.5 | 108 to 113 |
+| Arrival platform | -6.5 to 6.5 | 80.5 to 90.5 |
 | Ship reference outline | -2.9 to 2.9 | 75.5 to 94.5 |
 | Pier reference outline | -10 to -2 | 77 to 91 |
-| Existing south-road conflict marker | -95 to 95 | 94.5 to 95.5 |
+| Preserved west/east road arms | -95 to -16; 16 to 95 | 92 to 98 |
+| Extended west/east detours | -19 to -13; 13 to 19 | 95 to 120 |
+| Relocated south basin bypass | -16 to 16 | 117 to 123 |
+| Option B land access spur | -4.25 to 4.25 | 111 to 118 |
 
 ## Court integration decision
 
@@ -45,7 +48,7 @@ A 2.4m-wide compacted-sand path links the gym and handball court along the south
 2. **Shallow band and beach:** overlap is 3.5m in Z (107..110.5). This is a visual transition only; final waterline, surface elevations, and collision boundaries need to be designed together.
 3. **Gym and handball court:** no overlap; their X ranges are separated by 54m. The new 2.4m-wide path runs along the southern beach margin. The gym connector touches the gym's southern edge, and the court connector touches the court's southern edge; the connectors meet the main path. Check actual walkable continuity and clearances in Godot.
 4. **Bridge and land ramp:** their Z ranges meet at Z=108 with no positive-area overlap. A shared edge alone does not guarantee a smooth vehicle/player transition; inspect final mesh elevations and ramp slope in Godot.
-5. **Bridge and existing south-road marker:** the marker crosses the bridge footprint at Z≈95. This records the known road conflict; no live road has been rerouted.
+5. **Option B bridge and southern routes:** the centered bridge X range (-6.5..6.5) is separated from the existing road-arm inner edges at X=±16 by 9.5m, and from the extended detour nearest edges at X=±13 by 6.5m. The blockout now includes the preserved road arms, extended detours, relocated bypass at Z=120, and the 8.5m access spur. This is a plan-view representation only; junction turning radii, grades, and live-network compatibility remain unverified.
 6. **Arrival platform and pier reference:** the footprints overlap by 7.5m in X and 10m in Z. This may be intentional as a connection, but the actual pier/ship geometry and walkable path must be checked before implementation.
 7. **Arrival platform and ship outline:** the rectangular footprints overlap by only 0.4m in X (−2.9..−2.5). Do not infer that this provides a usable ship connection; use the actual approved ship scene and inspect its access geometry.
 
@@ -55,7 +58,7 @@ A 2.4m-wide compacted-sand path links the gym and handball court along the south
 - Rebuild the sea → transition → shallow → beach sequence as adjacent surfaces or explicitly designed blend meshes, with a single walkable collision surface only where intended.
 - Confirm bridge-to-ramp height continuity and vehicle clearance using the real scene scale.
 - Replace the ship and pier reference rectangles with instances of the approved assets in a dedicated test scene, without moving the production ship.
-- Re-route the southern road only after presenting the proposed route and obtaining approval.
+- Option B is approved for the isolated preview only; any production road edits still require a separate implementation review and approval.
 - Add gameplay collision, water-depth boundaries, equipment interaction, vehicle/player tests, and server-authoritative out-of-bounds protection in later implementation stages.
 
 ## Validation status
@@ -90,7 +93,7 @@ The isolated blockout was compared with the existing production geometry in `pro
 
 This cross-check does not modify production files. It does not establish walkable collision, vehicle clearance, water depth, player access, or a rendered result. Godot validation and a screenshot from the actual scene remain outstanding.
 
-## Coordinated route option B (proposal, not implemented)
+## Coordinated route option B (user-approved for isolated preview; not production)
 
 A coordinated alternative is documented in [royal_waterfront_route_option_b.md](royal_waterfront_route_option_b.md), with a coordinate sketch in [royal_waterfront_route_option_b.svg](royal_waterfront_route_option_b.svg).
 
@@ -102,4 +105,4 @@ A coordinated alternative is documented in [royal_waterfront_route_option_b.md](
 
 Static plan-view check: the centered bridge footprint X=-6.5..6.5 is 9.5m clear of the existing road-arm inner edges at X=±16 and 6.5m clear of the side-detour nearest edges at X=±13. The ramp ends at Z=113; the relocated bypass begins at Z=117, leaving a 4m gap that the proposed spur bridges. The spur overlaps the bypass by 1m in Z to form a T-junction. The extended side detours overlap the bypass by 3m in Z to form the two perimeter-road junctions.
 
-This is a geometry proposal only. It does not resolve the shoreline/ground-collision overlap, prove a continuous boarding surface to the real ship, or establish vertical clearance, road grades, turning radii, or Godot runtime behavior. No production geometry was changed and no approval to implement has been inferred.
+The user approved Option B for the isolated review blockout, and the preview script now represents the centered bridge/platform, ramp, preserved road arms, extended detours, relocated bypass, and access spur. This does not resolve the shoreline/ground-collision overlap, prove a continuous boarding surface to the real ship, or establish vertical clearance, road grades, turning radii, or Godot runtime behavior. No production geometry was changed.
