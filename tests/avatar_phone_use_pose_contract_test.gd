@@ -34,7 +34,7 @@ func _run() -> void:
 	if not is_equal_approx(right_arm.rotation.z, -0.78):
 		_fail("Right arm did not enter the configured phone-use pose.")
 		return
-	if not is_equal_approx(head.rotation.x, -0.28):
+	if not is_equal_approx(head.rotation.x, -0.42):
 		_fail("Head did not tilt toward the phone.")
 		return
 
