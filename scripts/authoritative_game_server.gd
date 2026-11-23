@@ -21,6 +21,7 @@ signal arcade_session_state_changed(session_id: String, state: String, machine_i
 signal arcade_session_verified(session_id: String, server_event_id: String, machine_id: String, zone_id: String, mode: String, participants: Dictionary, results: Dictionary)
 signal arcade_slot_spin_settled(session_id: String, result: Dictionary)
 signal arcade_slot_spin_failed(session_id: String, message: String)
+signal jet_ski_race_state_changed(state: String, participant_count: int, message: String)
 
 const DEFAULT_PORT := 2456
 const MAX_PLAYERS := 64
@@ -31,6 +32,8 @@ const ACCELERATION := 18.0
 const GRAVITY := 20.0
 const SNAPSHOT_INTERVAL := 0.05
 const MAX_PLAYER_VISIBILITY_DISTANCE := 140.0
+const JET_SKI_RACE_MIN_PARTICIPANTS := 2
+const JET_SKI_RACE_MAX_PARTICIPANTS := 4
 const SPAWN_POSITION := Vector3(0.0, 1.0, -42.0)
 
 var _server_peer: WebSocketMultiplayerPeer
@@ -45,6 +48,9 @@ var _client_authenticated := false
 var _objective_zones: Dictionary = {}
 var _proof_hmac_secret := PackedByteArray()
 var _proof_secret_warning_shown := false
+var _jet_ski_race_participants: Array[int] = []
+var _jet_ski_race_locked_participants: Array[int] = []
+var _jet_ski_race_state := "waiting"
 var _arcade_machines: Dictionary = {}
 var _arcade_sessions: Dictionary = {}
 var _peer_arcade_sessions: Dictionary = {}
@@ -1458,6 +1464,99 @@ func receive_arcade_session_state(session_id: String, state: String, machine_id:
 	if multiplayer.is_server() or not is_authenticated():
 		return
 	arcade_session_state_changed.emit(session_id, state, machine_id, message)
+
+
+
+# Royal jet ski race lobby gate. The server owns the roster and start eligibility.
+func request_join_jet_ski_race() -> bool:
+	if _is_dedicated_server or not is_authenticated() or not multiplayer.has_multiplayer_peer():
+		return false
+	request_join_jet_ski_race_rpc.rpc_id(1)
+	return true
+
+
+func request_leave_jet_ski_race() -> bool:
+	if _is_dedicated_server or not is_authenticated() or not multiplayer.has_multiplayer_peer():
+		return false
+	request_leave_jet_ski_race_rpc.rpc_id(1)
+	return true
+
+
+func request_start_jet_ski_race() -> bool:
+	if _is_dedicated_server or not is_authenticated() or not multiplayer.has_multiplayer_peer():
+		return false
+	request_start_jet_ski_race_rpc.rpc_id(1)
+	return true
+
+
+func _jet_ski_race_can_start(participant_count: int) -> bool:
+	return participant_count >= JET_SKI_RACE_MIN_PARTICIPANTS and participant_count <= JET_SKI_RACE_MAX_PARTICIPANTS
+
+
+func _notify_jet_ski_race_participants(message: String) -> void:
+	for peer_id in _jet_ski_race_participants:
+		if _sessions.has(peer_id) and bool(_sessions[peer_id].get("authenticated", false)):
+			rpc_id(peer_id, "receive_jet_ski_race_state", _jet_ski_race_state, _jet_ski_race_participants.size(), message)
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func request_join_jet_ski_race_rpc() -> void:
+	if not multiplayer.is_server():
+		return
+	var peer_id := multiplayer.get_remote_sender_id()
+	if not _sessions.has(peer_id) or not bool(_sessions[peer_id].get("authenticated", false)):
+		return
+	if _jet_ski_race_state != "waiting":
+		rpc_id(peer_id, "receive_jet_ski_race_state", _jet_ski_race_state, _jet_ski_race_participants.size(), "قائمة المتسابقين أُغلقت لهذه الجولة.")
+		return
+	if _jet_ski_race_participants.has(peer_id):
+		rpc_id(peer_id, "receive_jet_ski_race_state", _jet_ski_race_state, _jet_ski_race_participants.size(), "أنت مسجل بالفعل في المسابقة.")
+		return
+	if _jet_ski_race_participants.size() >= JET_SKI_RACE_MAX_PARTICIPANTS:
+		rpc_id(peer_id, "receive_jet_ski_race_state", _jet_ski_race_state, _jet_ski_race_participants.size(), "اكتملت خانات المتسابقين الأربعة.")
+		return
+	_jet_ski_race_participants.append(peer_id)
+	_notify_jet_ski_race_participants("تم تسجيلك في بطولة الجت سكي الملكية.")
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func request_leave_jet_ski_race_rpc() -> void:
+	if not multiplayer.is_server():
+		return
+	var peer_id := multiplayer.get_remote_sender_id()
+	if _jet_ski_race_state != "waiting" or not _jet_ski_race_participants.has(peer_id):
+		return
+	_jet_ski_race_participants.erase(peer_id)
+	_notify_jet_ski_race_participants("تم تحديث قائمة المتسابقين بعد مغادرة لاعب.")
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func request_start_jet_ski_race_rpc() -> void:
+	if not multiplayer.is_server():
+		return
+	var peer_id := multiplayer.get_remote_sender_id()
+	if not _sessions.has(peer_id) or not bool(_sessions[peer_id].get("authenticated", false)):
+		return
+	if not _jet_ski_race_participants.has(peer_id):
+		rpc_id(peer_id, "receive_jet_ski_race_state", _jet_ski_race_state, _jet_ski_race_participants.size(), "سجل نفسك في المسابقة أولًا.")
+		return
+	var participant_count := _jet_ski_race_participants.size()
+	if not _jet_ski_race_can_start(participant_count):
+		rpc_id(peer_id, "receive_jet_ski_race_state", "waiting", participant_count, "تحتاج المسابقة إلى متسابقين على الأقل لبدء الجولة.")
+		return
+	if _jet_ski_race_state != "waiting":
+		rpc_id(peer_id, "receive_jet_ski_race_state", _jet_ski_race_state, participant_count, "تم تقديم طلب بدء الجولة بالفعل.")
+		return
+	_jet_ski_race_locked_participants = _jet_ski_race_participants.duplicate()
+	_jet_ski_race_state = "ready"
+	_notify_jet_ski_race_participants("اكتمل الحد الأدنى: الجولة جاهزة لمرحلة العد التنازلي، وتم قفل قائمة المشاركين.")
+
+
+@rpc("authority", "call_remote", "reliable")
+func receive_jet_ski_race_state(state: String, participant_count: int, message: String) -> void:
+	if multiplayer.is_server() or not is_authenticated():
+		return
+	jet_ski_race_state_changed.emit(state, participant_count, message)
 
 
 
