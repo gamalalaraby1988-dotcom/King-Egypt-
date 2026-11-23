@@ -17,6 +17,21 @@ func _initialize() -> void:
 	if not is_equal_approx(JET_SKI_SCRIPT.apply_water_resistance(8.0, -2.0, 0.5), 8.0):
 		failures.append("Negative water resistance must not accelerate the craft.")
 
+	var main_source := FileAccess.get_file_as_string("res://scripts/main.gd")
+	for required_contract in [
+		"func _mount_player_jet_ski() -> void:",
+		"player.reparent(city_jet_ski, true)",
+		"player.visible = true",
+		"player.sitting = true",
+		"JetSkiCamera",
+		"func _exit_player_jet_ski() -> void:",
+		"func _recover_jet_ski_occupancy() -> void:",
+		"JET_SKI_BOARDING_RADIUS",
+		"_is_local_city_interaction_allowed()"
+	]:
+		if not main_source.contains(required_contract):
+			failures.append("Jet ski rider integration is missing contract: %s" % required_contract)
+
 	if not failures.is_empty():
 		for failure in failures:
 			push_error(failure)
