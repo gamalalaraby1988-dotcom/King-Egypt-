@@ -65,7 +65,7 @@ func _build_phone_visual() -> void:
 	right_arm.add_child(phone_visual)
 	# حافظ على مركز الهاتف عند أمام أسفل الوجه حتى مع دوران الذراع حول مفصل الكتف.
 	phone_visual.global_position = to_global(Vector3(0.0, 1.43, -0.27))
-	phone_visual.global_rotation = Vector3(-1.05, 0.0, 0.0)
+	_orient_phone_screen_to_head()
 	var body := MeshInstance3D.new()
 	body.name = "PhoneBody"
 	var body_mesh := BoxMesh.new()
@@ -125,6 +125,15 @@ func _build_phone_visual() -> void:
 	screen_material.emission_energy_multiplier = 0.35
 	screen.material_override = screen_material
 	phone_visual.add_child(screen)
+
+
+func _orient_phone_screen_to_head() -> void:
+	if not is_instance_valid(phone_visual) or not parts.has("Head"):
+		return
+	var phone_head := parts["Head"] as MeshInstance3D
+	# look_at يجعل المحور -Z نحو الهدف؛ نعكس الهدف كي يصبح +Z، وهو اتجاه سطح الشاشة، نحو الوجه.
+	phone_visual.look_at(phone_visual.global_position * 2.0 - phone_head.global_position, Vector3.UP)
+
 
 func _process(delta: float) -> void:
 	motion_time += delta
