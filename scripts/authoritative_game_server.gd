@@ -449,6 +449,15 @@ func _on_peer_disconnected(peer_id: int) -> void:
 	if is_instance_valid(body):
 		body.queue_free()
 	_sessions.erase(peer_id)
+	var was_jet_ski_race_participant := _jet_ski_race_participants.has(peer_id)
+	_jet_ski_race_participants.erase(peer_id)
+	_jet_ski_race_locked_participants.erase(peer_id)
+	if _jet_ski_race_state == "ready":
+		_jet_ski_race_state = "waiting"
+		_jet_ski_race_locked_participants.clear()
+		_notify_jet_ski_race_participants("غادر متسابق قبل بدء الجولة؛ أُعيد فتح التسجيل.")
+	elif was_jet_ski_race_participant:
+		_notify_jet_ski_race_participants("غادر متسابق؛ تم تحديث عدد المشاركين.")
 	if _auth_requests.has(peer_id):
 		var request := _auth_requests[peer_id] as HTTPRequest
 		if is_instance_valid(request):
