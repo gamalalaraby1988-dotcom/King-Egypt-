@@ -27,6 +27,18 @@ func _initialize() -> void:
 		failures.append("The server race duration must be exactly five minutes.")
 	if SERVER_SCRIPT.JET_SKI_RACE_OFF_COURSE_LIMIT_SECONDS != 300:
 		failures.append("The off-course return allowance must be exactly five minutes.")
+	if SERVER_SCRIPT.JET_SKI_RACE_DAILY_REWARD_WINNING_RANKS != 3:
+		failures.append("Daily jet ski rewards must be limited to the top three ranks.")
+	for rank in [1, 2, 3]:
+		if not server._jet_ski_race_reward_rank_eligible(rank):
+			failures.append("Podium rank %d should be reward-eligible." % rank)
+	for rank in [0, 4, 5]:
+		if server._jet_ski_race_reward_rank_eligible(rank):
+			failures.append("Non-podium rank %d must not be reward-eligible." % rank)
+	if server._jet_ski_race_daily_reward_claim_key("player-123", "2026-11-23") != "player-123:2026-11-23":
+		failures.append("Daily reward claim keys must be scoped to account ID and UTC day.")
+	if not server._jet_ski_race_daily_reward_claim_key("", "2026-11-23").is_empty():
+		failures.append("Daily reward claim keys must reject empty account IDs.")
 	if server._jet_ski_race_duration_expired(999999, 1000000):
 		failures.append("The race duration expired before its deadline.")
 	if not server._jet_ski_race_duration_expired(1000000, 1000000):
