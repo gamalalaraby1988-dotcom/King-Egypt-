@@ -177,7 +177,6 @@ func _build_ship_gate_interaction() -> void:
 	outer_mesh.outer_radius = 3.22
 	outer_ring.mesh = outer_mesh
 	outer_ring.position = Vector3(0.0, 1.30, 91.5)
-	outer_ring.rotation.x = PI * 0.5
 	outer_ring.material_override = glow
 	add_child(outer_ring)
 	var inner_ring := MeshInstance3D.new()
@@ -187,7 +186,6 @@ func _build_ship_gate_interaction() -> void:
 	inner_mesh.outer_radius = 2.64
 	inner_ring.mesh = inner_mesh
 	inner_ring.position = Vector3(0.0, 1.31, 91.5)
-	inner_ring.rotation.x = PI * 0.5
 	inner_ring.material_override = inner_glow
 	add_child(inner_ring)
 	for side in [-1.0, 1.0]:
