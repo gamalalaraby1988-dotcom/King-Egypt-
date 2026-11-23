@@ -13,6 +13,14 @@ func _initialize() -> void:
 		failures.append("Steering outside [-1, 1] must be rejected.")
 	if bool(CONTRACT.validate_input(0.0, 0.0, 0.0, 1, 1, 1100000, 1000000, 0).get("accepted", false)):
 		failures.append("Replayed or stale input sequences must be rejected.")
+	if bool(CONTRACT.validate_input(0.0, 0.0, 0.0, 0, -1, 1100000, 1000000, 0).get("accepted", false)):
+		failures.append("Zero input sequence numbers must be rejected.")
+	if bool(CONTRACT.validate_input(0.0, 0.0, 0.0, 20000, 1, 1100000, 1000000, 0).get("accepted", false)):
+		failures.append("Implausibly large sequence jumps must be rejected.")
+	if bool(CONTRACT.validate_input(0.0, 0.0, 0.0, 2, 1, 900000, 1000000, 0).get("accepted", false)):
+		failures.append("Monotonic clock regression must be rejected.")
+	if bool(CONTRACT.validate_input(0.0, 0.0, 0.0, 2, 1, 1100000, 1000000, -1).get("accepted", false)):
+		failures.append("Corrupted rate-window counters must be rejected.")
 	if bool(CONTRACT.validate_input(0.0, 0.0, 0.0, 2, 1, 1100000, 1000000, 35).get("accepted", false)):
 		failures.append("Input above the per-second rate limit must be rejected.")
 	if bool(CONTRACT.validate_input(NAN, 0.0, 0.0, 2, 1, 1100000, 1000000, 0).get("accepted", false)):
