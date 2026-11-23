@@ -74,3 +74,14 @@
 - This is still a primitive-mesh visual blockout, not the final production ship asset. Collision, vehicle physics, player interaction, network-authoritative entry, and final material/lighting polish are not implemented or validated by this change.
 - The new commit must pass the Godot check workflow and produce a genuine render from the same preview scene. The rendered image must be visually inspected before claiming the reference match is validated.
 - No production scene was changed and nothing was merged into `main`.
+
+
+## Render review and Egyptian emblem refinement — 2026-11-23
+
+- Retrieved and inspected the rendered PNG from workflow run `45102317971`, artifact `14785967516`, generated from the exact Godot preview scene at commit `367705ea5462db6b2b0de2cd83e741a00593daf4`.
+- The render confirmed the wider hull, centered gate, and bridge approach, but also showed that the pharaoh face remained too primitive and the forward winged emblems were not legible enough. The render is therefore a review checkpoint, not an approved final ship.
+- Added a further detail pass on the same preview scene: shaped nemes side lappets and gold stripes, eye/brow details, nose, ceremonial beard, and larger forward-facing winged-sun emblems on the blue fascia.
+- Latest script commit: `7099b8160e02543f045e4d7ecbbe796f86c31ebf`.
+- A fresh Godot validation and render are required for this latest detail pass. Do not describe the new details as validated until those workflows finish and the resulting render is visually inspected.
+- Still a primitive-mesh blockout. No final production ship asset, gameplay collision, vehicle physics, player interaction, or network-authoritative entry logic is claimed.
+- No production scene changed and no merge to `main`.
