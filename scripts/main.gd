@@ -462,6 +462,10 @@ func _on_jet_ski_mount_result_received(success: bool, message: String) -> void:
 			return
 		city_jet_ski.name = "LocalAuthoritativeRoyalJetSki"
 		add_child(city_jet_ski)
+	var local_player := get_node_or_null("Player") as CharacterBody3D
+	if is_instance_valid(local_player):
+		city_jet_ski.global_position = JET_SKI_LAUNCH_POSITION
+		city_jet_ski.global_rotation.y = local_player.global_rotation.y
 	_mount_player_jet_ski()
 	if is_instance_valid(city_jet_ski):
 		city_jet_ski.set_physics_process(false)
