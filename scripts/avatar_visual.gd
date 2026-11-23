@@ -31,6 +31,7 @@ var phone_using := false
 var phone_visual: Node3D
 var phone_screen_viewport: SubViewport
 var phone_screen_content: VBoxContainer
+signal phone_app_pressed(app_id: String)
 
 func _ready() -> void:
 	_build_base_character()
@@ -143,6 +144,17 @@ func _build_phone_visual() -> void:
 	screen_material.emission_energy_multiplier = 0.8
 	screen.material_override = screen_material
 	phone_visual.add_child(phone_screen_viewport)
+	var phone_screen_area := Area3D.new()
+	phone_screen_area.name = "PhoneScreenTouchArea"
+	phone_screen_area.input_ray_pickable = true
+	phone_screen_area.position.z = 0.016
+	var touch_shape := CollisionShape3D.new()
+	var touch_box := BoxShape3D.new()
+	touch_box.size = Vector3(0.112, 0.192, 0.008)
+	touch_shape.shape = touch_box
+	phone_screen_area.add_child(touch_shape)
+	phone_visual.add_child(phone_screen_area)
+	phone_screen_area.input_event.connect(_on_phone_screen_input_event)
 	set_phone_screen_content("هاتف اللاعب", ["الأصدقاء", "المحادثات", "المركبات", "الحيوانات الأليفة"])
 
 
@@ -173,9 +185,14 @@ func set_phone_screen_icons(icons: Array[String]) -> void:
 	icon_grid.add_theme_constant_override("h_separation", 7)
 	icon_grid.add_theme_constant_override("v_separation", 9)
 	phone_screen_content.add_child(icon_grid)
-	for glyph in icons:
+	var app_ids := ["garage", "friends", "settings", "safe_return", "map", "messages", "missions", "rewards", "profile"]
+	for index in range(icons.size()):
+		var glyph: String = icons[index]
+		var app_id: String = app_ids[index] if index < app_ids.size() else ""
 		var icon_button := Button.new()
 		icon_button.text = glyph
+		icon_button.tooltip_text = app_id
+		icon_button.pressed.connect(_emit_phone_app_pressed.bind(app_id))
 		icon_button.custom_minimum_size = Vector2(58, 66)
 		icon_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		icon_button.add_theme_font_size_override("font_size", 29)
@@ -185,6 +202,25 @@ func set_phone_screen_icons(icons: Array[String]) -> void:
 		icon_button.add_theme_stylebox_override("pressed", _make_phone_icon_style())
 		icon_button.focus_mode = Control.FOCUS_NONE
 		icon_grid.add_child(icon_button)
+
+
+func _emit_phone_app_pressed(app_id: String) -> void:
+	if not app_id.is_empty():
+		phone_app_pressed.emit(app_id)
+
+
+func _on_phone_screen_input_event(_camera: Camera3D, event: InputEvent, world_position: Vector3, _normal: Vector3, _shape_idx: int) -> void:
+	if not is_instance_valid(phone_screen_viewport):
+		return
+	var local_position := phone_visual.to_local(world_position)
+	var forwarded := event.duplicate() as InputEvent
+	if forwarded is InputEventMouse:
+		var mouse_event := forwarded as InputEventMouse
+		mouse_event.position = Vector2(
+			(local_position.x / 0.112 + 0.5) * float(phone_screen_viewport.size.x),
+			(0.5 - local_position.y / 0.192) * float(phone_screen_viewport.size.y)
+		)
+		phone_screen_viewport.push_input(forwarded, true)
 
 
 func _make_phone_icon_style() -> StyleBoxFlat:
