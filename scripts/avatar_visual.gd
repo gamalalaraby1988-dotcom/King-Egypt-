@@ -58,7 +58,7 @@ func _build_phone_visual() -> void:
 	phone_visual = Node3D.new()
 	phone_visual.name = "PlayerPhoneVisual"
 	# إزاحة محلية محسوبة لتعويض زاوية رفع الذراع، ووضع الهاتف أمام الصدر.
-	phone_visual.position = Vector3(0.0, -0.10, -0.245)
+	phone_visual.position = Vector3(0.0, 0.12, -0.27)
 	phone_visual.rotation = Vector3(-0.08, 0.10, 0.62)
 	phone_visual.visible = false
 	right_arm.add_child(phone_visual)
@@ -121,7 +121,7 @@ func _process(delta: float) -> void:
 			var phone_arm := parts["RightArm"] as MeshInstance3D
 			phone_arm.rotation = Vector3(-0.10, 0.0, -0.78)
 		if parts.has("Head"):
-			(parts["Head"] as MeshInstance3D).rotation = Vector3(-0.42, 0.08, 0.0)
+			(parts["Head"] as MeshInstance3D).rotation = Vector3(-0.62, 0.08, 0.0)
 		if parts.has("TorsoBase"):
 			(parts["TorsoBase"] as MeshInstance3D).rotation.x = -0.025
 		# استمر في تحريك الساقين والذراع اليسرى عند المشي أو الجري دون إسقاط الهاتف.
