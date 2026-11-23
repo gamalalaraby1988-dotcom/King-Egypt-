@@ -676,6 +676,9 @@ func request_jet_ski_mount_rpc() -> void:
 			rpc_id(peer_id, "receive_jet_ski_mount_result", false, "الجت سكي مشغولة حاليًا.")
 			return
 	var now_usec := Time.get_ticks_usec()
+	session["jet_ski_last_sequence"] = 0
+	session["jet_ski_input_window_usec"] = now_usec
+	session["jet_ski_input_count"] = 0
 	session["jet_ski_mounted"] = true
 	session["jet_ski_position"] = JET_SKI_SERVER_LAUNCH_POSITION
 	session["jet_ski_rotation_y"] = body.rotation.y
@@ -799,6 +802,9 @@ func request_safe_return_rpc() -> void:
 		return
 	var session: Dictionary = _sessions[peer_id]
 	if not bool(session.get("authenticated", false)):
+		return
+	if bool(session.get("jet_ski_mounted", false)):
+		rpc_id(peer_id, "receive_safe_return_result", false, "انزل من الجت سكي قبل طلب العودة الآمنة.")
 		return
 	var now_usec := Time.get_ticks_usec()
 	if now_usec - int(session.get("last_safe_return_usec", 0)) < 5000000:
