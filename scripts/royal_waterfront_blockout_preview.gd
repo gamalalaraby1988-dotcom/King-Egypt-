@@ -354,14 +354,24 @@ func _ship_deck_ribbon_mesh(width: float, depth: float, thickness: float) -> Arr
 	return st.commit()
 
 func _ship_deck_ribbon(label: String, width: float, depth: float, thickness: float, position: Vector3, color: Color) -> MeshInstance3D:
-	var node := MeshInstance3D.new()
-	node.name = label
-	node.mesh = _ship_deck_ribbon_mesh(width, depth, thickness)
-	node.position = position
-	node.material_override = _material(color, 0.42)
-	node.add_to_group("royal_ship_visuals")
-	add_child(node)
-	return node
+	# Build a smooth-looking curved fascia from narrow overlapping segments.
+	# This avoids the oversized planar faces and inconsistent normals of the first ribbon mesh.
+	var root := Node3D.new()
+	root.name = label
+	root.position = position
+	root.add_to_group("royal_ship_visuals")
+	add_child(root)
+	var segments := 40
+	var segment_width := width / float(segments)
+	for i in range(segments):
+		var t := -1.0 + 2.0 * (float(i) + 0.5) / float(segments)
+		var sweep := pow(abs(t), 2.0)
+		var x := t * width * 0.5
+		var y := 0.28 - 1.55 * sweep
+		var segment_depth := depth * (1.0 - 0.13 * sweep)
+		var segment := _box(label + "_Segment_%02d" % i, Vector3(segment_width + 0.045, thickness, segment_depth), Vector3(x, y, 0.0), color, root)
+		segment.material_override = _material(color, 0.62)
+	return root
 
 func _build_five_civilizations_ship_blockout() -> void:
 	# Reference-matched stationary royal vessel. The uploaded image is the visual authority:
