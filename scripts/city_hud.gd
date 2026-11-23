@@ -140,9 +140,12 @@ func _unhandled_input(event: InputEvent) -> void:
 	for panel in open_popups:
 		if is_instance_valid(panel) and panel.visible and panel.get_global_rect().has_point(pointer_position):
 			return
+	var closing_phone := is_instance_valid(phone_popup) and phone_popup.visible
 	for panel in open_popups:
 		if is_instance_valid(panel):
 			panel.visible = false
+	if closing_phone:
+		_set_local_player_phone_pose(false)
 	if is_instance_valid(phone_entry_button):
 		phone_entry_button.visible = true
 
@@ -170,6 +173,12 @@ func _build_phone_entry_button() -> void:
 
 func _on_phone_entry_pressed() -> void:
 	_open_vehicle_store_phone()
+
+
+func _set_local_player_phone_pose(enabled: bool) -> void:
+	var player := main_scene.find_child("Player", true, false) as Node if is_instance_valid(main_scene) else null
+	if is_instance_valid(player) and player.has_method("set_phone_using"):
+		player.call("set_phone_using", enabled)
 
 
 func _build() -> void:
@@ -831,12 +840,14 @@ func _open_vehicle_store_phone() -> void:
 		_build_vehicle_store_phone()
 	_refresh_vehicle_store_phone()
 	phone_popup.visible = true
+	_set_local_player_phone_pose(true)
 	if is_instance_valid(phone_entry_button):
 		phone_entry_button.visible = false
 
 func _close_vehicle_store_phone() -> void:
 	if is_instance_valid(phone_popup):
 		phone_popup.visible = false
+	_set_local_player_phone_pose(false)
 	if is_instance_valid(phone_entry_button):
 		phone_entry_button.visible = true
 
