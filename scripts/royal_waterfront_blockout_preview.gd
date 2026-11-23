@@ -26,9 +26,9 @@ func _ready() -> void:
 	_build_option_b_southern_roads()
 	_mark_preserved_ship_and_conflicts()
 	# Centered frontal review angle: show the ship gate symmetrically, its full wide silhouette, and the bridge approach.
-	$PreviewCamera.position = Vector3(0.0, 19.0, 137.0)
-	$PreviewCamera.fov = 52.0
-	$PreviewCamera.look_at(Vector3(0.0, 8.0, 83.0), Vector3.UP)
+	$PreviewCamera.position = Vector3(0.0, 22.0, 135.0)
+	$PreviewCamera.fov = 56.0
+	$PreviewCamera.look_at(Vector3(0.0, 9.0, 88.0), Vector3.UP)
 
 func _material(color: Color, roughness: float = 0.82) -> StandardMaterial3D:
 	var material := StandardMaterial3D.new()
@@ -305,6 +305,64 @@ func _royal_ship_hull_mesh() -> ArrayMesh:
 	st.generate_normals()
 	return st.commit()
 
+func _ship_deck_ribbon_mesh(width: float, depth: float, thickness: float) -> ArrayMesh:
+	# Curved cruise-ship deck fascia: the middle stays high and the bow/stern wings sweep down.
+	var top := PackedVector3Array()
+	var bottom := PackedVector3Array()
+	var segments := 32
+	for i in range(segments + 1):
+		var t := -1.0 + 2.0 * float(i) / float(segments)
+		var x := t * width * 0.5
+		var sweep := pow(abs(t), 2.15)
+		var y := 0.28 - 1.65 * sweep
+		top.append(Vector3(x, y, depth * 0.5 * (1.0 - 0.10 * sweep)))
+		bottom.append(Vector3(x, y - thickness, depth * 0.5 * (1.0 - 0.10 * sweep)))
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for i in range(segments):
+		var a := top[i]
+		var b := top[i + 1]
+		var c := bottom[i + 1]
+		var d := bottom[i]
+		# Top surface and front fascia.
+		st.add_vertex(a)
+		st.add_vertex(b)
+		st.add_vertex(Vector3(b.x, b.y, -b.z))
+		st.add_vertex(a)
+		st.add_vertex(Vector3(b.x, b.y, -b.z))
+		st.add_vertex(Vector3(a.x, a.y, -a.z))
+		st.add_vertex(a)
+		st.add_vertex(d)
+		st.add_vertex(c)
+		st.add_vertex(a)
+		st.add_vertex(c)
+		st.add_vertex(b)
+		# Bottom surface and rear fascia.
+		st.add_vertex(Vector3(a.x, d.y, -d.z))
+		st.add_vertex(Vector3(b.x, c.y, -c.z))
+		st.add_vertex(Vector3(b.x, c.y, c.z))
+		st.add_vertex(Vector3(a.x, d.y, -d.z))
+		st.add_vertex(Vector3(b.x, c.y, c.z))
+		st.add_vertex(Vector3(a.x, d.y, d.z))
+		st.add_vertex(d)
+		st.add_vertex(Vector3(a.x, d.y, -d.z))
+		st.add_vertex(Vector3(b.x, c.y, -c.z))
+		st.add_vertex(d)
+		st.add_vertex(Vector3(b.x, c.y, -c.z))
+		st.add_vertex(c)
+	st.generate_normals()
+	return st.commit()
+
+func _ship_deck_ribbon(label: String, width: float, depth: float, thickness: float, position: Vector3, color: Color) -> MeshInstance3D:
+	var node := MeshInstance3D.new()
+	node.name = label
+	node.mesh = _ship_deck_ribbon_mesh(width, depth, thickness)
+	node.position = position
+	node.material_override = _material(color, 0.42)
+	node.add_to_group("royal_ship_visuals")
+	add_child(node)
+	return node
+
 func _build_five_civilizations_ship_blockout() -> void:
 	# Reference-matched stationary royal vessel. The uploaded image is the visual authority:
 	# very wide dark-blue cruise-ship silhouette, gold Egyptian ornament, stepped side
@@ -334,8 +392,8 @@ func _build_five_civilizations_ship_blockout() -> void:
 		var depth := 26.0 - float(tier) * 1.8
 		var y := 3.05 + float(tier) * 1.55
 		var z := 82.5 - float(tier) * 0.25
-		_box("ShipSuperstructure_Tier_%02d_DarkBlue" % tier, Vector3(width, 0.72, depth), Vector3(0.0, y, z), blue if tier % 2 == 0 else blue_light)
-		_box("ShipSuperstructure_Tier_%02d_GoldEdge" % tier, Vector3(width + 0.18, 0.10, depth + 0.12), Vector3(0.0, y + 0.40, z), gold)
+		_ship_deck_ribbon("ShipSuperstructure_Tier_%02d_CurvedDarkBlue" % tier, width, depth, 0.72, Vector3(0.0, y, z), blue if tier % 2 == 0 else blue_light)
+		_ship_deck_ribbon("ShipSuperstructure_Tier_%02d_CurvedGoldEdge" % tier, width + 0.34, depth + 0.22, 0.12, Vector3(0.0, y + 0.38, z), gold)
 		for side: float in [-1.0, 1.0]:
 			_box("ShipSuperstructure_Tier_%02d_SideBalcony" % tier, Vector3(0.34, 0.34, depth - 1.0), Vector3(side * (width * 0.5 - 0.12), y + 0.55, z), ivory)
 
