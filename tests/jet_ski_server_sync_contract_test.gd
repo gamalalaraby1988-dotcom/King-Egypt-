@@ -56,6 +56,12 @@ func _initialize() -> void:
 		failures.append("Client jet ski RPC must not accept a client-supplied position.")
 	if not main.contains('AuthoritativeGameServer.request_jet_ski_mount()') or not main.contains('AuthoritativeGameServer.request_jet_ski_unmount()'):
 		failures.append("Online mount and dismount must request server-authoritative lifecycle changes.")
+	if not server.contains('rpc_id(peer_id, "receive_jet_ski_unmount_result", true, body.global_position)') or not server.contains('func receive_jet_ski_unmount_result(success: bool, server_position: Vector3)'):
+		failures.append("Server must acknowledge dismount with its authoritative player exit position.")
+	if not main.contains('jet_ski_unmount_result_received.connect(_on_jet_ski_unmount_result_received)') or not main.contains('_exit_player_jet_ski(server_position)'):
+		failures.append("Online client must wait for server-confirmed dismount position before exiting the jet ski.")
+	if not main.contains('vehicle_interaction_button.disabled = true') or not main.contains('_jet_ski_unmount_pending'):
+		failures.append("Online dismount requests must be guarded against repeated taps while awaiting acknowledgement.")
 	if main.contains('_mount_player_jet_ski()\n\tif is_instance_valid(city_jet_ski):\n\t\tcity_jet_ski.set_physics_process(false)'):
 		failures.append("Online local prediction must not be disabled immediately after mounting.")
 	if not main.contains('jet_ski_authoritative_state_received.connect(_on_jet_ski_authoritative_state_received)'):
