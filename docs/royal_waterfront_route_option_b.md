@@ -1,6 +1,6 @@
 # Royal Waterfront — Combined Bridge and Southern Road Option B
 
-**Status:** Geometry proposal for review only. Not approved for production and not applied to the live scene.
+**Status:** Approved by the user for the isolated review blockout and applied to `feature/royal-waterfront-blockout-preview`. This is not approved for production and has not been applied to the live scene.
 
 ## Purpose
 
@@ -44,4 +44,11 @@ The ship remains fixed. The marina terminal, yacht club, beach handball area, be
 
 ## Change boundary
 
-Only the proposal document and coordinate diagram are added to the isolated review branch. No production scene, production road, approved building, ship, or gameplay collision is edited. No merge or deployment is performed.
+The Option B bridge center, arrival platform, land ramp, preserved side road arms, extended side detours, relocated bypass, and short access spur are represented in the isolated review blockout script only. The coordinate diagram remains a plan-view reference. No production scene, production road, approved building, ship, or gameplay collision is edited. No merge or deployment is performed.
+
+## Current review status
+
+- Option B approval: received; applies only to the isolated preview.
+- Blockout script: updated to center the bridge/platform at X=0 and add the Option B southern road geometry.
+- Actual ship/pier connection, vertical grades, turning radii, shoreline collision, and water-depth behavior: still unverified.
+- Godot render/runtime screenshot: not captured; the available environment has not run Godot.
