@@ -47,6 +47,20 @@ func _box(label: String, size: Vector3, position: Vector3, color: Color, parent:
 	target.add_child(node)
 	return node
 
+func _ellipsoid(label: String, radii: Vector3, position: Vector3, color: Color, parent: Node = null) -> MeshInstance3D:
+	var target: Node = self if parent == null else parent
+	var node := MeshInstance3D.new()
+	node.name = label
+	var mesh := SphereMesh.new()
+	mesh.radius = 1.0
+	mesh.height = 2.0
+	node.mesh = mesh
+	node.position = position
+	node.scale = radii
+	node.material_override = _material(color, 0.28)
+	target.add_child(node)
+	return node
+
 func _label(text: String, position: Vector3, color: Color = IVORY, font_size: int = 34) -> void:
 	var node := Label3D.new()
 	node.name = "Label_" + text.replace(" ", "_")
@@ -283,27 +297,27 @@ func _build_five_civilizations_ship_blockout() -> void:
 		var y := 12.6 + float(stripe) * 0.86
 		_box("ShipPharaoh_Headdress_GoldStripe_%02d" % stripe, Vector3(9.0 - float(stripe) * 0.56, 0.17, 0.18), Vector3(0.0, y, 97.08), gold)
 	_box("ShipPharaoh_Crown", Vector3(1.65, 1.85, 0.72), Vector3(0.0, 18.25, 97.0), gold)
-	# Facial elements are deliberately placed in front of the ellipsoid surface (+Z toward the bridge camera).
+	# Smooth sculpted facial forms sit just in front of the gold mask surface, facing the bridge.
 	for side: float in [-1.0, 1.0]:
-		var ear := _box("ShipPharaoh_Ear", Vector3(0.48, 0.92, 0.24), Vector3(side * 2.0, 14.75, 98.30), gold)
-		var cheek := _box("ShipPharaoh_CheekPlane", Vector3(0.92, 0.58, 0.22), Vector3(side * 1.12, 14.55, 98.34), ivory)
-		cheek.rotation_degrees.z = side * -8.0
-		var eye_socket := _box("ShipPharaoh_EyeSocket", Vector3(0.94, 0.38, 0.16), Vector3(side * 0.92, 15.52, 98.32), dark)
-		eye_socket.rotation_degrees.z = side * -4.0
-		var eye := _box("ShipPharaoh_Eye", Vector3(0.60, 0.15, 0.10), Vector3(side * 0.92, 15.52, 98.43), ivory)
-		eye.rotation_degrees.z = side * -4.0
-		var pupil := _box("ShipPharaoh_EyePupil", Vector3(0.13, 0.15, 0.08), Vector3(side * 0.92, 15.52, 98.50), dark)
-		var brow := _box("ShipPharaoh_GoldBrow", Vector3(1.08, 0.18, 0.16), Vector3(side * 0.92, 15.91, 98.34), gold)
+		_ellipsoid("ShipPharaoh_Ear", Vector3(0.28, 0.52, 0.16), Vector3(side * 2.02, 14.82, 98.28), gold)
+		_ellipsoid("ShipPharaoh_Cheek", Vector3(0.62, 0.42, 0.16), Vector3(side * 1.02, 14.62, 98.34), Color(0.91, 0.72, 0.37))
+		_ellipsoid("ShipPharaoh_EyeSocket", Vector3(0.48, 0.22, 0.12), Vector3(side * 0.88, 15.55, 98.37), Color(0.24, 0.15, 0.08))
+		_ellipsoid("ShipPharaoh_Eye", Vector3(0.31, 0.095, 0.08), Vector3(side * 0.88, 15.55, 98.46), IVORY)
+		_ellipsoid("ShipPharaoh_EyePupil", Vector3(0.075, 0.095, 0.06), Vector3(side * 0.88, 15.55, 98.53), Color(0.08, 0.07, 0.06))
+		var brow := _ellipsoid("ShipPharaoh_GoldBrow", Vector3(0.54, 0.10, 0.10), Vector3(side * 0.90, 15.90, 98.40), gold)
 		brow.rotation_degrees.z = side * -5.0
-	# A stepped bridge and projecting tip make the nose legible in the frontal render.
-	_box("ShipPharaoh_NoseBridge", Vector3(0.34, 0.82, 0.26), Vector3(0.0, 15.00, 98.40), gold)
-	_box("ShipPharaoh_NoseTip", Vector3(0.56, 0.30, 0.34), Vector3(0.0, 14.56, 98.49), ivory)
-	_box("ShipPharaoh_MouthLine", Vector3(0.78, 0.13, 0.12), Vector3(0.0, 14.08, 98.43), dark)
-	_box("ShipPharaoh_LowerLip", Vector3(0.72, 0.16, 0.14), Vector3(0.0, 13.88, 98.42), gold)
-	_box("ShipPharaoh_CeremonialBeard", Vector3(0.78, 1.65, 0.48), Vector3(0.0, 12.72, 98.38), gold)
-	_box("ShipPharaoh_BeardGoldRib_01", Vector3(0.12, 1.30, 0.10), Vector3(-0.20, 12.72, 98.66), ivory)
-	_box("ShipPharaoh_BeardGoldRib_02", Vector3(0.12, 1.30, 0.10), Vector3(0.20, 12.72, 98.66), ivory)
-	_box("ShipPharaoh_BeardTip", Vector3(0.46, 0.48, 0.38), Vector3(0.0, 11.78, 98.40), gold)
+	# Tapered smooth nose, defined lips and a narrower ceremonial false beard.
+	_ellipsoid("ShipPharaoh_NoseBridge", Vector3(0.22, 0.62, 0.18), Vector3(0.0, 15.03, 98.43), Color(0.91, 0.72, 0.37))
+	_ellipsoid("ShipPharaoh_NoseTip", Vector3(0.30, 0.20, 0.20), Vector3(0.0, 14.62, 98.51), gold)
+	_ellipsoid("ShipPharaoh_MouthLine", Vector3(0.34, 0.055, 0.07), Vector3(0.0, 14.12, 98.47), Color(0.20, 0.10, 0.05))
+	_ellipsoid("ShipPharaoh_LowerLip", Vector3(0.30, 0.075, 0.07), Vector3(0.0, 13.98, 98.46), Color(0.91, 0.72, 0.37))
+	var beard := _cylinder("ShipPharaoh_CeremonialBeard", 0.46, 1.55, Vector3(0.0, 12.86, 98.34), gold)
+	var beard_mesh := beard.mesh as CylinderMesh
+	beard_mesh.top_radius = 0.22
+	beard_mesh.bottom_radius = 0.40
+	for rib_x in [-0.16, 0.0, 0.16]:
+		_ellipsoid("ShipPharaoh_BeardRib", Vector3(0.035, 0.60, 0.035), Vector3(rib_x, 12.86, 98.61), IVORY)
+	_ellipsoid("ShipPharaoh_BeardTip", Vector3(0.22, 0.24, 0.20), Vector3(0.0, 11.98, 98.36), gold)
 	# Small uraeus crest above the brow completes the royal nemes silhouette.
 	_box("ShipPharaoh_UraeusStem", Vector3(0.20, 0.88, 0.20), Vector3(0.0, 17.20, 97.62), gold)
 	_box("ShipPharaoh_UraeusHead", Vector3(0.58, 0.52, 0.28), Vector3(0.0, 17.60, 97.78), ivory)
