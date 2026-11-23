@@ -999,7 +999,7 @@ func _sync_local_phone_screen(catalog: Dictionary, owned: Array, selected: Strin
 	if not is_instance_valid(avatar) or not avatar.has_method("set_phone_screen_content"):
 		return
 	# نفس رموز تطبيقات قائمة المدينة، مع إظهار الأيقونات فقط على شاشة الهاتف ثلاثية الأبعاد.
-	avatar.call("set_phone_screen_icons", ["👤", "📜", "🎁", "🏆", "👑", "📱", "🗺", "🐈", "💬", "👥", "🛡", "😊", "🎉", "⚙️"])
+	avatar.call("set_phone_screen_icons", ["🚘", "👥", "⚙️", "🏠", "🗺️", "💬", "📋", "🎁", "👤"])
 
 
 func _capture_safe_spawn() -> void:
