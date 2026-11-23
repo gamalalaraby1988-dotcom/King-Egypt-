@@ -113,8 +113,8 @@ func _build_bridge_and_arrival() -> void:
 	var center_x := 0.0
 	_box("RoyalBridgeDeck", Vector3(13.0, 0.45, 17.0), Vector3(center_x, 0.52, 99.5), IVORY)
 	_box("BridgeTwoWayRoad", Vector3(8.5, 0.08, 17.0), Vector3(center_x, 0.80, 99.5), ROAD)
-	for side in [-1.0, 1.0]:
-		var walkway_x := center_x + side * 5.375
+	for side: float in [-1.0, 1.0]:
+		var walkway_x: float = center_x + side * 5.375
 		_box("ProtectedPedestrianWalkway", Vector3(2.25, 0.12, 17.0), Vector3(walkway_x, 0.86, 99.5), SAND)
 		_box("BridgeSafetyBarrier", Vector3(0.18, 1.0, 17.0), Vector3(center_x + side * 6.42, 1.05, 99.5), GOLD)
 		_box("BridgePedestrianSeparator", Vector3(0.14, 0.72, 17.0), Vector3(center_x + side * 4.22, 1.02, 99.5), GOLD)
@@ -150,11 +150,11 @@ func _cylinder(label: String, radius: float, height: float, position: Vector3, m
 
 func _build_bridge_details() -> void:
 	# Decorative/readability pass on the same 13m two-way bridge blockout.
-	for side in [-1.0, 1.0]:
-		var x := side * 2.1
+	for side: float in [-1.0, 1.0]:
+		var x: float = side * 2.1
 		_box("BridgeCenterDoubleGoldLine", Vector3(0.10, 0.025, 17.0), Vector3(x, 0.855, 99.5), GOLD)
-		for z in [94.0, 99.0, 104.0]:
-			var lamp_x := side * 5.7
+		for z: float in [94.0, 99.0, 104.0]:
+			var lamp_x: float = side * 5.7
 			_box("BridgeLampPedestal", Vector3(0.55, 0.45, 0.55), Vector3(lamp_x, 1.12, z), GOLD)
 			_box("BridgeLampPost", Vector3(0.12, 2.0, 0.12), Vector3(lamp_x, 2.25, z), GOLD)
 			_box("BridgeLampHead", Vector3(0.48, 0.22, 0.48), Vector3(lamp_x, 3.35, z), IVORY)
@@ -188,7 +188,7 @@ func _build_ship_gate_interaction() -> void:
 	inner_ring.position = Vector3(0.0, 1.31, 91.5)
 	inner_ring.material_override = inner_glow
 	add_child(inner_ring)
-	for side in [-1.0, 1.0]:
+	for side: float in [-1.0, 1.0]:
 		_box("InteractionIslandGoldEdge", Vector3(0.16, 0.22, 9.0), Vector3(side * 4.05, 1.20, 91.5), GOLD)
 	_label("GLOWING INTERACTION CIRCLE - DIRECTLY BEFORE SHIP GATE", Vector3(0.0, 3.3, 86.5), GOLD, 19)
 	_label("PLAYER ENTERS CIRCLE  >  INTERACT  >  CONFIRM SHIP ENTRY", Vector3(0.0, 2.8, 96.5), IVORY, 15)
@@ -196,10 +196,10 @@ func _build_ship_gate_interaction() -> void:
 
 func _build_option_b_southern_roads() -> void:
 	# Option B review geometry only: side arms remain in place; detours extend to the relocated bypass.
-	for side in [-1.0, 1.0]:
-		var x := side * 55.5
+	for side: float in [-1.0, 1.0]:
+		var x: float = side * 55.5
 		_box("PreservedSouthRoadArm", Vector3(79.0, 0.08, 6.0), Vector3(x, 0.22, 95.0), ROAD)
-		var detour_x := side * 16.0
+		var detour_x: float = side * 16.0
 		_box("ExtendedSouthSideDetour", Vector3(6.0, 0.08, 25.0), Vector3(detour_x, 0.24, 107.5), ROAD)
 	_box("RelocatedSouthBasinBypass", Vector3(32.0, 0.08, 6.0), Vector3(0.0, 0.26, 120.0), ROAD)
 	_box("OptionB_LandAccessSpur", Vector3(8.5, 0.08, 7.0), Vector3(0.0, 0.28, 114.5), ROAD)
