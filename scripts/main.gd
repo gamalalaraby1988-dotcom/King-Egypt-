@@ -125,7 +125,7 @@ func _process(_delta: float) -> void:
 		return
 	if vehicle_occupied and (not is_instance_valid(city_vehicle) or not is_instance_valid(get_node_or_null("Player"))):
 		_recover_vehicle_occupancy()
-	if scooter_occupied and (not is_instance_valid(city_scooter) or not is_instance_valid(get_node_or_null("Player"))):
+	if scooter_occupied and (not is_instance_valid(city_scooter) or not is_instance_valid(city_scooter.get_node_or_null("Player"))):
 		_recover_scooter_occupancy()
 	var player := get_node_or_null("Player") as CharacterBody3D
 	var player_needs_exit := is_instance_valid(player) and (player.get("sitting") == true or player.get("animal_riding") == true)
@@ -137,7 +137,10 @@ func _process(_delta: float) -> void:
 		if is_instance_valid(vehicle_summon_button):
 			vehicle_summon_button.visible = false
 		if is_instance_valid(scooter_toggle_button):
-			scooter_toggle_button.visible = false
+			scooter_toggle_button.visible = scooter_occupied
+			if scooter_occupied:
+				scooter_toggle_button.text = "👣"
+				scooter_toggle_button.tooltip_text = "العودة للمشي"
 		return
 	# زر الباب مخصص للخروج فقط؛ ركوب المركبات يتم من زر التفاعل الموحد داخل MissionManager.
 	if is_instance_valid(vehicle_interaction_button):
@@ -313,6 +316,11 @@ func _on_scooter_toggle_pressed() -> void:
 		_exit_player_scooter()
 		return
 	if is_instance_valid(city_scooter):
+		city_scooter.queue_free()
+		city_scooter = null
+		if is_instance_valid(scooter_toggle_button):
+			scooter_toggle_button.text = "🛴"
+			 scooter_toggle_button.tooltip_text = "استدعاء السكوتر الكهربائي"
 		return
 	_summon_electric_scooter()
 
@@ -404,7 +412,8 @@ func _mount_player_scooter() -> void:
 	if is_instance_valid(vehicle_summon_button):
 		vehicle_summon_button.visible = false
 	if is_instance_valid(scooter_toggle_button):
-		scooter_toggle_button.visible = false
+		scooter_toggle_button.visible = true
+		scooter_toggle_button.text = "👣"
 	if is_instance_valid(vehicle_interaction_button):
 		vehicle_interaction_button.visible = true
 		vehicle_interaction_button.text = "🚪↗"
