@@ -91,7 +91,7 @@ func _input(event: InputEvent) -> void:
 			var center := steering_rect.position.x + steering_rect.size.x * 0.5
 			steering_value = clampf((event.position.x - center) / (steering_rect.size.x * 0.46), -1.0, 1.0)
 		elif event.index == camera_touch and is_instance_valid(jet_ski):
-			var drag_delta := event.position.x - camera_last_position.x
+			var drag_delta: float = event.position.x - camera_last_position.x
 			jet_ski.call("set_camera_drag", drag_delta * 0.006)
 			camera_last_position = event.position
 		queue_redraw()
