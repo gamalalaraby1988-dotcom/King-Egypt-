@@ -2066,6 +2066,8 @@ func _on_player_server_authenticated(success: bool, message: String) -> void:
 
 func _on_mode_disconnected() -> void:
 	_clear_remote_player_views()
+	if jet_ski_occupied:
+		_exit_player_jet_ski()
 	_release_pending_city_reservation()
 	# أعد نافذة اختيار الوضع بعد فقد الخادم، ولا تحوّل الجلسة تلقائيًا إلى Offline.
 	var player := get_node_or_null("Player")
