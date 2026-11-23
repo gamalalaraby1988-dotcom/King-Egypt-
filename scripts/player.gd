@@ -11,6 +11,7 @@ extends CharacterBody3D
 
 var mobile_move: Vector2 = Vector2.ZERO
 var mobile_sprint: bool = false
+var mounted_scooter: CharacterBody3D = null
 var sitting := false
 var _active_emote := ""
 var _emote_remaining := 0.0
@@ -318,9 +319,21 @@ func _update_avatar_animation(state: String, speed: float) -> void:
 
 func set_mobile_move(value: Vector2) -> void:
 	mobile_move = value
+	if is_instance_valid(mounted_scooter):
+		mounted_scooter.call("set_throttle", value.y < -0.16)
+		mounted_scooter.call("set_brake", value.y > 0.16)
+		mounted_scooter.call("set_steering", value.x)
 
 func set_mobile_sprint(value: bool) -> void:
-	mobile_sprint = value
+	mobile_sprint = false if is_instance_valid(mounted_scooter) else value
+
+func set_mounted_scooter(scooter: CharacterBody3D) -> void:
+	mounted_scooter = scooter
+	if is_instance_valid(mounted_scooter):
+		mounted_scooter.call("clear_controls")
+	else:
+		mobile_move = Vector2.ZERO
+		mobile_sprint = false
 
 
 func _try_step_up(delta: float) -> void:
