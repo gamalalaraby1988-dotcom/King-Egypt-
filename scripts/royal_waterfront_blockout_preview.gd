@@ -9,9 +9,12 @@ const DEEP_WATER := Color(0.025, 0.20, 0.29)
 const SHALLOW_WATER := Color(0.16, 0.48, 0.53)
 const ROAD := Color(0.16, 0.17, 0.18)
 const WARNING := Color(0.75, 0.12, 0.10)
+const GYM_WOOD := Color(0.39, 0.25, 0.13)
+const GYM_METAL := Color(0.20, 0.22, 0.23)
 
 func _ready() -> void:
 	_build_land_and_beach()
+	_build_open_beach_gym()
 	_build_open_water()
 	_build_bridge_and_arrival()
 	_mark_preserved_ship_and_conflicts()
@@ -60,6 +63,29 @@ func _build_land_and_beach() -> void:
 	_box("BeachCourtLine_E", Vector3(0.12, 0.035, 12.0), Vector3(53.5, 0.20, 125.0), IVORY)
 	_label("ROYAL BEACH HANDBALL COURT - INTEGRATED IN THE SAND", Vector3(40.0, 2.0, 139.0), IVORY, 22)
 	_label("ROYAL CORNICHE", Vector3(-58.0, 2.0, 119.0), GOLD, 28)
+
+func _build_open_beach_gym() -> void:
+	# Open-air fitness zone on the western side of the beach, separated from the handball play area.
+	# The low, flush exercise surface is a visual placeholder; gameplay collision and equipment interaction are not implemented.
+	var gym_center := Vector3(-48.0, 0.18, 132.0)
+	_box("BeachGym_SoftTrainingSurface", Vector3(26.0, 0.12, 16.0), gym_center, Color(0.65, 0.54, 0.39))
+	# Open-sided shade pergola: four posts and slim beams only, with no enclosed walls.
+	for x_offset in [-11.0, 11.0]:
+		for z_offset in [-6.5, 6.5]:
+			_box("BeachGym_PergolaPost", Vector3(0.35, 3.0, 0.35), gym_center + Vector3(x_offset, 1.55, z_offset), GYM_WOOD)
+	_box("BeachGym_PergolaBeam_Long_A", Vector3(23.0, 0.28, 0.32), gym_center + Vector3(0.0, 3.05, -6.5), GYM_WOOD)
+	_box("BeachGym_PergolaBeam_Long_B", Vector3(23.0, 0.28, 0.32), gym_center + Vector3(0.0, 3.05, 6.5), GYM_WOOD)
+	_box("BeachGym_PergolaBeam_Side_A", Vector3(0.32, 0.28, 13.0), gym_center + Vector3(-11.0, 3.05, 0.0), GYM_WOOD)
+	_box("BeachGym_PergolaBeam_Side_B", Vector3(0.32, 0.28, 13.0), gym_center + Vector3(11.0, 3.05, 0.0), GYM_WOOD)
+	# Simple recognizable equipment silhouettes, all kept within the gym footprint.
+	_box("BeachGym_PullUpBar", Vector3(5.0, 0.16, 0.16), gym_center + Vector3(-7.0, 2.35, -2.5), GYM_METAL)
+	_box("BeachGym_PullUpPost_L", Vector3(0.16, 2.4, 0.16), gym_center + Vector3(-9.5, 1.25, -2.5), GYM_METAL)
+	_box("BeachGym_PullUpPost_R", Vector3(0.16, 2.4, 0.16), gym_center + Vector3(-4.5, 1.25, -2.5), GYM_METAL)
+	_box("BeachGym_ParallelBars", Vector3(4.0, 0.14, 0.14), gym_center + Vector3(6.0, 1.15, 2.5), GYM_METAL)
+	_box("BeachGym_Bench", Vector3(2.6, 0.18, 0.8), gym_center + Vector3(5.5, 0.62, -3.5), GYM_WOOD)
+	_box("BeachGym_StretchingRail", Vector3(4.0, 0.12, 0.12), gym_center + Vector3(-6.0, 1.0, 4.0), GYM_METAL)
+	_label("OPEN-AIR BEACH FITNESS", Vector3(-48.0, 4.0, 132.0), GOLD, 25)
+	_label("OPEN SIDES • SEA VIEW • NO ENCLOSURE", Vector3(-48.0, 3.6, 141.5), IVORY, 16)
 
 func _build_open_water() -> void:
 	# Water covers the former promenade and enclosed marina basin as one open body.
