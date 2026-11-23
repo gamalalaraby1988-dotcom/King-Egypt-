@@ -370,7 +370,10 @@ func _build_royal_sea_bridge() -> void:
 	bridge.add_to_group("royal_sea_bridge")
 	add_child(bridge)
 
-	# The bridge begins at the eastern waterfront promenade and extends over open water.
+	# Vehicle approach ties the bridge directly into the Royal Beach Club's
+	# existing eastern access walk; the deck begins at the waterfront promenade.
+	_path_segment(self, "RoyalSeaBridgeVehicleApproach", Vector3(84.0, 0.12, 62.5), Vector3(48.0, 0.12, 76.0), 6.2, DARK)
+	_path_segment(self, "RoyalSeaBridgePedestrianApproach", Vector3(75.0, 0.12, 62.6), Vector3(43.0, 0.12, 76.0), 2.6, SAND)
 	var deck_length := 60.0
 	var deck_width := 10.0
 	var deck_center_z := 106.0
@@ -395,7 +398,17 @@ func _build_royal_sea_bridge() -> void:
 	_box(bridge, "RoyalJetSkiArrivalPlatform", Vector3(18.0, 0.38, 14.0), Vector3(0.0, 0.08, 139.0), IVORY)
 	_box(bridge, "RoyalJetSkiStopStrip", Vector3(15.0, 0.07, 0.55), Vector3(0.0, 0.32, 134.0), GOLD)
 	for step_index in range(5):
-		_box(bridge, "RoyalJetSkiAccessStep", Vector3(8.0, 0.22, 1.0), Vector3(0.0, 0.42 + float(step_index) * 0.18, 141.0 + float(step_index) * 0.95), SAND)
+		var step_size := Vector3(8.0, 0.22, 1.0)
+		var step_at := Vector3(0.0, 0.42 + float(step_index) * 0.18, 141.0 + float(step_index) * 0.95)
+		_box(bridge, "RoyalJetSkiAccessStep", step_size, step_at, SAND)
+		_add_static_box_collision(bridge, "RoyalJetSkiAccessStepCollision", step_size, step_at)
+	# Low bollards and continuous side rails protect the vehicle/pedestrian approach.
+	for side in [-1.0, 1.0]:
+		for post_index in range(4):
+			var post_z := 65.0 + float(post_index) * 3.2
+			_box(bridge, "RoyalSeaBridgeApproachSafetyPost", Vector3(0.28, 1.05, 0.28), Vector3(side * 3.0, 0.55, post_z), IVORY)
+			_box(bridge, "RoyalSeaBridgeApproachGoldCap", Vector3(0.42, 0.12, 0.42), Vector3(side * 3.0, 1.10, post_z), GOLD)
+	_add_static_box_collision(bridge, "RoyalJetSkiArrivalPlatformCollision", Vector3(18.0, 0.48, 14.0), Vector3(0.0, 0.0, 139.0))
 	# Glowing circular interaction marker is a visual placeholder until the boarding system is built.
 	var interaction_ring := MeshInstance3D.new()
 	interaction_ring.name = "RoyalJetSkiInteractionCirclePreview"
