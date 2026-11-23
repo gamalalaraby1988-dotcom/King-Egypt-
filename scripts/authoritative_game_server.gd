@@ -452,7 +452,7 @@ func _on_peer_disconnected(peer_id: int) -> void:
 	var was_jet_ski_race_participant := _jet_ski_race_participants.has(peer_id)
 	_jet_ski_race_participants.erase(peer_id)
 	_jet_ski_race_locked_participants.erase(peer_id)
-	if was_jet_ski_race_participant and _jet_ski_race_state == "ready":
+	if _jet_ski_race_should_reopen_after_disconnect(was_jet_ski_race_participant, _jet_ski_race_state):
 		_jet_ski_race_state = "waiting"
 		_jet_ski_race_locked_participants.clear()
 		_notify_jet_ski_race_participants("غادر متسابق قبل بدء الجولة؛ أُعيد فتح التسجيل.")
@@ -1500,6 +1500,10 @@ func request_start_jet_ski_race() -> bool:
 
 func _jet_ski_race_can_start(participant_count: int) -> bool:
 	return participant_count >= JET_SKI_RACE_MIN_PARTICIPANTS and participant_count <= JET_SKI_RACE_MAX_PARTICIPANTS
+
+
+func _jet_ski_race_should_reopen_after_disconnect(was_participant: bool, race_state: String) -> bool:
+	return was_participant and race_state == "ready"
 
 
 func _notify_jet_ski_race_participants(message: String) -> void:
