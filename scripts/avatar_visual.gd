@@ -51,13 +51,17 @@ func set_phone_using(enabled: bool) -> void:
 
 
 func _build_phone_visual() -> void:
-	# هاتف صغير داكن بواجهة مضيئة، موضوع أمام كف اليد اليمنى.
+	# الهاتف مثبت في اليد اليمنى نفسها، وليس عائمًا في موضع مستقل من الجسم.
+	var right_arm := parts.get("RightArm") as MeshInstance3D
+	if not is_instance_valid(right_arm):
+		return
 	phone_visual = Node3D.new()
 	phone_visual.name = "PlayerPhoneVisual"
-	phone_visual.position = Vector3(0.49, 0.91, -0.245)
+	# إزاحة محلية محسوبة لتعويض زاوية رفع الذراع، ووضع الهاتف أمام الصدر.
+	phone_visual.position = Vector3(0.21, -0.03, -0.245)
 	phone_visual.rotation = Vector3(-0.18, 0.10, -0.16)
 	phone_visual.visible = false
-	add_child(phone_visual)
+	right_arm.add_child(phone_visual)
 	var body := MeshInstance3D.new()
 	body.name = "PhoneBody"
 	var body_mesh := BoxMesh.new()
@@ -69,6 +73,27 @@ func _build_phone_visual() -> void:
 	body_material.roughness = 0.32
 	body.material_override = body_material
 	phone_visual.add_child(body)
+	# كف اليد خلف الهاتف والإبهام على الحافة، لإظهار مسكة طبيعية.
+	var palm := MeshInstance3D.new()
+	palm.name = "RightHandPalm"
+	var palm_mesh := SphereMesh.new()
+	palm_mesh.radius = 1.0
+	palm_mesh.height = 2.0
+	palm.mesh = palm_mesh
+	palm.scale = Vector3(0.075, 0.085, 0.045)
+	palm.position = Vector3(0.0, -0.005, 0.043)
+	palm.material_override = _material(SKIN)
+	phone_visual.add_child(palm)
+	var thumb := MeshInstance3D.new()
+	thumb.name = "RightHandThumb"
+	var thumb_mesh := CapsuleMesh.new()
+	thumb_mesh.radius = 0.018
+	thumb_mesh.height = 0.075
+	thumb.mesh = thumb_mesh
+	thumb.position = Vector3(-0.071, -0.005, 0.004)
+	thumb.rotation.z = -0.35
+	thumb.material_override = _material(SKIN)
+	phone_visual.add_child(thumb)
 	var screen := MeshInstance3D.new()
 	screen.name = "PhoneScreen"
 	var screen_mesh := BoxMesh.new()
@@ -93,9 +118,9 @@ func _process(delta: float) -> void:
 	if phone_using:
 		if parts.has("RightArm"):
 			var phone_arm := parts["RightArm"] as MeshInstance3D
-			phone_arm.rotation = Vector3(-0.12, 0.0, -0.62)
+			phone_arm.rotation = Vector3(-0.10, 0.0, -0.78)
 		if parts.has("Head"):
-			(parts["Head"] as MeshInstance3D).rotation.x = -0.22
+			(parts["Head"] as MeshInstance3D).rotation = Vector3(-0.28, 0.08, 0.0)
 		if parts.has("TorsoBase"):
 			(parts["TorsoBase"] as MeshInstance3D).rotation.x = -0.025
 		return
