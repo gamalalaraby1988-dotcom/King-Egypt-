@@ -14,6 +14,9 @@ Coordinates are axis-aligned ranges derived from the dimensions and positions in
 | Continuous sandy beach (including court and gym) | -90 to 90 | 107 to 153 |
 | Integrated beach handball court area | 19 to 61 | 107 to 143 |
 | Open-air beach gym surface | -61 to -35 | 124 to 140 |
+| Main beach activity path | -48 to 40 | 144.8 to 147.2 |
+| Gym path connector | -49.2 to -46.8 | 140 to 146 |
+| Court path connector | 38.8 to 41.2 | 143 to 146 |
 | Beach gym pergola posts/beams | within gym footprint | within gym footprint |
 | Bridge deck | -15.5 to -2.5 | 91 to 108 |
 | Land-ramp transition | -15.5 to -2.5 | 108 to 113 |
@@ -34,11 +37,13 @@ A 26m × 16m open-air fitness area is placed at approximately X=-48m, Z=132m, on
 
 The gym is schematic only. Confirm accessible circulation, safe fall zones around equipment, salt-air-resistant materials, shade coverage, and the final relationship to beach paths in the full Godot scene. No equipment interaction or collision is implemented.
 
+A 2.4m-wide compacted-sand path links the gym and handball court along the southern side of the beach, with short connectors meeting the gym edge at Z=140 and court edge at Z=143. The main path remains within the sandy beach boundary (ends at Z=147.2, beach ends at Z=153). This is a visual path only; grade, accessibility, and collision need runtime review.
+
 ## Remaining geometric intersections and checks
 
 1. **Shallow band and open sea:** overlap is 1.5m in Z (105.5..107). This can serve as a visual blend, but the layers currently have different elevations and are not a single continuous walkable surface.
 2. **Shallow band and beach:** overlap is 3.5m in Z (107..110.5). This is a visual transition only; final waterline, surface elevations, and collision boundaries need to be designed together.
-3. **Gym and handball court:** no overlap; their X ranges are separated by 54m, leaving ample room for a shared beach promenade/activity path if designed later.
+3. **Gym and handball court:** no overlap; their X ranges are separated by 54m. The new 2.4m-wide path runs along the southern beach margin. The gym connector touches the gym's southern edge, and the court connector touches the court's southern edge; the connectors meet the main path. Check actual walkable continuity and clearances in Godot.
 4. **Bridge and land ramp:** their Z ranges meet at Z=108 with no positive-area overlap. A shared edge alone does not guarantee a smooth vehicle/player transition; inspect final mesh elevations and ramp slope in Godot.
 5. **Bridge and existing south-road marker:** the marker crosses the bridge footprint at Z≈95. This records the known road conflict; no live road has been rerouted.
 6. **Arrival platform and pier reference:** the footprints overlap by 7.5m in X and 10m in Z. This may be intentional as a connection, but the actual pier/ship geometry and walkable path must be checked before implementation.
@@ -46,7 +51,7 @@ The gym is schematic only. Confirm accessible circulation, safe fall zones aroun
 
 ## Recommended next revision
 
-- Review the beach/court proportions, court run-off, gym access and equipment clearances, and shoreline boundary in the full scene.
+- Review the beach/court proportions, court run-off, gym access and equipment clearances, activity-path continuity, and shoreline boundary in the full scene.
 - Rebuild the sea → transition → shallow → beach sequence as adjacent surfaces or explicitly designed blend meshes, with a single walkable collision surface only where intended.
 - Confirm bridge-to-ramp height continuity and vehicle clearance using the real scene scale.
 - Replace the ship and pier reference rectangles with instances of the approved assets in a dedicated test scene, without moving the production ship.
