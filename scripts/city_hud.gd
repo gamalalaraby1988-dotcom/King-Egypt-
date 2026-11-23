@@ -998,8 +998,34 @@ func _sync_local_phone_screen(catalog: Dictionary, owned: Array, selected: Strin
 	var avatar := player.get_node_or_null("AvatarVisual")
 	if not is_instance_valid(avatar) or not avatar.has_method("set_phone_screen_content"):
 		return
-	# نفس رموز تطبيقات قائمة المدينة، مع إظهار الأيقونات فقط على شاشة الهاتف ثلاثية الأبعاد.
+	if avatar.has_signal("phone_app_pressed"):
+		var app_callback := Callable(self, "_on_avatar_phone_app_pressed")
+		if not avatar.phone_app_pressed.is_connected(app_callback):
+			avatar.phone_app_pressed.connect(app_callback)
+	# ترتيب التطبيقات ثابت على شاشة الهاتف الفعلية التي تحملها الشخصية.
 	avatar.call("set_phone_screen_icons", ["🚘", "👥", "⚙️", "🏠", "🗺️", "💬", "📋", "🎁", "👤"])
+
+
+func _on_avatar_phone_app_pressed(app_id: String) -> void:
+	match app_id:
+		"garage":
+			_open_vehicle_store_phone()
+		"friends":
+			_open_social_popup("friends")
+		"settings":
+			_open_section("settings")
+		"safe_return":
+			_request_safe_return()
+		"map":
+			_open_section("map")
+		"messages":
+			_open_social_popup("public")
+		"missions":
+			_open_section("missions")
+		"rewards":
+			_open_section("rewards")
+		"profile":
+			_open_section("profile")
 
 
 func _capture_safe_spawn() -> void:
