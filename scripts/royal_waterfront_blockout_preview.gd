@@ -226,6 +226,41 @@ func _build_option_b_southern_roads() -> void:
 	_label("RELOCATED SOUTH BYPASS - Z=120", Vector3(0.0, 2.0, 125.0), GOLD, 18)
 
 
+func _tutankhamun_mask_mesh() -> ArrayMesh:
+	# Custom tapered face silhouette: broad brow/cheeks, narrowing jaw and rounded chin.
+	# Local +Z faces the bridge camera.
+	var rings := [
+		Vector3(0.00, -2.20, 0.12),
+		Vector3(0.78, -1.88, 0.72),
+		Vector3(1.42, -1.28, 0.92),
+		Vector3(1.82, -0.42, 1.02),
+		Vector3(1.92, 0.48, 1.00),
+		Vector3(1.78, 1.28, 0.88),
+		Vector3(1.48, 1.92, 0.62),
+		Vector3(0.82, 2.20, 0.22)
+	]
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var segments := 40
+	for ring_index in range(rings.size() - 1):
+		var lower: Vector3 = rings[ring_index]
+		var upper: Vector3 = rings[ring_index + 1]
+		for segment in range(segments):
+			var a0 := TAU * float(segment) / float(segments)
+			var a1 := TAU * float(segment + 1) / float(segments)
+			var p00 := Vector3(cos(a0) * lower.x, lower.y, sin(a0) * lower.z)
+			var p01 := Vector3(cos(a1) * lower.x, lower.y, sin(a1) * lower.z)
+			var p10 := Vector3(cos(a0) * upper.x, upper.y, sin(a0) * upper.z)
+			var p11 := Vector3(cos(a1) * upper.x, upper.y, sin(a1) * upper.z)
+			st.add_vertex(p00)
+			st.add_vertex(p10)
+			st.add_vertex(p11)
+			st.add_vertex(p00)
+			st.add_vertex(p11)
+			st.add_vertex(p01)
+	st.generate_normals()
+	return st.commit()
+
 func _build_five_civilizations_ship_blockout() -> void:
 	# Reference-matched stationary royal vessel. The uploaded image is the visual authority:
 	# very wide dark-blue cruise-ship silhouette, gold Egyptian ornament, stepped side
@@ -276,14 +311,10 @@ func _build_five_civilizations_ship_blockout() -> void:
 
 	# Monumental pharaoh mask: sculptural face, nemes side lobes, brows, eyes and ceremonial beard.
 	var head := MeshInstance3D.new()
-	head.name = "ShipPharaoh_MaskFace"
-	var head_mesh := SphereMesh.new()
-	head_mesh.radius = 2.35
-	head_mesh.height = 4.8
-	head.mesh = head_mesh
+	head.name = "ShipPharaoh_MaskFace_CustomTaperedMesh"
+	head.mesh = _tutankhamun_mask_mesh()
 	head.position = Vector3(0.0, 15.0, 97.15)
-	head.scale = Vector3(1.12, 1.28, 0.48)
-	head.material_override = _material(gold, 0.28)
+	head.material_override = _material(gold, 0.24)
 	add_child(head)
 	_box("ShipPharaoh_Headdress_Back", Vector3(9.6, 7.5, 0.58), Vector3(0.0, 15.1, 96.0), blue)
 	for side: float in [-1.0, 1.0]:
