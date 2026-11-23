@@ -15,6 +15,7 @@ const GYM_METAL := Color(0.20, 0.22, 0.23)
 func _ready() -> void:
 	_build_land_and_beach()
 	_build_open_beach_gym()
+	_build_beach_activity_path()
 	_build_open_water()
 	_build_bridge_and_arrival()
 	_mark_preserved_ship_and_conflicts()
@@ -86,6 +87,15 @@ func _build_open_beach_gym() -> void:
 	_box("BeachGym_StretchingRail", Vector3(4.0, 0.12, 0.12), gym_center + Vector3(-6.0, 1.0, 4.0), GYM_METAL)
 	_label("OPEN-AIR BEACH FITNESS", Vector3(-48.0, 4.0, 132.0), GOLD, 25)
 	_label("OPEN SIDES • SEA VIEW • NO ENCLOSURE", Vector3(-48.0, 3.6, 141.5), IVORY, 16)
+
+
+func _build_beach_activity_path() -> void:
+	# A compacted-sand pedestrian path links the gym and handball court without crossing either play area.
+	var path_material := Color(0.72, 0.62, 0.47)
+	_box("BeachActivityPath_Main", Vector3(88.0, 0.045, 2.4), Vector3(-4.0, 0.205, 146.0), path_material)
+	_box("BeachActivityPath_GymConnector", Vector3(2.4, 0.045, 6.0), Vector3(-48.0, 0.205, 143.0), path_material)
+	_box("BeachActivityPath_CourtConnector", Vector3(2.4, 0.045, 3.0), Vector3(40.0, 0.205, 144.5), path_material)
+	_label("BEACH ACTIVITY WALKWAY", Vector3(-4.0, 1.8, 148.0), GOLD, 18)
 
 func _build_open_water() -> void:
 	# Water covers the former promenade and enclosed marina basin as one open body.
