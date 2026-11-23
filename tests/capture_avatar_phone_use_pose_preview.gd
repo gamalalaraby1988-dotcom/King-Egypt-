@@ -49,7 +49,12 @@ func _render_poses() -> void:
 	avatar.call("set_motion_state", "run", 4.0)
 	await _wait_motion_frames()
 	await _save_preview("avatar_phone_use_pose_run.png")
-	print("Saved actual avatar phone-use pose previews for idle, walk, and run.")
+	# A side/rear three-quarter camera reveals the actual screen surface facing the avatar.
+	avatar.call("set_motion_state", "idle", 0.0)
+	camera.position = Vector3(2.2, 1.65, 2.3)
+	camera.look_at(Vector3(0.0, 1.43, -0.27), Vector3.UP)
+	await _save_preview("avatar_phone_use_pose_screen_side.png")
+	print("Saved actual avatar phone-use pose previews for idle, walk, run, and screen-side inspection.")
 	quit(0)
 
 func _wait_motion_frames() -> void:
