@@ -22,11 +22,15 @@ static func validate_input(throttle: Variant, brake: Variant, steering: Variant,
 	var safe_steering := float(steering)
 	if safe_throttle < 0.0 or safe_throttle > 1.0 or safe_brake < 0.0 or safe_brake > 1.0 or absf(safe_steering) > 1.0:
 		return {"accepted": false, "reason": "out_of_bounds"}
-	if sequence <= last_sequence or sequence - last_sequence > MAX_SEQUENCE_GAP:
+	if sequence <= 0 or sequence <= last_sequence or sequence - last_sequence > MAX_SEQUENCE_GAP:
 		return {"accepted": false, "reason": "invalid_sequence"}
+	if now_usec < 0 or window_start_usec < 0 or window_count < 0:
+		return {"accepted": false, "reason": "invalid_rate_state"}
 	var safe_window_start := window_start_usec
 	var safe_count := window_count
-	if now_usec < safe_window_start or now_usec - safe_window_start >= INPUT_WINDOW_USEC:
+	if now_usec < safe_window_start:
+		return {"accepted": false, "reason": "clock_regression"}
+	if now_usec - safe_window_start >= INPUT_WINDOW_USEC:
 		safe_window_start = now_usec
 		safe_count = 0
 	if safe_count >= MAX_INPUT_RATE:
