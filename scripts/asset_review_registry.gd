@@ -8,7 +8,8 @@ const VALID_STATUSES := [
 	"approved",
 	"integrated",
 	"rejected",
-	"existing_unverified"
+	"existing_unverified",
+	"procedural_prototype_unverified"
 ]
 
 static func validate_manifest(path: String = MANIFEST_PATH) -> PackedStringArray:
