@@ -24,7 +24,8 @@ func _initialize() -> void:
 		"player.visible = true",
 		"player.sitting = true",
 		"JetSkiCamera",
-		"func _exit_player_jet_ski() -> void:",
+		"func _exit_player_jet_ski(server_position: Variant = null) -> void:",
+		"_jet_ski_unmount_pending = false",
 		"func _recover_jet_ski_occupancy() -> void:",
 		"JET_SKI_BOARDING_RADIUS",
 		"_is_local_city_interaction_allowed()"
