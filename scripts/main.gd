@@ -313,7 +313,8 @@ func _summon_player_vehicle() -> void:
 
 func _on_scooter_toggle_pressed() -> void:
 	if scooter_occupied:
-		_exit_player_scooter()
+		# Foot button means return to walking and dismiss the scooter completely.
+		_exit_player_scooter(true)
 		return
 	if is_instance_valid(city_scooter):
 		city_scooter.queue_free()
@@ -349,9 +350,14 @@ func _summon_electric_scooter() -> void:
 	city_scooter.global_rotation.y = player.global_rotation.y
 	city_scooter.velocity = Vector3.ZERO
 	city_scooter.call("clear_controls")
-	if is_instance_valid(scooter_toggle_button):
-		scooter_toggle_button.text = "👣"
-		scooter_toggle_button.tooltip_text = "العودة للمشي" if CityLanguage.get_language() == "ar" else "Walk"
+	# Calling the scooter now places the player directly on it.
+	_mount_player_scooter()
+	if not scooter_occupied:
+		city_scooter.queue_free()
+		city_scooter = null
+		if is_instance_valid(scooter_toggle_button):
+			scooter_toggle_button.text = "🛴"
+			scooter_toggle_button.tooltip_text = "استدعاء السكوتر الكهربائي" if CityLanguage.get_language() == "ar" else "Call electric scooter"
 
 func try_enter_summoned_vehicle() -> bool:
 	# Shared contextual interaction: prefer the nearby standing scooter, then the car.
@@ -418,7 +424,7 @@ func _mount_player_scooter() -> void:
 		vehicle_interaction_button.text = "🚪↗"
 		vehicle_interaction_button.tooltip_text = "النزول من السكوتر" if CityLanguage.get_language() == "ar" else "Dismount scooter"
 
-func _exit_player_scooter() -> void:
+func _exit_player_scooter(remove_scooter: bool = false) -> void:
 	if not scooter_occupied or not is_instance_valid(city_scooter):
 		return
 	var player := city_scooter.get_node_or_null("Player") as CharacterBody3D
@@ -435,12 +441,15 @@ func _exit_player_scooter() -> void:
 	city_scooter.call("clear_controls")
 	city_scooter.set_physics_process(false)
 	scooter_occupied = false
+	if remove_scooter:
+		city_scooter.queue_free()
+		city_scooter = null
 	if is_instance_valid(vehicle_interaction_button):
 		vehicle_interaction_button.visible = false
 	if is_instance_valid(scooter_toggle_button):
 		scooter_toggle_button.visible = true
-		scooter_toggle_button.text = "👣"
-		scooter_toggle_button.tooltip_text = "العودة للمشي"
+		scooter_toggle_button.text = "👣" if is_instance_valid(city_scooter) else "🛴"
+		scooter_toggle_button.tooltip_text = ("العودة للمشي" if CityLanguage.get_language() == "ar" else "Walk") if is_instance_valid(city_scooter) else ("استدعاء السكوتر الكهربائي" if CityLanguage.get_language() == "ar" else "Call electric scooter")
 	if is_instance_valid(vehicle_summon_button):
 		vehicle_summon_button.visible = true
 
