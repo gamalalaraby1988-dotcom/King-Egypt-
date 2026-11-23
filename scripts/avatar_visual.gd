@@ -214,12 +214,18 @@ func _on_phone_screen_input_event(_camera: Camera3D, event: InputEvent, world_po
 		return
 	var local_position := phone_visual.to_local(world_position)
 	var forwarded := event.duplicate() as InputEvent
+	var screen_point := Vector2(
+		(local_position.x / 0.112 + 0.5) * float(phone_screen_viewport.size.x),
+		(0.5 - local_position.y / 0.192) * float(phone_screen_viewport.size.y)
+	)
 	if forwarded is InputEventMouse:
-		var mouse_event := forwarded as InputEventMouse
-		mouse_event.position = Vector2(
-			(local_position.x / 0.112 + 0.5) * float(phone_screen_viewport.size.x),
-			(0.5 - local_position.y / 0.192) * float(phone_screen_viewport.size.y)
-		)
+		(forwarded as InputEventMouse).position = screen_point
+		phone_screen_viewport.push_input(forwarded, true)
+	elif forwarded is InputEventScreenTouch:
+		(forwarded as InputEventScreenTouch).position = screen_point
+		phone_screen_viewport.push_input(forwarded, true)
+	elif forwarded is InputEventScreenDrag:
+		(forwarded as InputEventScreenDrag).position = screen_point
 		phone_screen_viewport.push_input(forwarded, true)
 
 
