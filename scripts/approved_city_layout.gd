@@ -13,6 +13,7 @@ const DARK := Color(0.12, 0.16, 0.17)
 func _ready() -> void:
 	name = "ApprovedCityLayout"
 	_build_districts()
+	_build_expanded_city_center()
 	_build_main_street_wall_ads()
 	_build_nile_waterfront()
 	_build_royal_development_district()
@@ -299,6 +300,51 @@ func _build_districts() -> void:
 		var accent := GOLD if i < 3 or i == 0 else (TEAL if i % 3 == 0 else SAND)
 		_building(self, str(e[0]), str(e[1]), e[2], e[3], float(e[4]), accent)
 	_build_open_fuel_station()
+
+
+func _build_expanded_city_center() -> void:
+	# A connected second urban grid extends the existing city center toward the
+	# former distant-pyramid parcel. Buildings reuse the established Egyptian
+	# facade builder, while the boulevard and cross streets remain walkable.
+	var entries := [
+		["expanded_supermarket", "السوق الملكي الجديد", Vector3(-48.0, 0.0, -116.0), Vector2(14.0, 12.0), 7.0],
+		["expanded_cafe", "مقهى الساحة الملكية", Vector3(-16.0, 0.0, -116.0), Vector2(14.0, 12.0), 7.0],
+		["expanded_residences_west", "الأجنحة السكنية الغربية", Vector3(16.0, 0.0, -116.0), Vector2(14.0, 12.0), 11.0],
+		["expanded_residences_east", "الأجنحة السكنية الشرقية", Vector3(48.0, 0.0, -116.0), Vector2(14.0, 12.0), 11.0],
+		["expanded_entertainment", "مركز الترفيه الملكي", Vector3(-48.0, 0.0, -151.0), Vector2(14.0, 12.0), 9.0],
+		["expanded_services", "مركز الخدمات الجديد", Vector3(-16.0, 0.0, -151.0), Vector2(14.0, 12.0), 8.0],
+		["expanded_hotel", "فندق المدينة الملكي", Vector3(16.0, 0.0, -151.0), Vector2(14.0, 12.0), 12.0],
+		["expanded_gallery", "معرض الحضارة المصرية", Vector3(48.0, 0.0, -151.0), Vector2(14.0, 12.0), 9.0]
+	]
+	for i in range(entries.size()):
+		var e: Array = entries[i]
+		var accent := GOLD if i % 2 == 0 else TEAL
+		_building(self, str(e[0]), str(e[1]), e[2], e[3], float(e[4]), accent)
+
+	# A broad north-south boulevard continues from the existing street grid.
+	_box(self, "ExpandedCityCentralBoulevard", Vector3(12.0, 0.14, 82.0), Vector3(0.0, 0.02, -128.0), DARK)
+	_add_static_box_collision(self, "ExpandedCityCentralBoulevardWalkable", Vector3(12.0, 0.22, 82.0), Vector3(0.0, 0.02, -128.0))
+	for road_z in [-99.0, -134.0, -169.0]:
+		_box(self, "ExpandedCityCrossStreet", Vector3(150.0, 0.14, 9.0), Vector3(0.0, 0.02, road_z), DARK)
+		_add_static_box_collision(self, "ExpandedCityCrossStreetWalkable", Vector3(150.0, 0.22, 9.0), Vector3(0.0, 0.02, road_z))
+		# Restrained center markings improve road readability without heavy assets.
+		for marker_x in range(-7, 8):
+			_box(self, "ExpandedCityRoadCenterMark", Vector3(2.0, 0.025, 0.16), Vector3(float(marker_x) * 9.0, 0.105, road_z), IVORY)
+
+	# Short entrance walks link every new building to the nearest cross street.
+	for x in [-48.0, -16.0, 16.0, 48.0]:
+		_path_segment(self, "ExpandedCityNorthEntranceWalk", Vector3(x, 0.12, -109.5), Vector3(x, 0.12, -110.0), 2.8, SAND)
+		_path_segment(self, "ExpandedCitySouthEntranceWalk", Vector3(x, 0.12, -144.5), Vector3(x, 0.12, -145.0), 2.8, SAND)
+
+	# Small landscaped islands soften the grid while leaving the sidewalks open.
+	for side in [-1.0, 1.0]:
+		for z in [-125.0, -160.0]:
+			var island := Node3D.new()
+			island.name = "ExpandedCityGreenIsland"
+			island.position = Vector3(side * 70.0, 0.0, z)
+			add_child(island)
+			_box(island, "GreenIslandLawn", Vector3(9.0, 0.12, 9.0), Vector3.ZERO, Color(0.20, 0.38, 0.22))
+			_tree(island, "GreenIslandPalm", Vector3(0.0, 0.0, 0.0), 0.72)
 
 func _build_open_fuel_station() -> void:
 	# Open, drive-through forecourt on the approved west service edge.
