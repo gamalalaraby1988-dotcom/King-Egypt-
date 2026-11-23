@@ -970,6 +970,10 @@ func _build_access_roads_and_parking() -> void:
 	]
 	for walk in entrance_walks:
 		_path_segment(self, str(walk[0]), walk[1], walk[2], 2.6, SAND)
+	# Shared northern access spine connects both relocated building rows to the north perimeter road.
+	_path_segment(self, "NorthDistrictAccess_RowSouth", Vector3(-52.0, 0.12, -105.0), Vector3(52.0, 0.12, -105.0), 3.6, SAND)
+	_path_segment(self, "NorthDistrictAccess_RowNorth", Vector3(-52.0, 0.12, -135.0), Vector3(52.0, 0.12, -135.0), 3.6, SAND)
+	_path_segment(self, "NorthDistrictAccess_Spine", Vector3(0.0, 0.12, -135.0), Vector3(0.0, 0.12, -98.0), 3.6, SAND)
 	_path_segment(self, "PoliceServiceAccess", Vector3(-95.0, 0.12, -5.0), Vector3(-84.0, 0.12, -5.0), 3.2, SAND)
 	_path_segment(self, "PoliceEntranceTurn", Vector3(-84.0, 0.12, -5.0), Vector3(-84.0, 0.12, 0.9), 3.2, SAND)
 	_path_segment(self, "PoliceFrontWalk", Vector3(-84.0, 0.12, 0.9), Vector3(-75.0, 0.12, 0.9), 3.2, SAND)
