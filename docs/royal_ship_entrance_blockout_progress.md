@@ -24,3 +24,10 @@
 3. Compare the terminal pad and apron against the actual ship entrance mesh and adjust only after that inspection.
 4. Add real collision and vehicle turning geometry, then test player and vehicle movement.
 5. Implement the interaction prompt and confirmation using the previously approved ship-entry flow only after the geometry is approved.
+
+
+## Follow-up work
+- Corrected the interaction-pad position back to the **ship-facing end of the bridge** (Z≈91.5 in the current blockout), rather than leaving it in the middle of the bridge.
+- Added `.github/workflows/royal-waterfront-preview-check.yml` to import the project and attempt a headless startup of the exact preview scene on future pushes to this branch.
+- The workflow has been committed, but no GitHub Actions run is visible yet; therefore this is not a passed validation.
+- The interaction circle and vehicle bypass remain visual-only placeholders pending a real Godot render, collision setup, and vehicle/player testing.
