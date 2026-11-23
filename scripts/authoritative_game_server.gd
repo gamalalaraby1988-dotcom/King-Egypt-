@@ -670,17 +670,19 @@ func request_jet_ski_mount_rpc() -> void:
 	if not is_instance_valid(body) or body.global_position.distance_to(JET_SKI_SERVER_LAUNCH_POSITION) > JET_SKI_SERVER_BOARDING_RADIUS:
 		rpc_id(peer_id, "receive_jet_ski_mount_result", false, "اقترب من بوابة الجت سكي الملكية أولًا.")
 		return
+	var occupied_slots := 0
 	for other_variant in _sessions.keys():
-		var other_peer := int(other_variant)
-		if other_peer != peer_id and bool((_sessions[other_peer] as Dictionary).get("jet_ski_mounted", false)):
-			rpc_id(peer_id, "receive_jet_ski_mount_result", false, "الجت سكي مشغولة حاليًا.")
-			return
+		if bool((_sessions[int(other_variant)] as Dictionary).get("jet_ski_mounted", false)):
+			occupied_slots += 1
+	var slot_column := occupied_slots % 5
+	var slot_row := floori(float(occupied_slots) / 5.0)
+	var launch_slot := JET_SKI_SERVER_LAUNCH_POSITION + Vector3(float(slot_column - 2) * 2.2, 0.0, float(slot_row) * 3.2)
 	var now_usec := Time.get_ticks_usec()
 	session["jet_ski_last_sequence"] = 0
 	session["jet_ski_input_window_usec"] = now_usec
 	session["jet_ski_input_count"] = 0
 	session["jet_ski_mounted"] = true
-	session["jet_ski_position"] = JET_SKI_SERVER_LAUNCH_POSITION
+	session["jet_ski_position"] = launch_slot
 	session["jet_ski_rotation_y"] = body.rotation.y
 	session["jet_ski_velocity"] = Vector3.ZERO
 	session["jet_ski_throttle"] = 0.0
@@ -690,7 +692,7 @@ func request_jet_ski_mount_rpc() -> void:
 	session["is_sitting"] = true
 	session["direction"] = Vector3.ZERO
 	session["sprint"] = false
-	body.global_position = JET_SKI_SERVER_LAUNCH_POSITION + JET_SKI_RIDER_OFFSET
+	body.global_position = launch_slot + JET_SKI_RIDER_OFFSET
 	body.velocity = Vector3.ZERO
 	session["velocity"] = Vector3.ZERO
 	_sessions[peer_id] = session
