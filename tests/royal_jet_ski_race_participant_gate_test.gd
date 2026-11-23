@@ -15,8 +15,14 @@ func _initialize() -> void:
 		failures.append("Race start incorrectly allowed with five participants.")
 	if server._jet_ski_race_should_reopen_after_disconnect(false, "ready"):
 		failures.append("A non-participant disconnect incorrectly reopened a ready race.")
+	if server._jet_ski_race_should_reopen_after_disconnect(false, "countdown"):
+		failures.append("A non-participant disconnect incorrectly cancelled the countdown.")
 	if not server._jet_ski_race_should_reopen_after_disconnect(true, "ready"):
 		failures.append("A participant disconnect did not reopen a ready race.")
+	if not server._jet_ski_race_should_reopen_after_disconnect(true, "countdown"):
+		failures.append("A participant disconnect did not cancel the active countdown.")
+	if SERVER_SCRIPT.JET_SKI_RACE_COUNTDOWN_SECONDS != 5:
+		failures.append("The synchronized server countdown must be five seconds.")
 	if server._jet_ski_race_should_reopen_after_disconnect(true, "waiting"):
 		failures.append("A participant disconnect changed a lobby that was already waiting.")
 	server.free()
