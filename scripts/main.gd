@@ -33,6 +33,8 @@ var _vehicle_key_was_down := false
 var _player_saved_collision_layer := 1
 var _player_saved_collision_mask := 1
 var _last_safe_player_position := Vector3(0.0, 1.0, -42.0)
+var _initial_player_spawn_position := Vector3(0.0, 1.0, -42.0)
+var _initial_player_spawn_captured := false
 var _remote_player_views: Dictionary = {}
 var _city_matchmaking_request: HTTPRequest
 var _pending_city_reservation_id := ""
@@ -64,6 +66,8 @@ func _ready() -> void:
 	var initial_player := get_node_or_null("Player") as CharacterBody3D
 	if is_instance_valid(initial_player):
 		_last_safe_player_position = initial_player.global_position
+		_initial_player_spawn_position = initial_player.global_position
+		_initial_player_spawn_captured = true
 	var key_light := get_node_or_null("DirectionalLight3D")
 	if key_light:
 		key_light.add_to_group("quality_shadow_light")
@@ -152,6 +156,23 @@ func _process(_delta: float) -> void:
 		scooter_toggle_button.visible = true
 		scooter_toggle_button.text = "👣" if is_instance_valid(city_scooter) else "🛴"
 		scooter_toggle_button.tooltip_text = ("العودة للمشي" if CityLanguage.get_language() == "ar" else "Walk") if is_instance_valid(city_scooter) else ("استدعاء السكوتر الكهربائي" if CityLanguage.get_language() == "ar" else "Call electric scooter")
+
+
+func return_player_to_start_position() -> bool:
+	# This local recovery never overrides server-owned online positions.
+	if GameModeManager.is_online_ready() or interior_transition_busy or is_instance_valid(interior_root) or vehicle_occupied or scooter_occupied:
+		return false
+	var player := get_node_or_null("Player") as CharacterBody3D
+	if not is_instance_valid(player) or not _initial_player_spawn_captured:
+		return false
+	player.velocity = Vector3.ZERO
+	player.mobile_move = Vector2.ZERO
+	player.mobile_sprint = false
+	player.sitting = false
+	player.global_position = _initial_player_spawn_position
+	player.reset_physics_interpolation()
+	_last_safe_player_position = _initial_player_spawn_position
+	return true
 
 
 func _guard_player_safety() -> void:
