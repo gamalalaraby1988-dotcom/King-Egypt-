@@ -20,8 +20,9 @@ func _run() -> void:
 	if phone.get_parent() != right_arm:
 		_fail("Phone visual is not attached to the right arm.")
 		return
-	if not is_equal_approx(phone.position.y, 0.22) or not is_equal_approx(phone.position.x, -0.23):
-		_fail("Phone was not placed inward at the chest-level grip position.")
+	var phone_world_position := phone.global_position
+	if absf(phone_world_position.x) > 0.04 or absf(phone_world_position.y - 1.20) > 0.05:
+		_fail("Phone was not positioned at the center of the chest in the rendered avatar pose.")
 		return
 	if phone.visible:
 		_fail("Phone should be hidden before phone-use mode starts.")
