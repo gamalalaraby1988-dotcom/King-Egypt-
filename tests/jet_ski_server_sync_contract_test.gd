@@ -62,6 +62,8 @@ func _initialize() -> void:
 		failures.append("Online client must wait for server-confirmed dismount position before exiting the jet ski.")
 	if not main.contains('vehicle_interaction_button.disabled = true') or not main.contains('_jet_ski_unmount_pending'):
 		failures.append("Online dismount requests must be guarded against repeated taps while awaiting acknowledgement.")
+	if not main.contains('func _request_jet_ski_unmount() -> void:') or not main.contains('_exit_contextual_state():') or not main.contains('_request_jet_ski_unmount()'):
+		failures.append("All online contextual exit paths must use the server-confirmed jet ski dismount flow.")
 	if main.contains('_mount_player_jet_ski()\n\tif is_instance_valid(city_jet_ski):\n\t\tcity_jet_ski.set_physics_process(false)'):
 		failures.append("Online local prediction must not be disabled immediately after mounting.")
 	if not main.contains('jet_ski_authoritative_state_received.connect(_on_jet_ski_authoritative_state_received)'):
