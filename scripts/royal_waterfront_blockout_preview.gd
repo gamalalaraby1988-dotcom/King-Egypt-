@@ -367,9 +367,10 @@ func _ship_deck_ribbon(label: String, width: float, depth: float, thickness: flo
 		var t := -1.0 + 2.0 * (float(i) + 0.5) / float(segments)
 		var sweep := pow(abs(t), 2.0)
 		var x := t * width * 0.5
-		var y := 0.28 - 1.55 * sweep
-		var segment_depth := depth * (1.0 - 0.13 * sweep)
+		var y := 0.35 - 2.65 * pow(abs(t), 1.75)
+		var segment_depth := depth * (1.0 - 0.30 * sweep)
 		var segment := _box(label + "_Segment_%02d" % i, Vector3(segment_width + 0.045, thickness, segment_depth), Vector3(x, y, 0.0), color, root)
+		segment.rotation_degrees.z = -sign(t) * 7.0 * pow(abs(t), 1.3)
 		segment.material_override = _material(color, 0.62)
 	return root
 
@@ -413,8 +414,8 @@ func _build_five_civilizations_ship_blockout() -> void:
 	_box("ShipRoyalGate_GoldFrame_Right", Vector3(1.15, 10.0, 1.0), Vector3(6.2, 7.2, 95.0), gold)
 	_box("ShipRoyalGate_TopBeam", Vector3(13.5, 1.0, 1.2), Vector3(0.0, 12.0, 95.0), gold)
 	_box("ShipRoyalGate_InnerBluePortal", Vector3(8.8, 7.4, 0.28), Vector3(0.0, 6.3, 96.0), blue_light)
-	var gate_door := _box("ShipRoyalGate_IlluminatedDoorway", Vector3(5.8, 5.8, 0.18), Vector3(0.0, 5.4, 96.2), Color(0.18, 0.68, 0.95))
-	gate_door.material_override = _emissive_material(Color(0.18, 0.68, 0.95), 1.7)
+	var gate_door := _box("ShipRoyalGate_IlluminatedDoorway", Vector3(5.8, 5.8, 0.18), Vector3(0.0, 5.4, 96.2), Color(0.035, 0.18, 0.29))
+	gate_door.material_override = _emissive_material(Color(0.08, 0.32, 0.46), 0.85)
 	_box("ShipRoyalGate_NamePlate", Vector3(9.6, 1.2, 0.35), Vector3(0.0, 10.0, 96.1), dark)
 	_label("KING OF EGYPT CITY", Vector3(0.0, 10.05, 96.35), gold, 28)
 
