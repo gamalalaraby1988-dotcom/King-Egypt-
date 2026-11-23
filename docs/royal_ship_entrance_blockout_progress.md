@@ -256,3 +256,13 @@
 - The earlier render run `45168289013` was still running at the time of this note and is not treated as valid verification of the corrected script.
 - Push of the fix triggers fresh Godot validation and render workflows. No visual approval is claimed until the new render is inspected.
 - No merge to `main`; no production collision, vehicle physics, interaction trigger or server-authoritative entry logic is claimed.
+
+
+## Segmented deck render inspection and follow-up tuning — 2026-11-23
+
+- Corrected helper return type was validated by Godot 4.7.2; validation run `45168500103` succeeded.
+- Exact scene render run `45168499368` succeeded and artifact `14815357593` was retrieved and inspected as a 1280x720 PNG.
+- Inspection shows the side decks are still too horizontal/flat and the portal glow is overly cyan compared with the user's navy-blue and gold reference.
+- Follow-up commit `470505ec162b2edf93ae0ca44269d5399eb2f56f` strengthens the deck-end drop, tapers depth toward the ends, adds a slight segment slope, and tones the portal to a restrained deep blue.
+- This follow-up still requires a fresh Godot validation and rendered preview. It is not yet visually verified.
+- The current image is a genuine scene capture but still only a low-detail blockout. No final ship asset, collision, vehicle physics, interaction trigger or server-authoritative entry logic is claimed. No merge to `main`.
