@@ -119,6 +119,8 @@ func _process(_delta: float) -> void:
 			vehicle_interaction_button.visible = false
 		if is_instance_valid(vehicle_summon_button):
 			vehicle_summon_button.visible = false
+		if is_instance_valid(vehicle_exit_button):
+			vehicle_exit_button.visible = false
 		return
 	_guard_player_safety()
 	# المركبات تخص مساحة المدينة؛ أخفِ أدواتها طوال الانتقال أو الوجود داخل مبنى.
@@ -453,10 +455,6 @@ func _sync_vehicle_occupant_pose() -> void:
 		return
 	player.global_position = city_vehicle.to_global(Vector3(0.0, 1.05, -0.18))
 	player.global_rotation.y = city_vehicle.global_rotation.y
-	var avatar_visual := player.get_node_or_null("AvatarVisual")
-	if is_instance_valid(avatar_visual) and avatar_visual.has_method("set_motion_state"):
-		avatar_visual.call("set_motion_state", "sit", 0.0)
-
 func _exit_contextual_state() -> void:
 	if scooter_occupied:
 		_exit_player_scooter()
