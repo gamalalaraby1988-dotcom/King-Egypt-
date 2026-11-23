@@ -13,6 +13,7 @@ Open the scene directly in Godot 4.7+ to inspect the schematic blockout. It is d
 - A visual shallow-water transition band and a continuous sandy beach extended around the existing handball area.
 - The handball court integrated into the beach as a marked play zone on the same sand surface, with no separate raised pad; its current center and reserved footprint are retained.
 - A new open-air beach fitness zone on the western side of the beach, separated from the handball play area. It has an open-sided shade pergola, pull-up bar, parallel bars, stretching rail, and bench silhouettes, with a direct sea-facing open layout.
+- A low-profile compacted-sand pedestrian activity path linking the gym and handball court along the southern side of the beach, with short connectors to each activity zone.
 - A royal bridge concept with an 8.5m two-way carriageway, 2.25m protected pedestrian paths on each side, barriers, and an arrival platform.
 - The current ship and pier location shown as reference outlines only; the approved ship asset is not recreated or moved.
 - The existing southern road at approximately Z=95 marked as a conflict requiring a later route redesign.
@@ -23,6 +24,7 @@ Open the scene directly in Godot 4.7+ to inspect the schematic blockout. It is d
 - Shoreline and beach extents are schematic, not surveyed or approved final coordinates.
 - The beach court is a schematic 42m × 36m reserved area with low-profile boundary lines; sports clearances and equipment are not finalized.
 - The open-air gym visual footprint is 26m × 16m, centered approximately at X=-48m, Z=132m. It is a beach activity zone, not an enclosed building; equipment dimensions and accessibility clearances are provisional.
+- The activity path is a 2.4m-wide, low-profile visual strip centered near Z=146m, with connectors toward the gym and court. It is not collision-tested.
 - No boat clearance is assumed below the bridge.
 - The visual shallow-water band is not walkable gameplay geometry.
 - No collision, equipment interaction, vehicle handling, water-depth logic, server-side boundary protection, or Android performance validation is included.
