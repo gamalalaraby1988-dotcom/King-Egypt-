@@ -45,6 +45,15 @@ func _initialize() -> void:
 		failures.append("Remote riders must render the authoritative jet ski snapshot.")
 	if not hud.contains('AuthoritativeGameServer.send_jet_ski_input('):
 		failures.append("Online HUD must send controls rather than relying on local physics.")
+	var controller_file := FileAccess.open("res://scripts/jet_ski_controller.gd", FileAccess.READ)
+	if controller_file == null:
+		failures.append("Jet ski prediction controller could not be read.")
+	else:
+		var controller := controller_file.get_as_text()
+		if not controller.contains("func reconcile_authoritative_state("):
+			failures.append("Local prediction must reconcile position, rotation, and velocity with server snapshots.")
+	if not main.contains('city_jet_ski.call("reconcile_authoritative_state", position, rotation_y, _velocity)'):
+		failures.append("The local rider must apply server corrections through the prediction reconciler.")
 	if not failures.is_empty():
 		for failure in failures:
 			push_error(failure)
