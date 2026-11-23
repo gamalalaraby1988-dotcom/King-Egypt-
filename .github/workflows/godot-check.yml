@@ -2,7 +2,7 @@ name: Godot project check
 
 on:
   push:
-    branches: [main, sync-latest-approved-decisions-77-79]
+    branches: [main, sync-latest-approved-decisions-77-79, review/nile-waterfront-production-preview]
   pull_request:
     branches: [main]
   workflow_dispatch:
