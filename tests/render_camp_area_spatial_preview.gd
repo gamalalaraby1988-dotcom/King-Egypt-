@@ -105,6 +105,8 @@ func _capture() -> void:
 			return
 
 	var captures := [
+		["05_expanded_city_center_overview.png", Vector3(112.0, 112.0, 28.0), Vector3(0.0, 4.0, -92.0), 72.0],
+		["06_expanded_city_center_detail.png", Vector3(82.0, 78.0, -8.0), Vector3(0.0, 4.0, -128.0), 66.0],
 		["01_development_and_mountain_overview.png", Vector3(104.0, 112.0, -125.0), Vector3(0.0, 8.0, -245.0), 72.0],
 		["02_development_buildings.png", Vector3(0.0, 52.0, -150.0), Vector3(0.0, 6.0, -214.0), 62.0],
 		["03_mountain_route_and_summit.png", Vector3(66.0, 92.0, -202.0), Vector3(0.0, 10.0, -255.0), 68.0],
