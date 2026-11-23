@@ -41,8 +41,25 @@ func _run() -> void:
 	avatar.call("set_phone_screen_content", "متجر المركبات", ["المال: 100", "سيارة Horus — مملوكة"])
 	await process_frame
 	var screen_content: VBoxContainer = avatar.get("phone_screen_content") as VBoxContainer
-	if not is_instance_valid(screen_content) or screen_content.get_child_count() < 4:
-		_fail("Phone screen did not render the supplied menu entries.")
+	if not is_instance_valid(screen_content):
+		_fail("Phone screen content container is missing.")
+		return
+	var icon_grid := screen_content.get_node_or_null("PhoneAppIconGrid") as GridContainer
+	if not is_instance_valid(icon_grid) or icon_grid.get_child_count() != 9:
+		_fail("Phone screen does not show the nine approved app icons.")
+		return
+	if phone.get_node_or_null("PhoneScreenTouchArea") == null:
+		_fail("Physical phone screen has no touch input area.")
+		return
+	var pressed_apps: Array[String] = []
+	avatar.phone_app_pressed.connect(func(app_id: String) -> void: pressed_apps.append(app_id))
+	var safe_home_icon := icon_grid.get_child(3) as Button
+	if not is_instance_valid(safe_home_icon) or safe_home_icon.tooltip_text != "safe_return":
+		_fail("Safe return icon is missing from the fourth phone app position.")
+		return
+	safe_home_icon.emit_signal("pressed")
+	if not pressed_apps.has("safe_return"):
+		_fail("Pressing the safe return icon did not emit the safe-return action.")
 		return
 	for finger_index in range(3):
 		if phone.get_node_or_null("RightHandFinger_%d" % finger_index) == null:
