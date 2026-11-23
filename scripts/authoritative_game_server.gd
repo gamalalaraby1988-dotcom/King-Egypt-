@@ -654,6 +654,7 @@ func request_leave_arcade_session(session_id: String) -> void:
 func request_jet_ski_mount() -> void:
 	if _is_dedicated_server or not is_authenticated() or not multiplayer.has_multiplayer_peer():
 		return
+	_jet_ski_input_sequence = 0
 	request_jet_ski_mount_rpc.rpc_id(1)
 
 
