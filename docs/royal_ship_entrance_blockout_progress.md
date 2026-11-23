@@ -146,3 +146,12 @@
 - Fresh Godot validation run `45163355882` completed successfully, including import/script validation and headless startup of the exact waterfront preview scene.
 - Fresh render run `45163355847` was still running its environment-install step when this note was added; the revised PNG has not yet been inspected.
 - This remains a stylized primitive-mesh blockout, not a final sculpted Tutankhamun mask asset. No collision, vehicle physics, player interaction or network-authoritative ship entry implementation is claimed. No merge to `main`.
+
+
+## Smooth facial-form render inspection — 2026-11-23
+
+- Render run `45163355847` completed successfully and uploaded artifact `14813530656` from source commit `08c4a1d5084dafe4834b115c1c6a6e9fb3219bf5`.
+- Retrieved and inspected the exact 1280x720 PNG from the Godot waterfront preview scene.
+- The new ellipsoid facial forms and tapered beard are visible, but the mask still reads as a simplified oval gold face with stylized raised features; it does not yet match the detailed sculpted Tutankhamun mask in the user's supplied image. The surrounding vessel remains a low-detail blockout.
+- This confirms the geometry smoothing pass rendered, but visual acceptance is still pending. Next visual milestone should replace the generic oval/primitive face treatment with a dedicated mask-shaped asset or a substantially more sculpted custom mesh, while retaining the approved blue-and-gold nemes, cobra/vulture insignia, collar, central gate, fixed ship position and bridge approach.
+- No production-ready mask or ship asset is claimed. No collision, vehicle physics, player interaction, or network-authoritative ship entry implementation is claimed. No merge to `main`.
