@@ -261,6 +261,41 @@ func _tutankhamun_mask_mesh() -> ArrayMesh:
 	st.generate_normals()
 	return st.commit()
 
+func _royal_ship_hull_mesh() -> ArrayMesh:
+	# Front elevation silhouette: a gently raised bow/stern and a deeper rounded keel.
+	# The mesh is extruded across the ship depth, avoiding the plain rectangular hull block.
+	var outline := PackedVector2Array([
+		Vector2(-33.0, -0.55), Vector2(-31.0, -1.55), Vector2(-27.0, -2.18),
+		Vector2(-19.0, -2.55), Vector2(0.0, -2.72), Vector2(19.0, -2.55),
+		Vector2(27.0, -2.18), Vector2(31.0, -1.55), Vector2(33.0, -0.55),
+		Vector2(33.0, 1.45), Vector2(29.0, 2.05), Vector2(20.0, 2.35),
+		Vector2(-20.0, 2.35), Vector2(-29.0, 2.05), Vector2(-33.0, 1.45)
+	])
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var center := Vector3(0.0, 0.0, 15.0)
+	for i in range(outline.size()):
+		var a := outline[i]
+		var b := outline[(i + 1) % outline.size()]
+		st.add_vertex(center)
+		st.add_vertex(Vector3(a.x, a.y, 15.0))
+		st.add_vertex(Vector3(b.x, b.y, 15.0))
+		st.add_vertex(Vector3(0.0, 0.0, -15.0))
+		st.add_vertex(Vector3(b.x, b.y, -15.0))
+		st.add_vertex(Vector3(a.x, a.y, -15.0))
+		var front_a := Vector3(a.x, a.y, 15.0)
+		var front_b := Vector3(b.x, b.y, 15.0)
+		var back_a := Vector3(a.x, a.y, -15.0)
+		var back_b := Vector3(b.x, b.y, -15.0)
+		st.add_vertex(front_a)
+		st.add_vertex(back_a)
+		st.add_vertex(back_b)
+		st.add_vertex(front_a)
+		st.add_vertex(back_b)
+		st.add_vertex(front_b)
+	st.generate_normals()
+	return st.commit()
+
 func _build_five_civilizations_ship_blockout() -> void:
 	# Reference-matched stationary royal vessel. The uploaded image is the visual authority:
 	# very wide dark-blue cruise-ship silhouette, gold Egyptian ornament, stepped side
@@ -273,7 +308,12 @@ func _build_five_civilizations_ship_blockout() -> void:
 	var dark := Color(0.035, 0.045, 0.065)
 
 	# Broad ship body: long axis across the image, with the entrance facing +Z.
-	_box("FiveCivilizationsShip_MainHull_Wide", Vector3(66.0, 5.0, 30.0), Vector3(0.0, -0.15, 82.5), hull)
+	var sculpted_hull := MeshInstance3D.new()
+	sculpted_hull.name = "FiveCivilizationsShip_MainHull_SculptedSilhouette"
+	sculpted_hull.mesh = _royal_ship_hull_mesh()
+	sculpted_hull.position = Vector3(0.0, -0.15, 82.5)
+	sculpted_hull.material_override = _material(hull, 0.48)
+	add_child(sculpted_hull)
 	_box("FiveCivilizationsShip_Hull_GoldWaterline", Vector3(66.4, 0.22, 29.0), Vector3(0.0, -2.25, 82.5), gold)
 	_box("FiveCivilizationsShip_Hull_BlueUpperBand", Vector3(65.5, 1.25, 28.5), Vector3(0.0, 2.25, 82.5), blue)
 
@@ -332,10 +372,13 @@ func _build_five_civilizations_ship_blockout() -> void:
 	for side: float in [-1.0, 1.0]:
 		_ellipsoid("ShipPharaoh_Ear", Vector3(0.28, 0.52, 0.16), Vector3(side * 2.02, 14.82, 98.28), gold)
 		_ellipsoid("ShipPharaoh_Cheek", Vector3(0.62, 0.42, 0.16), Vector3(side * 1.02, 14.62, 98.34), Color(0.91, 0.72, 0.37))
-		_ellipsoid("ShipPharaoh_EyeSocket", Vector3(0.48, 0.22, 0.12), Vector3(side * 0.88, 15.55, 98.37), Color(0.24, 0.15, 0.08))
-		_ellipsoid("ShipPharaoh_Eye", Vector3(0.31, 0.095, 0.08), Vector3(side * 0.88, 15.55, 98.46), IVORY)
-		_ellipsoid("ShipPharaoh_EyePupil", Vector3(0.075, 0.095, 0.06), Vector3(side * 0.88, 15.55, 98.53), Color(0.08, 0.07, 0.06))
-		var brow := _ellipsoid("ShipPharaoh_GoldBrow", Vector3(0.54, 0.10, 0.10), Vector3(side * 0.90, 15.90, 98.40), gold)
+		_ellipsoid("ShipPharaoh_EyeSocket", Vector3(0.47, 0.15, 0.12), Vector3(side * 0.88, 15.54, 98.37), Color(0.18, 0.10, 0.055))
+		var eye := _ellipsoid("ShipPharaoh_Eye", Vector3(0.30, 0.075, 0.075), Vector3(side * 0.88, 15.55, 98.46), IVORY)
+		eye.rotation_degrees.z = side * -4.0
+		_ellipsoid("ShipPharaoh_EyePupil", Vector3(0.068, 0.082, 0.06), Vector3(side * 0.88, 15.55, 98.53), Color(0.045, 0.035, 0.025))
+		var lower_liner := _ellipsoid("ShipPharaoh_KohlLowerLiner", Vector3(0.34, 0.035, 0.045), Vector3(side * 0.88, 15.43, 98.49), dark)
+		lower_liner.rotation_degrees.z = side * -4.0
+		var brow := _ellipsoid("ShipPharaoh_GoldBrow", Vector3(0.55, 0.075, 0.095), Vector3(side * 0.90, 15.88, 98.40), gold)
 		brow.rotation_degrees.z = side * -5.0
 	# Tapered smooth nose, defined lips and a narrower ceremonial false beard.
 	_ellipsoid("ShipPharaoh_NoseBridge", Vector3(0.22, 0.62, 0.18), Vector3(0.0, 15.03, 98.43), Color(0.91, 0.72, 0.37))
