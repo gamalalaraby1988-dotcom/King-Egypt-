@@ -29,6 +29,8 @@ var motion_time := 0.0
 var animated_defaults: Dictionary = {}
 var phone_using := false
 var phone_visual: Node3D
+var phone_screen_viewport: SubViewport
+var phone_screen_content: VBoxContainer
 
 func _ready() -> void:
 	_build_base_character()
@@ -118,13 +120,67 @@ func _build_phone_visual() -> void:
 	screen.mesh = screen_mesh
 	# الشاشة على جهة +Z لتواجه وجه الشخصية الموجود أمام الهاتف.
 	screen.position.z = 0.014
-	var screen_material := StandardMaterial3D.new()
-	screen_material.albedo_color = Color("#6d9db8")
-	screen_material.emission_enabled = true
-	screen_material.emission = Color("#294c63")
-	screen_material.emission_energy_multiplier = 0.35
-	screen.material_override = screen_material
 	phone_visual.add_child(screen)
+
+	# شاشة فعلية داخل المجسم: تعرض نفس بيانات قائمة الهاتف التي ترسلها واجهة المدينة.
+	phone_screen_viewport = SubViewport.new()
+	phone_screen_viewport.name = "PhoneScreenViewport"
+	phone_screen_viewport.size = Vector2i(256, 448)
+	phone_screen_viewport.transparent_bg = false
+	phone_screen_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	var screen_root := Control.new()
+	screen_root.name = "PhoneScreenRoot"
+	screen_root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	screen_root.add_theme_stylebox_override("panel", _make_phone_screen_style())
+	phone_screen_viewport.add_child(screen_root)
+	phone_screen_content = VBoxContainer.new()
+	phone_screen_content.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	phone_screen_content.add_theme_constant_override("separation", 8)
+	phone_screen_content.add_theme_constant_override("margin_left", 12)
+	phone_screen_content.add_theme_constant_override("margin_right", 12)
+	phone_screen_content.add_theme_constant_override("margin_top", 14)
+	phone_screen_content.add_theme_constant_override("margin_bottom", 14)
+	screen_root.add_child(phone_screen_content)
+	var screen_material := StandardMaterial3D.new()
+	screen_material.albedo_texture = phone_screen_viewport.get_texture()
+	screen_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	screen_material.emission_enabled = true
+	screen_material.emission_energy_multiplier = 0.8
+	screen.material_override = screen_material
+	phone_visual.add_child(phone_screen_viewport)
+	set_phone_screen_content("هاتف اللاعب", ["الأصدقاء", "المحادثات", "المركبات", "الحيوانات الأليفة"])
+
+
+func _make_phone_screen_style() -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color("#101a25")
+	style.border_color = Color("#c6a45b")
+	style.set_border_width_all(3)
+	style.set_corner_radius_all(8)
+	return style
+
+
+func set_phone_screen_content(title: String, entries: Array[String]) -> void:
+	if not is_instance_valid(phone_screen_content):
+		return
+	for child in phone_screen_content.get_children():
+		child.queue_free()
+	var heading := Label.new()
+	heading.text = title
+	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	heading.add_theme_color_override("font_color", Color("#f0d18a"))
+	heading.add_theme_font_size_override("font_size", 20)
+	phone_screen_content.add_child(heading)
+	var separator := HSeparator.new()
+	phone_screen_content.add_child(separator)
+	for entry in entries:
+		var item := Label.new()
+		item.text = "• " + entry
+		item.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		item.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		item.add_theme_color_override("font_color", Color("#f3f5f7"))
+		item.add_theme_font_size_override("font_size", 15)
+		phone_screen_content.add_child(item)
 
 
 func _orient_phone_screen_to_head() -> void:
