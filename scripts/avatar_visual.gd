@@ -59,7 +59,7 @@ func _build_phone_visual() -> void:
 	phone_visual.name = "PlayerPhoneVisual"
 	# إزاحة محلية محسوبة لتعويض زاوية رفع الذراع، ووضع الهاتف أمام الصدر.
 	phone_visual.position = Vector3(0.21, -0.03, -0.245)
-	phone_visual.rotation = Vector3(-0.18, 0.10, -0.16)
+	phone_visual.rotation = Vector3(-0.08, 0.10, 0.62)
 	phone_visual.visible = false
 	right_arm.add_child(phone_visual)
 	var body := MeshInstance3D.new()
