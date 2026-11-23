@@ -353,7 +353,7 @@ func _ship_deck_ribbon_mesh(width: float, depth: float, thickness: float) -> Arr
 	st.generate_normals()
 	return st.commit()
 
-func _ship_deck_ribbon(label: String, width: float, depth: float, thickness: float, position: Vector3, color: Color) -> MeshInstance3D:
+func _ship_deck_ribbon(label: String, width: float, depth: float, thickness: float, position: Vector3, color: Color) -> Node3D:
 	# Build a smooth-looking curved fascia from narrow overlapping segments.
 	# This avoids the oversized planar faces and inconsistent normals of the first ribbon mesh.
 	var root := Node3D.new()
