@@ -128,7 +128,7 @@ func _process(_delta: float) -> void:
 	if scooter_occupied and (not is_instance_valid(city_scooter) or not is_instance_valid(city_scooter.get_node_or_null("Player"))):
 		_recover_scooter_occupancy()
 	var player := get_node_or_null("Player") as CharacterBody3D
-	var player_needs_exit := is_instance_valid(player) and (player.get("sitting") == true or player.get("animal_riding") == true)
+	var player_needs_exit: bool = is_instance_valid(player) and (player.get("sitting") == true or player.get("animal_riding") == true)
 	if vehicle_occupied or scooter_occupied or player_needs_exit:
 		if is_instance_valid(vehicle_interaction_button):
 			vehicle_interaction_button.visible = true
