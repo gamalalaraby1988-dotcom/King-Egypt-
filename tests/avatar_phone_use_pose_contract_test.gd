@@ -45,6 +45,9 @@ func _run() -> void:
 	if not is_equal_approx(right_arm.rotation.z, -0.78):
 		_fail("Right arm did not enter the configured phone-use pose.")
 		return
+	if absf(phone.global_position.y - 1.43) > 0.05:
+		_fail("Phone dropped below the lower face when phone-use mode started.")
+		return
 	var head_to_phone := (phone.global_position - head.global_position).normalized()
 	var head_forward := -head.global_transform.basis.z.normalized()
 	if head_forward.dot(head_to_phone) < 0.95:
@@ -70,6 +73,9 @@ func _run() -> void:
 	if not phone.visible or not is_equal_approx(right_arm.rotation.z, -0.78):
 		_fail("Phone or right-arm pose was lost while walking.")
 		return
+	if absf(phone.global_position.y - 1.43) > 0.05:
+		_fail("Phone dropped below the lower face while walking.")
+		return
 	if is_zero_approx(left_leg.rotation.x):
 		_fail("Left leg did not animate while walking with the phone.")
 		return
@@ -78,6 +84,9 @@ func _run() -> void:
 	await create_timer(0.25).timeout
 	if not phone.visible or not is_equal_approx(right_arm.rotation.z, -0.78):
 		_fail("Phone or right-arm pose was lost while running.")
+		return
+	if absf(phone.global_position.y - 1.43) > 0.05:
+		_fail("Phone dropped below the lower face while running.")
 		return
 	if is_zero_approx(left_leg.rotation.x):
 		_fail("Left leg did not animate while running with the phone.")
