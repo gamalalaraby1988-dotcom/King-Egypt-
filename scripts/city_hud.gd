@@ -22,6 +22,7 @@ var money_label: Button
 var chips_label: Button
 var gems_label: Button
 var phone_popup: PanelContainer
+var phone_entry_button: Button
 var vehicle_store_list: VBoxContainer
 var vehicle_store_status: Label
 var player_popup: PanelContainer
@@ -91,6 +92,7 @@ func _ready() -> void:
 	_build_group_popup()
 	_build_group_chat_popup()
 	_build_social_popup()
+	_build_phone_entry_button()
 	if not PlayerFriendsClient.friends_updated.is_connected(_on_social_friends_updated):
 		PlayerFriendsClient.friends_updated.connect(_on_social_friends_updated)
 	if not PlayerFriendsClient.requests_updated.is_connected(_on_social_requests_updated):
@@ -141,6 +143,31 @@ func _unhandled_input(event: InputEvent) -> void:
 	for panel in open_popups:
 		if is_instance_valid(panel):
 			panel.visible = false
+
+
+func _build_phone_entry_button() -> void:
+	# أيقونة هاتف اللاعب ثابتة في الزاوية العليا اليمنى.
+	phone_entry_button = Button.new()
+	phone_entry_button.name = "PlayerPhoneEntryButton"
+	phone_entry_button.text = "📱"
+	phone_entry_button.tooltip_text = "هاتف اللاعب"
+	phone_entry_button.custom_minimum_size = Vector2(48, 48)
+	phone_entry_button.anchor_left = 1.0
+	phone_entry_button.anchor_right = 1.0
+	phone_entry_button.anchor_top = 0.0
+	phone_entry_button.anchor_bottom = 0.0
+	phone_entry_button.offset_left = -58.0
+	phone_entry_button.offset_right = -10.0
+	phone_entry_button.offset_top = 10.0
+	phone_entry_button.offset_bottom = 58.0
+	phone_entry_button.add_theme_font_size_override("font_size", 22)
+	phone_entry_button.add_theme_stylebox_override("normal", _make_hud_panel_style())
+	phone_entry_button.pressed.connect(_on_phone_entry_pressed)
+	root.add_child(phone_entry_button)
+
+
+func _on_phone_entry_pressed() -> void:
+	_open_vehicle_store_phone()
 
 
 func _build() -> void:
@@ -802,6 +829,14 @@ func _open_vehicle_store_phone() -> void:
 		_build_vehicle_store_phone()
 	_refresh_vehicle_store_phone()
 	phone_popup.visible = true
+	if is_instance_valid(phone_entry_button):
+		phone_entry_button.visible = false
+
+func _close_vehicle_store_phone() -> void:
+	if is_instance_valid(phone_popup):
+		phone_popup.visible = false
+	if is_instance_valid(phone_entry_button):
+		phone_entry_button.visible = true
 
 func _build_vehicle_store_phone() -> void:
 	phone_popup = PanelContainer.new()
@@ -835,7 +870,7 @@ func _build_vehicle_store_phone() -> void:
 	var close_phone := Button.new()
 	close_phone.text = "✕"
 	close_phone.custom_minimum_size = Vector2(38, 34)
-	close_phone.pressed.connect(func(): phone_popup.visible = false)
+	close_phone.pressed.connect(_close_vehicle_store_phone)
 	header.add_child(close_phone)
 	var wallet_line := Label.new()
 	wallet_line.name = "VehicleStoreWalletLine"
@@ -853,7 +888,7 @@ func _build_vehicle_store_phone() -> void:
 	content.add_child(vehicle_store_status)
 	var close_button := Button.new()
 	close_button.text = "إغلاق الهاتف"
-	close_button.pressed.connect(func(): phone_popup.visible = false)
+	close_button.pressed.connect(_close_vehicle_store_phone)
 	content.add_child(close_button)
 
 func _refresh_vehicle_store_phone() -> void:
