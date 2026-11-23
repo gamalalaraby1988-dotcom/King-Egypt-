@@ -967,6 +967,38 @@ func _refresh_vehicle_store_phone() -> void:
 			WalletManager.get_balance("chips"),
 			WalletManager.get_balance("gems")
 		]
+	_sync_local_phone_screen(catalog, owned, selected)
+
+
+func _sync_local_phone_screen(catalog: Dictionary, owned: Array, selected: String) -> void:
+	var player := main_scene.find_child("Player", true, false) as Node if is_instance_valid(main_scene) else null
+	if not is_instance_valid(player):
+		return
+	var avatar := player.get_node_or_null("AvatarVisual")
+	if not is_instance_valid(avatar) or not avatar.has_method("set_phone_screen_content"):
+		return
+	var entries: Array[String] = []
+	entries.append("المال: %d" % WalletManager.get_balance("money"))
+	entries.append("الرقائق: %d" % WalletManager.get_balance("chips"))
+	entries.append("الجواهر: %d" % WalletManager.get_balance("gems"))
+	for vehicle_id in catalog:
+		var offer: Dictionary = catalog[vehicle_id]
+		var price := int(offer.get("price", -1))
+		var currency := str(offer.get("currency", "money"))
+		var currency_name := "جوهرة" if currency == "gems" else "رقاقة" if currency == "chips" else "جنيه"
+		var status := "مملوكة" if owned.has(vehicle_id) else ("السعر غير معتمد" if price < 0 else ("مجانية" if price == 0 else "%d %s" % [price, currency_name]))
+		if selected == str(vehicle_id):
+			status += " • مختارة"
+		entries.append("%s — %s — %s" % [str(offer.get("name", vehicle_id)), str(offer.get("country", "")), status])
+	if owned.has("horus_2030"):
+		entries.append("ألوان Horus 2030")
+		for color_id in VehicleStoreManager.get_horus_colors():
+			var color: Dictionary = VehicleStoreManager.get_horus_colors()[color_id]
+			var owned_colors: Array = VehicleStoreManager.get_owned_horus_colors()
+			var color_status := "مملوك" if owned_colors.has(color_id) else "%d جوهرة" % int(color.get("price", -1))
+			entries.append("%s — %s" % [str(color.get("name", color_id)), color_status])
+	avatar.call("set_phone_screen_content", "متجر المركبات", entries)
+
 
 func _buy_vehicle_from_phone(vehicle_id: String) -> void:
 	if VehicleStoreManager.purchase_vehicle(vehicle_id):
