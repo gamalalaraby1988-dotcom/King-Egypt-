@@ -1,4 +1,9 @@
 extends Node
+
+const JetSkiNetworkContract = preload("res://scripts/jet_ski_network_contract.gd")
+const JET_SKI_SERVER_LAUNCH_POSITION := Vector3(0.0, 0.34, 82.0)
+const JET_SKI_SERVER_BOARDING_RADIUS := 8.0
+const JET_SKI_RIDER_OFFSET := Vector3(0.0, 0.88, 0.28)
 ## Dedicated WSS game authority. Clients submit bounded movement input, never positions.
 ## Server-side collision uses the loaded city physics world. Objective zones remain disabled
 ## until their canonical server coordinates and evidence rules are configured.
@@ -22,6 +27,7 @@ signal arcade_session_verified(session_id: String, server_event_id: String, mach
 signal arcade_slot_spin_settled(session_id: String, result: Dictionary)
 signal arcade_slot_spin_failed(session_id: String, message: String)
 signal jet_ski_race_state_changed(state: String, participant_count: int, message: String)
+signal jet_ski_mount_result_received(success: bool, message: String)
 
 const DEFAULT_PORT := 2456
 const MAX_PLAYERS := 64
@@ -51,6 +57,7 @@ var _walk_progress_requests: Dictionary = {}
 var _pending_mission_progress_lookups: Dictionary = {}
 var _is_dedicated_server := false
 var _input_sequence := 0
+var _jet_ski_input_sequence := 0
 var _snapshot_elapsed := 0.0
 var _client_authenticated := false
 var _objective_zones: Dictionary = {}
@@ -427,6 +434,17 @@ func _on_peer_connected(peer_id: int) -> void:
 		"sprint": false,
 		"velocity": Vector3.ZERO,
 		"last_sequence": -1,
+		"jet_ski_mounted": false,
+		"jet_ski_position": Vector3.ZERO,
+		"jet_ski_rotation_y": 0.0,
+		"jet_ski_velocity": Vector3.ZERO,
+		"jet_ski_throttle": 0.0,
+		"jet_ski_brake": 0.0,
+		"jet_ski_steering": 0.0,
+		"jet_ski_last_sequence": 0,
+		"jet_ski_last_input_usec": 0,
+		"jet_ski_input_window_usec": Time.get_ticks_usec(),
+		"jet_ski_input_count": 0,
 		"last_input_usec": 0,
 		"last_emote_usec": 0,
 		"active_emote": "",
@@ -629,6 +647,128 @@ func request_leave_arcade_session(session_id: String) -> void:
 	if _is_dedicated_server or not is_authenticated():
 		return
 	request_leave_arcade_session_rpc.rpc_id(1, session_id)
+
+
+func request_jet_ski_mount() -> void:
+	if _is_dedicated_server or not is_authenticated() or not multiplayer.has_multiplayer_peer():
+		return
+	request_jet_ski_mount_rpc.rpc_id(1)
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func request_jet_ski_mount_rpc() -> void:
+	if not multiplayer.is_server():
+		return
+	var peer_id := multiplayer.get_remote_sender_id()
+	if not _sessions.has(peer_id):
+		return
+	var session: Dictionary = _sessions[peer_id]
+	if not bool(session.get("authenticated", false)) or bool(session.get("jet_ski_mounted", false)) or bool(session.get("is_sitting", false)):
+		return
+	var body := session.get("body") as CharacterBody3D
+	if not is_instance_valid(body) or body.global_position.distance_to(JET_SKI_SERVER_LAUNCH_POSITION) > JET_SKI_SERVER_BOARDING_RADIUS:
+		rpc_id(peer_id, "receive_jet_ski_mount_result", false, "اقترب من بوابة الجت سكي الملكية أولًا.")
+		return
+	for other_variant in _sessions.keys():
+		var other_peer := int(other_variant)
+		if other_peer != peer_id and bool((_sessions[other_peer] as Dictionary).get("jet_ski_mounted", false)):
+			rpc_id(peer_id, "receive_jet_ski_mount_result", false, "الجت سكي مشغولة حاليًا.")
+			return
+	var now_usec := Time.get_ticks_usec()
+	session["jet_ski_mounted"] = true
+	session["jet_ski_position"] = JET_SKI_SERVER_LAUNCH_POSITION
+	session["jet_ski_rotation_y"] = body.rotation.y
+	session["jet_ski_velocity"] = Vector3.ZERO
+	session["jet_ski_throttle"] = 0.0
+	session["jet_ski_brake"] = 0.0
+	session["jet_ski_steering"] = 0.0
+	session["jet_ski_last_input_usec"] = now_usec
+	session["is_sitting"] = true
+	session["direction"] = Vector3.ZERO
+	session["sprint"] = false
+	body.global_position = JET_SKI_SERVER_LAUNCH_POSITION + JET_SKI_RIDER_OFFSET
+	body.velocity = Vector3.ZERO
+	session["velocity"] = Vector3.ZERO
+	_sessions[peer_id] = session
+	rpc_id(peer_id, "receive_jet_ski_mount_result", true, "تم تأكيد ركوب الجت سكي على الخادم.")
+
+
+func request_jet_ski_unmount() -> void:
+	if _is_dedicated_server or not is_authenticated() or not multiplayer.has_multiplayer_peer():
+		return
+	request_jet_ski_unmount_rpc.rpc_id(1)
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func request_jet_ski_unmount_rpc() -> void:
+	if not multiplayer.is_server():
+		return
+	var peer_id := multiplayer.get_remote_sender_id()
+	if not _sessions.has(peer_id):
+		return
+	var session: Dictionary = _sessions[peer_id]
+	if not bool(session.get("authenticated", false)) or not bool(session.get("jet_ski_mounted", false)):
+		return
+	var body := session.get("body") as CharacterBody3D
+	if not is_instance_valid(body):
+		return
+	var craft_position: Vector3 = session.get("jet_ski_position", JET_SKI_SERVER_LAUNCH_POSITION)
+	var craft_rotation := float(session.get("jet_ski_rotation_y", 0.0))
+	var right := Vector3(cos(craft_rotation), 0.0, -sin(craft_rotation))
+	body.global_position = craft_position + right * 2.0 + Vector3.UP * 0.15
+	body.velocity = Vector3.ZERO
+	session["jet_ski_mounted"] = false
+	session["jet_ski_throttle"] = 0.0
+	session["jet_ski_brake"] = 0.0
+	session["jet_ski_steering"] = 0.0
+	session["jet_ski_velocity"] = Vector3.ZERO
+	session["is_sitting"] = false
+	session["velocity"] = Vector3.ZERO
+	session["last_input_usec"] = Time.get_ticks_usec()
+	_sessions[peer_id] = session
+
+
+func send_jet_ski_input(throttle: float, brake: float, steering: float) -> void:
+	if _is_dedicated_server or not is_authenticated() or not multiplayer.has_multiplayer_peer():
+		return
+	_jet_ski_input_sequence += 1
+	submit_jet_ski_input.rpc_id(1, _jet_ski_input_sequence, throttle, brake, steering)
+
+
+@rpc("any_peer", "call_remote", "unreliable_ordered")
+func submit_jet_ski_input(sequence: int, throttle: Variant, brake: Variant, steering: Variant) -> void:
+	if not multiplayer.is_server():
+		return
+	var peer_id := multiplayer.get_remote_sender_id()
+	if not _sessions.has(peer_id):
+		return
+	var session: Dictionary = _sessions[peer_id]
+	if not bool(session.get("authenticated", false)) or not bool(session.get("jet_ski_mounted", false)):
+		return
+	var now_usec := Time.get_ticks_usec()
+	var validation := JetSkiNetworkContract.validate_input(
+		throttle, brake, steering, sequence,
+		int(session.get("jet_ski_last_sequence", 0)), now_usec,
+		int(session.get("jet_ski_input_window_usec", now_usec)),
+		int(session.get("jet_ski_input_count", 0))
+	)
+	if not bool(validation.get("accepted", false)):
+		return
+	session["jet_ski_last_sequence"] = sequence
+	session["jet_ski_last_input_usec"] = now_usec
+	session["jet_ski_input_window_usec"] = int(validation["window_start_usec"])
+	session["jet_ski_input_count"] = int(validation["window_count"])
+	session["jet_ski_throttle"] = float(validation["throttle"])
+	session["jet_ski_brake"] = float(validation["brake"])
+	session["jet_ski_steering"] = float(validation["steering"])
+	_sessions[peer_id] = session
+
+
+@rpc("authority", "call_remote", "reliable")
+func receive_jet_ski_mount_result(success: bool, message: String) -> void:
+	if multiplayer.is_server() or not is_authenticated():
+		return
+	jet_ski_mount_result_received.emit(success, message)
 
 
 func send_movement_input(world_direction: Vector3, sprint: bool) -> void:
@@ -1998,6 +2138,32 @@ func _physics_process(delta: float) -> void:
 		var body := session.get("body") as CharacterBody3D
 		if not is_instance_valid(body):
 			continue
+		if bool(session.get("jet_ski_mounted", false)):
+			var last_jet_input_usec := int(session.get("jet_ski_last_input_usec", 0))
+			if now_usec - last_jet_input_usec > 250000:
+				session["jet_ski_throttle"] = 0.0
+				session["jet_ski_brake"] = 0.0
+				session["jet_ski_steering"] = 0.0
+			var jet_state := JetSkiNetworkContract.step_motion(
+				session.get("jet_ski_position", JET_SKI_SERVER_LAUNCH_POSITION),
+				float(session.get("jet_ski_rotation_y", 0.0)),
+				session.get("jet_ski_velocity", Vector3.ZERO),
+				float(session.get("jet_ski_throttle", 0.0)),
+				float(session.get("jet_ski_brake", 0.0)),
+				float(session.get("jet_ski_steering", 0.0)),
+				safe_delta
+			)
+			session["jet_ski_position"] = jet_state["position"]
+			session["jet_ski_rotation_y"] = jet_state["rotation_y"]
+			session["jet_ski_velocity"] = jet_state["velocity"]
+			body.global_position = jet_state["position"] + JET_SKI_RIDER_OFFSET.rotated(Vector3.UP, float(jet_state["rotation_y"]))
+			body.rotation.y = float(jet_state["rotation_y"])
+			body.velocity = Vector3.ZERO
+			session["velocity"] = Vector3.ZERO
+			session["direction"] = Vector3.ZERO
+			session["sprint"] = false
+			_sessions[peer_id] = session
+			continue
 		var current_position := body.global_position
 		var movement_start_position := current_position
 		var was_grounded := body.is_on_floor()
@@ -2137,6 +2303,10 @@ func _build_remote_player_snapshots() -> Dictionary:
 			"position": source_body.global_position,
 			"rotation_y": source_body.rotation.y,
 			"velocity": source_body.velocity,
+			"is_jet_ski_riding": bool(source_session.get("jet_ski_mounted", false)),
+			"jet_ski_position": source_session.get("jet_ski_position", Vector3.ZERO),
+			"jet_ski_rotation_y": float(source_session.get("jet_ski_rotation_y", 0.0)),
+			"jet_ski_velocity": source_session.get("jet_ski_velocity", Vector3.ZERO),
 			"active_emote": str(source_session.get("active_emote", "")),
 			"emote_remaining": maxf(0.0, float(int(source_session.get("emote_until_usec", 0)) - Time.get_ticks_usec()) / 1000000.0),
 			"is_sitting": bool(source_session.get("is_sitting", false))
@@ -2208,6 +2378,14 @@ func receive_remote_players(players: Array) -> void:
 		if safe_emote_remaining <= 0.0:
 			safe_emote = ""
 		var safe_sitting: bool = bool(sitting_variant) if sitting_variant is bool else false
+		var riding_variant: Variant = player.get("is_jet_ski_riding", false)
+		var jet_position_variant: Variant = player.get("jet_ski_position", Vector3.ZERO)
+		var jet_velocity_variant: Variant = player.get("jet_ski_velocity", Vector3.ZERO)
+		var jet_rotation_variant: Variant = player.get("jet_ski_rotation_y", 0.0)
+		var safe_jet_position: Vector3 = jet_position_variant if jet_position_variant is Vector3 else Vector3.ZERO
+		var safe_jet_velocity: Vector3 = jet_velocity_variant if jet_velocity_variant is Vector3 else Vector3.ZERO
+		var safe_jet_rotation := float(jet_rotation_variant) if jet_rotation_variant is float or jet_rotation_variant is int else 0.0
+		var safe_jet_riding := riding_variant is bool and bool(riding_variant) and jet_position_variant is Vector3 and jet_velocity_variant is Vector3 and is_finite(safe_jet_rotation)
 		seen_peer_ids[int(peer_id_variant)] = true
 		safe_players.append({
 			"peer_id": int(peer_id_variant),
@@ -2216,7 +2394,11 @@ func receive_remote_players(players: Array) -> void:
 			"velocity": remote_velocity,
 			"active_emote": safe_emote,
 			"emote_remaining": safe_emote_remaining,
-			"is_sitting": safe_sitting
+			"is_sitting": safe_sitting,
+			"is_jet_ski_riding": safe_jet_riding,
+			"jet_ski_position": safe_jet_position,
+			"jet_ski_rotation_y": safe_jet_rotation,
+			"jet_ski_velocity": safe_jet_velocity
 		})
 		if safe_players.size() >= MAX_PLAYERS - 1:
 			break
