@@ -15,6 +15,18 @@ func _run_vehicle_control_contract() -> void:
 	var vehicle := vehicle_scene.instantiate() as CharacterBody3D
 	root.add_child(vehicle)
 	await process_frame
+	var cabin := vehicle.get_node_or_null("Cabin") as MeshInstance3D
+	var cabin_material := cabin.material_override as BaseMaterial3D if is_instance_valid(cabin) else null
+	if cabin_material == null or cabin_material.transparency != BaseMaterial3D.TRANSPARENCY_ALPHA:
+		push_error("Vehicle cabin is not transparent enough to show the seated avatar.")
+		quit(1)
+		return
+	var main_source := FileAccess.get_file_as_string("res://scripts/main.gd")
+	if not main_source.contains("vehicle_exit_button") or not main_source.contains("_on_contextual_interaction_down") or not main_source.contains("_sync_vehicle_occupant_pose"):
+		push_error("Main scene is missing the separate exit, contextual brake, or visible driver-seat binding.")
+		quit(1)
+		return
+
 	var hud := vehicle.get_node_or_null("VehicleHUDLayer/VehicleHUD") as Control
 	if hud == null or not hud.has_method("_update_layout"):
 		push_error("Vehicle HUD does not expose the shared joystick layout.")
