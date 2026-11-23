@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900" viewBox="0 0 1200 900">
+<defs>
+ <pattern id="sand" width="18" height="18" patternUnits="userSpaceOnUse"><rect width="18" height="18" fill="#d8bd83"/><circle cx="4" cy="5" r="1" fill="#b99a61"/><circle cx="14" cy="13" r="1" fill="#b99a61"/></pattern>
+ <pattern id="water" width="20" height="20" patternUnits="userSpaceOnUse"><rect width="20" height="20" fill="#1c7190"/><path d="M0 8 Q5 4 10 8 T20 8 M0 17 Q5 13 10 17 T20 17" fill="none" stroke="#7bc4d4" stroke-width="1.4"/></pattern>
+ <pattern id="shallow" width="18" height="18" patternUnits="userSpaceOnUse"><rect width="18" height="18" fill="#72c4c5"/><path d="M0 9 H18" stroke="#d4f0df" stroke-width="1.2"/></pattern>
+ <marker id="arrow" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="#333"/></marker>
+</defs>
+<rect width="1200" height="900" fill="#f4f1e9"/>
+<text x="600" y="42" font-family="Arial" font-size="26" font-weight="bold" text-anchor="middle" fill="#172b3a">KING OF EGYPT CITY — ROYAL WATERFRONT</text>
+<text x="600" y="70" font-family="Arial" font-size="15" text-anchor="middle" fill="#455">Revised shoreline and access proposal • plan view • schematic, not a Godot render</text>
+<!-- main zone map, x scale 4px/m, z scale 7px/m -->
+<rect x="220" y="130" width="760" height="259" fill="url(#water)" stroke="#14536c" stroke-width="2"/>
+<rect x="240" y="389" width="720" height="35" fill="url(#shallow)" stroke="#287d82" stroke-width="2"/>
+<rect x="240" y="424" width="720" height="322" fill="url(#sand)" stroke="#9b7c45" stroke-width="2"/>
+<text x="600" y="240" font-family="Arial" font-size="26" font-weight="bold" fill="white" text-anchor="middle">DEEP OPEN SEA</text>
+<text x="600" y="270" font-family="Arial" font-size="17" fill="white" text-anchor="middle">X = -95..95 • Z = 65..102 • NO LAND COLLISION</text>
+<text x="600" y="412" font-family="Arial" font-size="15" font-weight="bold" fill="#124b54" text-anchor="middle">SHALLOW SHELF • Z = 102..107 • WALKABLE DEDICATED FLOOR</text>
+<text x="600" y="470" font-family="Arial" font-size="23" font-weight="bold" fill="#634b27" text-anchor="middle">CONTINUOUS SAND BEACH • Z = 107..153</text>
+<!-- bridge / platform -->
+<rect x="574" y="295" width="52" height="119" fill="#6c6e72" stroke="#252a31" stroke-width="3"/>
+<rect x="574" y="295" width="52" height="119" fill="none" stroke="#f1d78b" stroke-width="2" stroke-dasharray="8 5"/>
+<text x="646" y="334" font-family="Arial" font-size="14" fill="#fff">Option B bridge</text>
+<rect x="574" y="389" width="52" height="70" fill="#c4a45e" stroke="#755a2b" stroke-width="2"/>
+<text x="646" y="446" font-family="Arial" font-size="13" fill="#4b3b20">real sloped land transition</text>
+<rect x="574" y="366" width="52" height="70" fill="#d8b96e" stroke="#755a2b" stroke-width="2" opacity=".9"/>
+<text x="646" y="378" font-family="Arial" font-size="13" fill="#fff">arrival platform</text>
+<!-- ship -->
+<path d="M560 205 L640 205 L650 300 L600 330 L550 300 Z" fill="#f1eee3" stroke="#8c6a28" stroke-width="4"/>
+<path d="M570 223 L630 223 L636 292 L600 314 L564 292 Z" fill="none" stroke="#c5a04a" stroke-width="3"/>
+<text x="600" y="260" font-family="Arial" font-size="16" font-weight="bold" fill="#55431f" text-anchor="middle">FIXED SHIP</text>
+<text x="600" y="281" font-family="Arial" font-size="12" fill="#55431f" text-anchor="middle">existing position</text>
+<!-- gangway conceptual side -->
+<path d="M626 367 L674 325 L690 325" fill="none" stroke="#8a5b22" stroke-width="8" stroke-linecap="round"/>
+<path d="M626 361 L674 319" fill="none" stroke="#f7e6b5" stroke-width="3"/>
+<text x="700" y="316" font-family="Arial" font-size="13" fill="#5b411d">gangway concept</text>
+<!-- court/gym -->
+<rect x="640" y="500" width="168" height="145" fill="#e9d39c" stroke="#7c653a" stroke-width="2"/>
+<rect x="670" y="535" width="108" height="48" fill="none" stroke="#fff" stroke-width="3"/>
+<text x="724" y="610" font-family="Arial" font-size="15" font-weight="bold" fill="#574323" text-anchor="middle">BEACH COURT</text>
+<rect x="330" y="540" width="104" height="112" fill="#b88b4e" stroke="#654d2c" stroke-width="2"/>
+<text x="382" y="590" font-family="Arial" font-size="14" fill="#fff" text-anchor="middle">OPEN-AIR</text>
+<text x="382" y="610" font-family="Arial" font-size="14" fill="#fff" text-anchor="middle">GYM</text>
+<path d="M382 660 L382 690 L724 690 L724 650" stroke="#9c7740" stroke-width="10" fill="none" stroke-dasharray="10 5"/>
+<text x="550" y="720" font-family="Arial" font-size="13" fill="#654d2c" text-anchor="middle">2.4m compacted-sand activity path (existing preview alignment)</text>
+<!-- boundaries labels -->
+<path d="M180 389 H220 M180 424 H240" stroke="#333" stroke-width="1.5"/>
+<text x="165" y="394" font-family="Arial" font-size="14" text-anchor="end" fill="#222">Z=102</text>
+<text x="165" y="429" font-family="Arial" font-size="14" text-anchor="end" fill="#222">Z=107</text>
+<path d="M1020 130 V746" stroke="#333" stroke-width="1.5" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+<text x="1042" y="440" font-family="Arial" font-size="15" fill="#333" transform="rotate(90 1042 440)" text-anchor="middle">NORTH (low Z) → SOUTH (high Z)</text>
+<!-- legend -->
+<rect x="70" y="790" width="1060" height="75" rx="12" fill="#fff" stroke="#bbb"/>
+<rect x="95" y="812" width="28" height="22" fill="url(#water)" stroke="#14536c"/><text x="133" y="829" font-family="Arial" font-size="14" fill="#222">Deep sea — no ground collider</text>
+<rect x="365" y="812" width="28" height="22" fill="url(#shallow)" stroke="#287d82"/><text x="403" y="829" font-family="Arial" font-size="14" fill="#222">Shallow — dedicated walkable shelf</text>
+<rect x="700" y="812" width="28" height="22" fill="url(#sand)" stroke="#9b7c45"/><text x="738" y="829" font-family="Arial" font-size="14" fill="#222">Beach — dedicated sand collision</text>
+<text x="600" y="884" font-family="Arial" font-size="12" text-anchor="middle" fill="#555">Conceptual layout only. Gangway route/landing remains subject to inspection of the actual ship mesh.</text>
+</svg>
