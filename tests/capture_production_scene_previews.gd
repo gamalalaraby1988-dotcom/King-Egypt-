@@ -102,6 +102,28 @@ func _capture_previews() -> void:
 		quit(1)
 		return
 
+	# Capture the actual production waterfront from a high oblique overview.
+	# These cameras are temporary and do not modify the saved city scene.
+	var waterfront_wide_ok := await _capture_view(
+		"nile_waterfront_overview.png",
+		Vector3(52.0, 78.0, 28.0),
+		Vector3(24.0, 0.0, 101.0),
+		68.0
+	)
+	if not waterfront_wide_ok:
+		quit(1)
+		return
+
+	var waterfront_detail_ok := await _capture_view(
+		"nile_waterfront_detail.png",
+		Vector3(34.0, 32.0, 52.0),
+		Vector3(8.0, 1.0, 96.0),
+		58.0
+	)
+	if not waterfront_detail_ok:
+		quit(1)
+		return
+
 	print("Production-scene previews saved in ", OUTPUT_DIR)
 	quit(0)
 
