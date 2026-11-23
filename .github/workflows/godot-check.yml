@@ -213,6 +213,22 @@ jobs:
             exit 1
           fi
 
+
+      - name: Run royal jet ski participant gate tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          GODOT="/tmp/godot/Godot_v4.7.2-stable_linux.x86_64"
+          LOG="/tmp/godot-royal-jet-ski-participant-gate.log"
+          set +e
+          "$GODOT" --headless --path . --script res://tests/royal_jet_ski_race_participant_gate_test.gd 2>&1 | tee "$LOG"
+          GODOT_STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$GODOT_STATUS" -ne 0 ] || grep -E '(^|[[:space:]])(ERROR|SCRIPT ERROR):|Parse Error:' "$LOG"; then
+            echo "Royal jet ski participant gate tests failed."
+            exit 1
+          fi
+
       - name: Run city adventure activity contract tests
         shell: bash
         run: |
