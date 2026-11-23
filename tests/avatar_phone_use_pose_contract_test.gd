@@ -38,6 +38,31 @@ func _run() -> void:
 		_fail("Head did not tilt toward the phone.")
 		return
 
+	# Verify that phone-use pose remains active during both walking and running.
+	var left_leg: MeshInstance3D = parts.get("LeftLeg") as MeshInstance3D
+	if not is_instance_valid(left_leg):
+		_fail("Left leg was not created for movement animation.")
+		return
+	avatar.call("set_motion_state", "walk", 2.0)
+	await create_timer(0.25).timeout
+	if not phone.visible or not is_equal_approx(right_arm.rotation.z, -0.78):
+		_fail("Phone or right-arm pose was lost while walking.")
+		return
+	if is_zero_approx(left_leg.rotation.x):
+		_fail("Left leg did not animate while walking with the phone.")
+		return
+
+	avatar.call("set_motion_state", "run", 4.0)
+	await create_timer(0.25).timeout
+	if not phone.visible or not is_equal_approx(right_arm.rotation.z, -0.78):
+		_fail("Phone or right-arm pose was lost while running.")
+		return
+	if is_zero_approx(left_leg.rotation.x):
+		_fail("Left leg did not animate while running with the phone.")
+		return
+
+	avatar.call("set_motion_state", "idle", 0.0)
+	await process_frame
 	avatar.call("set_phone_using", false)
 	await process_frame
 	if phone.visible:
