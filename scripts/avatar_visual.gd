@@ -157,7 +157,7 @@ func _make_phone_screen_style() -> StyleBoxFlat:
 
 func set_phone_screen_content(title: String, entries: Array[String]) -> void:
 	# التوافق مع النداءات القديمة: شاشة الجهاز تعرض رموز التطبيقات فقط دون نصوص.
-	set_phone_screen_icons(["👤", "📜", "🎁", "🏆", "👑", "📱", "🗺", "🐈", "💬", "👥", "🛡", "😊", "🎉", "⚙️"])
+	set_phone_screen_icons(["🚘", "👥", "⚙️", "🏠", "🗺️", "💬", "📋", "🎁", "👤"])
 
 
 func set_phone_screen_icons(icons: Array[String]) -> void:
