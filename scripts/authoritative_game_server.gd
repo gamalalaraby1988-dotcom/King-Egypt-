@@ -28,6 +28,7 @@ signal arcade_slot_spin_settled(session_id: String, result: Dictionary)
 signal arcade_slot_spin_failed(session_id: String, message: String)
 signal jet_ski_race_state_changed(state: String, participant_count: int, message: String)
 signal jet_ski_mount_result_received(success: bool, message: String)
+signal jet_ski_authoritative_state_received(position: Vector3, rotation_y: float, velocity: Vector3)
 
 const DEFAULT_PORT := 2456
 const MAX_PLAYERS := 64
@@ -2280,6 +2281,8 @@ func _physics_process(delta: float) -> void:
 			if not is_instance_valid(body):
 				continue
 			rpc_id(peer_id, "receive_authoritative_state", body.global_position, body.rotation.y, body.velocity)
+			if bool(session.get("jet_ski_mounted", false)):
+				rpc_id(peer_id, "receive_jet_ski_authoritative_state", session.get("jet_ski_position", JET_SKI_SERVER_LAUNCH_POSITION), float(session.get("jet_ski_rotation_y", 0.0)), session.get("jet_ski_velocity", Vector3.ZERO))
 			var remote_players: Array = remote_snapshots_by_peer.get(peer_id, [])
 			rpc_id(peer_id, "receive_remote_players", remote_players)
 
@@ -2334,6 +2337,17 @@ func _build_remote_player_snapshots() -> Dictionary:
 
 
 
+
+
+@rpc("authority", "call_remote", "unreliable_ordered")
+func receive_jet_ski_authoritative_state(position: Vector3, rotation_y: float, velocity: Vector3) -> void:
+	if multiplayer.is_server() or not is_authenticated():
+		return
+	if not is_finite(position.x) or not is_finite(position.y) or not is_finite(position.z):
+		return
+	if not is_finite(velocity.x) or not is_finite(velocity.y) or not is_finite(velocity.z) or not is_finite(rotation_y):
+		return
+	jet_ski_authoritative_state_received.emit(position, rotation_y, velocity)
 
 
 @rpc("authority", "call_remote", "unreliable_ordered")
