@@ -25,9 +25,9 @@ func _ready() -> void:
 	_build_option_b_southern_roads()
 	_mark_preserved_ship_and_conflicts()
 	# Centered frontal review angle: show the ship gate symmetrically, its full wide silhouette, and the bridge approach.
-	$PreviewCamera.position = Vector3(0.0, 27.0, 142.0)
-	$PreviewCamera.fov = 58.0
-	$PreviewCamera.look_at(Vector3(0.0, 7.0, 83.0), Vector3.UP)
+	$PreviewCamera.position = Vector3(0.0, 19.0, 137.0)
+	$PreviewCamera.fov = 52.0
+	$PreviewCamera.look_at(Vector3(0.0, 8.0, 83.0), Vector3.UP)
 
 func _material(color: Color, roughness: float = 0.82) -> StandardMaterial3D:
 	var material := StandardMaterial3D.new()
@@ -224,15 +224,15 @@ func _build_five_civilizations_ship_blockout() -> void:
 	var dark := Color(0.035, 0.045, 0.065)
 
 	# Broad ship body: long axis across the image, with the entrance facing +Z.
-	_box("FiveCivilizationsShip_MainHull_Wide", Vector3(42.0, 5.0, 25.0), Vector3(0.0, -0.15, 82.5), hull)
-	_box("FiveCivilizationsShip_Hull_GoldWaterline", Vector3(42.4, 0.22, 24.0), Vector3(0.0, -2.25, 82.5), gold)
-	_box("FiveCivilizationsShip_Hull_BlueUpperBand", Vector3(41.5, 1.25, 23.5), Vector3(0.0, 2.25, 82.5), blue)
+	_box("FiveCivilizationsShip_MainHull_Wide", Vector3(66.0, 5.0, 30.0), Vector3(0.0, -0.15, 82.5), hull)
+	_box("FiveCivilizationsShip_Hull_GoldWaterline", Vector3(66.4, 0.22, 29.0), Vector3(0.0, -2.25, 82.5), gold)
+	_box("FiveCivilizationsShip_Hull_BlueUpperBand", Vector3(65.5, 1.25, 28.5), Vector3(0.0, 2.25, 82.5), blue)
 
 	# Stepped outer superstructure ribbons reproduce the layered cruise-ship profile.
 	# These are visual fascia/overhangs, not extra walkable floors or stair access.
 	for tier in range(4):
-		var width := 39.0 - float(tier) * 3.4
-		var depth := 21.5 - float(tier) * 1.7
+		var width := 62.0 - float(tier) * 4.6
+		var depth := 26.0 - float(tier) * 1.8
 		var y := 3.05 + float(tier) * 1.55
 		var z := 82.5 - float(tier) * 0.25
 		_box("ShipSuperstructure_Tier_%02d_DarkBlue" % tier, Vector3(width, 0.72, depth), Vector3(0.0, y, z), blue if tier % 2 == 0 else blue_light)
@@ -281,14 +281,37 @@ func _build_five_civilizations_ship_blockout() -> void:
 	# Large gold winged-scarab insignia on both visible hull sides.
 	for side: float in [-1.0, 1.0]:
 		var wing_z := 82.0
-		_box("ShipHull_WingedEmblem_Center", Vector3(2.0, 1.8, 0.28), Vector3(side * 21.15, 0.7, wing_z), gold)
+		_box("ShipHull_WingedEmblem_Center", Vector3(2.0, 1.8, 0.28), Vector3(side * 30.5, 0.7, 95.1), gold)
 		for feather in range(6):
-			var feather_mesh := _box("ShipHull_WingFeather", Vector3(0.34, 0.16, 0.22), Vector3(side * 21.15, 0.85 + float(feather) * 0.23, wing_z - 2.1 + float(feather) * 0.78), gold)
+			var feather_mesh := _box("ShipHull_WingFeather", Vector3(0.34, 0.16, 0.22), Vector3(side * 30.5, 0.85 + float(feather) * 0.23, 95.28), gold)
 			feather_mesh.rotation_degrees.y = side * -18.0
-		_box("ShipHull_GoldSheerLine", Vector3(0.12, 0.16, 22.0), Vector3(side * 21.2, -1.0, 82.5), gold)
+		_box("ShipHull_GoldSheerLine", Vector3(0.12, 0.16, 22.0), Vector3(side * 33.0, -1.0, 82.5), gold)
+
+	# Broad front-facing promenade fascia: visible from the bridge approach like the reference image.
+	_box("ShipFront_PromenadeFascia", Vector3(58.0, 2.1, 0.72), Vector3(0.0, 1.55, 95.15), blue)
+	_box("ShipFront_PromenadeGoldRail", Vector3(58.5, 0.14, 0.88), Vector3(0.0, 2.72, 95.15), gold)
+	_box("ShipFront_PromenadeLowerGoldLine", Vector3(58.2, 0.12, 0.82), Vector3(0.0, 0.45, 95.15), gold)
+	for window_index in range(18):
+		var window_x := -27.0 + float(window_index) * 3.18
+		if absf(window_x) > 8.0:
+			var window_node := _box("ShipFront_IlluminatedCabinWindow_%02d" % window_index, Vector3(1.25, 0.78, 0.12), Vector3(window_x, 1.65, 95.58), Color(0.22, 0.62, 0.82))
+			window_node.material_override = _emissive_material(Color(0.22, 0.62, 0.82), 0.55)
+	for side: float in [-1.0, 1.0]:
+		for post_index in range(12):
+			var post_x := side * (10.0 + float(post_index) * 1.85)
+			_box("ShipFront_PromenadeRailPost", Vector3(0.12, 0.72, 0.12), Vector3(post_x, 2.35, 95.72), gold)
+	# Large winged Egyptian insignia face the bridge, not the outer side walls.
+	for side: float in [-1.0, 1.0]:
+		var emblem_x := side * 21.5
+		_box("ShipFront_WingedEmblem_Scarab", Vector3(1.25, 1.55, 0.24), Vector3(emblem_x, 0.25, 95.72), gold)
+		for feather_index in range(7):
+			var feather_x := emblem_x + side * (1.0 + float(feather_index) * 0.72)
+			var feather_y := 0.30 + float(feather_index) * 0.22
+			var feather := _box("ShipFront_WingedEmblem_Feather", Vector3(0.95, 0.16, 0.18), Vector3(feather_x, feather_y, 95.74), gold)
+			feather.rotation_degrees.z = side * -float(feather_index + 1) * 5.0
 
 	# Broad bow/stern caps keep the vessel silhouette expansive and symmetrical.
-	_box("ShipBow_RoyalBlueCap", Vector3(34.0, 0.65, 2.0), Vector3(0.0, 3.0, 69.8), blue_light)
+	_box("ShipBow_RoyalBlueCap", Vector3(52.0, 0.65, 2.0), Vector3(0.0, 3.0, 69.8), blue_light)
 	_box("ShipStern_RoyalBlueCap", Vector3(34.0, 0.65, 2.0), Vector3(0.0, 3.0, 95.0), blue_light)
 	_label("FIVE CIVILIZATIONS SHIP - REFERENCE SILHOUETTE BLOCKOUT", Vector3(0.0, 20.5, 82.0), GOLD, 22)
 
@@ -299,11 +322,11 @@ func _build_ship_detail_pass() -> void:
 	var blue := Color(0.035, 0.13, 0.23)
 	for side: float in [-1.0, 1.0]:
 		for z: float in [72.0, 76.0, 80.0, 84.0, 88.0, 92.0]:
-			var porthole := _cylinder("ShipHull_IlluminatedPorthole", 0.28, 0.12, Vector3(side * 21.28, 0.1, z), _emissive_material(Color(0.28, 0.72, 0.96), 1.1))
+			var porthole := _cylinder("ShipHull_IlluminatedPorthole", 0.28, 0.12, Vector3(side * 33.15, 0.1, z), _emissive_material(Color(0.28, 0.72, 0.96), 1.1))
 			porthole.rotation_degrees.z = 90.0
 		for tier in range(4):
 			var y := 3.55 + float(tier) * 1.55
-			_box("ShipTier_RoyalGoldFrontTrim", Vector3(17.0, 0.12, 0.18), Vector3(side * 10.0, y, 93.5), gold)
+			_box("ShipTier_RoyalGoldFrontTrim", Vector3(24.0, 0.12, 0.18), Vector3(side * 16.0, y, 95.0), gold)
 	# Five small insignia plates identify the five-civilization theme without inventing their names.
 	for i in range(5):
 		var x := -4.0 + float(i) * 2.0
