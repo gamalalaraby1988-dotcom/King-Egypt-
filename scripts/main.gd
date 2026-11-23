@@ -91,6 +91,8 @@ func _ready() -> void:
 	GameModeManager.online_connected.connect(_on_mode_connected)
 	AuthoritativeGameServer.authentication_completed.connect(_on_player_server_authenticated)
 	AuthoritativeGameServer.remote_players_received.connect(_on_remote_players_received)
+	AuthoritativeGameServer.jet_ski_mount_result_received.connect(_on_jet_ski_mount_result_received)
+	AuthoritativeGameServer.jet_ski_authoritative_state_received.connect(_on_jet_ski_authoritative_state_received)
 	GameModeManager.online_disconnected.connect(_on_mode_disconnected)
 
 
@@ -120,8 +122,12 @@ func _create_approved_city_layout() -> void:
 
 func _process(_delta: float) -> void:
 	if GameModeManager.is_online_ready():
+		var online_player := get_node_or_null("Player") as CharacterBody3D
+		var near_jet_ski_gate := is_instance_valid(online_player) and online_player.global_position.distance_to(JET_SKI_LAUNCH_POSITION) <= JET_SKI_BOARDING_RADIUS
 		if is_instance_valid(vehicle_interaction_button):
-			vehicle_interaction_button.visible = false
+			vehicle_interaction_button.visible = jet_ski_occupied or (near_jet_ski_gate and not vehicle_occupied and not scooter_occupied)
+			vehicle_interaction_button.text = "🚪↗" if jet_ski_occupied else "🏄"
+			vehicle_interaction_button.tooltip_text = "النزول من الجت سكي" if jet_ski_occupied and CityLanguage.get_language() == "ar" else ("Exit jet ski" if jet_ski_occupied else ("ركوب الجت سكي الملكية" if CityLanguage.get_language() == "ar" else "Ride royal jet ski"))
 		if is_instance_valid(vehicle_summon_button):
 			vehicle_summon_button.visible = false
 		return
@@ -290,7 +296,7 @@ func _create_player_vehicle() -> void:
 	vehicle_interaction_button.offset_bottom = -bottom_margin
 	vehicle_interaction_button.add_theme_font_size_override("font_size", 12)
 	vehicle_interaction_button.visible = false
-	vehicle_interaction_button.pressed.connect(_exit_contextual_state)
+	vehicle_interaction_button.pressed.connect(_on_vehicle_interaction_pressed)
 	layer.add_child(vehicle_interaction_button)
 
 func _summon_player_vehicle() -> void:
@@ -427,6 +433,46 @@ func try_enter_summoned_vehicle() -> bool:
 		return false
 	_toggle_vehicle_use()
 	return vehicle_occupied
+
+func _on_vehicle_interaction_pressed() -> void:
+	if jet_ski_occupied:
+		if GameModeManager.is_online_ready():
+			AuthoritativeGameServer.request_jet_ski_unmount()
+		_exit_player_jet_ski()
+		return
+	if GameModeManager.is_online_ready():
+		AuthoritativeGameServer.request_jet_ski_mount()
+		return
+	_exit_contextual_state()
+
+
+func _on_jet_ski_mount_result_received(success: bool, message: String) -> void:
+	_on_mode_status_changed(message)
+	if not success:
+		return
+	if not is_instance_valid(city_jet_ski):
+		var jet_ski_scene := load("res://scenes/jet_ski.tscn") as PackedScene
+		if jet_ski_scene == null:
+			push_warning("تعذر تحميل الجت سكي بعد تأكيد الخادم.")
+			AuthoritativeGameServer.request_jet_ski_unmount()
+			return
+		city_jet_ski = jet_ski_scene.instantiate() as CharacterBody3D
+		if not is_instance_valid(city_jet_ski):
+			AuthoritativeGameServer.request_jet_ski_unmount()
+			return
+		city_jet_ski.name = "LocalAuthoritativeRoyalJetSki"
+		add_child(city_jet_ski)
+	_mount_player_jet_ski()
+	if is_instance_valid(city_jet_ski):
+		city_jet_ski.set_physics_process(false)
+
+
+func _on_jet_ski_authoritative_state_received(position: Vector3, rotation_y: float, _velocity: Vector3) -> void:
+	if not jet_ski_occupied or not is_instance_valid(city_jet_ski):
+		return
+	city_jet_ski.global_position = position
+	city_jet_ski.global_rotation.y = rotation_y
+
 
 func _exit_contextual_state() -> void:
 	if jet_ski_occupied:
@@ -609,7 +655,7 @@ func _mount_player_jet_ski() -> void:
 	var jet_hud := city_jet_ski.get_node_or_null("JetSkiHUDLayer") as CanvasLayer
 	if is_instance_valid(jet_hud):
 		jet_hud.visible = true
-	city_jet_ski.set_physics_process(true)
+	city_jet_ski.set_physics_process(not GameModeManager.is_online_ready())
 	jet_ski_occupied = true
 	if is_instance_valid(vehicle_interaction_button):
 		vehicle_interaction_button.text = "🚪↗"
