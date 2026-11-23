@@ -76,3 +76,12 @@
 - The dedicated server now changes a valid locked roster into a `countdown` phase for five seconds, then advances the phase to `racing` using the server monotonic clock and notifies the locked participants.
 - If a registered participant disconnects during `ready` or `countdown`, the server reopens registration and clears the countdown deadline; a non-participant disconnect does not cancel the countdown.
 - This phase transition does not yet implement server-authoritative jet ski movement, checkpoint crossing validation, finish adjudication, or multiplayer vehicle snapshots. Those remain required before the race is playable.
+
+## وضع مشاهدة السباق — اعتماد التصميم
+- يمكن للاعبين غير المشاركين مشاهدة الجولة الجارية مباشرة؛ مثال ذلك أن يشارك لاعبان بينما يشاهد اللاعبان الآخران.
+- المشاهد لا يُضاف إلى قائمة المتسابقين المقفلة، ولا يشغل أحد مقاعد المتسابقين الأربعة، ولا يستطيع إرسال مدخلات قيادة أو التأثير في نقاط التفتيش أو نتيجة السباق.
+- نقطة المشاهدة الأساسية من الشاطئ الملكي، مع بث/مزامنة حالة الجت سكي ومواقع المتسابقين من الخادم إلى المشاهدين.
+- تتضمن واجهة المشاهدة كاميرا اختيارية للتبديل بين المتسابقين ومتابعة السباق من زوايا مختلفة، مع إمكانية العودة إلى منظور الشاطئ.
+- يجب أن تكون بيانات المشاهدة للقراءة فقط، وأن تستمر المشاهدة دون تغيير حالة الجولة أو إبطائها أو منح أفضلية لأي متسابق.
+- هذا اعتماد تصميم ومواصفات فقط؛ لم يُنفذ بث المشاهدة أو كاميرات التتبع بعد. يتطلب التنفيذ snapshots خادمية للمركبات وواجهة مشاهدة واختبارات متعددة العملاء.
+
