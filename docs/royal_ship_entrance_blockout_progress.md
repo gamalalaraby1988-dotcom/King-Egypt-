@@ -275,3 +275,12 @@
 - The render shows the side tiers, but they still read as thin horizontal gold/blue rails with a broad bright upper surface; the ship does not yet resemble the reference's deep navy multi-deck hull.
 - Follow-up commit `39539a4f6c11adcb476d554b7d4a5adecc61b35a` adds dark navy lower fascia under each tier, increases the downward slope at the deck ends, narrows gold edge bands and changes balcony strips from ivory to blue.
 - Fresh validation and rendering are required to assess this correction. The vessel remains procedural blockout geometry, not the final reference-matched ship. No production collision, vehicle physics, player interaction trigger, or server-authoritative entry system is claimed. No merge to `main`.
+
+
+## Navy deck-volume render review and next geometry pass — 2026-11-23
+
+- Godot validation run `45170833802` and exact-scene render run `45170833806` both completed successfully on script commit `39539a4f6c11adcb476d554b7d4a5adecc61b35a`.
+- Retrieved artifact `14816094367` and inspected its 1280x720 PNG directly. The ship now fills most of the horizontal frame and the navy lower fascia is visible, but the four side decks still read as thin horizontal slats rather than substantial curved balcony tiers; the current mask is still a simplified blockout.
+- Follow-up commit `80444032acf62c161a793ca6f08526de6ac73fa1` increases deck thickness from 0.72m to 1.12m, deepens the navy lower fascia, strengthens the downward sweep at the outer ends, tapers deck depth more strongly, and raises the gold edge trim to sit above the thicker deck.
+- This follow-up requires fresh validation and an exact-scene render before its visual effect can be accepted.
+- No final production ship asset, collision, vehicle physics, player interaction trigger, or server-authoritative ship-entry system is claimed. No merge to `main`.
