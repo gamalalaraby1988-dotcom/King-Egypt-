@@ -38,7 +38,8 @@ func _run() -> void:
 	if phone.get_node_or_null("PhoneScreen") == null:
 		_fail("Phone screen surface is missing.")
 		return
-	avatar.call("set_phone_screen_content", "متجر المركبات", ["المال: 100", "سيارة Horus — مملوكة"])
+	var phone_entries: Array[String] = ["المال: 100", "سيارة Horus — مملوكة"]
+	avatar.set_phone_screen_content("متجر المركبات", phone_entries)
 	await process_frame
 	var screen_content: VBoxContainer = avatar.get("phone_screen_content") as VBoxContainer
 	if not is_instance_valid(screen_content):
