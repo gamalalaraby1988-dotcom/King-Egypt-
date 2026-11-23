@@ -20,6 +20,7 @@ func _ready() -> void:
 	_build_bridge_and_arrival()
 	_build_bridge_details()
 	_build_ship_gate_interaction()
+	_build_five_civilizations_ship_blockout()
 	_build_option_b_southern_roads()
 	_mark_preserved_ship_and_conflicts()
 	# Close 3/4 review angle: keep the bridge, glowing interaction pad, and ship reference footprint in one readable frame.
@@ -209,10 +210,36 @@ func _build_option_b_southern_roads() -> void:
 	_label("OPTION B - PRESERVED SOUTH ROAD ARMS", Vector3(-58.0, 2.0, 91.0), GOLD, 16)
 	_label("RELOCATED SOUTH BYPASS - Z=120", Vector3(0.0, 2.0, 125.0), GOLD, 18)
 
+
+func _build_five_civilizations_ship_blockout() -> void:
+	# Real Godot mesh blockout for review only; deliberately not presented as the final ship asset.
+	# Keep the approved moored position and one accessible main deck (no extra floors or stairs).
+	var hull_mat := _material(Color(0.72, 0.73, 0.70), 0.42)
+	var ivory_mat := _material(IVORY, 0.38)
+	var gold_mat := _material(GOLD, 0.32)
+	var blue_mat := _material(Color(0.035, 0.12, 0.20), 0.34)
+	_box("FiveCivilizationsShip_Hull_Blockout", Vector3(8.0, 2.2, 18.0), Vector3(0.0, 0.35, 85.0), hull_mat)
+	_box("FiveCivilizationsShip_MainDeck_OneLevel", Vector3(9.0, 0.28, 17.0), Vector3(0.0, 1.60, 85.0), ivory_mat)
+	_box("FiveCivilizationsShip_RoyalBlueDeckInset", Vector3(6.8, 0.035, 12.0), Vector3(0.0, 1.76, 83.0), blue_mat)
+	# Main entrance faces the bridge-side (+Z) approach; the interaction circle remains outside it.
+	for x: float in [-2.2, 2.2]:
+		_box("FiveCivilizationsShip_GatePillar", Vector3(0.48, 3.2, 0.55), Vector3(x, 3.35, 93.8), gold_mat)
+	_box("FiveCivilizationsShip_GateLintel", Vector3(5.0, 0.48, 0.65), Vector3(0.0, 4.85, 93.8), gold_mat)
+	_box("FiveCivilizationsShip_MainHallFacade", Vector3(6.0, 3.2, 3.0), Vector3(0.0, 3.35, 88.0), ivory_mat)
+	_box("FiveCivilizationsShip_MainHallRoof", Vector3(6.8, 0.42, 3.8), Vector3(0.0, 5.15, 88.0), gold_mat)
+	# Five restrained civilization markers along the single deck edge.
+	for i in range(5):
+		var x := -3.2 + float(i) * 1.6
+		_box("FiveCivilizationsShip_CivilizationPanel_%02d" % i, Vector3(0.85, 1.15, 0.18), Vector3(x, 2.45, 79.8), gold_mat)
+	# Low perimeter rails clarify the vessel edge without creating another deck or floor.
+	for side: float in [-1.0, 1.0]:
+		_box("FiveCivilizationsShip_SideRail", Vector3(0.14, 0.7, 15.0), Vector3(side * 4.35, 2.05, 85.0), gold_mat)
+	_label("FIVE CIVILIZATIONS SHIP - GEOMETRY BLOCKOUT", Vector3(0.0, 7.0, 82.0), GOLD, 24)
+	_label("ONE MAIN DECK • STATIONARY • MAIN GATE TO ROYAL BRIDGE", Vector3(0.0, 6.0, 96.0), IVORY, 16)
+
+
 func _mark_preserved_ship_and_conflicts() -> void:
-	# Outline only: the approved Five Civilizations Ship asset remains untouched.
-	_box("ExistingShipFootprint_ReferenceOnly", Vector3(5.8, 0.16, 19.0), Vector3(0.0, 0.18, 85.0), GOLD)
-	_box("ExistingPierReferenceOnly", Vector3(8.0, 0.18, 14.0), Vector3(-6.0, 0.30, 84.0), IVORY)
-	_label("PRESERVE APPROVED SHIP POSITION", Vector3(12.0, 3.0, 82.0), GOLD, 24)
+	# The vessel above is a review blockout only; it does not replace a final approved ship asset.
+	_label("SHIP BLOCKOUT - FINAL ASSET STILL REQUIRED", Vector3(12.0, 3.0, 82.0), GOLD, 18)
 	_label("OPTION B ROUTE - REVIEW BLOCKOUT ONLY", Vector3(45.0, 3.0, 94.0), Color(1.0, 0.72, 0.66), 18)
 	_label("SCHEMATIC BLOCKOUT - NOT GAMEPLAY COLLISION", Vector3(0.0, 5.0, 151.0), GOLD, 32)
