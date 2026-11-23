@@ -41,3 +41,13 @@
 - The ship gate is placed on the bridge-facing (+Z) end for visual alignment with the existing interaction pad. Exact alignment remains provisional until the final ship model and gate dimensions are supplied/created and inspected together.
 - Only `scripts/royal_waterfront_blockout_preview.gd` was changed, on `feature/royal-waterfront-blockout-preview`. No production scene or `main` branch was changed.
 - Next validation: Godot headless check and a genuine render from the updated preview scene; inspect the resulting image before claiming visual alignment.
+
+
+## Royal ship detail pass — 2026-11-23
+
+- Added a second visual-detail pass to the same stationary, single-main-deck ship blockout: continuous gold hull sheer-lines, illuminated porthole details, deck-edge rail posts, a shaped bow cap and crest, a stern cap, five inset civilization emblem plaques, and a slim crown band above the main hall.
+- The ship remains fixed at the approved location. No extra floor, stairs, ship movement, production scene changes, collision, vehicle physics, interaction trigger, or network entry logic were added.
+- Change committed on `feature/royal-waterfront-blockout-preview`: `1c98ed04331cb140e700906f1c3b76d63d7a69f1`.
+- Godot 4.7.2 import/script validation and headless startup both passed on this commit (workflow run `45101305293`).
+- A genuine render from the same updated scene is running in workflow `45101305010`; its image must be inspected before visual alignment or appearance is reported as confirmed.
+- No merge to `main`.
