@@ -268,21 +268,21 @@ func _build_five_civilizations_ship_blockout() -> void:
 	head_mesh.height = 4.8
 	head.mesh = head_mesh
 	head.position = Vector3(0.0, 15.0, 97.15)
-	head.scale = Vector3(0.86, 1.0, 0.42)
+	head.scale = Vector3(1.12, 1.28, 0.48)
 	head.material_override = _material(gold, 0.28)
 	add_child(head)
-	_box("ShipPharaoh_Headdress_Back", Vector3(8.2, 6.6, 0.58), Vector3(0.0, 15.1, 96.0), blue)
+	_box("ShipPharaoh_Headdress_Back", Vector3(9.6, 7.5, 0.58), Vector3(0.0, 15.1, 96.0), blue)
 	for side: float in [-1.0, 1.0]:
-		var lappet := _box("ShipPharaoh_Nemes_SideLappet", Vector3(1.65, 5.8, 0.72), Vector3(side * 3.05, 13.9, 97.05), blue)
+		var lappet := _box("ShipPharaoh_Nemes_SideLappet", Vector3(2.0, 6.6, 0.72), Vector3(side * 3.35, 13.9, 97.05), blue)
 		lappet.rotation_degrees.z = side * -7.0
 		for stripe in range(5):
 			var stripe_y := 11.8 + float(stripe) * 0.95
-			var stripe_node := _box("ShipPharaoh_Nemes_GoldStripe", Vector3(1.78, 0.13, 0.78), Vector3(side * 3.05, stripe_y, 97.18), gold)
+			var stripe_node := _box("ShipPharaoh_Nemes_GoldStripe", Vector3(2.12, 0.16, 0.78), Vector3(side * 3.35, stripe_y, 97.18), gold)
 			stripe_node.rotation_degrees.z = side * -7.0
 	for stripe in range(6):
 		var y := 12.6 + float(stripe) * 0.86
-		_box("ShipPharaoh_Headdress_GoldStripe_%02d" % stripe, Vector3(7.8 - float(stripe) * 0.48, 0.14, 0.18), Vector3(0.0, y, 97.08), gold)
-	_box("ShipPharaoh_Crown", Vector3(1.25, 1.55, 0.72), Vector3(0.0, 18.1, 97.0), gold)
+		_box("ShipPharaoh_Headdress_GoldStripe_%02d" % stripe, Vector3(9.0 - float(stripe) * 0.56, 0.17, 0.18), Vector3(0.0, y, 97.08), gold)
+	_box("ShipPharaoh_Crown", Vector3(1.65, 1.85, 0.72), Vector3(0.0, 18.25, 97.0), gold)
 	# Facial elements are deliberately placed in front of the ellipsoid surface (+Z toward the bridge camera).
 	for side: float in [-1.0, 1.0]:
 		var ear := _box("ShipPharaoh_Ear", Vector3(0.48, 0.92, 0.24), Vector3(side * 2.0, 14.75, 98.30), gold)
