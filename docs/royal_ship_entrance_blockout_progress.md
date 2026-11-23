@@ -237,3 +237,13 @@
 - The frontal composition shows the gate and enlarged mask clearly, but the overall ship remains a stylized low-detail blockout, not a visual match for the user's reference image.
 - Next pass must correct the deck ribbon surface construction and tone down the large bright surfaces, strengthen the blue hull/deck volumes, and create continuous rounded balcony profiles before another render is reviewed.
 - This is a scene-render verification only. No final ship asset, gameplay collision, vehicle physics, player interaction trigger, or server-authoritative entry system is claimed. No merge to `main`.
+
+
+## Deck fascia geometry correction — 2026-11-23
+
+- The first curved-ribbon render was inspected; it showed oversized planar surfaces and visually disconnected bright trim.
+- Replaced the ribbon's single custom triangle surface with 40 narrow overlapping box segments per tier. Segment height and depth follow a smooth downward sweep toward both ends, creating a continuous stepped balcony silhouette without broad planar faces.
+- Segment meshes are parented under a single scaled tier node and inherit the existing ship visual scale group.
+- Script commit: `d4c5754e97e046d408b83ae95635087007a04816`.
+- New Godot validation and exact-scene render are required before accepting the geometry.
+- The vessel remains a procedural blockout; no production asset, collision, vehicle physics, player interaction, or network-authoritative entry implementation is claimed. No merge to `main`.
