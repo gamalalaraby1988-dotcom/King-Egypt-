@@ -132,6 +132,47 @@ func _initialize() -> void:
 	server._jet_ski_race_results = [{"peer_id": 13, "status": "dnf"}]
 	if not server._jet_ski_race_all_locked_participants_finished():
 		failures.append("A disconnected participant with a DNF result should count as resolved.")
+	# The dedicated server must durably queue finalized results before attempting network delivery.
+	server._is_dedicated_server = true
+	server._jet_ski_race_id = "10000000-0000-4000-8000-000000000099"
+	server._jet_ski_results_server_id = "city-test-01"
+	server._jet_ski_results_url = "" # Keep this contract test offline.
+	server._jet_ski_results_outbox.clear()
+	if not server._jet_ski_results_hmac_key.is_empty():
+		server._jet_ski_results_hmac_key.clear()
+	server._queue_jet_ski_race_result("00000000-0000-4000-8000-000000000099", "finished", 1, 2450000, "", 1790000000000000000)
+	if not server._jet_ski_results_outbox.is_empty():
+		failures.append("A result without the dedicated server HMAC key was incorrectly queued.")
+	var result_secret := PackedByteArray()
+	result_secret.resize(32)
+	result_secret.fill(7)
+	server._jet_ski_results_hmac_key = result_secret
+	server._queue_jet_ski_race_result("00000000-0000-4000-8000-000000000099", "finished", 1, 2450000, "", 1790000000000000000)
+	if server._jet_ski_results_outbox.size() != 1:
+		failures.append("A finalized result was not added to the durable outbox.")
+	else:
+		var queued_finish: Dictionary = server._jet_ski_results_outbox[0]
+		if str(queued_finish.get("status", "")) != "finished" or int(queued_finish.get("place", 0)) != 1:
+			failures.append("The durable outbox did not preserve the server-finalized finish rank.")
+		if not str(queued_finish.get("race_finished_at", "")).ends_with("Z"):
+			failures.append("Race finish timestamps must be explicit UTC ISO-8601 values.")
+		if str(queued_finish.get("race_id", "")) != server._jet_ski_race_id:
+			failures.append("Queued results must retain their unique race ID.")
+	server._queue_jet_ski_race_result("00000000-0000-4000-8000-000000000098", "dnf", 0, 0, "disconnect", 1790000001000000000)
+	if server._jet_ski_results_outbox.size() != 2:
+		failures.append("A disconnected participant's DNF result was not queued.")
+	else:
+		var queued_dnf: Dictionary = server._jet_ski_results_outbox[1]
+		if queued_dnf.get("place") != null or queued_dnf.get("finish_time_usec") != null or str(queued_dnf.get("reason", "")) != "disconnect":
+			failures.append("DNF outbox records must omit finish fields and preserve the server reason.")
+	var outbox_config := ConfigFile.new()
+	if outbox_config.load(SERVER_SCRIPT.JET_SKI_RESULTS_OUTBOX_PATH) != OK:
+		failures.append("The race result outbox was not saved to persistent server storage.")
+	else:
+		var saved_results: Variant = outbox_config.get_value("results", "pending", [])
+		if not saved_results is Array or saved_results.size() != 2:
+			failures.append("The persistent outbox did not preserve both pending server results.")
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(SERVER_SCRIPT.JET_SKI_RESULTS_OUTBOX_PATH))
 	server.free()
 	if not failures.is_empty():
 		for failure in failures:
