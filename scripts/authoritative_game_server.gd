@@ -78,7 +78,16 @@ var _jet_ski_race_state := "waiting"
 var _jet_ski_race_countdown_until_usec := 0
 var _jet_ski_race_ends_at_usec := 0
 var _jet_ski_race_started_at_usec := 0
+var _jet_ski_race_started_at_unix_usec := 0
+var _jet_ski_race_id := ""
 var _jet_ski_race_results: Array[Dictionary] = []
+var _jet_ski_results_url := ""
+var _jet_ski_results_server_id := ""
+var _jet_ski_results_hmac_key := PackedByteArray()
+var _jet_ski_results_outbox: Array[Dictionary] = []
+var _jet_ski_results_request: HTTPRequest
+var _jet_ski_results_retry_at_usec := 0
+const JET_SKI_RESULTS_OUTBOX_PATH := "user://king_city_jet_ski_results_outbox.cfg"
 var _arcade_machines: Dictionary = {}
 var _arcade_sessions: Dictionary = {}
 var _peer_arcade_sessions: Dictionary = {}
@@ -164,6 +173,8 @@ func _ready() -> void:
 		if not secret_b64.is_empty():
 			_proof_hmac_secret = Marshalls.base64_to_raw(secret_b64)
 		_configure_city_session_directory()
+		_configure_jet_ski_results_ingestion()
+		_load_jet_ski_results_outbox()
 		call_deferred("start_dedicated_server")
 
 
@@ -204,6 +215,136 @@ func start_dedicated_server() -> void:
 	multiplayer.peer_connected.connect(_on_peer_connected)
 	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
 	print("KING OF EGYPT CITY authoritative WSS server listening on TCP port %d." % port)
+
+
+func _configure_jet_ski_results_ingestion() -> void:
+	var base_url := str(ProjectSettings.get_setting("founder/auth/api_base_url", "")).strip_edges().trim_suffix("/")
+	_jet_ski_results_url = OS.get_environment("KING_CITY_JET_SKI_RESULTS_URL").strip_edges()
+	if _jet_ski_results_url.is_empty() and base_url.begins_with("https://"):
+		_jet_ski_results_url = base_url + "/functions/v1/jet-ski-race-results"
+	_jet_ski_results_server_id = OS.get_environment("KING_CITY_SESSION_SERVER_ID").strip_edges()
+	_jet_ski_results_hmac_key = Marshalls.base64_to_raw(OS.get_environment("KING_CITY_JET_SKI_RESULTS_HMAC_SECRET_B64").strip_edges())
+	var id_regex := RegEx.new()
+	id_regex.compile("^[A-Za-z0-9][A-Za-z0-9_-]{2,63}$")
+	var valid := _jet_ski_results_url.begins_with("https://")
+	valid = valid and id_regex.search(_jet_ski_results_server_id) != null
+	valid = valid and _jet_ski_results_hmac_key.size() >= 32
+	if not valid:
+		push_warning("Jet ski result persistence is disabled: configure KING_CITY_JET_SKI_RESULTS_HMAC_SECRET_B64 (32+ decoded bytes) and server ID.")
+		return
+	print("Royal jet ski persistent result sender configured for server %s." % _jet_ski_results_server_id)
+
+
+func _load_jet_ski_results_outbox() -> void:
+	var config := ConfigFile.new()
+	var error := config.load(JET_SKI_RESULTS_OUTBOX_PATH)
+	if error != OK:
+		if FileAccess.file_exists(JET_SKI_RESULTS_OUTBOX_PATH):
+			push_warning("Could not read jet ski result outbox; preserving the file and not overwriting it.")
+		return
+	var stored: Variant = config.get_value("results", "pending", [])
+	if stored is Array:
+		for item in stored:
+			if item is Dictionary and not str(item.get("server_event_id", "")).is_empty():
+				_jet_ski_results_outbox.append(item.duplicate(true))
+	if not _jet_ski_results_outbox.is_empty():
+		print("Restored %d pending royal jet ski result(s) from the server outbox." % _jet_ski_results_outbox.size())
+
+
+func _save_jet_ski_results_outbox() -> void:
+	var config := ConfigFile.new()
+	var load_error := config.load(JET_SKI_RESULTS_OUTBOX_PATH)
+	if load_error != OK and FileAccess.file_exists(JET_SKI_RESULTS_OUTBOX_PATH):
+		push_warning("Could not safely read jet ski result outbox; refusing to overwrite pending results.")
+		return
+	config.set_value("results", "pending", _jet_ski_results_outbox)
+	var error := config.save(JET_SKI_RESULTS_OUTBOX_PATH)
+	if error != OK:
+		push_warning("Could not persist the jet ski result outbox: %s" % error_string(error))
+
+
+func _queue_jet_ski_race_result(user_id: String, status: String, place: int, finish_time_usec: int, reason: String, finished_at_unix_usec: int) -> void:
+	if not _is_dedicated_server or _jet_ski_race_id.is_empty():
+		return
+	var normalized_user_id := user_id.strip_edges()
+	if normalized_user_id.is_empty() or _jet_ski_results_hmac_key.size() < 32:
+		push_warning("Jet ski race result could not be queued: missing authenticated user or server HMAC configuration.")
+		return
+	var event_id := _city_directory_uuid()
+	if event_id.is_empty():
+		push_warning("Jet ski race result could not be queued: failed to generate event ID.")
+		return
+	var row := {
+		"server_id": _jet_ski_results_server_id,
+		"race_id": _jet_ski_race_id,
+		"server_event_id": event_id,
+		"user_id": normalized_user_id,
+		"status": status,
+		"place": place if status == "finished" else null,
+		"finish_time_usec": finish_time_usec if status == "finished" else null,
+		"race_finished_at": Time.get_datetime_string_from_unix_time(int(finished_at_unix_usec / 1000000), true),
+		"reason": reason if status == "dnf" else null
+	}
+	_jet_ski_results_outbox.append(row)
+	_save_jet_ski_results_outbox()
+	_pump_jet_ski_results_outbox(Time.get_ticks_usec())
+
+
+func _pump_jet_ski_results_outbox(now_usec: int) -> void:
+	if not _is_dedicated_server or _jet_ski_results_request != null or _jet_ski_results_outbox.is_empty():
+		return
+	if _jet_ski_results_url.is_empty() or _jet_ski_results_hmac_key.size() < 32 or now_usec < _jet_ski_results_retry_at_usec:
+		return
+	var row: Dictionary = _jet_ski_results_outbox[0]
+	var raw_body := JSON.stringify(row)
+	var timestamp := str(int(Time.get_unix_time_from_system()))
+	var nonce := _city_directory_uuid()
+	if nonce.is_empty():
+		_jet_ski_results_retry_at_usec = now_usec + 5000000
+		return
+	var signer := HMACContext.new()
+	if signer.start(HashingContext.HASH_SHA256, _jet_ski_results_hmac_key) != OK:
+		_jet_ski_results_retry_at_usec = now_usec + 5000000
+		return
+	if signer.update((timestamp + "\\n" + nonce + "\\n" + raw_body).to_utf8_buffer()) != OK:
+		_jet_ski_results_retry_at_usec = now_usec + 5000000
+		return
+	var signature := signer.finish().hex_encode()
+	var request := HTTPRequest.new()
+	request.timeout = 10.0
+	add_child(request)
+	_jet_ski_results_request = request
+	request.request_completed.connect(_on_jet_ski_results_request_completed.bind(request, str(row.get("server_event_id", ""))))
+	var headers := PackedStringArray([
+		"Content-Type: application/json",
+		"apikey: " + str(ProjectSettings.get_setting("founder/auth/publishable_key", "")),
+		"x-king-city-timestamp: " + timestamp,
+		"x-king-city-nonce: " + nonce,
+		"x-king-city-signature: " + signature
+	])
+	var error := request.request(_jet_ski_results_url, headers, HTTPClient.METHOD_POST, raw_body)
+	if error != OK:
+		_jet_ski_results_request = null
+		request.queue_free()
+		_jet_ski_results_retry_at_usec = now_usec + 5000000
+
+
+func _on_jet_ski_results_request_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray, request: HTTPRequest, event_id: String) -> void:
+	if _jet_ski_results_request == request:
+		_jet_ski_results_request = null
+	if is_instance_valid(request):
+		request.queue_free()
+	if result == HTTPRequest.RESULT_SUCCESS and response_code == 200:
+		if not _jet_ski_results_outbox.is_empty() and str(_jet_ski_results_outbox[0].get("server_event_id", "")) == event_id:
+			_jet_ski_results_outbox.pop_front()
+			_save_jet_ski_results_outbox()
+			_jet_ski_results_retry_at_usec = 0
+			_pump_jet_ski_results_outbox(Time.get_ticks_usec())
+		return
+	push_warning("Jet ski result submission failed (HTTP %d, transport %d); retained in durable outbox. %s" % [
+		response_code, result, body.get_string_from_utf8().substr(0, 180)
+	])
+	_jet_ski_results_retry_at_usec = Time.get_ticks_usec() + 5000000
 
 
 func _configure_city_session_directory() -> void:
@@ -404,10 +545,15 @@ func _process(_delta: float) -> void:
 	if not multiplayer.is_server():
 		return
 	var now_usec := Time.get_ticks_usec()
+	_pump_jet_ski_results_outbox(now_usec)
 	if _jet_ski_race_state == "countdown" and now_usec >= _jet_ski_race_countdown_until_usec:
 		_jet_ski_race_state = "racing"
 		_jet_ski_race_countdown_until_usec = 0
 		_jet_ski_race_started_at_usec = now_usec
+		_jet_ski_race_started_at_unix_usec = int(Time.get_unix_time_from_system() * 1000000.0)
+		_jet_ski_race_id = _city_directory_uuid()
+		if _jet_ski_race_id.is_empty():
+			push_error("Could not create a unique royal jet ski race ID; results will not be persisted.")
 		_jet_ski_race_ends_at_usec = now_usec + JET_SKI_RACE_DURATION_SECONDS * 1000000
 		_jet_ski_race_results.clear()
 		for participant_peer_id in _jet_ski_race_locked_participants:
@@ -528,6 +674,10 @@ func _on_peer_disconnected(peer_id: int) -> void:
 			"status": "dnf",
 			"reason": "disconnect"
 		})
+		_queue_jet_ski_race_result(
+			str(session.get("user_id", "")), "dnf", 0, 0, "disconnect",
+			int(Time.get_unix_time_from_system() * 1000000.0)
+		)
 	_sessions.erase(peer_id)
 	_jet_ski_race_participants.erase(peer_id)
 	if _jet_ski_race_state == "racing" and _jet_ski_race_all_locked_participants_finished():
@@ -1834,6 +1984,10 @@ func _jet_ski_race_finish_round(message: String) -> void:
 				"status": "dnf",
 				"reason": "time_limit"
 			})
+			_queue_jet_ski_race_result(
+				str(session.get("user_id", "")), "dnf", 0, 0, "time_limit",
+				int(Time.get_unix_time_from_system() * 1000000.0)
+			)
 			_sessions[peer_id] = session
 	_jet_ski_race_state = "finished"
 	_jet_ski_race_ends_at_usec = 0
@@ -2387,6 +2541,12 @@ func _physics_process(delta: float) -> void:
 								"finish_time_usec": int(session["jet_ski_race_finish_time_usec"]),
 								"place": int(session["jet_ski_race_place"])
 							})
+							_queue_jet_ski_race_result(
+								str(session.get("user_id", "")), "finished",
+								int(session["jet_ski_race_place"]),
+								int(session["jet_ski_race_finish_time_usec"]), "",
+								_jet_ski_race_started_at_unix_usec + int(session["jet_ski_race_finish_time_usec"])
+							)
 							rpc_id(peer_id, "receive_jet_ski_race_progress", next_gate_index, "finished", int(session["jet_ski_race_place"]))
 						elif next_gate_index == 1:
 							rpc_id(peer_id, "receive_jet_ski_race_progress", next_gate_index, "racing", 0)
