@@ -25,6 +25,10 @@ async def main():
         raise SystemExit("--capacity must be between 1 and 64")
 
     tls = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    # Godot's bundled mbedTLS server currently fails the TLS 1.3 PSA
+    # handshake in this Linux container (-0x6c00). Pin this smoke client
+    # to TLS 1.2 so the test measures WebSocket admission, not TLS 1.3.
+    tls.maximum_version = ssl.TLSVersion.TLSv1_2
     tls.check_hostname = False
     tls.verify_mode = ssl.CERT_NONE
 
