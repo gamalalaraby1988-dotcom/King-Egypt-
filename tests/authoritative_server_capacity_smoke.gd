@@ -23,6 +23,12 @@ func _run() -> void:
 		_fail("capacity must be between 1 and %d" % MAX_CAPACITY)
 
 	if handshake_only:
+		var probe := WebSocketMultiplayerPeer.new()
+		var probe_tls := TLSOptions.client_unsafe() if url.begins_with("wss://") else null
+		var probe_error := probe.create_client(url, probe_tls)
+		if probe_error != OK:
+			_fail("Native Godot probe could not start: %s" % error_string(probe_error))
+		_peers.append(probe)
 		if not await _wait_for_connected(1, 15.0):
 			_fail("Native Godot WebSocket handshake did not complete")
 		print("NATIVE_GODOT_WEBSOCKET_HANDSHAKE=PASSED")
