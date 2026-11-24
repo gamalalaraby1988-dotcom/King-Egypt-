@@ -1,0 +1,17 @@
+.git
+.godot
+.import
+build
+.cache
+.idea
+.vscode
+.DS_Store
+*.apk
+*.aab
+*.keystore
+*.jks
+.env
+.env.*
+**/*.pem
+**/*.key
+**/*secret*
