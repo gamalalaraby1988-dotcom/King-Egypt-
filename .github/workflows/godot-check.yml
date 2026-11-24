@@ -596,6 +596,9 @@ jobs:
 
       - name: Run trusted city session directory Edge Function tests
         run: deno test supabase/tests/city-session-directory-edge.test.ts
+
+      - name: Run jet ski race result HMAC ingestion tests
+        run: deno test supabase/tests/jet-ski-race-results-edge.test.ts
       - name: Run royal gate bidirectional physics clearance test
         shell: bash
         run: |
