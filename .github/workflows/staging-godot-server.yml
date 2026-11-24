@@ -123,6 +123,11 @@ jobs:
             --headless --path /app --script res://tests/authoritative_server_capacity_smoke.gd \
             -- --url=wss://king-city-capacity-proxy:443 --capacity=64
 
+      - name: Simulate 64 authoritative player movements and visibility snapshots
+        run: |
+          docker run --rm --entrypoint /usr/local/bin/godot king-city-server:staging-check \
+            --headless --path /app --script res://tests/authoritative_player_movement_load_test.gd
+
       - name: Capture server diagnostics
         if: always()
         run: |
