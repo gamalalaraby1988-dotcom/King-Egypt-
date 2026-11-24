@@ -723,6 +723,9 @@ func request_jet_ski_unmount_rpc() -> void:
 	if not _sessions.has(peer_id):
 		return
 	var session: Dictionary = _sessions[peer_id]
+	if _jet_ski_race_state in ["countdown", "racing"] and _jet_ski_race_locked_participants.has(peer_id):
+		rpc_id(peer_id, "receive_jet_ski_unmount_result", false, Vector3.ZERO)
+		return
 	if not bool(session.get("authenticated", false)) or not bool(session.get("jet_ski_mounted", false)):
 		rpc_id(peer_id, "receive_jet_ski_unmount_result", false, Vector3.ZERO)
 		return
@@ -1723,6 +1726,20 @@ func _jet_ski_race_can_start(participant_count: int) -> bool:
 	return participant_count >= JET_SKI_RACE_MIN_PARTICIPANTS and participant_count <= JET_SKI_RACE_MAX_PARTICIPANTS
 
 
+func _jet_ski_race_all_participants_mounted(participant_ids: Array[int], sessions: Dictionary) -> bool:
+	if not _jet_ski_race_can_start(participant_ids.size()):
+		return false
+	var seen: Dictionary = {}
+	for peer_id in participant_ids:
+		if seen.has(peer_id) or not sessions.has(peer_id):
+			return false
+		seen[peer_id] = true
+		var session: Dictionary = sessions[peer_id]
+		if not bool(session.get("authenticated", false)) or not bool(session.get("jet_ski_mounted", false)):
+			return false
+	return true
+
+
 func _jet_ski_race_duration_expired(now_usec: int, ends_at_usec: int) -> bool:
 	return ends_at_usec > 0 and now_usec >= ends_at_usec
 
@@ -1828,6 +1845,9 @@ func request_start_jet_ski_race_rpc() -> void:
 	var participant_count := _jet_ski_race_participants.size()
 	if not _jet_ski_race_can_start(participant_count):
 		rpc_id(peer_id, "receive_jet_ski_race_state", "waiting", participant_count, "تحتاج المسابقة إلى متسابقين على الأقل لبدء الجولة.")
+		return
+	if not _jet_ski_race_all_participants_mounted(_jet_ski_race_participants, _sessions):
+		rpc_id(peer_id, "receive_jet_ski_race_state", "waiting", participant_count, "يجب على جميع المتسابقين المسجلين ركوب الجت سكي قبل بدء العد التنازلي.")
 		return
 	if _jet_ski_race_state != "waiting":
 		rpc_id(peer_id, "receive_jet_ski_race_state", _jet_ski_race_state, participant_count, "تم تقديم طلب بدء الجولة بالفعل.")
