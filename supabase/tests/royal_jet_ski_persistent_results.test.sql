@@ -1,5 +1,5 @@
 begin;
-select extensions.plan(15);
+select extensions.plan(17);
 
 insert into auth.users (id,aud,role,email,encrypted_password,email_confirmed_at)
 values
@@ -13,7 +13,7 @@ set local role service_role;
 select extensions.is(
   (private.record_jet_ski_race_result(
     '10000000-0000-4000-8000-000000000051','20000000-0000-4000-8000-000000000051',
-    'jet-ski-test-1','00000000-0000-4000-8000-000000000051','finished',2::smallint,3200000::bigint,
+    'jet-ski-test-1','00000000-0000-4000-8000-000000000051','finished',2::smallint,3200000::bigint,pg_catalog.now(),
     '30000000-0000-4000-8000-000000000051',pg_catalog.now(),null::text
   )->>'recorded')::boolean,
   true,
@@ -23,7 +23,7 @@ select extensions.is(
 select extensions.is(
   (private.record_jet_ski_race_result(
     '10000000-0000-4000-8000-000000000051','20000000-0000-4000-8000-000000000051',
-    'jet-ski-test-1','00000000-0000-4000-8000-000000000051','finished',2::smallint,3200000::bigint,
+    'jet-ski-test-1','00000000-0000-4000-8000-000000000051','finished',2::smallint,3200000::bigint,pg_catalog.now(),
     '30000000-0000-4000-8000-000000000052',pg_catalog.now(),null::text
   )->>'duplicate')::boolean,
   true,
@@ -33,7 +33,7 @@ select extensions.is(
 select extensions.throws_ok(
   $$select private.record_jet_ski_race_result(
     '10000000-0000-4000-8000-000000000051','20000000-0000-4000-8000-000000000099',
-    'jet-ski-test-1','00000000-0000-4000-8000-000000000051','finished',1::smallint,2500000::bigint,
+    'jet-ski-test-1','00000000-0000-4000-8000-000000000051','finished',1::smallint,2500000::bigint,pg_catalog.now(),
     '30000000-0000-4000-8000-000000000053',pg_catalog.now(),null::text
   )$$,
   '23505','jet_ski_race_result_conflict',
@@ -53,7 +53,7 @@ select extensions.throws_ok(
 select extensions.throws_ok(
   $$select private.record_jet_ski_race_result(
     '10000000-0000-4000-8000-000000000058','20000000-0000-4000-8000-000000000058',
-    'jet-ski-test-1','00000000-0000-4000-8000-000000000051','dnf',null::smallint,null::bigint,
+    'jet-ski-test-1','00000000-0000-4000-8000-000000000051','dnf',null::smallint,null::bigint,pg_catalog.now(),
     '30000000-0000-4000-8000-000000000058',pg_catalog.now(),null::text
   )$$,
   '22023','jet_ski_race_dnf_payload_invalid',
@@ -63,7 +63,7 @@ select extensions.throws_ok(
 select extensions.is(
   (private.record_jet_ski_race_result(
     '10000000-0000-4000-8000-000000000052','20000000-0000-4000-8000-000000000052',
-    'jet-ski-test-1','00000000-0000-4000-8000-000000000051','finished',1::smallint,2800000::bigint,
+    'jet-ski-test-1','00000000-0000-4000-8000-000000000051','finished',1::smallint,2800000::bigint,pg_catalog.now(),
     '30000000-0000-4000-8000-000000000054',pg_catalog.now(),null::text
   )->>'daily_best_place')::smallint,
   1::smallint,
@@ -98,7 +98,7 @@ select extensions.is(
 select extensions.is(
   (private.record_jet_ski_race_result(
     '10000000-0000-4000-8000-000000000053','20000000-0000-4000-8000-000000000053',
-    'jet-ski-test-1','00000000-0000-4000-8000-000000000052','dnf',null::smallint,null::bigint,
+    'jet-ski-test-1','00000000-0000-4000-8000-000000000052','dnf',null::smallint,null::bigint,pg_catalog.now(),
     '30000000-0000-4000-8000-000000000055',pg_catalog.now(),'disconnect'
   )->>'daily_reward_eligible')::boolean,
   false,
@@ -115,11 +115,31 @@ select extensions.is(
 select extensions.is(
   (private.record_jet_ski_race_result(
     '10000000-0000-4000-8000-000000000054','20000000-0000-4000-8000-000000000054',
-    'jet-ski-test-1','00000000-0000-4000-8000-000000000053','finished',4::smallint,5000000::bigint,
+    'jet-ski-test-1','00000000-0000-4000-8000-000000000053','finished',4::smallint,5000000::bigint,pg_catalog.now(),
     '30000000-0000-4000-8000-000000000056',pg_catalog.now(),null::text
   )->>'daily_reward_eligible')::boolean,
   false,
   'fourth place is not eligible for the daily podium entitlement'
+);
+
+select extensions.is(
+  (private.record_jet_ski_race_result(
+    '10000000-0000-4000-8000-000000000055','20000000-0000-4000-8000-000000000055',
+    'jet-ski-test-1','00000000-0000-4000-8000-000000000053','finished',3::smallint,4100000::bigint,
+    '2026-11-23 22:30:00+00'::timestamptz,'30000000-0000-4000-8000-000000000057'::uuid,pg_catalog.now(),null::text
+  )->>'egypt_day')::date,
+  ('2026-11-23 22:30:00+00'::timestamptz at time zone 'Africa/Cairo')::date,
+  'the Egypt-local day is derived from the signed race-finish timestamp'
+);
+
+select extensions.is(
+  (private.record_jet_ski_race_result(
+    '10000000-0000-4000-8000-000000000055','20000000-0000-4000-8000-000000000055',
+    'jet-ski-test-1','00000000-0000-4000-8000-000000000053','finished',3::smallint,4100000::bigint,
+    '2026-11-23 22:30:00+00'::timestamptz,'30000000-0000-4000-8000-000000000058'::uuid,pg_catalog.now(),null::text
+  )->>'duplicate')::boolean,
+  true,
+  'a delayed retry on a later day keeps the original race day and does not duplicate the result'
 );
 
 reset role;
@@ -129,7 +149,7 @@ select pg_catalog.set_config('request.jwt.claim.sub','00000000-0000-4000-8000-00
 select extensions.ok(
   not pg_catalog.has_function_privilege(
     'authenticated',
-    'public.record_jet_ski_race_result(uuid,uuid,text,uuid,text,smallint,bigint,uuid,timestamptz,text)',
+    'public.record_jet_ski_race_result(uuid,uuid,text,uuid,text,smallint,bigint,timestamptz,uuid,timestamptz,text)',
     'EXECUTE'
   ),
   'authenticated clients cannot call the public server-only result wrapper'
@@ -138,7 +158,7 @@ select extensions.ok(
 select extensions.ok(
   not pg_catalog.has_function_privilege(
     'authenticated',
-    'private.record_jet_ski_race_result(uuid,uuid,text,uuid,text,smallint,bigint,uuid,timestamptz,text)',
+    'private.record_jet_ski_race_result(uuid,uuid,text,uuid,text,smallint,bigint,timestamptz,uuid,timestamptz,text)',
     'EXECUTE'
   ),
   'authenticated clients cannot call the private server-only result recorder'
