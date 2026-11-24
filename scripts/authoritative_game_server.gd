@@ -2302,8 +2302,10 @@ func _physics_process(delta: float) -> void:
 								"finish_time_usec": int(session["jet_ski_race_finish_time_usec"]),
 								"place": _jet_ski_race_finished_count() + 1
 							})
+						elif next_gate_index == 1:
+							_notify_jet_ski_race_participants("اجتاز أحد المتسابقين بوابة البداية.")
 						else:
-							_notify_jet_ski_race_participants("اجتاز أحد المتسابقين بوابة %d من 3." % maxi(0, next_gate_index - 1))
+							_notify_jet_ski_race_participants("اجتاز أحد المتسابقين نقطة التفتيش %d من 3." % (next_gate_index - 1))
 			session["jet_ski_race_previous_position"] = next_jet_position
 			session["jet_ski_position"] = next_jet_position
 			session["jet_ski_rotation_y"] = jet_state["rotation_y"]
