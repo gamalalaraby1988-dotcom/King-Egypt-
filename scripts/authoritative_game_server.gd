@@ -267,8 +267,8 @@ func _queue_jet_ski_race_result(user_id: String, status: String, place: int, fin
 	if not _is_dedicated_server or _jet_ski_race_id.is_empty():
 		return
 	var normalized_user_id := user_id.strip_edges()
-	if normalized_user_id.is_empty() or _jet_ski_results_hmac_key.size() < 32:
-		push_warning("Jet ski race result could not be queued: missing authenticated user or server HMAC configuration.")
+	if normalized_user_id.is_empty():
+		push_warning("Jet ski race result could not be queued: missing authenticated user.")
 		return
 	var event_id := _city_directory_uuid()
 	if event_id.is_empty():
@@ -287,6 +287,9 @@ func _queue_jet_ski_race_result(user_id: String, status: String, place: int, fin
 	}
 	_jet_ski_results_outbox.append(row)
 	_save_jet_ski_results_outbox()
+	if _jet_ski_results_hmac_key.size() < 32:
+		push_warning("Jet ski result retained in the durable outbox until the dedicated server HMAC secret is configured.")
+		return
 	_pump_jet_ski_results_outbox(Time.get_ticks_usec())
 
 
