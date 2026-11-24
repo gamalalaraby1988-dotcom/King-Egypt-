@@ -117,6 +117,14 @@ func _initialize() -> void:
 		failures.append("The public results board did not sort finishers by server place.")
 	elif str(public_results[2].get("status", "")) != "dnf":
 		failures.append("DNF participants must appear after finishers in the public results board.")
+	server._jet_ski_race_results = [
+		{"peer_id": 11, "status": "finished", "place": 1, "finish_time_usec": 2500000},
+		{"peer_id": 12, "status": "finished", "place": 1, "finish_time_usec": 2500000}
+	]
+	if server._jet_ski_race_place_for_finish_time(2500000) != 1:
+		failures.append("Racers with identical server finish times must share the same rank.")
+	if server._jet_ski_race_place_for_finish_time(2600000) != 3:
+		failures.append("Competition ranking must skip the next place after a tie.")
 	server._sessions = {
 		11: {"jet_ski_race_finished": true},
 		12: {"jet_ski_race_finished": true}
