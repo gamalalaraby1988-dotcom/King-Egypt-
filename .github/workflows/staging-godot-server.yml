@@ -60,16 +60,16 @@ jobs:
             -out "$RUNNER_TEMP/server.crt" \
             -days 1 -subj "/CN=localhost" \
             -addext "subjectAltName=IP:127.0.0.1,DNS:localhost"
-          # The container runs as a non-root user; make this CI-only key readable
-          # so the dedicated server can load the ephemeral test certificate.
           chmod 644 "$RUNNER_TEMP/server.key" "$RUNNER_TEMP/server.crt"
+          cat "$RUNNER_TEMP/server.crt" "$RUNNER_TEMP/server.key" > "$RUNNER_TEMP/server.pem"
+          chmod 644 "$RUNNER_TEMP/server.pem"
 
-      - name: Start isolated TEST-mode server behind TLS proxy
+      - name: Start isolated TEST-mode server behind TCP TLS proxy
         run: |
           TEST_HMAC="$(printf '0123456789abcdef0123456789abcdef' | base64 -w0)"
           docker network create king-city-capacity-net
 
-          # The Godot backend has no published host port; only Nginx is exposed.
+          # The Godot backend has no published host port; only the TLS proxy is exposed.
           docker run -d --name king-city-capacity-smoke \
             --network king-city-capacity-net --network-alias king-city-backend \
             -e KING_CITY_SUPABASE_URL="https://unwrlvyjrtdwobcktetd.supabase.co" \
@@ -97,24 +97,24 @@ jobs:
 
           docker run -d --name king-city-capacity-proxy \
             --network king-city-capacity-net -p 2456:443 \
-            -v "$GITHUB_WORKSPACE/deploy/godot-server/nginx-capacity-smoke.conf:/etc/nginx/conf.d/default.conf:ro" \
-            -v "$RUNNER_TEMP/server.key:/etc/nginx/server.key:ro" \
-            -v "$RUNNER_TEMP/server.crt:/etc/nginx/server.crt:ro" \
-            nginx:1.27-alpine
+            -v "$GITHUB_WORKSPACE/deploy/godot-server/haproxy-capacity-smoke.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro" \
+            -v "$RUNNER_TEMP/server.pem:/usr/local/etc/haproxy/server.pem:ro" \
+            haproxy:3.0-alpine haproxy -W -db -f /usr/local/etc/haproxy/haproxy.cfg
 
           for attempt in $(seq 1 20); do
-            if docker logs king-city-capacity-proxy 2>&1 | grep -q "start worker processes"; then
-              exit 0
+            if [ "$(docker inspect -f '{{.State.Running}}' king-city-capacity-proxy)" = "true" ]; then
+              sleep 1
+              if [ "$(docker inspect -f '{{.State.Running}}' king-city-capacity-proxy)" = "true" ]; then
+                exit 0
+              fi
             fi
-            if [ "$(docker inspect -f '{{.State.Running}}' king-city-capacity-proxy)" != "true" ]; then
-              docker logs king-city-capacity-proxy
-              exit 1
-            fi
+            docker logs king-city-capacity-proxy || true
             sleep 1
           done
           docker logs king-city-capacity-proxy
-          echo "Timed out waiting for the TLS proxy to start."
+          echo "Timed out waiting for the TCP TLS proxy to start."
           exit 1
+
       - name: Test staged player connection capacity
         run: python tests/authoritative_server_capacity_smoke.py --capacity 64
 
