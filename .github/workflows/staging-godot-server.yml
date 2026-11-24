@@ -69,7 +69,7 @@ jobs:
           TEST_HMAC="$(printf '0123456789abcdef0123456789abcdef' | base64 -w0)"
           # Keep this compatibility override isolated to CI: Godot's TLS 1.3
           # PSA handshake fails in some Linux builds (-0x6c00). TLS 1.2 remains enabled.
-          printf '[network]\\ntls/enable_tls_v1.3=false\\n' > "$RUNNER_TEMP/override.cfg"
+          printf '[network]\ntls/enable_tls_v1.3=false\n' > "$RUNNER_TEMP/override.cfg"
           docker run -d --name king-city-capacity-smoke \
             -v "$RUNNER_TEMP/override.cfg:/app/override.cfg:ro" \
             -p 2456:2456 \
