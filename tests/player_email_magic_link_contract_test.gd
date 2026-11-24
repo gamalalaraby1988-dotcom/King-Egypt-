@@ -25,17 +25,20 @@ func _initialize() -> void:
 	_check(main_source.contains("FounderAuthClient.request_founder_entitlement_with_access_token(access_token)"), "Founder entitlement must be checked automatically after the player session is active.")
 	_check(not main_source.contains("_on_founder_verify_current_player_account"), "There must be no separate founder verification action.")
 	_check(not main_source.contains("founder_pin_gate") and not main_source.contains("_on_founder_pin_submit"), "Founder entry must not open a separate PIN login gate.")
-	_check(main_source.contains("المتابعة باستخدام Google"), "The login screen must expose the single Google sign-in button.")
-	_check(not main_source.contains("player_account_code_input") and not main_source.contains("player_account_email_input") and not main_source.contains("founder_email_gate"), "Player UI must not ask for an email or a six-digit code.")
+	_check(main_source.contains("تسجيل الدخول بالبريد الإلكتروني") and main_source.contains("البريد الإلكتروني") and main_source.contains("كلمة المرور"), "The login screen must expose email/password as the primary sign-in path.")
+	_check(main_source.contains("الدخول باستخدام Google (بديل)"), "Google sign-in must remain available as a fallback for existing linked accounts.")
+	_check(main_source.contains("player_password_input.secret = true"), "The password field must be masked.")
+	_check(main_source.contains("player_email_input") and main_source.contains("player_password_input"), "Player UI must collect email and password for primary login.")
+	_check(not main_source.contains("player_account_code_input") and not main_source.contains("founder_email_gate"), "Player UI must not introduce a separate founder login gate.")
 	_check(android_plugin.contains("getPendingAuthLink") and android_plugin.contains("clearPendingAuthLink"), "Android plugin must expose callback retrieval and clearing.")
 	_check(export_plugin.contains("android.intent.action.VIEW") and export_plugin.contains('android:scheme="kingofegyptcity"'), "Android manifest must register the app callback scheme.")
 	_check(export_preset.contains("gradle_build/use_gradle_build=true") and export_preset.contains("permissions/internet=true"), "Android export must use Gradle plugins and Internet permission.")
 
 	if _failed:
-		push_error("Google OAuth contract tests failed: %d" % _failed)
+		push_error("Player account auth contract tests failed: %d" % _failed)
 		quit(1)
 		return
-	print("Google OAuth contract tests passed.")
+	print("Player account auth contract tests passed.")
 	quit(0)
 
 func _check(condition: bool, message: String) -> void:
