@@ -217,8 +217,22 @@ func start_dedicated_server() -> void:
 	print("KING OF EGYPT CITY authoritative WSS server listening on TCP port %d." % port)
 
 
+func _server_api_base_url() -> String:
+	var configured := OS.get_environment("KING_CITY_SUPABASE_URL").strip_edges().trim_suffix("/")
+	if configured.is_empty():
+		configured = str(ProjectSettings.get_setting("founder/auth/api_base_url", "")).strip_edges().trim_suffix("/")
+	return configured
+
+
+func _server_publishable_key() -> String:
+	var configured := OS.get_environment("KING_CITY_SUPABASE_PUBLISHABLE_KEY").strip_edges()
+	if configured.is_empty():
+		configured = str(ProjectSettings.get_setting("founder/auth/publishable_key", "")).strip_edges()
+	return configured
+
+
 func _configure_jet_ski_results_ingestion() -> void:
-	var base_url := str(ProjectSettings.get_setting("founder/auth/api_base_url", "")).strip_edges().trim_suffix("/")
+	var base_url := _server_api_base_url()
 	_jet_ski_results_url = OS.get_environment("KING_CITY_JET_SKI_RESULTS_URL").strip_edges()
 	if _jet_ski_results_url.is_empty() and base_url.begins_with("https://"):
 		_jet_ski_results_url = base_url + "/functions/v1/jet-ski-race-results"
@@ -320,7 +334,7 @@ func _pump_jet_ski_results_outbox(now_usec: int) -> void:
 	request.request_completed.connect(_on_jet_ski_results_request_completed.bind(request, str(row.get("server_event_id", ""))))
 	var headers := PackedStringArray([
 		"Content-Type: application/json",
-		"apikey: " + str(ProjectSettings.get_setting("founder/auth/publishable_key", "")),
+		"apikey: " + _server_publishable_key(),
 		"x-king-city-timestamp: " + timestamp,
 		"x-king-city-nonce: " + nonce,
 		"x-king-city-signature: " + signature
