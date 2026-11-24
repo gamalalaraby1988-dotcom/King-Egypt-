@@ -23,3 +23,7 @@ verify_jwt = false
 # The handler verifies server HMAC and player JWT itself.
 [functions.city-session-directory]
 verify_jwt = false
+
+# Dedicated game-server result ingestion uses timestamped HMAC authentication.
+[functions.jet-ski-race-results]
+verify_jwt = false
