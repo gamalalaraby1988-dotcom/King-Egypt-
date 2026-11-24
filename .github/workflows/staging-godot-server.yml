@@ -115,6 +115,14 @@ jobs:
           echo "Timed out waiting for the TCP TLS proxy to start."
           exit 1
 
+      - name: Diagnose direct backend WebSocket handshake (non-blocking)
+        run: |
+          if docker run --rm --network king-city-capacity-net python:3.12-slim sh -c "pip install --disable-pip-version-check -q websockets==12.0 && python -c \"import asyncio,websockets; ws=asyncio.run(websockets.connect('ws://king-city-backend:2457', subprotocols=['binary'], open_timeout=5)); print('DIRECT_BACKEND_WEBSOCKET_HANDSHAKE=PASSED'); asyncio.run(ws.close())\""; then
+            echo "Direct backend handshake succeeded; inspect proxy path if WSS still fails."
+          else
+            echo "DIRECT_BACKEND_WEBSOCKET_HANDSHAKE=FAILED; backend listener/protocol is the likely fault domain."
+          fi
+
       - name: Test staged player connection capacity
         run: python tests/authoritative_server_capacity_smoke.py --capacity 64
 
