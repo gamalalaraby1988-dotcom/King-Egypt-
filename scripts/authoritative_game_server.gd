@@ -1794,6 +1794,14 @@ func _jet_ski_race_finished_count() -> int:
 	return count
 
 
+func _jet_ski_race_place_for_finish_time(finish_time_usec: int) -> int:
+	var earlier_finishers := 0
+	for result in _jet_ski_race_results:
+		if str(result.get("status", "")) == "finished" and int(result.get("finish_time_usec", 0)) < finish_time_usec:
+			earlier_finishers += 1
+	return earlier_finishers + 1
+
+
 func _jet_ski_race_all_locked_participants_finished() -> bool:
 	if _jet_ski_race_locked_participants.is_empty():
 		return false
@@ -2371,14 +2379,15 @@ func _physics_process(delta: float) -> void:
 							session["jet_ski_race_finished"] = true
 							session["jet_ski_race_status"] = "finished"
 							session["jet_ski_race_finish_time_usec"] = maxi(0, now_usec - _jet_ski_race_started_at_usec)
+							session["jet_ski_race_place"] = _jet_ski_race_place_for_finish_time(int(session["jet_ski_race_finish_time_usec"]))
 							_jet_ski_race_results.append({
 								"peer_id": peer_id,
 								"user_id": str(session.get("user_id", "")),
 								"status": "finished",
 								"finish_time_usec": int(session["jet_ski_race_finish_time_usec"]),
-								"place": _jet_ski_race_finished_count() + 1
+								"place": int(session["jet_ski_race_place"])
 							})
-							rpc_id(peer_id, "receive_jet_ski_race_progress", next_gate_index, "finished", _jet_ski_race_finished_count())
+							rpc_id(peer_id, "receive_jet_ski_race_progress", next_gate_index, "finished", int(session["jet_ski_race_place"]))
 						elif next_gate_index == 1:
 							rpc_id(peer_id, "receive_jet_ski_race_progress", next_gate_index, "racing", 0)
 							_notify_jet_ski_race_participants("اجتاز أحد المتسابقين بوابة البداية.")
