@@ -13,6 +13,22 @@ func _initialize() -> void:
 			failures.append("Race start incorrectly rejected with %d participant(s)." % count)
 	if server._jet_ski_race_can_start(5):
 		failures.append("Race start incorrectly allowed with five participants.")
+	var mounted_sessions := {
+		11: {"authenticated": true, "jet_ski_mounted": true},
+		12: {"authenticated": true, "jet_ski_mounted": true},
+		13: {"authenticated": true, "jet_ski_mounted": false}
+	}
+	if not server._jet_ski_race_all_participants_mounted([11, 12], mounted_sessions):
+		failures.append("A fully authenticated and mounted roster was incorrectly rejected.")
+	if server._jet_ski_race_all_participants_mounted([11, 13], mounted_sessions):
+		failures.append("A roster containing an unmounted participant was incorrectly accepted.")
+	mounted_sessions[12]["authenticated"] = false
+	if server._jet_ski_race_all_participants_mounted([11, 12], mounted_sessions):
+		failures.append("A roster containing an unauthenticated participant was incorrectly accepted.")
+	if server._jet_ski_race_all_participants_mounted([11], mounted_sessions):
+		failures.append("A single mounted participant was incorrectly accepted as a race roster.")
+	if server._jet_ski_race_all_participants_mounted([11, 11], mounted_sessions):
+		failures.append("A duplicate peer ID was incorrectly accepted in the race roster.")
 	if server._jet_ski_race_should_reopen_after_disconnect(false, "ready"):
 		failures.append("A non-participant disconnect incorrectly reopened a ready race.")
 	if server._jet_ski_race_should_reopen_after_disconnect(false, "countdown"):
