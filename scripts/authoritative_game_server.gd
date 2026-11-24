@@ -59,6 +59,7 @@ const JET_SKI_RACE_ANNOUNCEMENT_MINUTES := 15
 const SPAWN_POSITION := Vector3(0.0, 1.0, -42.0)
 
 var _server_peer: WebSocketMultiplayerPeer
+var _max_players_per_server := MAX_PLAYERS
 var _sessions: Dictionary = {}
 var _auth_requests: Dictionary = {}
 var _walk_progress_requests: Dictionary = {}
@@ -169,6 +170,9 @@ func _ready() -> void:
 	_load_daily_job_completions()
 	_is_dedicated_server = OS.get_cmdline_user_args().has("--dedicated-server")
 	if _is_dedicated_server:
+		var capacity_setting := OS.get_environment("KING_CITY_SESSION_CAPACITY").strip_edges()
+		_max_players_per_server = clampi(int(capacity_setting) if capacity_setting.is_valid_int() else MAX_PLAYERS, 1, MAX_PLAYERS)
+		print("KING OF EGYPT CITY server capacity configured: %d players (hard ceiling: %d)." % [_max_players_per_server, MAX_PLAYERS])
 		var secret_b64 := OS.get_environment("KING_CITY_PROOF_HMAC_SECRET_B64").strip_edges()
 		if not secret_b64.is_empty():
 			_proof_hmac_secret = Marshalls.base64_to_raw(secret_b64)
@@ -445,7 +449,7 @@ func _on_city_directory_request_completed(result: int, response_code: int, _head
 func _register_city_session_server() -> void:
 	if not _city_directory_enabled or _city_directory_registered:
 		return
-	var capacity := clampi(int(OS.get_environment("KING_CITY_SESSION_CAPACITY")) if not OS.get_environment("KING_CITY_SESSION_CAPACITY").is_empty() else MAX_PLAYERS, 1, MAX_PLAYERS)
+	var capacity := _max_players_per_server
 	_city_directory_next_heartbeat_usec = Time.get_ticks_usec() + 20000000
 	var payload := {
 		"action": "server_register",
@@ -604,7 +608,7 @@ func _on_peer_connected(peer_id: int) -> void:
 	if _city_directory_enabled and not _city_directory_registered:
 		multiplayer.multiplayer_peer.disconnect_peer(peer_id)
 		return
-	if _sessions.size() >= MAX_PLAYERS:
+	if _sessions.size() >= _max_players_per_server:
 		multiplayer.multiplayer_peer.disconnect_peer(peer_id)
 		return
 	_sessions[peer_id] = {
