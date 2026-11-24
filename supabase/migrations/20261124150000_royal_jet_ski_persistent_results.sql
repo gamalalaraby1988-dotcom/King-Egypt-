@@ -13,13 +13,20 @@ create table if not exists private.jet_ski_race_results (
     finish_time_usec bigint,
     reason text,
     finalized_at timestamptz not null default pg_catalog.now(),
-    primary key (race_id, user_id),
-    check (
+    primary key (race_id, user_id)
+);
+
+alter table private.jet_ski_race_results
+    drop constraint if exists jet_ski_race_results_check;
+alter table private.jet_ski_race_results
+    drop constraint if exists jet_ski_race_results_status_shape_check;
+alter table private.jet_ski_race_results
+    add constraint jet_ski_race_results_status_shape_check check (
         (status = 'finished' and place between 1 and 4 and finish_time_usec >= 0 and reason is null)
         or
-        (status = 'dnf' and place is null and finish_time_usec is null and reason in ('disconnect', 'time_limit'))
-    )
-);
+        (status = 'dnf' and place is null and finish_time_usec is null
+            and reason is not null and reason in ('disconnect', 'time_limit'))
+    );
 
 create index if not exists jet_ski_race_results_user_day_idx
     on private.jet_ski_race_results(user_id, egypt_day desc, finalized_at desc);
