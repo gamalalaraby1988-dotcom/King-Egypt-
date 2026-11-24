@@ -35,7 +35,7 @@ func _run_city_adventure_contract() -> void:
 		push_error("Survival race checkpoints must remain within the existing z=45 road corridor.")
 		quit(1)
 		return
-	for existing_entrance in ['["fire_rescue","مركز الإطفاء والإنقاذ",Vector3(-75,0,15)', '["police_station","مركز الشرطة",Vector3(-75,0,-5)', '["supermarket","السوبر ماركت",Vector3(-30,0,-30)', '["cinema","السينما",Vector3(60,0,30)']:
+	for existing_entrance in ['["fire_rescue","مركز الإطفاء والإنقاذ",Vector3(-75,0,15)', '["police_station","مركز الشرطة",Vector3(-75,0,-5)', '["supermarket","السوبر ماركت",Vector3(-30,0,-30)', '["cinema","السينما",Vector3(0,0,-195)']:
 		if not city_layout_source.contains(existing_entrance):
 			push_error("Adventure checkpoint references a building that is missing from the approved city layout.")
 			quit(1)
