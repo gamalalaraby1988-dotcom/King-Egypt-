@@ -15,7 +15,7 @@ const VALUES: Record<string, string | undefined> = {
   SUPABASE_URL: "https://project.invalid",
   SUPABASE_PUBLISHABLE_KEYS: JSON.stringify({ default: PUBLISHABLE }),
   SUPABASE_SECRET_KEYS: JSON.stringify({ default: SERVICE }),
-  CITY_SESSION_SERVER_KEYS_JSON: JSON.stringify({ [SERVER_ID]: SECRET_B64 }),
+  JET_SKI_RACE_SERVER_KEYS_JSON: JSON.stringify({ [SERVER_ID]: SECRET_B64 }),
 };
 
 function runtime(fetcher: typeof fetch, overrides: Record<string, string | undefined> = {}): JetSkiRaceResultsRuntime {
@@ -64,7 +64,7 @@ Deno.test("method, configuration, and API-key guards fail closed", async () => {
   let calls = 0;
   const handler = createJetSkiRaceResultsHandler(runtime(async () => { calls++; return Response.json({}); }));
   assertEquals((await handler(new Request("https://edge.invalid", { method: "GET" }))).status, 405);
-  const missing = createJetSkiRaceResultsHandler(runtime(fetch, { CITY_SESSION_SERVER_KEYS_JSON: undefined }));
+  const missing = createJetSkiRaceResultsHandler(runtime(fetch, { JET_SKI_RACE_SERVER_KEYS_JSON: undefined }));
   assertEquals((await missing(await signed(resultBody()))).status, 401);
   const noConfig = createJetSkiRaceResultsHandler(runtime(fetch, { SUPABASE_SECRET_KEYS: undefined }));
   assertEquals((await noConfig(await signed(resultBody()))).status, 503);
