@@ -1,4 +1,4 @@
-[gd_scene load_steps=8 format=3]
+[gd_scene load_steps=11 format=3]
 
 [ext_resource type="Script" path="res://scripts/jet_ski_controller.gd" id="1_controller"]
 [ext_resource type="Script" path="res://scripts/jet_ski_hud.gd" id="2_hud"]
@@ -6,20 +6,48 @@
 [sub_resource type="BoxShape3D" id="HullCollision"]
 size = Vector3(1.05, 0.38, 2.65)
 
-[sub_resource type="BoxMesh" id="HullMesh"]
-size = Vector3(1.05, 0.38, 2.65)
+[sub_resource type="CapsuleMesh" id="HullMesh"]
+radius = 0.5
+height = 2.1
+radial_segments = 32
+rings = 12
 
 [sub_resource type="StandardMaterial3D" id="HullMaterial"]
 albedo_color = Color(0.82, 0.68, 0.31, 1)
-metallic = 0.38
-roughness = 0.27
+metallic = 0.48
+roughness = 0.24
+clearcoat_enabled = true
+clearcoat = 0.72
 
-[sub_resource type="BoxMesh" id="SeatMesh"]
-size = Vector3(0.58, 0.24, 0.92)
+[sub_resource type="StandardMaterial3D" id="TealAccentMaterial"]
+albedo_color = Color(0.025, 0.55, 0.58, 1)
+metallic = 0.52
+roughness = 0.22
+emission_enabled = true
+emission = Color(0.01, 0.12, 0.13, 1)
+emission_energy_multiplier = 0.35
+
+[sub_resource type="CapsuleMesh" id="SeatMesh"]
+radius = 0.19
+height = 1.0
+radial_segments = 24
+rings = 10
 
 [sub_resource type="StandardMaterial3D" id="SeatMaterial"]
-albedo_color = Color(0.055, 0.065, 0.075, 1)
-roughness = 0.72
+albedo_color = Color(0.035, 0.045, 0.055, 1)
+roughness = 0.62
+
+[sub_resource type="CylinderMesh" id="HandlebarMesh"]
+top_radius = 0.045
+bottom_radius = 0.045
+height = 0.92
+radial_segments = 16
+
+[sub_resource type="CylinderMesh" id="StemMesh"]
+top_radius = 0.045
+bottom_radius = 0.065
+height = 0.42
+radial_segments = 16
 
 [node name="RoyalJetSki" type="CharacterBody3D"]
 collision_layer = 0
@@ -32,33 +60,77 @@ shape = SubResource("HullCollision")
 
 [node name="VisualRoot" type="Node3D" parent="."]
 
-[node name="Hull" type="MeshInstance3D" parent="VisualRoot"]
-position = Vector3(0, 0.08, 0)
+[node name="MainHull" type="MeshInstance3D" parent="VisualRoot"]
+position = Vector3(0, 0.10, 0.02)
+rotation = Vector3(1.5708, 0, 0)
+scale = Vector3(0.78, 0.52, 1.0)
 mesh = SubResource("HullMesh")
 material_override = SubResource("HullMaterial")
 
-[node name="Nose" type="MeshInstance3D" parent="VisualRoot"]
-position = Vector3(0, 0.13, -1.28)
-scale = Vector3(0.55, 0.72, 0.5)
+[node name="BowTip" type="MeshInstance3D" parent="VisualRoot"]
+position = Vector3(0, 0.13, -0.91)
+scale = Vector3(0.34, 0.22, 0.54)
+mesh = SubResource("HullMesh")
+material_override = SubResource("HullMaterial")
+
+[node name="BowAccent" type="MeshInstance3D" parent="VisualRoot"]
+position = Vector3(0, 0.31, -0.83)
+scale = Vector3(0.28, 0.055, 0.42)
+mesh = SubResource("HullMesh")
+material_override = SubResource("TealAccentMaterial")
+
+[node name="SideAccentLeft" type="MeshInstance3D" parent="VisualRoot"]
+position = Vector3(-0.39, 0.04, 0.16)
+scale = Vector3(0.035, 0.06, 0.72)
+mesh = SubResource("HullMesh")
+material_override = SubResource("TealAccentMaterial")
+
+[node name="SideAccentRight" type="MeshInstance3D" parent="VisualRoot"]
+position = Vector3(0.39, 0.04, 0.16)
+scale = Vector3(0.035, 0.06, 0.72)
+mesh = SubResource("HullMesh")
+material_override = SubResource("TealAccentMaterial")
+
+[node name="RearDeck" type="MeshInstance3D" parent="VisualRoot"]
+position = Vector3(0, 0.22, 0.63)
+scale = Vector3(0.57, 0.10, 0.30)
 mesh = SubResource("HullMesh")
 material_override = SubResource("HullMaterial")
 
 [node name="Seat" type="MeshInstance3D" parent="VisualRoot"]
-position = Vector3(0, 0.42, 0.28)
+position = Vector3(0, 0.40, 0.28)
+rotation = Vector3(1.5708, 0, 0)
+scale = Vector3(0.58, 0.38, 0.68)
 mesh = SubResource("SeatMesh")
 material_override = SubResource("SeatMaterial")
 
 [node name="HandlebarStem" type="MeshInstance3D" parent="VisualRoot"]
-position = Vector3(0, 0.48, -0.42)
-scale = Vector3(0.12, 0.72, 0.12)
-mesh = SubResource("SeatMesh")
+position = Vector3(0, 0.43, -0.48)
+rotation = Vector3(1.12, 0, 0)
+scale = Vector3(0.78, 0.78, 0.78)
+mesh = SubResource("StemMesh")
 material_override = SubResource("HullMaterial")
 
 [node name="Handlebar" type="MeshInstance3D" parent="VisualRoot"]
-position = Vector3(0, 0.72, -0.42)
-scale = Vector3(0.9, 0.12, 0.12)
-mesh = SubResource("SeatMesh")
+position = Vector3(0, 0.61, -0.55)
+rotation = Vector3(0, 0, 1.5708)
+scale = Vector3(0.78, 0.78, 0.78)
+mesh = SubResource("HandlebarMesh")
 material_override = SubResource("SeatMaterial")
+
+[node name="LeftGrip" type="MeshInstance3D" parent="VisualRoot"]
+position = Vector3(-0.34, 0.61, -0.55)
+rotation = Vector3(0, 0, 1.5708)
+scale = Vector3(0.72, 0.95, 0.72)
+mesh = SubResource("StemMesh")
+material_override = SubResource("TealAccentMaterial")
+
+[node name="RightGrip" type="MeshInstance3D" parent="VisualRoot"]
+position = Vector3(0.34, 0.61, -0.55)
+rotation = Vector3(0, 0, 1.5708)
+scale = Vector3(0.72, 0.95, 0.72)
+mesh = SubResource("StemMesh")
+material_override = SubResource("TealAccentMaterial")
 
 [node name="CameraPivot" type="Node3D" parent="."]
 position = Vector3(0, 2.25, 0.75)
