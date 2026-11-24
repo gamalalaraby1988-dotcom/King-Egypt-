@@ -349,9 +349,34 @@ func _build_nile_waterfront() -> void:
 	# The former enclosed marina basin is replaced by open sea. main.gd removes
 	# the matching terrain footprint so there is no hidden walkable floor.
 	var water := _box(self, "RoyalOpenSea", Vector3(120.0, 0.18, 72.0), Vector3(0.0, -0.12, 114.0), Color(0.025, 0.24, 0.34))
-	var water_material := _mat(Color(0.025, 0.24, 0.34), 0.12)
-	water_material.roughness = 0.2
+	var water_material := _mat(Color(0.035, 0.34, 0.48), 0.22)
+	water_material.roughness = 0.12
+	water_material.metallic = 0.28
+	water_material.emission_enabled = true
+	water_material.emission = Color(0.008, 0.075, 0.105)
+	water_material.emission_energy_multiplier = 0.42
 	water.material_override = water_material
+	# Subtle parallel highlights break up the prototype's flat water plane while
+	# staying inexpensive: a small set of thin, non-colliding surface strips.
+	var ripple_material := StandardMaterial3D.new()
+	ripple_material.albedo_color = Color(0.18, 0.58, 0.68, 0.48)
+	ripple_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	ripple_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	ripple_material.roughness = 0.24
+	for i in range(9):
+		var ripple := MeshInstance3D.new()
+		ripple.name = "OpenSeaSurfaceRipple_%02d" % i
+		var ripple_mesh := BoxMesh.new()
+		ripple_mesh.size = Vector3(84.0 - float(i % 3) * 12.0, 0.025, 0.10)
+		ripple.mesh = ripple_mesh
+		ripple.position = Vector3(0.0, 0.015, 88.0 + float(i) * 6.2)
+		ripple.material_override = ripple_material
+		ripple.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		add_child(ripple)
+	# A restrained pale shoreline accent makes the water/beach boundary readable.
+	var shore_material := _mat(Color(0.72, 0.66, 0.51))
+	shore_material.roughness = 0.94
+	_box(self, "RoyalBeachShoreline", Vector3(120.0, 0.06, 0.42), Vector3(0.0, 0.015, 77.9), Color(0.72, 0.66, 0.51)).material_override = shore_material
 	# A continuous promenade forms the northern edge of the open-water beach.
 	_box(self, "WaterfrontPromenade", Vector3(180.0, 0.28, 3.0), Vector3(0.0, 0.02, 76.0), SAND)
 	for x in [-65.0, -45.0, -25.0, 25.0, 45.0, 65.0]:
@@ -457,17 +482,40 @@ func _add_jet_ski_gate(parent: Node3D, gate_id: String, z_position: float, label
 	gate.name = "JetSkiGate_" + gate_id
 	gate.position = Vector3(0.0, 0.0, z_position)
 	parent.add_child(gate)
+	var gate_gold := gate_id == "Start" or gate_id == "Finish"
+	var gate_color := GOLD if gate_gold else TEAL
+	var post_material := _mat(gate_color, 0.32)
+	# Full-width raised marker frame makes every checkpoint legible from the
+	# shoreline and from the race approach, not just as two distant buoys.
 	for side in [-1.0, 1.0]:
+		var post := MeshInstance3D.new()
+		post.name = "GateFramePost"
+		var post_mesh := BoxMesh.new()
+		post_mesh.size = Vector3(0.42, 5.2, 0.42)
+		post.mesh = post_mesh
+		post.position = Vector3(side * 21.0, 2.55, 0.0)
+		post.material_override = post_material
+		post.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		gate.add_child(post)
 		var buoy := MeshInstance3D.new()
 		buoy.name = "GateBuoy"
 		var sphere := SphereMesh.new()
-		sphere.radius = 0.8 if gate_id == "Start" or gate_id == "Finish" else 0.65
+		sphere.radius = 1.05 if gate_gold else 0.9
 		sphere.height = sphere.radius * 2.0
 		buoy.mesh = sphere
 		buoy.position = Vector3(side * 21.0, 0.15, 0.0)
-		buoy.material_override = _mat(GOLD if gate_id == "Start" or gate_id == "Finish" else TEAL, 0.18)
+		buoy.material_override = _mat(gate_color, 0.22)
 		buoy.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		gate.add_child(buoy)
+	var crossbar := MeshInstance3D.new()
+	crossbar.name = "GateFrameCrossbar"
+	var crossbar_mesh := BoxMesh.new()
+	crossbar_mesh.size = Vector3(42.5, 0.38, 0.48)
+	crossbar.mesh = crossbar_mesh
+	crossbar.position = Vector3(0.0, 5.15, 0.0)
+	crossbar.material_override = post_material
+	crossbar.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	gate.add_child(crossbar)
 	var marker := Label3D.new()
 	marker.name = "GateLabel"
 	marker.text = label_text
