@@ -104,6 +104,7 @@ create policy jet_ski_daily_entitlements_service_update
     using (true) with check (true);
 
 drop function if exists private.record_jet_ski_race_result(uuid,uuid,text,uuid,text,smallint,bigint,text);
+drop function if exists private.record_jet_ski_race_result(uuid,uuid,text,uuid,text,smallint,bigint,timestamptz,uuid,timestamptz,text);
 
 create or replace function private.record_jet_ski_race_result(
     p_race_id uuid,
@@ -113,6 +114,7 @@ create or replace function private.record_jet_ski_race_result(
     p_status text,
     p_place smallint,
     p_finish_time_usec bigint,
+    p_race_finished_at timestamptz,
     p_nonce uuid,
     p_issued_at timestamptz,
     p_reason text default null
@@ -123,7 +125,7 @@ security invoker
 set search_path = ''
 as $function$
 declare
-    v_egypt_day date := (pg_catalog.now() at time zone 'Africa/Cairo')::date;
+    v_egypt_day date;
     v_by_event private.jet_ski_race_results%rowtype;
     v_by_racer private.jet_ski_race_results%rowtype;
     v_result private.jet_ski_race_results%rowtype;
@@ -133,9 +135,11 @@ declare
     v_inserted boolean := false;
 begin
     if p_race_id is null or p_server_event_id is null or p_user_id is null
-       or p_nonce is null or p_issued_at is null
+       or p_race_finished_at is null or p_nonce is null or p_issued_at is null
        or p_issued_at > pg_catalog.now() + interval '60 seconds'
        or p_issued_at < pg_catalog.now() - interval '60 seconds'
+       or p_race_finished_at > pg_catalog.now() + interval '60 seconds'
+       or p_race_finished_at < pg_catalog.now() - interval '7 days'
        or p_status is null or p_server_id is null
        or p_server_id !~ '^[a-zA-Z0-9][a-zA-Z0-9_-]{2,63}$'
        or p_status not in ('finished', 'dnf') then
@@ -152,6 +156,8 @@ begin
        or p_reason is null or p_reason not in ('disconnect', 'time_limit') then
         raise exception 'jet_ski_race_dnf_payload_invalid' using errcode = '22023';
     end if;
+
+    v_egypt_day := (p_race_finished_at at time zone 'Africa/Cairo')::date;
 
     delete from private.jet_ski_race_server_nonces
     where expires_at <= pg_catalog.now();
@@ -248,9 +254,9 @@ begin
 end;
 $function$;
 
-revoke all on function private.record_jet_ski_race_result(uuid,uuid,text,uuid,text,smallint,bigint,uuid,timestamptz,text)
+revoke all on function private.record_jet_ski_race_result(uuid,uuid,text,uuid,text,smallint,bigint,timestamptz,uuid,timestamptz,text)
     from public, anon, authenticated;
-grant execute on function private.record_jet_ski_race_result(uuid,uuid,text,uuid,text,smallint,bigint,uuid,timestamptz,text)
+grant execute on function private.record_jet_ski_race_result(uuid,uuid,text,uuid,text,smallint,bigint,timestamptz,uuid,timestamptz,text)
     to service_role;
 
 create or replace function public.record_jet_ski_race_result(
@@ -261,6 +267,7 @@ create or replace function public.record_jet_ski_race_result(
     p_status text,
     p_place smallint,
     p_finish_time_usec bigint,
+    p_race_finished_at timestamptz,
     p_nonce uuid,
     p_issued_at timestamptz,
     p_reason text default null
@@ -272,18 +279,18 @@ set search_path = ''
 as $function$
     select private.record_jet_ski_race_result(
         p_race_id, p_server_event_id, p_server_id, p_user_id,
-        p_status, p_place, p_finish_time_usec, p_nonce, p_issued_at, p_reason
+        p_status, p_place, p_finish_time_usec, p_race_finished_at, p_nonce, p_issued_at, p_reason
     );
 $function$;
 
-revoke all on function public.record_jet_ski_race_result(uuid,uuid,text,uuid,text,smallint,bigint,uuid,timestamptz,text)
+revoke all on function public.record_jet_ski_race_result(uuid,uuid,text,uuid,text,smallint,bigint,timestamptz,uuid,timestamptz,text)
     from public, anon, authenticated;
-grant execute on function public.record_jet_ski_race_result(uuid,uuid,text,uuid,text,smallint,bigint,uuid,timestamptz,text)
+grant execute on function public.record_jet_ski_race_result(uuid,uuid,text,uuid,text,smallint,bigint,timestamptz,uuid,timestamptz,text)
     to service_role;
 
 comment on table private.jet_ski_race_results is
 'Append-only server-finalized royal jet ski race results. Client roles have no access; a trusted HMAC-verifying Edge Function records results through the service-only RPC.';
 comment on table private.jet_ski_daily_reward_entitlements is
 'One best podium entitlement per account and Egypt-local day. Reward amounts remain null until the economy team approves the daily cash schedule; this table does not pay currency.';
-comment on function private.record_jet_ski_race_result(uuid,uuid,text,uuid,text,smallint,bigint,uuid,timestamptz,text) is
+comment on function private.record_jet_ski_race_result(uuid,uuid,text,uuid,text,smallint,bigint,timestamptz,uuid,timestamptz,text) is
 'Service-only idempotent race-result recorder. Consumes a short-lived server nonce, derives the Egypt-local day in Postgres, rejects conflicting event replays, and atomically maintains one best top-three entitlement per account/day without issuing a payout.';
