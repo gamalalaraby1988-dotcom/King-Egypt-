@@ -27,6 +27,8 @@ signal arcade_session_verified(session_id: String, server_event_id: String, mach
 signal arcade_slot_spin_settled(session_id: String, result: Dictionary)
 signal arcade_slot_spin_failed(session_id: String, message: String)
 signal jet_ski_race_state_changed(state: String, participant_count: int, message: String)
+signal jet_ski_race_progress_changed(next_gate_index: int, status: String, place: int)
+signal jet_ski_race_results_received(results: Array)
 signal jet_ski_mount_result_received(success: bool, message: String)
 signal jet_ski_unmount_result_received(success: bool, server_position: Vector3)
 signal jet_ski_authoritative_state_received(position: Vector3, rotation_y: float, velocity: Vector3)
@@ -1818,6 +1820,7 @@ func _jet_ski_race_finish_round(message: String) -> void:
 	_jet_ski_race_state = "finished"
 	_jet_ski_race_ends_at_usec = 0
 	_jet_ski_race_countdown_until_usec = 0
+	_broadcast_jet_ski_race_results()
 	_notify_jet_ski_race_participants(message)
 
 
@@ -1843,6 +1846,40 @@ func _jet_ski_race_should_reopen_after_disconnect(was_participant: bool, race_st
 
 func _jet_ski_race_can_watch(peer_id: int, participant_ids: Array[int]) -> bool:
 	return peer_id > 0 and not participant_ids.has(peer_id)
+
+
+func _jet_ski_race_public_results() -> Array[Dictionary]:
+	var rows: Array[Dictionary] = []
+	for result in _jet_ski_race_results:
+		var peer_id := int(result.get("peer_id", 0))
+		var slot := _jet_ski_race_locked_participants.find(peer_id) + 1
+		rows.append({
+			"slot": slot,
+			"status": str(result.get("status", "dnf")),
+			"place": int(result.get("place", 0)),
+			"finish_time_usec": int(result.get("finish_time_usec", 0))
+		})
+	rows.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		var a_finished := str(a.get("status", "")) == "finished"
+		var b_finished := str(b.get("status", "")) == "finished"
+		if a_finished != b_finished:
+			return a_finished
+		if a_finished:
+			return int(a.get("place", 999)) < int(b.get("place", 999))
+		return int(a.get("slot", 999)) < int(b.get("slot", 999))
+	)
+	return rows
+
+
+func _broadcast_jet_ski_race_results() -> void:
+	var public_results := _jet_ski_race_public_results()
+	var audience: Array[int] = _jet_ski_race_participants.duplicate()
+	for spectator_peer_id in _jet_ski_race_spectators:
+		if not audience.has(spectator_peer_id):
+			audience.append(spectator_peer_id)
+	for peer_id in audience:
+		if _sessions.has(peer_id) and bool(_sessions[peer_id].get("authenticated", false)):
+			rpc_id(peer_id, "receive_jet_ski_race_results", public_results)
 
 
 func _notify_jet_ski_race_participants(message: String) -> void:
@@ -1947,6 +1984,29 @@ func receive_jet_ski_race_state(state: String, participant_count: int, message: 
 	if multiplayer.is_server() or not is_authenticated():
 		return
 	jet_ski_race_state_changed.emit(state, participant_count, message)
+
+
+@rpc("authority", "call_remote", "reliable")
+func receive_jet_ski_race_progress(next_gate_index: int, status: String, place: int) -> void:
+	if multiplayer.is_server() or not is_authenticated():
+		return
+	jet_ski_race_progress_changed.emit(clampi(next_gate_index, 0, JET_SKI_RACE_GATE_Z_POSITIONS.size()), status, maxi(0, place))
+
+
+@rpc("authority", "call_remote", "reliable")
+func receive_jet_ski_race_results(results: Array) -> void:
+	if multiplayer.is_server() or not is_authenticated():
+		return
+	var safe_results: Array = []
+	for item in results:
+		if item is Dictionary:
+			safe_results.append({
+				"slot": clampi(int(item.get("slot", 0)), 0, JET_SKI_RACE_MAX_PARTICIPANTS),
+				"status": str(item.get("status", "dnf")) if str(item.get("status", "")) in ["finished", "dnf"] else "dnf",
+				"place": clampi(int(item.get("place", 0)), 0, JET_SKI_RACE_MAX_PARTICIPANTS),
+				"finish_time_usec": maxi(0, int(item.get("finish_time_usec", 0)))
+			})
+	jet_ski_race_results_received.emit(safe_results)
 
 
 
@@ -2308,9 +2368,12 @@ func _physics_process(delta: float) -> void:
 								"finish_time_usec": int(session["jet_ski_race_finish_time_usec"]),
 								"place": _jet_ski_race_finished_count() + 1
 							})
+							rpc_id(peer_id, "receive_jet_ski_race_progress", next_gate_index, "finished", _jet_ski_race_finished_count())
 						elif next_gate_index == 1:
+							rpc_id(peer_id, "receive_jet_ski_race_progress", next_gate_index, "racing", 0)
 							_notify_jet_ski_race_participants("اجتاز أحد المتسابقين بوابة البداية.")
 						else:
+							rpc_id(peer_id, "receive_jet_ski_race_progress", next_gate_index, "racing", 0)
 							_notify_jet_ski_race_participants("اجتاز أحد المتسابقين نقطة التفتيش %d من 3." % (next_gate_index - 1))
 			session["jet_ski_race_previous_position"] = next_jet_position
 			session["jet_ski_position"] = next_jet_position
