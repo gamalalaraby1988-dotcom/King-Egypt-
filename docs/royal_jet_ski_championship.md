@@ -142,3 +142,14 @@ Do not describe the championship as playable or multiplayer-validated until thes
 
 - Added the `jet-ski-race-results` Edge Function boundary: it validates the dedicated server's timestamped HMAC, strict result payload, finish-time window, and database nonce before forwarding the result through the service-role-only RPC. The function is configured with platform JWT verification disabled because it authenticates the server with HMAC itself.
 - Added Edge Function contract tests to the GitHub Actions workflow. The function has been added to the repository but is not deployed to either Supabase project yet.
+
+## Authoritative server result sender and durable retry outbox (2026-11-24)
+- The dedicated Godot server now creates a unique race ID when the countdown transitions into the live race. Finish timestamps are derived from the server's race-start wall clock plus its monotonic finish duration; DNF timestamps are captured by the server at disconnect or time-limit resolution.
+- Finalized finish and DNF rows are queued locally in `user://king_city_jet_ski_results_outbox.cfg` before submission. The outbox is restored on server startup and retains failed submissions; successful acknowledgements remove only the matching event. Retries use a fresh nonce while preserving the same event ID and result payload, so the database's idempotency checks can safely recognize delayed retries.
+- The sender signs the exact JSON body with HMAC-SHA256 over `timestamp + newline + nonce + newline + raw_body`, matching the Edge Function verifier. Finish timestamps are sent as explicit UTC ISO-8601 values.
+- The current server ranking policy is competition ranking: exact equal server finish times share a place, and the following place is skipped (for example, 1, 1, 3). The persistent entitlement keeps the best podium rank and, within the same rank, the faster finish time. No arbitrary lane/slot tie-break is introduced.
+- Dedicated server runtime configuration required before results can be submitted:
+  - `KING_CITY_SESSION_SERVER_ID`: the same registered server ID configured for the city session directory.
+  - `KING_CITY_JET_SKI_RESULTS_HMAC_SECRET_B64`: a dedicated random secret of at least 32 decoded bytes, shared only with the `CITY_SESSION_SERVER_KEYS_JSON` entry for this server in the Edge Function environment. Do not reuse the city-directory HMAC secret or commit the value.
+  - Optional `KING_CITY_JET_SKI_RESULTS_URL`; otherwise the function URL is derived from the project's configured Supabase URL.
+- The Edge Function is still not deployed, and its server HMAC secret is not configured in Supabase. The production database has not been migrated. The local outbox sender is therefore implemented but cannot yet submit live results. Configure the secret and deploy the function to the isolated test project first, then run a signed end-to-end server result test before production rollout.
