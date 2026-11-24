@@ -9,6 +9,7 @@ on:
       - 'scenes/**'
       - 'scripts/**'
       - 'assets/**'
+      - 'tests/**'
       - '.github/workflows/staging-godot-server.yml'
   push:
     branches:
@@ -20,6 +21,7 @@ on:
       - 'scenes/**'
       - 'scripts/**'
       - 'assets/**'
+      - 'tests/**'
       - '.github/workflows/staging-godot-server.yml'
 
 permissions:
