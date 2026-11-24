@@ -68,9 +68,9 @@ func _capture_previews() -> void:
 	# Capture the expanded open sea and royal beach from the actual production scene.
 	var waterfront_ok := await _capture_view(
 		"royal_open_sea_waterfront_preview.png",
-		Vector3(0.0, 92.0, 30.0),
+		Vector3(0.0, 66.0, 24.0),
 		Vector3(0.0, 0.0, 114.0),
-		72.0
+		58.0
 	)
 	if not waterfront_ok:
 		quit(1)
@@ -79,9 +79,9 @@ func _capture_previews() -> void:
 	# Capture the real jet-ski start, checkpoint buoys, and finish gates in the same production scene.
 	var course_ok := await _capture_view(
 		"royal_jet_ski_course_preview.png",
-		Vector3(34.0, 48.0, 88.0),
-		Vector3(0.0, 0.0, 124.0),
-		70.0
+		Vector3(30.0, 34.0, 78.0),
+		Vector3(0.0, 2.0, 122.0),
+		58.0
 	)
 	if not course_ok:
 		quit(1)
@@ -90,9 +90,9 @@ func _capture_previews() -> void:
 	# Capture both relocated northern building rows from the production scene.
 	var north_district_ok := await _capture_view(
 		"northern_six_buildings_preview.png",
-		Vector3(0.0, 72.0, -218.0),
-		Vector3(0.0, 0.0, -135.0),
-		68.0
+		Vector3(0.0, 44.0, -204.0),
+		Vector3(0.0, 3.0, -135.0),
+		56.0
 	)
 	if not north_district_ok:
 		quit(1)
