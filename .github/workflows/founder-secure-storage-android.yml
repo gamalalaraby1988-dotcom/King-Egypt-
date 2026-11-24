@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - feature/founder-auth-session-refresh
+      - staging/email-auth-session
     paths:
       - "android/plugins/founder_secure_storage/**"
       - "addons/founder_secure_storage/**"
