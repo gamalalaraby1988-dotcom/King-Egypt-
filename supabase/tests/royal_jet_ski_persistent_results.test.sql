@@ -22,7 +22,7 @@ select extensions.is(
 select extensions.is(
   (private.record_jet_ski_race_result(
     '10000000-0000-4000-8000-000000000051','20000000-0000-4000-8000-000000000051',
-    'jet-ski-test-1','00000000-0000-4000-8000-000000000051','finished',2,3200000,null
+    'jet-ski-test-1','00000000-0000-4000-8000-000000000051','finished',2::smallint,3200000::bigint,null::text
   )->>'duplicate')::boolean,
   true,
   'replaying the identical server event is idempotent'
