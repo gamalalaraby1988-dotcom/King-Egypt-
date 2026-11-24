@@ -1662,8 +1662,8 @@ func _create_mode_selection_ui() -> void:
  
 func _on_google_sign_in_pressed() -> void:
 	if not PlayerAccountAuthClient.request_google_sign_in():
-		if is_instance_valid(mode_status_label):
-			mode_status_label.text = "تعذر بدء تسجيل الدخول باستخدام Google."
+		# PlayerAccountAuthClient emits the precise failure message synchronously.
+		# Do not overwrite it with a generic status here.
 		return
 	if is_instance_valid(mode_status_label):
 		mode_status_label.text = "أكمل اختيار حساب Google المرتبط بشخصيتك الأصلية، ثم ستعود إلى اللعبة تلقائيًا."

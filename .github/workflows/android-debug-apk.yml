@@ -64,6 +64,9 @@ jobs:
           set -euo pipefail
           gradle --no-daemon -p android/plugins/founder_secure_storage :plugin:copyDebugAARToAddon
           test -s addons/founder_secure_storage/bin/debug/FounderSecureStorage-debug.aar
+          unzip -p addons/founder_secure_storage/bin/debug/FounderSecureStorage-debug.aar AndroidManifest.xml | grep -F "org.godotengine.plugin.v2.FounderSecureStorage"
+          unzip -p addons/founder_secure_storage/bin/debug/FounderSecureStorage-debug.aar classes.jar > /tmp/founder-secure-storage-classes.jar
+          jar tf /tmp/founder-secure-storage-classes.jar | grep -F "com/kingofegyptcity/security/FounderSecureStoragePlugin.class"
 
       - name: Download Godot 4.7.2 editor
         shell: bash
@@ -118,9 +121,17 @@ jobs:
           export GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD="android"
           /tmp/godot/Godot_v4.7.2-stable_linux.x86_64 \
             --headless --path . --install-android-build-template \
-            --export-debug "Android" "build/android/KING_OF_EGYPT_CITY-debug.apk"
+            --export-debug "Android" "build/android/KING_OF_EGYPT_CITY-debug.apk" 2>&1 | tee /tmp/godot-android-export.log
           test -s "build/android/KING_OF_EGYPT_CITY-debug.apk"
+          grep -F "FounderSecureStorage: packaging Android AAR:" /tmp/godot-android-export.log
           unzip -t "build/android/KING_OF_EGYPT_CITY-debug.apk"
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump xmltree "build/android/KING_OF_EGYPT_CITY-debug.apk" AndroidManifest.xml > /tmp/android-manifest-tree.txt
+          grep -F "org.godotengine.plugin.v2.FounderSecureStorage" /tmp/android-manifest-tree.txt
+          grep -F "kingofegyptcity" /tmp/android-manifest-tree.txt
+          grep -F "auth-callback" /tmp/android-manifest-tree.txt
+          unzip -p "build/android/KING_OF_EGYPT_CITY-debug.apk" classes.dex > /tmp/app-classes.dex
+          strings /tmp/app-classes.dex | grep -F "FounderSecureStoragePlugin"
+          strings /tmp/app-classes.dex | grep -F "getPendingAuthLink"
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
