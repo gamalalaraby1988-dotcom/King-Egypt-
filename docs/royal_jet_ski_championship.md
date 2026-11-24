@@ -60,7 +60,7 @@
 ## Current implementation status
 
 ### Implemented foundation
-- The approved waterfront course currently contains visual start, three checkpoint, and finish gates at Z=96, 111, 126, 141, and 148. These are still visual markers; they do not yet detect or validate a crossing.
+- The approved waterfront course has start, three checkpoint, and finish gates at Z=96, 111, 126, 141, and 148. The dedicated server now checks the server-simulated craft segment against the next gate plane in order, using the interpolated crossing point inside the buoy aperture and a bounded waterline height. Reverse travel, proximity without crossing, skipped planes, and out-of-aperture crossings do not advance progress.
 - The standalone RoyalJetSki scene, client controller, and dedicated touch HUD are integrated into the city scene. Online boarding and dismounting use authenticated server requests and server-confirmed positions.
 - The dedicated server validates bounded, sequenced, rate-limited throttle/brake/steering input. Clients never submit craft positions.
 - The server simulates jet ski movement using the shared hydrodynamic motion contract, applies the rider transform, and sends authoritative craft snapshots to the rider.
@@ -69,9 +69,9 @@
 - The race lobby supports a server-owned roster of up to four participants, a separate spectator role, a five-second countdown, and a five-minute race timer.
 
 ### Remaining before the championship is playable
-- Add server-authoritative ordered start/checkpoint/finish crossing detection using the server-simulated craft path; reject skipped, reversed, repeated, or out-of-bounds gates.
-- Require every locked participant to be authenticated and mounted before the countdown can begin, and define safe handling for dismounts or disconnects during a race.
-- Implement finish adjudication, tie handling, final race results, and a player-facing race lobby/results HUD.
+- The server now records a finisher only after the last gate plane is crossed in order; the finish time is measured with the server monotonic clock. Participants still on course when the five-minute timer expires are marked DNF, and a disconnect during the active round is recorded as DNF.
+- The mounted-roster prerequisite remains enforced before countdown; locked participants cannot dismount during countdown or racing.
+- Player-facing race progress/result HUD, explicit tie policy, spectator camera experience, and durable reward claims remain incomplete.
 - Connect daily reward eligibility to a durable, atomic per-account claim record only after a server-verified final result exists; no cash reward is currently issued.
 - Complete spectator camera selection and a rendered spectator experience; spectator registration and read-only role separation alone do not complete the viewing feature.
 - Verify the course, collision boundaries, and actual rendered waterfront preview in the game scene.
