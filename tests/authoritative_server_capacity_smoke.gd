@@ -13,6 +13,7 @@ func _run() -> void:
 	var args := OS.get_cmdline_user_args()
 	var url := "wss://king-city-capacity-proxy:443"
 	var capacity := 64
+	var handshake_only := args.has("--handshake-only")
 	for arg in args:
 		if arg.begins_with("--url="):
 			url = arg.trim_prefix("--url=")
@@ -20,6 +21,14 @@ func _run() -> void:
 			capacity = int(arg.trim_prefix("--capacity="))
 	if capacity < 1 or capacity > MAX_CAPACITY:
 		_fail("capacity must be between 1 and %d" % MAX_CAPACITY)
+
+	if handshake_only:
+		if not await _wait_for_connected(1, 15.0):
+			_fail("Native Godot WebSocket handshake did not complete")
+		print("NATIVE_GODOT_WEBSOCKET_HANDSHAKE=PASSED")
+		_close_all()
+		quit(0)
+		return
 
 	var stages: Array[int] = []
 	for count in [20, 30, 50, capacity]:
