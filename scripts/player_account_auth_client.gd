@@ -131,6 +131,25 @@ func request_google_sign_in() -> bool:
 	request_finished.emit(true, "اختر حساب Google المرتبط بشخصيتك الأصلية، ثم عُد إلى اللعبة.")
 	return true
 
+func request_email_password_sign_in(email: String, password: String) -> bool:
+	if _pending_action != "":
+		request_finished.emit(false, "هناك طلب حساب قيد التنفيذ.")
+		return false
+	if not is_configured():
+		request_finished.emit(false, "إعدادات خدمة الحسابات غير مكتملة.")
+		return false
+	var normalized_email := email.strip_edges().to_lower()
+	if not _valid_email(normalized_email):
+		request_finished.emit(false, "أدخل بريدًا إلكترونيًا صحيحًا.")
+		return false
+	if password.is_empty():
+		request_finished.emit(false, "أدخل كلمة المرور.")
+		return false
+	return _send_auth_request("/auth/v1/token?grant_type=password", {
+		"email": normalized_email,
+		"password": password
+	}, "email_password")
+
 func _android_deep_link_ready() -> bool:
 	if not Engine.has_singleton(DEEP_LINK_PLUGIN_SINGLETON):
 		return false
@@ -227,6 +246,8 @@ func _on_auth_request_completed(result: int, response_code: int, _headers: Packe
 		"request_google_oauth":
 			request_finished.emit(true, "تم فتح تسجيل الدخول باستخدام Google. أكمل الاختيار ثم عُد إلى اللعبة.")
 		"verify_google_oauth":
+			_accept_session_response(response, false)
+		"email_password":
 			_accept_session_response(response, false)
 		"refresh":
 			_accept_session_response(response, _restoring)
@@ -411,6 +432,12 @@ func _safe_error(response: Dictionary) -> String:
 			return "تم تجاوز حد إرسال الرموز مؤقتًا. حاول لاحقًا."
 		"email_address_invalid":
 			return "عنوان البريد الإلكتروني غير صالح."
+		"invalid_credentials":
+			return "البريد الإلكتروني أو كلمة المرور غير صحيحة."
+		"email_not_confirmed":
+			return "يرجى تأكيد بريدك الإلكتروني قبل تسجيل الدخول."
+		"weak_password":
+			return "كلمة المرور لا تحقق متطلبات الأمان. اختر كلمة مرور أقوى."
 		"otp_expired":
 			return "انتهت صلاحية الرمز. اطلب رمزًا جديدًا."
 		"otp_disabled":
@@ -418,4 +445,4 @@ func _safe_error(response: Dictionary) -> String:
 		"flow_state_expired", "bad_code_verifier":
 			return "انتهت صلاحية جلسة Google أو تعذر التحقق منها. أعد المحاولة."
 		_:
-			return "تعذر تسجيل الدخول باستخدام Google. حاول مرة أخرى."
+			return "تعذر تسجيل الدخول. تحقق من البيانات وحاول مرة أخرى."
