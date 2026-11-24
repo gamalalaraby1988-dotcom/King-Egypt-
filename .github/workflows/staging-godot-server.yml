@@ -55,29 +55,32 @@ jobs:
 
       - name: Create ephemeral TLS certificate
         run: |
-          openssl req -x509 -newkey rsa:2048 -nodes \
-            -keyout "$RUNNER_TEMP/server.key" \
-            -out "$RUNNER_TEMP/server.crt" \
-            -days 1 -subj "/CN=localhost" \
+          openssl req -x509 -newkey rsa:2048 -nodes \\
+            -keyout "$RUNNER_TEMP/server.key" \\
+            -out "$RUNNER_TEMP/server.crt" \\
+            -days 1 -subj "/CN=localhost" \\
             -addext "subjectAltName=IP:127.0.0.1,DNS:localhost"
+          # The container runs as a non-root user; make this CI-only key readable
+          # so the dedicated server can load the ephemeral test certificate.
+          chmod 644 "$RUNNER_TEMP/server.key" "$RUNNER_TEMP/server.crt"
 
       - name: Start isolated TEST-mode server
         run: |
           TEST_HMAC="$(printf '0123456789abcdef0123456789abcdef' | base64 -w0)"
-          docker run -d --name king-city-capacity-smoke \
-            -p 2456:2456 \
-            -v "$RUNNER_TEMP/server.key:/run/tls/server.key:ro" \
-            -v "$RUNNER_TEMP/server.crt:/run/tls/server.crt:ro" \
-            -e KING_CITY_SUPABASE_URL="https://unwrlvyjrtdwobcktetd.supabase.co" \
-            -e KING_CITY_SUPABASE_PUBLISHABLE_KEY="sb_publishable_ci_smoke_only" \
-            -e KING_CITY_SESSION_SERVER_ID="ci" \
-            -e KING_CITY_SESSION_REGION="x" \
-            -e KING_CITY_SESSION_ENDPOINT="wss://127.0.0.1:2456" \
-            -e KING_CITY_SESSION_DIRECTORY_HMAC_SECRET_B64="$TEST_HMAC" \
-            -e KING_CITY_TLS_KEY_PATH="/run/tls/server.key" \
-            -e KING_CITY_TLS_CERT_PATH="/run/tls/server.crt" \
-            -e KING_CITY_GAME_PORT="2456" \
-            -e KING_CITY_SESSION_CAPACITY="64" \
+          docker run -d --name king-city-capacity-smoke \\
+            -p 2456:2456 \\
+            -v "$RUNNER_TEMP/server.key:/run/tls/server.key:ro" \\
+            -v "$RUNNER_TEMP/server.crt:/run/tls/server.crt:ro" \\
+            -e KING_CITY_SUPABASE_URL="https://unwrlvyjrtdwobcktetd.supabase.co" \\
+            -e KING_CITY_SUPABASE_PUBLISHABLE_KEY="sb_publishable_ci_smoke_only" \\
+            -e KING_CITY_SESSION_SERVER_ID="ci" \\
+            -e KING_CITY_SESSION_REGION="x" \\
+            -e KING_CITY_SESSION_ENDPOINT="wss://127.0.0.1:2456" \\
+            -e KING_CITY_SESSION_DIRECTORY_HMAC_SECRET_B64="$TEST_HMAC" \\
+            -e KING_CITY_TLS_KEY_PATH="/run/tls/server.key" \\
+            -e KING_CITY_TLS_CERT_PATH="/run/tls/server.crt" \\
+            -e KING_CITY_GAME_PORT="2456" \\
+            -e KING_CITY_SESSION_CAPACITY="64" \\
             king-city-server:staging-check
 
           for attempt in $(seq 1 30); do
