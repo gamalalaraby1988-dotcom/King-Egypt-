@@ -13,7 +13,7 @@ set local role service_role;
 select extensions.is(
   (private.record_jet_ski_race_result(
     '10000000-0000-4000-8000-000000000051','20000000-0000-4000-8000-000000000051',
-    'jet-ski-test-1','00000000-0000-4000-8000-000000000051','finished',2,3200000,null
+    'jet-ski-test-1','00000000-0000-4000-8000-000000000051','finished',2::smallint,3200000::bigint,null::text
   )->>'recorded')::boolean,
   true,
   'records a server-finalized finish result'
@@ -31,7 +31,7 @@ select extensions.is(
 select extensions.throws_ok(
   $$select private.record_jet_ski_race_result(
     '10000000-0000-4000-8000-000000000051','20000000-0000-4000-8000-000000000099',
-    'jet-ski-test-1','00000000-0000-4000-8000-000000000051','finished',1,2500000,null
+    'jet-ski-test-1','00000000-0000-4000-8000-000000000051','finished',1::smallint,2500000::bigint,null::text
   )$$,
   '23505','jet_ski_race_result_conflict',
   'a second conflicting result for the same racer and race is rejected'
@@ -40,7 +40,7 @@ select extensions.throws_ok(
 select extensions.is(
   (private.record_jet_ski_race_result(
     '10000000-0000-4000-8000-000000000052','20000000-0000-4000-8000-000000000052',
-    'jet-ski-test-1','00000000-0000-4000-8000-000000000051','finished',1,2800000,null
+    'jet-ski-test-1','00000000-0000-4000-8000-000000000051','finished',1::smallint,2800000::bigint,null::text
   )->>'daily_best_place')::smallint,
   1::smallint,
   'a better later podium result replaces the daily best place'
@@ -65,7 +65,7 @@ select extensions.is(
 select extensions.is(
   (private.record_jet_ski_race_result(
     '10000000-0000-4000-8000-000000000053','20000000-0000-4000-8000-000000000053',
-    'jet-ski-test-1','00000000-0000-4000-8000-000000000052','dnf',null,null,'disconnect'
+    'jet-ski-test-1','00000000-0000-4000-8000-000000000052','dnf',null::smallint,null::bigint,'disconnect'
   )->>'daily_reward_eligible')::boolean,
   false,
   'DNF results do not create a podium entitlement'
@@ -81,7 +81,7 @@ select extensions.is(
 select extensions.is(
   (private.record_jet_ski_race_result(
     '10000000-0000-4000-8000-000000000054','20000000-0000-4000-8000-000000000054',
-    'jet-ski-test-1','00000000-0000-4000-8000-000000000053','finished',4,5000000,null
+    'jet-ski-test-1','00000000-0000-4000-8000-000000000053','finished',4::smallint,5000000::bigint,null::text
   )->>'daily_reward_eligible')::boolean,
   false,
   'fourth place is not eligible for the daily podium entitlement'
