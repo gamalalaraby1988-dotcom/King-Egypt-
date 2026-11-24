@@ -1629,7 +1629,7 @@ func _create_mode_selection_ui() -> void:
 
 	player_email_input = LineEdit.new()
 	player_email_input.placeholder_text = "البريد الإلكتروني"
-	player_email_input.keyboard_type = LineEdit.KEYBOARD_TYPE_EMAIL_ADDRESS
+	player_email_input.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_EMAIL_ADDRESS
 	player_email_input.clear_button_enabled = true
 	content.add_child(player_email_input)
 
