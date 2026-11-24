@@ -104,6 +104,26 @@ func _initialize() -> void:
 		failures.append("A non-participant was incorrectly blocked from spectator mode.")
 	if server._jet_ski_race_can_watch(0, participant_ids):
 		failures.append("An invalid peer ID was incorrectly allowed into spectator mode.")
+	server._jet_ski_race_locked_participants = [11, 12, 13]
+	server._jet_ski_race_results = [
+		{"peer_id": 12, "status": "finished", "place": 1, "finish_time_usec": 2500000},
+		{"peer_id": 11, "status": "finished", "place": 2, "finish_time_usec": 3100000},
+		{"peer_id": 13, "status": "dnf", "reason": "disconnect"}
+	]
+	var public_results := server._jet_ski_race_public_results()
+	if public_results.size() != 3:
+		failures.append("The public race results board did not include all finishers and DNF records.")
+	elif int(public_results[0].get("slot", 0)) != 2 or int(public_results[0].get("place", 0)) != 1:
+		failures.append("The public results board did not sort finishers by server place.")
+	elif str(public_results[2].get("status", "")) != "dnf":
+		failures.append("DNF participants must appear after finishers in the public results board.")
+	server._sessions = {
+		11: {"jet_ski_race_finished": true},
+		12: {"jet_ski_race_finished": true}
+	}
+	server._jet_ski_race_results = [{"peer_id": 13, "status": "dnf"}]
+	if not server._jet_ski_race_all_locked_participants_finished():
+		failures.append("A disconnected participant with a DNF result should count as resolved.")
 	server.free()
 	if not failures.is_empty():
 		for failure in failures:
