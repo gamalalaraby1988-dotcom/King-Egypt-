@@ -20,10 +20,15 @@ case "$KING_CITY_SESSION_ENDPOINT" in
   *) fail "KING_CITY_SESSION_ENDPOINT must use wss://." ;;
 esac
 [ -n "${KING_CITY_SESSION_DIRECTORY_HMAC_SECRET_B64:-}" ] || fail "KING_CITY_SESSION_DIRECTORY_HMAC_SECRET_B64 is required."
-[ -n "${KING_CITY_TLS_KEY_PATH:-}" ] || fail "KING_CITY_TLS_KEY_PATH is required."
-[ -n "${KING_CITY_TLS_CERT_PATH:-}" ] || fail "KING_CITY_TLS_CERT_PATH is required."
-[ -r "$KING_CITY_TLS_KEY_PATH" ] || fail "TLS private key is not readable at KING_CITY_TLS_KEY_PATH."
-[ -r "$KING_CITY_TLS_CERT_PATH" ] || fail "TLS certificate is not readable at KING_CITY_TLS_CERT_PATH."
+if [ "${KING_CITY_TRUSTED_PROXY_MODE:-0}" = "1" ]; then
+  [ "$KING_CITY_SUPABASE_URL" = "$STAGING_URL" ] || fail "Trusted proxy mode is restricted to the TEST project."
+  echo "KING CITY TEST backend will accept plain WebSocket only behind its private TLS proxy."
+else
+  [ -n "${KING_CITY_TLS_KEY_PATH:-}" ] || fail "KING_CITY_TLS_KEY_PATH is required."
+  [ -n "${KING_CITY_TLS_CERT_PATH:-}" ] || fail "KING_CITY_TLS_CERT_PATH is required."
+  [ -r "$KING_CITY_TLS_KEY_PATH" ] || fail "TLS private key is not readable at KING_CITY_TLS_KEY_PATH."
+  [ -r "$KING_CITY_TLS_CERT_PATH" ] || fail "TLS certificate is not readable at KING_CITY_TLS_CERT_PATH."
+fi
 
 case "${KING_CITY_GAME_PORT:-2456}" in
   *[!0-9]*|'') fail "KING_CITY_GAME_PORT must be a numeric TCP port." ;;
