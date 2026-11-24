@@ -73,6 +73,22 @@ func _initialize() -> void:
 		failures.append("Daily reward claim keys must be scoped to account ID and UTC day.")
 	if not server._jet_ski_race_daily_reward_claim_key("", "2026-11-23").is_empty():
 		failures.append("Daily reward claim keys must reject empty account IDs.")
+	if not server._jet_ski_race_crossed_gate(Vector3(0.0, 0.34, 95.0), Vector3(0.0, 0.34, 97.0), 96.0, 20.0):
+		failures.append("A valid forward crossing through the gate aperture was rejected.")
+	if server._jet_ski_race_crossed_gate(Vector3(0.0, 0.34, 97.0), Vector3(0.0, 0.34, 99.0), 96.0, 20.0):
+		failures.append("A racer already beyond the gate was incorrectly credited without crossing.")
+	if server._jet_ski_race_crossed_gate(Vector3(0.0, 0.34, 97.0), Vector3(0.0, 0.34, 95.0), 96.0, 20.0):
+		failures.append("A reverse crossing was incorrectly accepted.")
+	if server._jet_ski_race_crossed_gate(Vector3(22.0, 0.34, 95.0), Vector3(22.0, 0.34, 97.0), 96.0, 20.0):
+		failures.append("A crossing outside the buoy aperture was incorrectly accepted.")
+	if server._jet_ski_race_crossed_gate(Vector3(0.0, 3.0, 95.0), Vector3(0.0, 3.0, 97.0), 96.0, 20.0):
+		failures.append("A crossing above the gate height was incorrectly accepted.")
+	if server._jet_ski_race_crossed_gate(Vector3(0.0, 0.34, 95.0), Vector3(0.0, 0.34, 97.0), 111.0, 20.0):
+		failures.append("A segment that did not cross the requested gate plane was incorrectly accepted.")
+	if SERVER_SCRIPT.JET_SKI_RACE_GATE_Z_POSITIONS != [96.0, 111.0, 126.0, 141.0, 148.0]:
+		failures.append("Server gate planes must match the five approved scene gates.")
+	if SERVER_SCRIPT.JET_SKI_RACE_GATE_HALF_WIDTH != 20.0:
+		failures.append("Server gate clearance must preserve the approved 42m buoy spacing.")
 	if server._jet_ski_race_duration_expired(999999, 1000000):
 		failures.append("The race duration expired before its deadline.")
 	if not server._jet_ski_race_duration_expired(1000000, 1000000):
