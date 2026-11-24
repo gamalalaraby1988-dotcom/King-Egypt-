@@ -22,8 +22,8 @@ const BUILDING_LEVEL_RANGES := [
 	Vector2i(1429, 1607), Vector2i(1608, 1785), Vector2i(1786, 1964), Vector2i(1965, 2142),
 	Vector2i(2143, 2321), Vector2i(2322, 2499), Vector2i(2500, 2678), Vector2i(2679, 2856),
 	Vector2i(2857, 3035), Vector2i(3036, 3213), Vector2i(3214, 3392), Vector2i(3393, 3570),
-	Vector2i(3571, 3749), Vector2i(3750, 3927), Vector2i(3928, 4106), Vector2i(4107, 4284),
-	Vector2i(4285, 4463), Vector2i(4464, 4641), Vector2i(4642, 4820), Vector2i(4821, 5000)
+	Vector2i(3571, 3749), Vector2i(3750, 3927), Vector2i(3928, 4106), Vector2i(4107, 4463),
+	Vector2i(4464, 4641), Vector2i(4642, 4820), Vector2i(4821, 5000)
 ]
 
 
