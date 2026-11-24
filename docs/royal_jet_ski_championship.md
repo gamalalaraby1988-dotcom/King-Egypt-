@@ -130,3 +130,12 @@ Do not describe the championship as playable or multiplayer-validated until thes
 - A locked participant cannot dismount during countdown or active racing; the server rejects that dismount request. Disconnect handling remains governed by the existing session cleanup and is not a substitute for finish adjudication.
 - Added participant-gate contract coverage for fully mounted rosters, unmounted members, unauthenticated members, undersized rosters, and duplicate peer IDs.
 - This closes the mounted-roster prerequisite only. Ordered server-side gate crossing, finish adjudication/results, race HUD, and live multi-client staging validation remain incomplete.
+
+## Persistent race results and daily podium entitlement foundation (2026-11-24)
+- Added a private append-only result ledger keyed by race and account, with a unique server event ID and server ID. A repeated identical event is idempotent; a conflicting result for the same racer/race is rejected.
+- Added short-lived per-server nonce storage and a service-role-only recording RPC. The intended Edge Function boundary must verify the dedicated server HMAC before calling the RPC; authenticated clients cannot call either result recorder.
+- The database derives the result day using `Africa/Cairo`, rather than trusting a client-provided date.
+- Added one daily podium entitlement per account/day. If the player reaches a better place later that day, the stored entitlement is upgraded; ties in the same place retain the faster course time. DNF and fourth place do not qualify.
+- Reward cash remains NULL and the entitlement remains `pending_configuration` until the city economy approves the amounts. This migration does not credit wallets or issue money.
+- Applied and exercised the migration against the isolated `KING_OF_EGYPT_CITY_TEST` Supabase project. The SQL contract test file covers persistence, duplicate replay, conflicting results, nonce replay, Egypt-local daily uniqueness, best-place replacement, DNF/fourth-place exclusion, and client write/execute denial.
+- **Not yet end-to-end:** the dedicated Godot server does not yet submit its final result payloads to a deployed HMAC-verifying Edge Function. The production Supabase project has not been changed. Do not describe race results as live-persisted until the server sender, Edge Function, and production migration are connected and staged together.
