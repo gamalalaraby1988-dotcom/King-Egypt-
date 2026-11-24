@@ -20,12 +20,12 @@
 | `KING_CITY_SESSION_DIRECTORY_URL` | اختياري؛ رابط وظيفة الدليل أعلاه |
 | `KING_CITY_SESSION_SERVER_ID` | معرّف ثابت، مثال: `city-egypt-staging-01` |
 | `KING_CITY_SESSION_REGION` | `egypt` |
-| `KING_CITY_SESSION_ENDPOINT` | عنوان WSS عام حقيقي ينتهي عادةً بـ `:2456`؛ لا تستخدم قيمة وهمية |
+| `KING_CITY_SESSION_ENDPOINT` | عنوان WSS عام حقيقي؛ لا تستخدم قيمة وهمية |
 | `KING_CITY_SESSION_DIRECTORY_HMAC_SECRET_B64` | سر Base64 عشوائي مستقل، 32 بايت على الأقل بعد فك الترميز |
 | `KING_CITY_GAME_PORT` | `2456` ما لم يحدد مزود الاستضافة منفذًا آخر |
 | `KING_CITY_SESSION_CAPACITY` | `64` أو أقل |
-| `KING_CITY_TLS_KEY_PATH` | مسار شهادة TLS الخاصة بالخادم |
-| `KING_CITY_TLS_CERT_PATH` | مسار ملف شهادة TLS |
+| `KING_CITY_TLS_KEY_PATH` | مسار **المفتاح الخاص** لشهادة TLS |
+| `KING_CITY_TLS_CERT_PATH` | مسار **شهادة TLS العامة** المطابقة للمفتاح |
 
 تدعم نسخة الخادم في هذا الفرع أيضًا `KING_CITY_SUPABASE_URL` و`KING_CITY_SUPABASE_PUBLISHABLE_KEY` لجميع طلبات API الصادرة من الخادم، بما فيها التحقق من الحساب وطلبات التقدم. عند غيابهما تعود إلى إعدادات المشروع المعتادة. لذلك يجب ضبطهما معًا على مشروع TEST في بيئة الاختبار.
 
@@ -56,13 +56,13 @@
 وبالصيغة نفسها:
 
 ```json
-{"city-egypt-staging-01":"<JET_SKI_RESULTS_HMAC_SECRET_BASE64>"}
+{"city-egypt-staging-01":"<JET_SKI_RESULTS_SECRET_BASE64>"}
 ```
 
 ## 4. متطلبات التشغيل قبل التسجيل
 
 - يجب أن يكون خادم Godot 4.7+ يعمل كعملية مستمرة باستخدام وسيط `--dedicated-server`.
-- يجب أن تكون شهادة TLS صالحة للاسم الموجود في عنوان WSS.
+- يجب أن تكون شهادة TLS صالحة للاسم الموجود في عنوان WSS، وأن يطابق المفتاح الخاص الشهادة.
 - يجب أن يكون منفذ TCP المعلن متاحًا من الإنترنت، وأن يمرر إلى عملية Godot.
 - لا يسجل الخادم نفسه في الدليل إلا بعد اكتمال متغيرات البيئة المطلوبة وبدء مستمع WSS.
 - يرسل الخادم نبضات دورية، وتنتهي صلاحية التسجيل إذا توقف عن إرسالها.
