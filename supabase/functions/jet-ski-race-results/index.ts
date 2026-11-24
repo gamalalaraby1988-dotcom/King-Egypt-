@@ -168,8 +168,8 @@ export function createJetSkiRaceResultsHandler(runtime: JetSkiRaceResultsRuntime
     let finishTimeUsec: number | null = null;
     let reason: string | null = null;
     if (status === "finished") {
-      if (!Number.isSafeInteger(body.place) || Number(body.place) < 1 || Number(body.place) > 4 ||
-          !Number.isSafeInteger(body.finish_time_usec) || Number(body.finish_time_usec) < 0 ||
+      if (typeof body.place !== "number" || !Number.isSafeInteger(body.place) || body.place < 1 || body.place > 4 ||
+          typeof body.finish_time_usec !== "number" || !Number.isSafeInteger(body.finish_time_usec) || body.finish_time_usec < 0 ||
           (body.reason !== undefined && body.reason !== null)) {
         return json({ error: "invalid_finish_result" }, 400);
       }
