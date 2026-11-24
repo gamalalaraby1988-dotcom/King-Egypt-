@@ -4,18 +4,28 @@ const MASTER_PLAN = preload("res://scripts/city_master_plan.gd")
 const DEVELOPMENT_MANAGER = preload("res://scripts/development_manager.gd")
 
 func _initialize() -> void:
+	call_deferred("_run_development_progression_registry_contract")
+
+func _run_development_progression_registry_contract() -> void:
 	var failures: Array[String] = []
 	var manager := DEVELOPMENT_MANAGER.new()
+	var building_ids: Array[String] = []
+	for building in MASTER_PLAN.BUILDINGS:
+		building_ids.append(str(building.get("id", "")))
 
-	if MASTER_PLAN.BUILDINGS.size() != DEVELOPMENT_MANAGER.TOTAL_BUILDINGS:
+	if building_ids.size() != DEVELOPMENT_MANAGER.TOTAL_BUILDINGS:
 		failures.append("The canonical city plan and development progression must contain the same number of buildings.")
 	if DEVELOPMENT_MANAGER.BUILDING_LEVEL_RANGES.size() != DEVELOPMENT_MANAGER.TOTAL_BUILDINGS:
 		failures.append("Every approved development building must have exactly one level range.")
-	if MASTER_PLAN.get_building_by_id("marina_terminal").size() != 0:
+	if building_ids.has("marina_terminal"):
 		failures.append("The removed marina terminal must not remain in the canonical city plan.")
 	if DEVELOPMENT_MANAGER.BUILDING_MILESTONE_REWARDS.has("marina_terminal"):
 		failures.append("The removed marina terminal must not retain a development reward slot.")
-	if MASTER_PLAN.get_building_by_id("royal_yacht_club").get("name", "") != "النادي الشاطئي الملكي":
+	var beach_club: Dictionary = {}
+	for building in MASTER_PLAN.BUILDINGS:
+		if str(building.get("id", "")) == "royal_yacht_club":
+			beach_club = building
+	if beach_club.get("name", "") != "النادي الشاطئي الملكي":
 		failures.append("The retained waterfront building must use the approved Royal Beach Club name.")
 	if DEVELOPMENT_MANAGER.BUILDING_LEVEL_RANGES[23] != Vector2i(4107, 4463):
 		failures.append("The Royal Beach Club must absorb the retired marina level band to preserve the existing level scale.")
