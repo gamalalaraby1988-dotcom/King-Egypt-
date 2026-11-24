@@ -141,8 +141,9 @@ func _initialize() -> void:
 	if not server._jet_ski_results_hmac_key.is_empty():
 		server._jet_ski_results_hmac_key.clear()
 	server._queue_jet_ski_race_result("00000000-0000-4000-8000-000000000099", "finished", 1, 2450000, "", 1790000000000000)
-	if not server._jet_ski_results_outbox.is_empty():
-		failures.append("A result without the dedicated server HMAC key was incorrectly queued.")
+	if server._jet_ski_results_outbox.size() != 1:
+		failures.append("A finalized result must remain in the durable outbox while HMAC configuration is unavailable.")
+	server._jet_ski_results_outbox.clear()
 	var result_secret := PackedByteArray()
 	result_secret.resize(32)
 	result_secret.fill(7)
