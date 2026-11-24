@@ -57,25 +57,35 @@
 - الدائرة والشريط والدرجات حاليًا عناصر مرئية فقط؛ لم يُنفذ بعد زر التفاعل أو فحص توفر الجت سكي أو الحجز الذري أو الركوب الفوري.
 - لا تزال مراجعة نقطة البداية والنهاية والارتفاعات والتصادمات داخل Godot والتقاط معاينة من المشهد الفعلي مطلوبة قبل اعتماد الدمج.
 
-## What this does not implement yet
-- The course objects are visual markers only; they do not detect or validate crossings.
-- A standalone jet ski scene, client controller, and touch HUD now exist, but they are not integrated into city spawning/boarding or authenticated multiplayer. The server-authoritative race countdown, vehicle movement/snapshots, checkpoint progression, finish validation, rewards, and race UI are still not implemented.
-- No Godot test run has been observed for these new scene changes. The PR remains a draft and must be reviewed and tested before any merge.
+## Current implementation status
 
+### Implemented foundation
+- The approved waterfront course currently contains visual start, three checkpoint, and finish gates at Z=96, 111, 126, 141, and 148. These are still visual markers; they do not yet detect or validate a crossing.
+- The standalone RoyalJetSki scene, client controller, and dedicated touch HUD are integrated into the city scene. Online boarding and dismounting use authenticated server requests and server-confirmed positions.
+- The dedicated server validates bounded, sequenced, rate-limited throttle/brake/steering input. Clients never submit craft positions.
+- The server simulates jet ski movement using the shared hydrodynamic motion contract, applies the rider transform, and sends authoritative craft snapshots to the rider.
+- Remote-player snapshots include jet ski riding state and craft transforms, allowing other clients to render remote riders. Local prediction reconciles against server snapshots.
+- Input timeout, independent launch slots, server-side mount/dismount lifecycle, and disconnect cleanup are covered by contract tests.
+- The race lobby supports a server-owned roster of up to four participants, a separate spectator role, a five-second countdown, and a five-minute race timer.
 
-## Current watercraft foundation (implementation in progress)
-- Added an independent RoyalJetSki scene and controller. Its motion uses forward thrust, speed-dependent steering authority, lateral water damping, water resistance, and gentle buoyancy bob; it does not reuse the car's ground-contact or tire-steering physics.
-- Added a dedicated touch HUD with drive, brake, steering, and right-side drag camera input.
-- Added a headless contract test for steering authority and water-resistance behavior, and wired it into the Godot CI workflow.
-- This is a reusable client-side vehicle foundation only. It is not yet spawned from the Royal Beach Club/bridge, does not yet mount the player's avatar, and is not yet connected to authenticated server movement.
-- The synchronized countdown, server-owned jet ski movement, four-player vehicle snapshots, ordered checkpoint crossing validation, finish adjudication, race results/rewards, and final production-scene preview remain required before the championship can be considered playable.
-- Do not describe the watercraft as multiplayer-ready until server authority and a real multi-client test are implemented.
+### Remaining before the championship is playable
+- Add server-authoritative ordered start/checkpoint/finish crossing detection using the server-simulated craft path; reject skipped, reversed, repeated, or out-of-bounds gates.
+- Require every locked participant to be authenticated and mounted before the countdown can begin, and define safe handling for dismounts or disconnects during a race.
+- Implement finish adjudication, tie handling, final race results, and a player-facing race lobby/results HUD.
+- Connect daily reward eligibility to a durable, atomic per-account claim record only after a server-verified final result exists; no cash reward is currently issued.
+- Complete spectator camera selection and a rendered spectator experience; spectator registration and read-only role separation alone do not complete the viewing feature.
+- Verify the course, collision boundaries, and actual rendered waterfront preview in the game scene.
+- Run a real multi-client session against a dedicated server and test boarding, steering, remote visibility, checkpoint order, finish, spectator behavior, dismount, timeout, and disconnect.
+- Verify the weekly schedule against Egypt daylight-saving changes before year-round production use.
 
+Do not describe the championship as playable or multiplayer-validated until these remaining items and a real multi-client test are complete.
 
-## Synchronized countdown foundation
-- The dedicated server now changes a valid locked roster into a `countdown` phase for five seconds, then advances the phase to `racing` using the server monotonic clock and notifies the locked participants.
-- If a registered participant disconnects during `ready` or `countdown`, the server reopens registration and clears the countdown deadline; a non-participant disconnect does not cancel the countdown.
-- This phase transition does not yet implement server-authoritative jet ski movement, checkpoint crossing validation, finish adjudication, or multiplayer vehicle snapshots. Those remain required before the race is playable.
+## Synchronized countdown and race timer
+- The dedicated server changes a valid locked roster into a `countdown` phase for five seconds, then advances to `racing` using the server monotonic clock.
+- The race timer runs for five minutes from the server's transition into `racing`; countdown time is excluded.
+- The server moves the round to `finished` when the timer expires and notifies registered participants and spectators.
+- A participant disconnect during `ready` or `countdown` reopens registration and clears the countdown deadline. Disconnects during a live race update the roster notification, but final race adjudication and DNF policy remain to be implemented.
+- The timer and lobby phase do not themselves validate course progress or determine a winner.
 
 ## وضع مشاهدة السباق — اعتماد التصميم
 - يمكن للاعبين غير المشاركين مشاهدة الجولة الجارية مباشرة؛ مثال ذلك أن يشارك لاعبان بينما يشاهد اللاعبان الآخران.
