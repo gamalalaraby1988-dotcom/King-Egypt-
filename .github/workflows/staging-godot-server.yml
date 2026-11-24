@@ -1,0 +1,43 @@
+name: Staging Godot server container
+
+on:
+  pull_request:
+    paths:
+      - 'deploy/godot-server/**'
+      - '.dockerignore'
+      - 'project.godot'
+      - 'scenes/**'
+      - 'scripts/**'
+      - 'assets/**'
+      - '.github/workflows/staging-godot-server.yml'
+  push:
+    branches:
+      - 'staging/godot-docker-container'
+    paths:
+      - 'deploy/godot-server/**'
+      - '.dockerignore'
+      - 'project.godot'
+      - 'scenes/**'
+      - 'scripts/**'
+      - 'assets/**'
+      - '.github/workflows/staging-godot-server.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  docker-build:
+    name: Build staging server image (no deployment)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/godot-server/Dockerfile
+          push: false
+          tags: king-city-server:staging-check
