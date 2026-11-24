@@ -87,6 +87,47 @@ func _capture_previews() -> void:
 		quit(1)
 		return
 
+	# Instantiate the exact production RoyalJetSki scene so the preview uses the in-game craft,
+	# not a replacement mesh or illustration. Keep it in the production waterfront scene.
+	var jet_ski_packed := load("res://scenes/jet_ski.tscn") as PackedScene
+	if jet_ski_packed == null:
+		push_error("The production RoyalJetSki scene could not be loaded.")
+		quit(1)
+		return
+	var jet_ski_preview := jet_ski_packed.instantiate() as Node3D
+	if jet_ski_preview == null:
+		push_error("The production RoyalJetSki scene did not instantiate as a Node3D.")
+		quit(1)
+		return
+	jet_ski_preview.name = "RoyalJetSkiProductionPreviewInstance"
+	jet_ski_preview.position = Vector3(0.0, 0.34, 108.0)
+	jet_ski_preview.rotation.y = deg_to_rad(18.0)
+	current_scene.add_child(jet_ski_preview)
+	for _frame in range(8):
+		await process_frame
+
+	var jet_ski_three_quarter_ok := await _capture_view(
+		"royal_jet_ski_craft_three_quarter_preview.png",
+		Vector3(4.8, 3.1, 102.8),
+		Vector3(0.0, 0.72, 108.0),
+		48.0
+	)
+	if not jet_ski_three_quarter_ok:
+		quit(1)
+		return
+
+	var jet_ski_side_ok := await _capture_view(
+		"royal_jet_ski_craft_side_preview.png",
+		Vector3(5.8, 2.1, 108.8),
+		Vector3(0.0, 0.58, 108.0),
+		48.0
+	)
+	if not jet_ski_side_ok:
+		quit(1)
+		return
+	jet_ski_preview.queue_free()
+	await process_frame
+
 	# Capture both relocated northern building rows from the production scene.
 	var north_district_ok := await _capture_view(
 		"northern_six_buildings_preview.png",
