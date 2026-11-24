@@ -195,30 +195,41 @@ func is_authenticated() -> bool:
 func start_dedicated_server() -> void:
 	if not _is_dedicated_server or _server_peer != null:
 		return
-	var key_path := OS.get_environment("KING_CITY_TLS_KEY_PATH").strip_edges()
-	var cert_path := OS.get_environment("KING_CITY_TLS_CERT_PATH").strip_edges()
-	if key_path.is_empty() or cert_path.is_empty():
-		push_error("Dedicated server requires KING_CITY_TLS_KEY_PATH and KING_CITY_TLS_CERT_PATH.")
-		return
-	var private_key := CryptoKey.new()
-	var key_error := private_key.load(key_path)
-	var certificate := X509Certificate.new()
-	var cert_error := certificate.load(cert_path)
-	if key_error != OK or cert_error != OK:
-		push_error("Dedicated server TLS key/certificate could not be loaded.")
-		return
-	var tls_options := TLSOptions.server(private_key, certificate)
+	var trusted_proxy_mode := OS.get_environment("KING_CITY_TRUSTED_PROXY_MODE").strip_edges() == "1"
+	var tls_options: TLSOptions = null
+	if trusted_proxy_mode:
+		# Plain WebSocket is permitted only behind a private TLS-terminating proxy.
+		# Restrict this mode to the isolated TEST project; never publish the backend port.
+		if _server_api_base_url() != "https://unwrlvyjrtdwobcktetd.supabase.co":
+			push_error("Trusted proxy mode is restricted to the isolated TEST project.")
+			return
+		print("KING OF EGYPT CITY trusted-proxy backend mode enabled; TLS must terminate at the private proxy.")
+	else:
+		var key_path := OS.get_environment("KING_CITY_TLS_KEY_PATH").strip_edges()
+		var cert_path := OS.get_environment("KING_CITY_TLS_CERT_PATH").strip_edges()
+		if key_path.is_empty() or cert_path.is_empty():
+			push_error("Dedicated server requires KING_CITY_TLS_KEY_PATH and KING_CITY_TLS_CERT_PATH.")
+			return
+		var private_key := CryptoKey.new()
+		var key_error := private_key.load(key_path)
+		var certificate := X509Certificate.new()
+		var cert_error := certificate.load(cert_path)
+		if key_error != OK or cert_error != OK:
+			push_error("Dedicated server TLS key/certificate could not be loaded.")
+			return
+		tls_options = TLSOptions.server(private_key, certificate)
 	_server_peer = WebSocketMultiplayerPeer.new()
 	var port := int(OS.get_environment("KING_CITY_GAME_PORT")) if not OS.get_environment("KING_CITY_GAME_PORT").is_empty() else DEFAULT_PORT
 	var error := _server_peer.create_server(port, "0.0.0.0", tls_options)
 	if error != OK:
-		push_error("Could not start secure WebSocket game server: %s" % error_string(error))
+		push_error("Could not start WebSocket game server: %s" % error_string(error))
 		_server_peer = null
 		return
 	multiplayer.multiplayer_peer = _server_peer
 	multiplayer.peer_connected.connect(_on_peer_connected)
 	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
-	print("KING OF EGYPT CITY authoritative WSS server listening on TCP port %d." % port)
+	var transport_label := "WebSocket behind trusted TLS proxy" if trusted_proxy_mode else "WSS"
+	print("KING OF EGYPT CITY authoritative %s server listening on TCP port %d." % [transport_label, port])
 
 
 func _server_api_base_url() -> String:
