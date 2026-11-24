@@ -44,6 +44,10 @@ const JET_SKI_RACE_MIN_PARTICIPANTS := 2
 const JET_SKI_RACE_MAX_PARTICIPANTS := 4
 const JET_SKI_RACE_COUNTDOWN_SECONDS := 5
 const JET_SKI_RACE_DURATION_SECONDS := 300
+const JET_SKI_RACE_GATE_Z_POSITIONS := [96.0, 111.0, 126.0, 141.0, 148.0]
+const JET_SKI_RACE_GATE_HALF_WIDTH := 20.0
+const JET_SKI_RACE_GATE_MIN_HEIGHT := -0.5
+const JET_SKI_RACE_GATE_MAX_HEIGHT := 2.5
 const JET_SKI_RACE_OFF_COURSE_LIMIT_SECONDS := 300
 const JET_SKI_RACE_DAILY_REWARD_WINNING_RANKS := 3
 const JET_SKI_RACE_WEEKLY_DAYS := [1, 4, 6] # Godot weekday: Monday=1, Thursday=4, Saturday=6.
@@ -71,6 +75,8 @@ var _jet_ski_race_spectators: Array[int] = []
 var _jet_ski_race_state := "waiting"
 var _jet_ski_race_countdown_until_usec := 0
 var _jet_ski_race_ends_at_usec := 0
+var _jet_ski_race_started_at_usec := 0
+var _jet_ski_race_results: Array[Dictionary] = []
 var _arcade_machines: Dictionary = {}
 var _arcade_sessions: Dictionary = {}
 var _peer_arcade_sessions: Dictionary = {}
@@ -399,12 +405,22 @@ func _process(_delta: float) -> void:
 	if _jet_ski_race_state == "countdown" and now_usec >= _jet_ski_race_countdown_until_usec:
 		_jet_ski_race_state = "racing"
 		_jet_ski_race_countdown_until_usec = 0
+		_jet_ski_race_started_at_usec = now_usec
 		_jet_ski_race_ends_at_usec = now_usec + JET_SKI_RACE_DURATION_SECONDS * 1000000
-		_notify_jet_ski_race_participants("انطلق السباق! مدة المسابقة خمس دقائق.")
+		_jet_ski_race_results.clear()
+		for participant_peer_id in _jet_ski_race_locked_participants:
+			if not _sessions.has(participant_peer_id):
+				continue
+			var participant_session: Dictionary = _sessions[participant_peer_id]
+			participant_session["jet_ski_race_next_gate_index"] = 0
+			participant_session["jet_ski_race_previous_position"] = participant_session.get("jet_ski_position", JET_SKI_SERVER_LAUNCH_POSITION)
+			participant_session["jet_ski_race_finished"] = false
+			participant_session["jet_ski_race_finish_time_usec"] = 0
+			participant_session["jet_ski_race_status"] = "racing"
+			_sessions[participant_peer_id] = participant_session
+		_notify_jet_ski_race_participants("انطلق السباق! اعبر بوابة البداية ثم البوابات الثلاث بالترتيب وصولًا إلى خط النهاية. مدة المسابقة خمس دقائق.")
 	elif _jet_ski_race_state == "racing" and _jet_ski_race_duration_expired(now_usec, _jet_ski_race_ends_at_usec):
-		_jet_ski_race_state = "finished"
-		_jet_ski_race_ends_at_usec = 0
-		_notify_jet_ski_race_participants("انتهت مدة المسابقة (خمس دقائق). انتهت الجولة.")
+		_jet_ski_race_finish_round("انتهت مدة المسابقة (خمس دقائق). تم تسجيل من لم يصل إلى خط النهاية كمنسحب.")
 	if _city_directory_enabled and _server_peer != null and now_usec >= _city_directory_next_heartbeat_usec:
 		if _city_directory_registered:
 			_send_city_session_heartbeat()
@@ -502,8 +518,15 @@ func _on_peer_disconnected(peer_id: int) -> void:
 	var body := session.get("body") as CharacterBody3D
 	if is_instance_valid(body):
 		body.queue_free()
-	_sessions.erase(peer_id)
 	var was_jet_ski_race_participant := _jet_ski_race_participants.has(peer_id)
+	if _jet_ski_race_state == "racing" and _jet_ski_race_locked_participants.has(peer_id):
+		_jet_ski_race_results.append({
+			"peer_id": peer_id,
+			"user_id": str(session.get("user_id", "")),
+			"status": "dnf",
+			"reason": "disconnect"
+		})
+	_sessions.erase(peer_id)
 	_jet_ski_race_participants.erase(peer_id)
 	_jet_ski_race_spectators.erase(peer_id)
 	_jet_ski_race_locked_participants.erase(peer_id)
@@ -1740,6 +1763,58 @@ func _jet_ski_race_all_participants_mounted(participant_ids: Array[int], session
 	return true
 
 
+func _jet_ski_race_crossed_gate(previous_position: Vector3, current_position: Vector3, gate_z: float, half_width: float) -> bool:
+	# Accept only a forward (+Z) segment crossing the actual gate plane.
+	# Checking the interpolated crossing point prevents proximity and endpoint-only exploits.
+	if not is_finite(previous_position.x) or not is_finite(previous_position.y) or not is_finite(previous_position.z):
+		return false
+	if not is_finite(current_position.x) or not is_finite(current_position.y) or not is_finite(current_position.z):
+		return false
+	if not is_finite(gate_z) or not is_finite(half_width) or half_width <= 0.0:
+		return false
+	var travel_z := current_position.z - previous_position.z
+	if travel_z <= 0.0001 or previous_position.z >= gate_z or current_position.z < gate_z:
+		return false
+	var crossing_fraction := (gate_z - previous_position.z) / travel_z
+	var crossing_x := lerpf(previous_position.x, current_position.x, crossing_fraction)
+	var crossing_y := lerpf(previous_position.y, current_position.y, crossing_fraction)
+	return absf(crossing_x) <= half_width and crossing_y >= JET_SKI_RACE_GATE_MIN_HEIGHT and crossing_y <= JET_SKI_RACE_GATE_MAX_HEIGHT
+
+
+func _jet_ski_race_finished_count() -> int:
+	var count := 0
+	for result in _jet_ski_race_results:
+		if str(result.get("status", "")) == "finished":
+			count += 1
+	return count
+
+
+func _jet_ski_race_all_locked_participants_finished() -> bool:
+	if _jet_ski_race_locked_participants.is_empty():
+		return false
+	for peer_id in _jet_ski_race_locked_participants:
+		if not _sessions.has(peer_id) or not bool(_sessions[peer_id].get("jet_ski_race_finished", false)):
+			return false
+	return true
+
+
+func _jet_ski_race_finish_round(message: String) -> void:
+	if _jet_ski_race_state == "finished":
+		return
+	for peer_id in _jet_ski_race_locked_participants:
+		if not _sessions.has(peer_id):
+			continue
+		var session: Dictionary = _sessions[peer_id]
+		if not bool(session.get("jet_ski_race_finished", false)):
+			session["jet_ski_race_status"] = "dnf"
+			session["jet_ski_race_finished"] = true
+			_sessions[peer_id] = session
+	_jet_ski_race_state = "finished"
+	_jet_ski_race_ends_at_usec = 0
+	_jet_ski_race_countdown_until_usec = 0
+	_notify_jet_ski_race_participants(message)
+
+
 func _jet_ski_race_duration_expired(now_usec: int, ends_at_usec: int) -> bool:
 	return ends_at_usec > 0 and now_usec >= ends_at_usec
 
@@ -1853,6 +1928,8 @@ func request_start_jet_ski_race_rpc() -> void:
 		rpc_id(peer_id, "receive_jet_ski_race_state", _jet_ski_race_state, participant_count, "تم تقديم طلب بدء الجولة بالفعل.")
 		return
 	_jet_ski_race_locked_participants = _jet_ski_race_participants.duplicate()
+	_jet_ski_race_results.clear()
+	_jet_ski_race_started_at_usec = 0
 	_jet_ski_race_state = "countdown"
 	_jet_ski_race_countdown_until_usec = Time.get_ticks_usec() + JET_SKI_RACE_COUNTDOWN_SECONDS * 1000000
 	_jet_ski_race_ends_at_usec = 0
@@ -2196,8 +2273,9 @@ func _physics_process(delta: float) -> void:
 				session["jet_ski_throttle"] = 0.0
 				session["jet_ski_brake"] = 0.0
 				session["jet_ski_steering"] = 0.0
+			var previous_jet_position: Vector3 = session.get("jet_ski_position", JET_SKI_SERVER_LAUNCH_POSITION)
 			var jet_state := JetSkiNetworkContract.step_motion(
-				session.get("jet_ski_position", JET_SKI_SERVER_LAUNCH_POSITION),
+				previous_jet_position,
 				float(session.get("jet_ski_rotation_y", 0.0)),
 				session.get("jet_ski_velocity", Vector3.ZERO),
 				float(session.get("jet_ski_throttle", 0.0)),
@@ -2205,7 +2283,29 @@ func _physics_process(delta: float) -> void:
 				float(session.get("jet_ski_steering", 0.0)),
 				safe_delta
 			)
-			session["jet_ski_position"] = jet_state["position"]
+			var next_jet_position: Vector3 = jet_state["position"]
+			if _jet_ski_race_state == "racing" and _jet_ski_race_locked_participants.has(peer_id) and not bool(session.get("jet_ski_race_finished", false)):
+				var next_gate_index := int(session.get("jet_ski_race_next_gate_index", 0))
+				if next_gate_index >= 0 and next_gate_index < JET_SKI_RACE_GATE_Z_POSITIONS.size():
+					var gate_z := float(JET_SKI_RACE_GATE_Z_POSITIONS[next_gate_index])
+					if _jet_ski_race_crossed_gate(previous_jet_position, next_jet_position, gate_z, JET_SKI_RACE_GATE_HALF_WIDTH):
+						next_gate_index += 1
+						session["jet_ski_race_next_gate_index"] = next_gate_index
+						if next_gate_index == JET_SKI_RACE_GATE_Z_POSITIONS.size():
+							session["jet_ski_race_finished"] = true
+							session["jet_ski_race_status"] = "finished"
+							session["jet_ski_race_finish_time_usec"] = maxi(0, now_usec - _jet_ski_race_started_at_usec)
+							_jet_ski_race_results.append({
+								"peer_id": peer_id,
+								"user_id": str(session.get("user_id", "")),
+								"status": "finished",
+								"finish_time_usec": int(session["jet_ski_race_finish_time_usec"]),
+								"place": _jet_ski_race_finished_count() + 1
+							})
+						else:
+							_notify_jet_ski_race_participants("اجتاز أحد المتسابقين بوابة %d من 3." % maxi(0, next_gate_index - 1))
+			session["jet_ski_race_previous_position"] = next_jet_position
+			session["jet_ski_position"] = next_jet_position
 			session["jet_ski_rotation_y"] = jet_state["rotation_y"]
 			session["jet_ski_velocity"] = jet_state["velocity"]
 			body.global_position = jet_state["position"] + JET_SKI_RIDER_OFFSET.rotated(Vector3.UP, float(jet_state["rotation_y"]))
@@ -2215,6 +2315,8 @@ func _physics_process(delta: float) -> void:
 			session["direction"] = Vector3.ZERO
 			session["sprint"] = false
 			_sessions[peer_id] = session
+			if _jet_ski_race_state == "racing" and _jet_ski_race_all_locked_participants_finished():
+				_jet_ski_race_finish_round("اكتمل السباق! تم اعتماد ترتيب الوصول على الخادم.")
 			continue
 		var current_position := body.global_position
 		var movement_start_position := current_position
