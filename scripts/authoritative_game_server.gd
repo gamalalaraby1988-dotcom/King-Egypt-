@@ -521,7 +521,7 @@ func _on_peer_disconnected(peer_id: int) -> void:
 	if is_instance_valid(body):
 		body.queue_free()
 	var was_jet_ski_race_participant := _jet_ski_race_participants.has(peer_id)
-	if _jet_ski_race_state == "racing" and _jet_ski_race_locked_participants.has(peer_id):
+	if _jet_ski_race_state == "racing" and _jet_ski_race_locked_participants.has(peer_id) and not bool(session.get("jet_ski_race_finished", false)):
 		_jet_ski_race_results.append({
 			"peer_id": peer_id,
 			"user_id": str(session.get("user_id", "")),
@@ -530,8 +530,11 @@ func _on_peer_disconnected(peer_id: int) -> void:
 		})
 	_sessions.erase(peer_id)
 	_jet_ski_race_participants.erase(peer_id)
+	if _jet_ski_race_state == "racing" and _jet_ski_race_all_locked_participants_finished():
+		_jet_ski_race_finish_round("انتهت الجولة بعد اكتمال وصول المتسابقين أو تسجيل حالات عدم الإكمال.")
 	_jet_ski_race_spectators.erase(peer_id)
-	_jet_ski_race_locked_participants.erase(peer_id)
+	if _jet_ski_race_state not in ["racing", "finished"]:
+		_jet_ski_race_locked_participants.erase(peer_id)
 	if _jet_ski_race_should_reopen_after_disconnect(was_jet_ski_race_participant, _jet_ski_race_state):
 		_jet_ski_race_state = "waiting"
 		_jet_ski_race_countdown_until_usec = 0
@@ -1795,6 +1798,13 @@ func _jet_ski_race_all_locked_participants_finished() -> bool:
 	if _jet_ski_race_locked_participants.is_empty():
 		return false
 	for peer_id in _jet_ski_race_locked_participants:
+		var has_result := false
+		for result in _jet_ski_race_results:
+			if int(result.get("peer_id", 0)) == peer_id:
+				has_result = true
+				break
+		if has_result:
+			continue
 		if not _sessions.has(peer_id) or not bool(_sessions[peer_id].get("jet_ski_race_finished", false)):
 			return false
 	return true
