@@ -123,3 +123,10 @@ Do not describe the championship as playable or multiplayer-validated until thes
 - يبدأ نطاق الإعلان المسبق قبل الموعد بـ15 دقيقة، أي من 7:45 مساءً في أيام البطولة.
 - أضيفت ثوابت الجدول ودوال التحقق من يوم البطولة ونافذة الإعلان إلى الخادم، مع اختبارات عقد لهذه القواعد.
 - **حد التنفيذ الحالي:** هذه الإضافة تثبت الجدول وتتحقق من أهلية اليوم ونافذة الإعلان برمجيًا، لكنها لا تطلق البطولة تلقائيًا ولا تبث إعلانًا داخل واجهة اللاعبين بعد. كما أن دخول اللاعبين وبدء الجولة ما زالا يعتمدان على استكمال تدفق السباق الخادمي وواجهة التسجيل. يستخدم الخادم حاليًا إعداد الساعة المصرية UTC+2 الموجود في المشروع؛ يجب تحديث/تكييف مصدر التوقيت عند تغير التوقيت الصيفي في مصر قبل الاعتماد التشغيلي طوال العام.
+
+
+## Race roster safety prerequisite (2026-11-24)
+- The server now refuses to start the synchronized countdown unless every locked roster member is authenticated and currently mounted on a jet ski.
+- A locked participant cannot dismount during countdown or active racing; the server rejects that dismount request. Disconnect handling remains governed by the existing session cleanup and is not a substitute for finish adjudication.
+- Added participant-gate contract coverage for fully mounted rosters, unmounted members, unauthenticated members, undersized rosters, and duplicate peer IDs.
+- This closes the mounted-roster prerequisite only. Ordered server-side gate crossing, finish adjudication/results, race HUD, and live multi-client staging validation remain incomplete.
