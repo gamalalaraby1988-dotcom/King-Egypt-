@@ -45,14 +45,6 @@ jobs:
           load: true
           tags: king-city-server:staging-check
 
-      - name: Set up Python for WSS admission test
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Install WSS test client
-        run: python -m pip install --disable-pip-version-check websockets==12.0
-
       - name: Create ephemeral TLS certificate
         run: |
           openssl req -x509 -newkey rsa:2048 -nodes \
@@ -115,30 +107,25 @@ jobs:
           echo "Timed out waiting for the TCP TLS proxy to start."
           exit 1
 
-      - name: Diagnose direct backend WebSocket handshake (non-blocking)
+      - name: Diagnose direct backend with native Godot client (non-blocking)
         run: |
-          if docker run --rm -i --network king-city-capacity-net python:3.12-slim sh -c "pip install --disable-pip-version-check -q websockets==12.0 && python -" <<'PY'
-          import asyncio
-          import websockets
-
-          async def main():
-              async with websockets.connect(
-                  "ws://king-city-backend:2457",
-                  subprotocols=["binary"],
-                  open_timeout=5,
-              ):
-                  print("DIRECT_BACKEND_WEBSOCKET_HANDSHAKE=PASSED")
-
-          asyncio.run(main())
-          PY
-          then
-            echo "Direct backend handshake succeeded; inspect proxy path if WSS still fails."
+          if docker run --rm --network king-city-capacity-net \\
+            --entrypoint /usr/local/bin/godot king-city-server:staging-check \\
+            --headless --path /app --script res://tests/authoritative_server_capacity_smoke.gd \\
+            -- --url=ws://king-city-backend:2457 --capacity=1; then
+            echo "DIRECT_BACKEND_GODOT_WEBSOCKET_HANDSHAKE=PASSED"
           else
-            echo "DIRECT_BACKEND_WEBSOCKET_HANDSHAKE=FAILED; backend listener/protocol is the likely fault domain."
+            echo "DIRECT_BACKEND_GODOT_WEBSOCKET_HANDSHAKE=FAILED; inspect backend listener/protocol."
           fi
 
-      - name: Test staged player connection capacity
-        run: python tests/authoritative_server_capacity_smoke.py --capacity 64
+      - name: Test staged player connection capacity with native Godot clients
+        run: |
+          docker run --rm --network king-city-capacity-net \\
+            --entrypoint /usr/local/bin/godot king-city-server:staging-check \\
+            --headless --path /app --script res://tests/authoritative_server_capacity_smoke.gd \\
+            -- --url=wss://king-city-capacity-proxy:443 --capacity=64
+
+       run: python tests/authoritative_server_capacity_smoke.py --capacity 64
 
       - name: Capture server diagnostics
         if: always()
