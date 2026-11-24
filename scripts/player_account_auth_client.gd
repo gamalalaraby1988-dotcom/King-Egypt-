@@ -142,8 +142,8 @@ func request_email_password_sign_in(email: String, password: String) -> bool:
 	if not _valid_email(normalized_email):
 		request_finished.emit(false, "أدخل بريدًا إلكترونيًا صحيحًا.")
 		return false
-	if password.length() < 8:
-		request_finished.emit(false, "كلمة المرور يجب أن تتكون من 8 أحرف على الأقل.")
+	if password.is_empty():
+		request_finished.emit(false, "أدخل كلمة المرور.")
 		return false
 	return _send_auth_request("/auth/v1/token?grant_type=password", {
 		"email": normalized_email,
