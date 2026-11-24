@@ -1,7 +1,7 @@
 extends Node
 const ProfileConfigStore = preload("res://scripts/profile_config_store.gd")
 
-## تقدم اللاعب عبر مباني التطوير الـ28 المعتمدة فقط.
+## تقدم اللاعب عبر مباني التطوير الـ27 المعتمدة فقط.
 ## كل مبنى يضم خمس مراحل؛ إكمال المرحلة يفتح نطاق المستوى التالي.
 ## ترقية المستوى تتم بالمال، ولا تمنح الوظائف أو الأنشطة XP.
 
@@ -10,7 +10,8 @@ signal development_panel_opened(building_id: String)
 
 const MAX_PLAYER_LEVEL := 5000
 const STAGES_PER_BUILDING := 5
-const TOTAL_BUILDINGS := 28
+const TOTAL_BUILDINGS := 27
+const REMOVED_MARINA_BUILDING_INDEX := 23
 const TOTAL_STAGES := TOTAL_BUILDINGS * STAGES_PER_BUILDING
 const BASE_STAGE_COST := 3500
 const COST_GROWTH := 1.065
@@ -52,7 +53,6 @@ const BUILDING_MILESTONE_REWARDS := {
 	"fire_rescue": {"stage_2": {"money": 0, "chips": 0}, "stage_5": {"money": 0, "chips": 0}},
 	"train_station": {"stage_2": {"money": 0, "chips": 0}, "stage_5": {"money": 0, "chips": 0}},
 	"fuel_station": {"stage_2": {"money": 0, "chips": 0}, "stage_5": {"money": 0, "chips": 0}},
-	"marina_terminal": {"stage_2": {"money": 0, "chips": 0}, "stage_5": {"money": 0, "chips": 0}},
 	"royal_yacht_club": {"stage_2": {"money": 0, "chips": 0}, "stage_5": {"money": 0, "chips": 0}},
 	"adventure_center": {"stage_2": {"money": 0, "chips": 0}, "stage_5": {"money": 0, "chips": 0}},
 	"desert_lodge": {"stage_2": {"money": 0, "chips": 0}, "stage_5": {"money": 0, "chips": 0}},
@@ -326,7 +326,8 @@ func _load_progress() -> void:
 			completed_stage_count = _completed_stages_for_level(saved_level)
 		else:
 			var legacy_level_stage_count := _completed_stages_for_level(saved_level)
-			completed_stage_count = maxi(clampi(int(saved_count), 0, TOTAL_STAGES), legacy_level_stage_count)
+			var normalized_saved_count := _normalize_removed_marina_progress(int(saved_count))
+			completed_stage_count = maxi(clampi(normalized_saved_count, 0, TOTAL_STAGES), legacy_level_stage_count)
 	player_level = max(saved_level, _level_for_stage(completed_stage_count))
 	if completed_stage_count >= TOTAL_STAGES:
 		player_level = MAX_PLAYER_LEVEL
@@ -341,6 +342,18 @@ func _level_for_stage(completed_stages: int) -> int:
 	var range_size := level_range.y - level_range.x + 1
 	var stage_offset := int(ceil(float(range_size * stage_in_building) / float(STAGES_PER_BUILDING))) - 1
 	return mini(MAX_PLAYER_LEVEL, level_range.x + stage_offset)
+
+func _normalize_removed_marina_progress(saved_count: int) -> int:
+	# The former marina-terminal slot had no physical building after the approved
+	# waterfront redesign. Collapse any legacy progress in that slot and shift
+	# later progress back by five stages without reducing the player's saved level.
+	var removed_stage_start := REMOVED_MARINA_BUILDING_INDEX * STAGES_PER_BUILDING
+	var removed_stage_end := removed_stage_start + STAGES_PER_BUILDING
+	if saved_count <= removed_stage_start:
+		return saved_count
+	if saved_count < removed_stage_end:
+		return removed_stage_start
+	return saved_count - STAGES_PER_BUILDING
 
 func _completed_stages_for_level(level: int) -> int:
 	var result := 0
