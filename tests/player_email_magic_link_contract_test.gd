@@ -10,7 +10,9 @@ func _initialize() -> void:
 	var export_plugin := FileAccess.get_file_as_string("res://addons/founder_secure_storage/export_plugin.gd")
 	var export_preset := FileAccess.get_file_as_string("res://export_presets.cfg")
 
-	_check(player_auth.contains("provider=google") and player_auth.contains("OS.shell_open(authorize_url)"), "Sign-in must open the Google OAuth page.");
+	_check(player_auth.contains("provider=google") and player_auth.contains("OS.shell_open(authorize_url)"), "Google fallback sign-in must open the OAuth page.");
+	_check(player_auth.contains('/auth/v1/token?grant_type=password') and player_auth.contains('"email": normalized_email') and player_auth.contains('"password": password'), "Primary player sign-in must use Supabase email/password authentication.");
+	_check(player_auth.contains('"email_password"') and player_auth.contains('_accept_session_response(response, false)'), "Email/password sign-in must enter the shared session lifecycle.");
 	_check(player_auth.contains("code_challenge_method=s256") and player_auth.contains("code_challenge="), "Google OAuth must use PKCE.")
 	_check(player_auth.contains('kingofegyptcity://auth-callback'), "Google OAuth must use the registered Android callback URI.")
 	_check(player_auth.contains('"/auth/v1/token?grant_type=pkce"'), "Google callbacks must exchange the PKCE authorization code.")
