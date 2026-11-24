@@ -51,7 +51,7 @@ jobs:
             -keyout "$RUNNER_TEMP/server.key" \
             -out "$RUNNER_TEMP/server.crt" \
             -days 1 -subj "/CN=localhost" \
-            -addext "subjectAltName=IP:127.0.0.1,DNS:localhost"
+            -addext "subjectAltName=DNS:king-city-capacity-proxy,DNS:localhost"
           chmod 644 "$RUNNER_TEMP/server.key" "$RUNNER_TEMP/server.crt"
           cat "$RUNNER_TEMP/server.crt" "$RUNNER_TEMP/server.key" > "$RUNNER_TEMP/server.pem"
           chmod 644 "$RUNNER_TEMP/server.pem"
@@ -60,15 +60,13 @@ jobs:
         run: |
           TEST_HMAC="$(printf '0123456789abcdef0123456789abcdef' | base64 -w0)"
           docker network create king-city-capacity-net
-
-          # The Godot backend has no published host port; only the TLS proxy is exposed.
           docker run -d --name king-city-capacity-smoke \
             --network king-city-capacity-net --network-alias king-city-backend \
             -e KING_CITY_SUPABASE_URL="https://unwrlvyjrtdwobcktetd.supabase.co" \
             -e KING_CITY_SUPABASE_PUBLISHABLE_KEY="sb_publishable_ci_smoke_only" \
             -e KING_CITY_SESSION_SERVER_ID="ci" \
             -e KING_CITY_SESSION_REGION="x" \
-            -e KING_CITY_SESSION_ENDPOINT="wss://127.0.0.1:2456" \
+            -e KING_CITY_SESSION_ENDPOINT="wss://king-city-capacity-proxy:443" \
             -e KING_CITY_SESSION_DIRECTORY_HMAC_SECRET_B64="$TEST_HMAC" \
             -e KING_CITY_GAME_PORT="2457" \
             -e KING_CITY_SESSION_CAPACITY="64" \
@@ -109,10 +107,10 @@ jobs:
 
       - name: Diagnose direct backend with native Godot client (non-blocking)
         run: |
-          if docker run --rm --network king-city-capacity-net \\
-            --entrypoint /usr/local/bin/godot king-city-server:staging-check \\
-            --headless --path /app --script res://tests/authoritative_server_capacity_smoke.gd \\
-            -- --url=ws://king-city-backend:2457 --capacity=1; then
+          if docker run --rm --network king-city-capacity-net \
+            --entrypoint /usr/local/bin/godot king-city-server:staging-check \
+            --headless --path /app --script res://tests/authoritative_server_capacity_smoke.gd \
+            -- --url=ws://king-city-backend:2457 --handshake-only; then
             echo "DIRECT_BACKEND_GODOT_WEBSOCKET_HANDSHAKE=PASSED"
           else
             echo "DIRECT_BACKEND_GODOT_WEBSOCKET_HANDSHAKE=FAILED; inspect backend listener/protocol."
@@ -120,12 +118,10 @@ jobs:
 
       - name: Test staged player connection capacity with native Godot clients
         run: |
-          docker run --rm --network king-city-capacity-net \\
-            --entrypoint /usr/local/bin/godot king-city-server:staging-check \\
-            --headless --path /app --script res://tests/authoritative_server_capacity_smoke.gd \\
+          docker run --rm --network king-city-capacity-net \
+            --entrypoint /usr/local/bin/godot king-city-server:staging-check \
+            --headless --path /app --script res://tests/authoritative_server_capacity_smoke.gd \
             -- --url=wss://king-city-capacity-proxy:443 --capacity=64
-
-       run: python tests/authoritative_server_capacity_smoke.py --capacity 64
 
       - name: Capture server diagnostics
         if: always()
