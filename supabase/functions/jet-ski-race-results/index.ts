@@ -95,7 +95,7 @@ async function verifyServer(
 
   let serverKeys: Record<string, unknown>;
   try {
-    serverKeys = JSON.parse(runtime.env("CITY_SESSION_SERVER_KEYS_JSON") ?? "{}");
+    serverKeys = JSON.parse(runtime.env("JET_SKI_RACE_SERVER_KEYS_JSON") ?? "{}");
   } catch {
     return null;
   }
