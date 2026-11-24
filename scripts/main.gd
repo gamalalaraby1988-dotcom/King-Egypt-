@@ -1739,7 +1739,7 @@ func _on_player_account_access_token_changed(access_token: String) -> void:
 		ProfileConfigStore.complete_account_switch()
 		if FounderIdentityManager.is_founder and FounderIdentityManager.founder_subject_id != account_id:
 			FounderIdentityManager.clear_entitlement()
-		# Founder status is checked automatically with the same Google-authenticated player session.
+		# Founder status is checked automatically with the same authenticated player session.
 		FounderAuthClient.request_founder_entitlement_with_access_token(access_token)
 
 func _reload_scene_for_account_profile() -> void:
