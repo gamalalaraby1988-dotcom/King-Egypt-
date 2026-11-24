@@ -13,6 +13,13 @@ var steering_rect := Rect2()
 var camera_last_position := Vector2.ZERO
 var _ui_scale := 1.0
 var _network_send_elapsed := 0.0
+var _race_state := "waiting"
+var _race_participant_count := 0
+var _race_message := ""
+var _race_next_gate_index := 0
+var _race_status := "waiting"
+var _race_place := 0
+var _race_results: Array = []
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -21,6 +28,36 @@ func _ready() -> void:
 	if is_instance_valid(layer):
 		jet_ski = layer.get_parent() as CharacterBody3D
 	_update_layout()
+	if not AuthoritativeGameServer.jet_ski_race_state_changed.is_connected(_on_race_state_changed):
+		AuthoritativeGameServer.jet_ski_race_state_changed.connect(_on_race_state_changed)
+	if not AuthoritativeGameServer.jet_ski_race_progress_changed.is_connected(_on_race_progress_changed):
+		AuthoritativeGameServer.jet_ski_race_progress_changed.connect(_on_race_progress_changed)
+	if not AuthoritativeGameServer.jet_ski_race_results_received.is_connected(_on_race_results_received):
+		AuthoritativeGameServer.jet_ski_race_results_received.connect(_on_race_results_received)
+	queue_redraw()
+
+
+func _on_race_state_changed(state: String, participant_count: int, message: String) -> void:
+	_race_state = state
+	_race_participant_count = participant_count
+	_race_message = message
+	if state == "countdown":
+		_race_next_gate_index = 0
+		_race_status = "racing"
+		_race_place = 0
+		_race_results.clear()
+	queue_redraw()
+
+
+func _on_race_progress_changed(next_gate_index: int, status: String, place: int) -> void:
+	_race_next_gate_index = next_gate_index
+	_race_status = status
+	_race_place = place
+	queue_redraw()
+
+
+func _on_race_results_received(results: Array) -> void:
+	_race_results = results.duplicate(true)
 	queue_redraw()
 
 
@@ -68,6 +105,47 @@ func _draw() -> void:
 	_draw_button(drive_rect, "GO", Color(0.12, 0.42, 0.2, 0.82))
 	_draw_button(brake_rect, "BRAKE", Color(0.65, 0.12, 0.1, 0.84))
 	_draw_button(steering_rect, "STEER", Color(0.08, 0.12, 0.2, 0.66))
+	_draw_race_panel()
+
+
+func _draw_race_panel() -> void:
+	if _race_state == "waiting" and _race_message.is_empty() and _race_results.is_empty():
+		return
+	var viewport_size := get_viewport_rect().size
+	var width := minf(390.0, viewport_size.x - 28.0)
+	var panel_height := 112.0 if _race_results.is_empty() else 210.0
+	var panel := Rect2(Vector2((viewport_size.x - width) * 0.5, 18.0), Vector2(width, panel_height))
+	draw_rect(panel, Color(0.025, 0.045, 0.075, 0.9), true)
+	draw_rect(panel, Color(0.88, 0.69, 0.32, 0.95), false, 2.0)
+	var font := ThemeDB.fallback_font
+	var title := "بطولة الجت سكي الملكية"
+	draw_string(font, Vector2(panel.position.x + 14.0, panel.position.y + 24.0), title, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(1.0, 0.84, 0.48))
+	var status_text := "المتسابقون: %d / 4" % _race_participant_count
+	if _race_state == "countdown":
+		status_text = "استعد للانطلاق"
+	elif _race_state == "racing":
+		status_text = "السباق جارٍ"
+	elif _race_state == "finished":
+		status_text = "انتهت الجولة"
+	draw_string(font, Vector2(panel.position.x + 14.0, panel.position.y + 48.0), status_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color.WHITE)
+	if _race_state == "racing" or _race_status == "finished":
+		var gate_text := "التقدم: %d / 5 بوابات" % _race_next_gate_index
+		if _race_status == "finished":
+			gate_text = "وصلت إلى خط النهاية" + (" — المركز %d" % _race_place if _race_place > 0 else "")
+		draw_string(font, Vector2(panel.position.x + 14.0, panel.position.y + 70.0), gate_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(0.9, 0.9, 0.9))
+	if not _race_results.is_empty():
+		var y := panel.position.y + 112.0
+		draw_line(Vector2(panel.position.x + 12.0, y), Vector2(panel.end.x - 12.0, y), Color(0.7, 0.55, 0.25, 0.8), 1.0)
+		y += 19.0
+		draw_string(font, Vector2(panel.position.x + 14.0, y), "النتائج", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(1.0, 0.84, 0.48))
+		for row in _race_results:
+			y += 19.0
+			var slot := int(row.get("slot", 0))
+			var result_status := str(row.get("status", "dnf"))
+			var result_text := "المتسابق %d: %s" % [slot, "أنهى السباق" if result_status == "finished" else "لم يكمل"]
+			if result_status == "finished":
+				result_text += " — المركز %d" % int(row.get("place", 0))
+			draw_string(font, Vector2(panel.position.x + 14.0, y), result_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color.WHITE)
 
 
 func _draw_button(rect: Rect2, label: String, color: Color) -> void:
