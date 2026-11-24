@@ -282,7 +282,7 @@ func _queue_jet_ski_race_result(user_id: String, status: String, place: int, fin
 		"status": status,
 		"place": place if status == "finished" else null,
 		"finish_time_usec": finish_time_usec if status == "finished" else null,
-		"race_finished_at": Time.get_datetime_string_from_unix_time(int(finished_at_unix_usec / 1000000), true),
+		"race_finished_at": Time.get_datetime_string_from_unix_time(int(finished_at_unix_usec / 1000000), true) + "Z",
 		"reason": reason if status == "dnf" else null
 	}
 	_jet_ski_results_outbox.append(row)
@@ -306,7 +306,7 @@ func _pump_jet_ski_results_outbox(now_usec: int) -> void:
 	if signer.start(HashingContext.HASH_SHA256, _jet_ski_results_hmac_key) != OK:
 		_jet_ski_results_retry_at_usec = now_usec + 5000000
 		return
-	if signer.update((timestamp + "\\n" + nonce + "\\n" + raw_body).to_utf8_buffer()) != OK:
+	if signer.update((timestamp + "\n" + nonce + "\n" + raw_body).to_utf8_buffer()) != OK:
 		_jet_ski_results_retry_at_usec = now_usec + 5000000
 		return
 	var signature := signer.finish().hex_encode()
