@@ -1808,6 +1808,12 @@ func _jet_ski_race_finish_round(message: String) -> void:
 		if not bool(session.get("jet_ski_race_finished", false)):
 			session["jet_ski_race_status"] = "dnf"
 			session["jet_ski_race_finished"] = true
+			_jet_ski_race_results.append({
+				"peer_id": peer_id,
+				"user_id": str(session.get("user_id", "")),
+				"status": "dnf",
+				"reason": "time_limit"
+			})
 			_sessions[peer_id] = session
 	_jet_ski_race_state = "finished"
 	_jet_ski_race_ends_at_usec = 0
