@@ -170,7 +170,7 @@ func _initialize() -> void:
 		failures.append("The race result outbox was not saved to persistent server storage.")
 	else:
 		var saved_results: Variant = outbox_config.get_value("results", "pending", [])
-		if not saved_results is Array or saved_results.size() != 2:
+		if not (saved_results is Array) or saved_results.size() != 2:
 			failures.append("The persistent outbox did not preserve both pending server results.")
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(SERVER_SCRIPT.JET_SKI_RESULTS_OUTBOX_PATH))
 	server.free()
