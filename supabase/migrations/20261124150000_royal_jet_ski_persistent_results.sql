@@ -100,7 +100,7 @@ declare
     v_inserted boolean := false;
 begin
     if p_race_id is null or p_server_event_id is null or p_user_id is null
-       or p_server_id is null or p_server_id !~ '^[a-zA-Z0-9][a-zA-Z0-9_-]{2,63}$'
+       or p_status is null or p_server_id is null or p_server_id !~ '^[a-zA-Z0-9][a-zA-Z0-9_-]{2,63}$'
        or p_status not in ('finished', 'dnf') then
         raise exception 'jet_ski_race_result_invalid' using errcode = '22023';
     end if;
@@ -112,7 +112,7 @@ begin
             raise exception 'jet_ski_race_finish_payload_invalid' using errcode = '22023';
         end if;
     elsif p_place is not null or p_finish_time_usec is not null
-       or p_reason not in ('disconnect', 'time_limit') then
+       or p_reason is null or p_reason not in ('disconnect', 'time_limit') then
         raise exception 'jet_ski_race_dnf_payload_invalid' using errcode = '22023';
     end if;
 
