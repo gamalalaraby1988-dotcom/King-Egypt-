@@ -36,8 +36,8 @@ security/public_key_pem="-----BEGIN PUBLIC KEY-----\nMIIBojANBgkqhkiG9w0BAQEFAAO
 auth/api_base_url="https://lupmaktbymuaymhqsxxu.supabase.co"
 auth/publishable_key="sb_publishable_KMNgd88WnXikozVVI9TeLA_PxV5ap9P"
 auth/magic_link_redirect_uri="kingofegyptcity://auth-callback"
-auth/test_api_base_url="https://unwrlvyjrtdwobcktetd.supabase.co"
-auth/test_publishable_key="sb_publishable_BrWeMmhyOpL73Uca40Ug0Q_8Zgw55si"
+founder/auth/test_api_base_url="https://unwrlvyjrtdwobcktetd.supabase.co"
+founder/auth/test_publishable_key="sb_publishable_BrWeMmhyOpL73Uca40Ug0Q_8Zgw55si"
 
 [display]
 window/size/viewport_width=1280
