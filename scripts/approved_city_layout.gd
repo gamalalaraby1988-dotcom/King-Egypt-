@@ -522,7 +522,7 @@ func _add_jet_ski_gate(parent: Node3D, gate_id: String, z_position: float, label
 		gate.add_child(support)
 
 		var pontoon := MeshInstance3D.new()
-		pontoon.name = "FloatingGatePontoon"
+		pontoon.name = "FloatingGatePontoon_Left" if side < 0.0 else "FloatingGatePontoon_Right"
 		var pontoon_mesh := CylinderMesh.new()
 		pontoon_mesh.top_radius = 0.42
 		pontoon_mesh.bottom_radius = 0.42
