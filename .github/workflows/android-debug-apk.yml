@@ -135,6 +135,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: KING-OF-EGYPT-CITY-Android-debug
-          path: build/android/KING_OF_EGYPT_CITY-debug.apk
+          path: build/android/KING_OF_EGYPT_CITY-test-debug.apk
           if-no-files-found: error
           retention-days: 14
