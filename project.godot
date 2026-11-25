@@ -40,7 +40,7 @@ auth/publishable_key="sb_publishable_KMNgd88WnXikozVVI9TeLA_PxV5ap9P"
 auth/publishable_key.environment_test="sb_publishable_BrWeMmhyOpL73Uca40Ug0Q_8Zgw55si"
 auth/publishable_key.environment_production="sb_publishable_KMNgd88WnXikozVVI9TeLA_PxV5ap9P"
 auth/magic_link_redirect_uri="kingofegyptcity://auth-callback"
-auth/magic_link_redirect_uri.environment_test="kingofegyptcity://auth-callback"
+auth/magic_link_redirect_uri.environment_test="kingofegyptcity-test://auth-callback"
 auth/magic_link_redirect_uri.environment_production="kingofegyptcity://auth-callback"
 
 [display]
