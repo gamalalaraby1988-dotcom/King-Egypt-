@@ -81,7 +81,7 @@ func verify_email_otp(email: String, token: String) -> bool:
 	if not _valid_email(normalized) or code.length() < 6:
 		request_finished.emit(false, "أدخل البريد الإلكتروني ورمز التحقق بشكل صحيح.")
 		return false
-	return _send_auth_request("/auth/v1/verify", {"email": normalized, "token": code, "type": "signup"}, "verify_email")
+	return _send_auth_request("/auth/v1/verify", {"email": normalized, "token": code, "type": "email"}, "verify_email")
 
 func request_email_sign_in(email: String, password: String) -> bool:
 	var normalized := email.strip_edges().to_lower()
@@ -118,7 +118,7 @@ func update_password(new_password: String) -> bool:
 		"apikey: " + _publishable_key(),
 		"Authorization: Bearer " + _access_token
 	])
-	var error := _auth_http.request(_api_base_url() + "/auth/v1/user", headers, HTTPClient.METHOD_PATCH, JSON.stringify({"password": new_password}))
+	var error := _auth_http.request(_api_base_url() + "/auth/v1/user", headers, HTTPClient.METHOD_PUT, JSON.stringify({"password": new_password}))
 	if error != OK:
 		request_finished.emit(false, "تعذر بدء تحديث كلمة المرور.")
 		return false
