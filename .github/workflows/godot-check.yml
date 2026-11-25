@@ -523,6 +523,8 @@ jobs:
         with:
           deno-version: v2.x
 
+      - name: Run founder entitlement Edge Function authentication and signing tests
+        run: deno test supabase/tests/founder-entitlement-edge.test.ts
       - name: Run player sync Edge Function authentication tests
         run: deno test --allow-net supabase/tests/player-sync-edge.test.ts
 
