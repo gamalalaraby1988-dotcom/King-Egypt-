@@ -23,6 +23,20 @@ class FounderSecureStoragePlugin(godot: Godot) : GodotPlugin(godot) {
     @UsedByGodot
     fun is_available(): Boolean = android.os.Build.VERSION.SDK_INT >= 23
 
+    // Expose camelCase aliases as well: Godot's Android bridge preserves JVM method names.
+    // GDScript accepts either spelling so this plugin remains compatible across bridge variants.
+    @UsedByGodot
+    fun isAvailable(): Boolean = is_available()
+
+    @UsedByGodot
+    fun saveSecret(alias: String, value: String): Boolean = save_secret(alias, value)
+
+    @UsedByGodot
+    fun loadSecret(alias: String): String = load_secret(alias)
+
+    @UsedByGodot
+    fun deleteSecret(alias: String) = delete_secret(alias)
+
     @UsedByGodot
     @Synchronized
     fun save_secret(alias: String, value: String): Boolean {
