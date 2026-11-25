@@ -53,6 +53,12 @@ func _capture_previews() -> void:
 		var continuous_ring := ring.get_node_or_null("ContinuousLuminousRing") as MeshInstance3D
 		var cyan_tracer := ring.get_node_or_null("CyanInnerLightTracer") as MeshInstance3D
 		var gate_label := ring.get_node_or_null("GateLabel") as Label3D
+		if gate_name == "Finish":
+			var finish_glow := ring.get_node_or_null("FinishWordGlow") as OmniLight3D
+			if gate_label == null or gate_label.text != "FINISH" or finish_glow == null or gate_label.position.y <= 16.75:
+				push_error("The finish word must glow above the clear gate opening.")
+				quit(1)
+				return
 		var support_count := 0
 		var pontoon_count := 0
 		for child in ring.get_children():
