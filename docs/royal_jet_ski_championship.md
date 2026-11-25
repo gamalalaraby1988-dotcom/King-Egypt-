@@ -153,3 +153,9 @@ Do not describe the championship as playable or multiplayer-validated until thes
   - `KING_CITY_JET_SKI_RESULTS_HMAC_SECRET_B64`: a dedicated random secret of at least 32 decoded bytes, shared only with the matching `JET_SKI_RACE_SERVER_KEYS_JSON` entry in the Edge Function environment. Do not reuse the city-directory HMAC secret or commit the value.
   - Optional `KING_CITY_JET_SKI_RESULTS_URL`; otherwise the function URL is derived from the project's configured Supabase URL.
 - The `jet-ski-race-results` Edge Function has now been deployed as version 1 to the isolated `KING_OF_EGYPT_CITY_TEST` project with JWT verification disabled because it authenticates the dedicated server through HMAC. The dedicated `JET_SKI_RACE_SERVER_KEYS_JSON` secret is not yet configured, so the function intentionally fails closed and cannot accept live race submissions yet. The production database has not been migrated and the production Edge Function has not been deployed. The next gate is to configure the dedicated test secret through Supabase project secrets, then run a signed end-to-end server result test before any production rollout.
+
+
+## Staggered slalom course update (2026-11-25)
+- The five visible gates form a moderate alternating slalom: start (X=0, Z=96), checkpoint 1 (X=-10, Z=111), checkpoint 2 (X=10, Z=126), checkpoint 3 (X=-10, Z=141), finish (X=0, Z=156).
+- The dedicated server validates the interpolated crossing point against each gate center in both horizontal and vertical axes; driving straight through the old centerline cannot clear offset checkpoints.
+- The race remains ordered and forward-only. The stagger requires deliberate steering without making the course excessively tight.
