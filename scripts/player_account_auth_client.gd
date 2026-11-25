@@ -31,8 +31,12 @@ var _restoring := false
 var _restore_retry_pending := false
 var _deep_link_poll_elapsed := 0.0
 var _pending_code_verifier := ""
+var _recovery_access_token := ""
+var _recovery_expires_at := 0
+var _deep_link_poll_elapsed := 0.0
 
 func _ready() -> void:
+	set_process(true)
 	_auth_http = HTTPRequest.new()
 	_auth_http.name = "PlayerAccountAuthHTTPRequest"
 	_auth_http.timeout = 20.0
@@ -51,6 +55,14 @@ func _ready() -> void:
 	add_child(_refresh_timer)
 	_refresh_timer.timeout.connect(_refresh_session)
 	call_deferred("_restore_session")
+
+func _process(delta: float) -> void:
+	_deep_link_poll_elapsed += delta
+	if _deep_link_poll_elapsed < 0.5:
+		return
+	_deep_link_poll_elapsed = 0.0
+	if _pending_action.is_empty():
+		_poll_password_recovery_link()
 
 func is_configured() -> bool:
 	var base := _api_base_url()
@@ -95,7 +107,7 @@ func request_password_recovery(email: String) -> bool:
 	if not _valid_email(normalized):
 		request_finished.emit(false, "أدخل بريدًا إلكترونيًا صحيحًا لاستعادة كلمة المرور.")
 		return false
-	return _send_auth_request("/auth/v1/recover", {"email": normalized}, "recover_password")
+	return _send_auth_request("/auth/v1/recover?redirect_to=kingofegyptcity%3A%2F%2Fauth-callback", {"email": normalized}, "recover_password")
 
 func verify_password_recovery_otp(email: String, token: String) -> bool:
 	var normalized := email.strip_edges().to_lower()
@@ -106,8 +118,12 @@ func verify_password_recovery_otp(email: String, token: String) -> bool:
 	return _send_auth_request("/auth/v1/verify", {"email": normalized, "token": code, "type": "recovery"}, "verify_recovery")
 
 func update_password(new_password: String) -> bool:
-	if not has_active_session() or new_password.length() < 8:
-		request_finished.emit(false, "تحقق من رمز الاستعادة أولًا، ثم أدخل كلمة مرور جديدة من 8 أحرف على الأقل.")
+	var recovery_session_valid := not _recovery_access_token.is_empty() and Time.get_unix_time_from_system() < _recovery_expires_at
+	if not recovery_session_valid and not has_active_session():
+		request_finished.emit(false, "افتح رابط الاستعادة الذي وصلك بالبريد أو تحقق من رمز الاستعادة أولًا.")
+		return false
+	if new_password.length() < 8:
+		request_finished.emit(false, "أدخل كلمة مرور جديدة من 8 أحرف على الأقل.")
 		return false
 	if _pending_action != "":
 		request_finished.emit(false, "هناك طلب حساب قيد التنفيذ.")
@@ -116,7 +132,7 @@ func update_password(new_password: String) -> bool:
 		"Content-Type: application/json",
 		"Accept: application/json",
 		"apikey: " + _publishable_key(),
-		"Authorization: Bearer " + _access_token
+		"Authorization: Bearer " + (_recovery_access_token if recovery_session_valid else _access_token)
 	])
 	var error := _auth_http.request(_api_base_url() + "/auth/v1/user", headers, HTTPClient.METHOD_PUT, JSON.stringify({"password": new_password}))
 	if error != OK:
@@ -184,13 +200,82 @@ func _on_auth_request_completed(result: int, response_code: int, _headers: Packe
 		"verify_email", "sign_in_email", "verify_recovery":
 			_accept_session_response(response, false)
 		"recover_password":
-			request_finished.emit(true, "إذا كان البريد مسجلًا، فسيصلك رمز استعادة كلمة المرور. أدخله في خانة الرمز.")
+			request_finished.emit(true, "إذا كان البريد مسجلًا، فستصلك رسالة. افتحها واضغط رابط استعادة كلمة المرور؛ ستعود إلى اللعبة لإدخال كلمة مرور جديدة.")
+		"recovery_link_user":
+			var user_id := str(response.get("id", ""))
+			var email := str(response.get("email", "")).strip_edges().to_lower()
+			var confirmed_at := str(response.get("email_confirmed_at", ""))
+			if user_id.is_empty() or email.is_empty() or confirmed_at.is_empty():
+				_recovery_access_token = ""
+				_recovery_expires_at = 0
+				request_finished.emit(false, "لم نتمكن من تأكيد رابط الاستعادة. اطلب رسالة جديدة.")
+			else:
+				request_finished.emit(true, "تم التحقق من رابط الاستعادة. أدخل كلمة المرور الجديدة ثم اضغط حفظ كلمة المرور.")
 		"update_password":
+			_recovery_access_token = ""
+			_recovery_expires_at = 0
 			request_finished.emit(true, "تم تحديث كلمة المرور. يمكنك تسجيل الدخول بها الآن.")
 		"refresh":
 			_accept_session_response(response, _restoring)
 		_:
 			request_finished.emit(false, "حالة طلب غير معروفة.")
+
+func _poll_password_recovery_link() -> void:
+	var storage := _secure_storage()
+	if storage == null or not storage.has_method("getPendingAuthLink"):
+		return
+	var link := str(storage.call("getPendingAuthLink")).strip_edges()
+	if link.is_empty() or not link.begins_with("kingofegyptcity://auth-callback"):
+		return
+	if storage.has_method("clearPendingAuthLink"):
+		storage.call("clearPendingAuthLink")
+	var parameters := _parse_deep_link_parameters(link)
+	var error_description := str(parameters.get("error_description", parameters.get("error", "")))
+	if not error_description.is_empty():
+		request_finished.emit(false, "تعذر فتح رابط الاستعادة: " + uri_decode(error_description))
+		return
+	if str(parameters.get("type", "")) != "recovery":
+		request_finished.emit(false, "رابط البريد ليس رابط استعادة كلمة المرور.")
+		return
+	var access := str(parameters.get("access_token", ""))
+	var expires := int(parameters.get("expires_in", 0))
+	if access.is_empty() or expires <= 0:
+		request_finished.emit(false, "عاد رابط البريد دون جلسة استعادة صالحة. تأكد من إعداد رابط العودة ثم اطلب رسالة جديدة.")
+		return
+	_recovery_access_token = access
+	_recovery_expires_at = int(Time.get_unix_time_from_system()) + expires
+	var headers := PackedStringArray([
+		"Accept: application/json",
+		"apikey: " + _publishable_key(),
+		"Authorization: Bearer " + _recovery_access_token
+	])
+	var error := _auth_http.request(_api_base_url() + "/auth/v1/user", headers, HTTPClient.METHOD_GET)
+	if error != OK:
+		_recovery_access_token = ""
+		_recovery_expires_at = 0
+		request_finished.emit(false, "تعذر التحقق من رابط الاستعادة. افتح الرسالة وجرّب مرة أخرى.")
+		return
+	_pending_action = "recovery_link_user"
+
+func _parse_deep_link_parameters(link: String) -> Dictionary:
+	var parameters: Dictionary = {}
+	var query_start := link.find("?")
+	var fragment_start := link.find("#")
+	if query_start >= 0:
+		var query_end := fragment_start if fragment_start > query_start else link.length()
+		_merge_url_parameters(parameters, link.substr(query_start + 1, query_end - query_start - 1))
+	if fragment_start >= 0:
+		_merge_url_parameters(parameters, link.substr(fragment_start + 1))
+	return parameters
+
+func _merge_url_parameters(target: Dictionary, encoded_parameters: String) -> void:
+	for pair in encoded_parameters.split("&", false):
+		var separator := pair.find("=")
+		if separator < 0:
+			continue
+		var key := uri_decode(pair.substr(0, separator).replace("+", " "))
+		var value := uri_decode(pair.substr(separator + 1).replace("+", " "))
+		target[key] = value
 
 func _accept_session_response(response: Dictionary, was_restoring: bool) -> void:
 	var user_value: Variant = response.get("user", {})
