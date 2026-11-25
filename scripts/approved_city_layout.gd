@@ -453,25 +453,47 @@ func _build_jet_ski_course() -> void:
 
 
 func _add_jet_ski_gate(parent: Node3D, gate_id: String, z_position: float, label_text: String) -> void:
+	# A full vertical luminous ring: its opening is centered on the race plane.
+	# Short overlapping segments keep the silhouette smooth while remaining mobile-friendly.
 	var gate := Node3D.new()
 	gate.name = "JetSkiGate_" + gate_id
 	gate.position = Vector3(0.0, 0.0, z_position)
 	parent.add_child(gate)
-	for side in [-1.0, 1.0]:
-		var buoy := MeshInstance3D.new()
-		buoy.name = "GateBuoy"
-		var sphere := SphereMesh.new()
-		sphere.radius = 0.8 if gate_id == "Start" or gate_id == "Finish" else 0.65
-		sphere.height = sphere.radius * 2.0
-		buoy.mesh = sphere
-		buoy.position = Vector3(side * 21.0, 0.15, 0.0)
-		buoy.material_override = _mat(GOLD if gate_id == "Start" or gate_id == "Finish" else TEAL, 0.18)
-		buoy.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		gate.add_child(buoy)
+
+	var is_major_gate := gate_id == "Start" or gate_id == "Finish"
+	var ring_radius := 8.5 if is_major_gate else 8.0
+	var ring_center_y := 8.25 if is_major_gate else 7.75
+	var segment_count := 28
+	var segment_length := TAU * ring_radius / float(segment_count)
+	var ring_material := StandardMaterial3D.new()
+	ring_material.albedo_color = GOLD if is_major_gate else TEAL
+	ring_material.metallic = 0.62
+	ring_material.roughness = 0.22
+	ring_material.emission_enabled = true
+	ring_material.emission = Color(1.0, 0.58, 0.12) if is_major_gate else Color(0.05, 0.72, 1.0)
+	ring_material.emission_energy_multiplier = 2.4 if is_major_gate else 1.8
+
+	for segment_index in range(segment_count):
+		var angle := TAU * float(segment_index) / float(segment_count)
+		var segment := MeshInstance3D.new()
+		segment.name = "LuminousRingSegment_%02d" % segment_index
+		var mesh := BoxMesh.new()
+		mesh.size = Vector3(segment_length + 0.10, 0.48, 0.42)
+		segment.mesh = mesh
+		segment.position = Vector3(
+			cos(angle) * ring_radius,
+			ring_center_y + sin(angle) * ring_radius,
+			0.0
+		)
+		segment.rotation.z = angle + PI * 0.5
+		segment.material_override = ring_material
+		segment.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		gate.add_child(segment)
+
 	var marker := Label3D.new()
 	marker.name = "GateLabel"
 	marker.text = label_text
-	marker.position = Vector3(0.0, 3.0, 0.0)
+	marker.position = Vector3(0.0, ring_center_y + ring_radius + 1.2, 0.0)
 	marker.font_size = 26
 	marker.pixel_size = 0.012
 	marker.modulate = Color(1.0, 0.88, 0.58)
