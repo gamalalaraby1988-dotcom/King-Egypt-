@@ -17,6 +17,7 @@ func _initialize() -> void:
 	_check(player_auth.contains('RECOVERY_CODE_VERIFIER_ALIAS') and player_auth.contains('save_secret'), "Password recovery verifier must be stored securely across app launches.")
 	_check(player_auth.contains('"saveSecret"') and player_auth.contains('"loadSecret"') and player_auth.contains("storage.callv"), "The auth client must support both Android plugin bridge method naming styles.")
 	_check(player_auth.contains("diagnostic S1") and player_auth.contains("diagnostic S2"), "Secure-storage failures must expose distinct runtime diagnostics.")
+	_check(player_auth.contains('storage.call("has_java_method", method_name)') and player_auth.contains('_storage_has_method_exact(storage, "getPendingAuthLink")'), "Android JNISingleton methods must be detected through has_java_method.")
 	_check(secure_plugin.contains("fun isAvailable()") and secure_plugin.contains("fun saveSecret(") and secure_plugin.contains("fun loadSecret("), "The Android plugin must expose camelCase aliases for secure storage methods.")
 	_check(player_auth.contains('parameters.get("code", "")') and player_auth.contains('"/auth/v1/token?grant_type=pkce"'), "Password recovery deep links must exchange PKCE authorization codes.")
 	_check(player_auth.contains('"auth_code": authorization_code') and player_auth.contains('"code_verifier": verifier'), "PKCE exchange must submit the authorization code and matching verifier.")
