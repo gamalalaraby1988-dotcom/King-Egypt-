@@ -451,7 +451,39 @@ func _build_jet_ski_course() -> void:
 	_add_jet_ski_gate(course, "Checkpoint2", 10.0, 126.0, "CHECKPOINT 2")
 	_add_jet_ski_gate(course, "Checkpoint3", -10.0, 141.0, "CHECKPOINT 3")
 	_add_jet_ski_gate(course, "Finish", 0.0, 156.0, "FINISH")
+	_add_jet_ski_route_guides(course)
 
+
+
+func _add_jet_ski_route_guides(parent: Node3D) -> void:
+	# Continuous low-profile cyan light strips trace the approved slalom over the water.
+	var gate_points: Array[Vector3] = [
+		Vector3(0.0, 0.24, 96.0),
+		Vector3(-10.0, 0.24, 111.0),
+		Vector3(10.0, 0.24, 126.0),
+		Vector3(-10.0, 0.24, 141.0),
+		Vector3(0.0, 0.24, 156.0)
+	]
+	var guide_material := StandardMaterial3D.new()
+	guide_material.albedo_color = Color(0.04, 0.72, 1.0, 0.92)
+	guide_material.emission_enabled = true
+	guide_material.emission = Color(0.02, 0.78, 1.0)
+	guide_material.emission_energy_multiplier = 3.2
+	guide_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	for index in range(gate_points.size() - 1):
+		var start: Vector3 = gate_points[index]
+		var finish: Vector3 = gate_points[index + 1]
+		var delta := finish - start
+		var guide := MeshInstance3D.new()
+		guide.name = "LuminousRouteGuide_%02d" % (index + 1)
+		var strip := BoxMesh.new()
+		strip.size = Vector3(0.22, 0.055, delta.length())
+		guide.mesh = strip
+		guide.position = (start + finish) * 0.5
+		guide.rotation.y = atan2(delta.x, delta.z)
+		guide.material_override = guide_material
+		guide.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		parent.add_child(guide)
 
 func _add_jet_ski_gate(parent: Node3D, gate_id: String, x_position: float, z_position: float, label_text: String) -> void:
 	# All five gates share the exact circular aperture used by the authoritative server.
