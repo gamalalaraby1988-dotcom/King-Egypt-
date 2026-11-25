@@ -2166,7 +2166,7 @@ func receive_jet_ski_race_state(state: String, participant_count: int, message: 
 func receive_jet_ski_race_progress(next_gate_index: int, status: String, place: int) -> void:
 	if multiplayer.is_server() or not is_authenticated():
 		return
-	jet_ski_race_progress_changed.emit(clampi(next_gate_index, 0, JET_SKI_RACE_GATE_Z_POSITIONS.size()), status, maxi(0, place))
+	jet_ski_race_progress_changed.emit(clampi(next_gate_index, 0, JET_SKI_RACE_GATE_POSITIONS.size()), status, maxi(0, place))
 
 
 @rpc("authority", "call_remote", "reliable")
