@@ -109,8 +109,13 @@ func request_password_recovery(email: String) -> bool:
 		request_finished.emit(false, "أدخل بريدًا إلكترونيًا صحيحًا لاستعادة كلمة المرور.")
 		return false
 	var storage := _secure_storage()
-	if storage == null or not _storage_has_method(storage, "save_secret", "saveSecret"):
-		request_finished.emit(false, "التخزين الآمن غير متاح لإتمام استعادة كلمة المرور.")
+	if storage == null:
+		push_error("FounderSecureStorage diagnostic S1: Android singleton is not registered in this APK.")
+		request_finished.emit(false, "تشخيص S1: إضافة التخزين الآمن غير مسجلة داخل نسخة اللعبة. هذا خلل في ربط إضافة Android باللعبة.")
+		return false
+	if not _storage_has_method(storage, "save_secret", "saveSecret"):
+		push_error("FounderSecureStorage diagnostic S2: singleton exists but save_secret/saveSecret is not exposed.")
+		request_finished.emit(false, "تشخيص S2: الإضافة موجودة، لكن وظيفة الحفظ الآمن غير متاحة. يلزم إصلاح واجهة الإضافة.")
 		return false
 	var random_bytes: PackedByteArray = Crypto.new().generate_random_bytes(32)
 	if random_bytes.is_empty():
