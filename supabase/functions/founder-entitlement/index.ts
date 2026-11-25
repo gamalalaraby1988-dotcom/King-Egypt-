@@ -52,20 +52,41 @@ function toBase64(bytes: Uint8Array): string {
   return btoa(binary);
 }
 
-async function readEmptyJsonObject(req: Request): Promise<boolean> {
-  const contentType = (req.headers.get("Content-Type") ?? "")
-    .split(";")[0].trim().toLowerCase();
-  if (contentType !== "application/json") return false;
-
+async function readBoundedBody(req: Request): Promise<string | null> {
   const contentLength = req.headers.get("Content-Length");
   if (
     contentLength &&
     Number.isFinite(Number(contentLength)) &&
     Number(contentLength) > MAX_REQUEST_BODY_BYTES
-  ) return false;
+  ) return null;
+  if (!req.body) return "";
+  const reader = req.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > MAX_REQUEST_BODY_BYTES) {
+        await reader.cancel();
+        return null;
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return new TextDecoder().decode(bytes);
+}
 
-  const body = await req.text();
-  if (new TextEncoder().encode(body).byteLength > MAX_REQUEST_BODY_BYTES) return false;
+function isEmptyJsonObject(body: string): boolean {
   try {
     const parsed: unknown = JSON.parse(body);
     return typeof parsed === "object" && parsed !== null &&
@@ -94,7 +115,14 @@ export function createFounderEntitlementHandler(
     if (!/^Bearer\s+\S+$/i.test(authHeader)) {
       return json({ error: "unauthorized" }, 401);
     }
-    if (!await readEmptyJsonObject(req)) {
+    const requestBody = await readBoundedBody(req);
+    if (requestBody === null) {
+      return json({ error: "request_too_large" }, 413);
+    }
+    if (
+      (req.headers.get("Content-Type") ?? "").split(";")[0].trim().toLowerCase() !== "application/json" ||
+      !isEmptyJsonObject(requestBody)
+    ) {
       return json({ error: "invalid_request_body" }, 400);
     }
 
