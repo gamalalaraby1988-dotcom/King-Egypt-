@@ -16,8 +16,17 @@
 - `POST /auth/v1/signup` لإنشاء حساب بالبريد وكلمة المرور؛ ويجب تفعيل تأكيد البريد في Supabase.
 - `POST /auth/v1/verify` مع `type: signup` للتحقق من رمز التسجيل.
 - `POST /auth/v1/token?grant_type=password` لتسجيل الدخول بالبريد وكلمة المرور.
-- `POST /auth/v1/recover` ثم `/auth/v1/verify` مع `type: recovery` لاستعادة الحساب برمز البريد.
-- `PATCH /auth/v1/user` مع جلسة الاستعادة لتعيين كلمة مرور جديدة.
+- `POST /auth/v1/recover?redirect_to=kingofegyptcity://auth-callback` لإرسال رسالة الاستعادة مع العودة إلى تطبيق Android.
+- يفتح اللاعب رابط `{{ .ConfirmationURL }}` من البريد؛ يعيد Supabase جلسة الاستعادة إلى التطبيق عبر الرابط العميق. يتحقق العميل من الجلسة بطلب `GET /auth/v1/user`.
+- `PUT /auth/v1/user` مع access token الناتج عن رابط الاستعادة لتعيين كلمة مرور جديدة.
+- يبقى إدخال OTP عبر `/auth/v1/verify` مع `type: recovery` متاحًا كمسار بديل إذا كان قالب البريد يرسل رمزًا رقميًا.
+
+### رابط العودة إلى Android
+
+في مشروع TEST فقط، أضف العنوان التالي إلى Authentication > URL Configuration > Redirect URLs قبل اختبار الاستعادة:
+`kingofegyptcity://auth-callback`
+
+يجب أن يطابق العنوان المسجل حرفيًا عنوان التطبيق. لا تغيّر إعدادات URL في Production. قالب البريد الافتراضي الذي يستخدم `{{ .ConfirmationURL }}` يظل كما هو؛ لا يتطلب تعديل قالب البريد أو SMTP لهذا التدفق.
 - بعد التحقق يتأكد العميل من وجود `email_confirmed_at` ومن تطابق البريد الذي أعاده الخادم.
 - بعد ذلك يرسل access token إلى وظيفة `founder-entitlement`، والوظيفة تتحقق من الجلسة مباشرةً عبر Supabase Auth.
 

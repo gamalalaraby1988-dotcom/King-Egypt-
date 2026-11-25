@@ -1870,8 +1870,13 @@ func _create_mode_selection_ui() -> void:
 	recovery_button.text = "استعادة كلمة المرور"
 	recovery_button.pressed.connect(_on_password_recovery_pressed)
 	content.add_child(recovery_button)
+	var recovery_help := Label.new()
+	recovery_help.text = "بعد طلب الاستعادة افتح رسالة البريد واضغط رابط الاستعادة. ستعود إلى اللعبة لتعيين كلمة مرور جديدة."
+	recovery_help.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	recovery_help.add_theme_font_size_override("font_size", 12)
+	content.add_child(recovery_help)
 	var verify_recovery_button := Button.new()
-	verify_recovery_button.text = "تأكيد رمز استعادة كلمة المرور"
+	verify_recovery_button.text = "تأكيد رمز الاستعادة (إذا وصل رمز)"
 	verify_recovery_button.pressed.connect(_on_password_recovery_verify_pressed)
 	content.add_child(verify_recovery_button)
 	var update_password_button := Button.new()
