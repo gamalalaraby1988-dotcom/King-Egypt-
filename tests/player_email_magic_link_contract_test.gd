@@ -13,6 +13,8 @@ func _initialize() -> void:
 	_check(player_auth.contains('"/auth/v1/verify"') and player_auth.contains('"type": "email"'), "Email OTP must verify the signup email.")
 	_check(player_auth.contains('"/auth/v1/token?grant_type=password"'), "Email sign-in must use the password grant.")
 	_check(player_auth.contains('"/auth/v1/recover?redirect_to='), "Password recovery must request a recovery email with the app deep-link redirect.")
+	var project_config := FileAccess.get_file_as_string("res://project.godot")
+	_check(project_config.contains('founder/auth/test_api_base_url="https://unwrlvyjrtdwobcktetd.supabase.co"') and project_config.contains('founder/auth/test_publishable_key="sb_publishable_'), "TEST auth client settings must use the exact project setting paths read by the TEST client.")
 	_check(player_auth.contains('"code_challenge": challenge') and player_auth.contains('"code_challenge_method": "s256"'), "Password recovery must use a PKCE challenge.")
 	_check(player_auth.contains('RECOVERY_CODE_VERIFIER_ALIAS') and player_auth.contains('save_secret'), "Password recovery verifier must be stored securely across app launches.")
 	_check(player_auth.contains('"saveSecret"') and player_auth.contains('"loadSecret"') and player_auth.contains("storage.callv"), "The auth client must support both Android plugin bridge method naming styles.")
