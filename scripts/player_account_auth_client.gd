@@ -11,7 +11,7 @@ const API_BASE_SETTING := "founder/auth/api_base_url"
 const PUBLISHABLE_KEY_SETTING := "founder/auth/publishable_key"
 const PKCE_TOKEN_PATH := "/auth/v1/token?grant_type=pkce"
 const REFRESH_PATH := "/auth/v1/token?grant_type=refresh_token"
-const GOOGLE_REDIRECT_URI := "kingofegyptcity://auth-callback"
+const REDIRECT_URI_SETTING := "founder/auth/magic_link_redirect_uri"
 const PKCE_VERIFIER_ALIAS := "king_of_egypt_city.player.magic_link_verifier.v1"
 const DEEP_LINK_PLUGIN_SINGLETON := "FounderSecureStorage"
 const PROFILE_PATH := "/rest/v1/player_profiles"
@@ -119,7 +119,12 @@ func request_google_sign_in() -> bool:
 		_pending_code_verifier = ""
 		request_finished.emit(false, "التخزين الآمن في Android غير متاح؛ لم يتم فتح Google.")
 		return false
-	var redirect_query := "?provider=google&redirect_to=" + GOOGLE_REDIRECT_URI.uri_encode()
+	var redirect_uri := _redirect_uri()
+	if redirect_uri.is_empty():
+		_clear_pending_oauth()
+		request_finished.emit(false, "إعداد رابط العودة لتسجيل الدخول غير مكتمل.")
+		return false
+	var redirect_query := "?provider=google&redirect_to=" + redirect_uri.uri_encode()
 	redirect_query += "&code_challenge=" + challenge.uri_encode()
 	redirect_query += "&code_challenge_method=s256"
 	var authorize_url := _api_base_url() + "/auth/v1/authorize" + redirect_query
@@ -141,7 +146,7 @@ func _base64url(value: PackedByteArray) -> String:
 	return Marshalls.raw_to_base64(value).replace("+", "-").replace("/", "_").trim_suffix("=")
 
 func _handle_google_oauth_callback(link: String) -> void:
-	if not link.begins_with(GOOGLE_REDIRECT_URI):
+	if not link.begins_with(_redirect_uri()):
 		return
 	var auth_code := _url_parameter(link, "code")
 	if auth_code.is_empty():
@@ -176,11 +181,14 @@ func _clear_pending_oauth() -> void:
 		storage.call("delete_secret", PKCE_VERIFIER_ALIAS)
 	_pending_code_verifier = ""
 
+func _redirect_uri() -> String:
+	return str(ProjectSettings.get_setting_with_override(REDIRECT_URI_SETTING, "")).strip_edges()
+
 func _api_base_url() -> String:
-	return str(ProjectSettings.get_setting(API_BASE_SETTING, "")).strip_edges().trim_suffix("/")
+	return str(ProjectSettings.get_setting_with_override(API_BASE_SETTING, "")).strip_edges().trim_suffix("/")
 
 func _publishable_key() -> String:
-	return str(ProjectSettings.get_setting(PUBLISHABLE_KEY_SETTING, "")).strip_edges()
+	return str(ProjectSettings.get_setting_with_override(PUBLISHABLE_KEY_SETTING, "")).strip_edges()
 
 func _valid_email(value: String) -> bool:
 	var at_pos := value.find("@")
