@@ -36,6 +36,12 @@
 - إضافة اختبارات Deno لحالات OPTIONS وطرق HTTP والرمز المفقود/غير الصحيح، والتهيئة الناقصة، وهوية غير مطابقة، وبريد غير مؤكد، ونجاح التوقيع والتحقق منه، وأخطاء الشبكة والتوقيع.
 - تغيير إعداد الوظيفة في `supabase/config.toml` إلى `verify_jwt = true`؛ لأن الطلب يحمل access token حقيقيًا في Authorization. يظل فحص `/auth/v1/user` داخل الوظيفة قائمًا كتحقق إضافي من هوية المؤسس.
 
+## 4) عناوين OAuth
+
+- TEST: `kingofegyptcity-test://auth-callback`، ويُستخدم مع تصدير Android Debug.
+- PRODUCTION: `kingofegyptcity://auth-callback`، ويُستخدم مع تصدير Android Release.
+- يجب تسجيل كل رابط في قائمة Redirect URLs لمشروع Auth المطابق قبل اختبار تسجيل الدخول. لا نعد OAuth مكتملًا حتى ينجح الاختبار على APK لكل بيئة.
+
 ## 4) الأسرار المطلوبة لكل بيئة
 
 يجب إعدادها يدويًا وبشكل مستقل في TEST وPRODUCTION عند وقت النشر:
