@@ -278,12 +278,12 @@ func _on_auth_request_completed(result: int, response_code: int, _headers: Packe
 
 func _poll_password_recovery_link() -> void:
 	var storage := _secure_storage()
-	if storage == null or not storage.has_method("getPendingAuthLink"):
+	if storage == null or not _storage_has_method_exact(storage, "getPendingAuthLink"):
 		return
 	var link := str(storage.call("getPendingAuthLink")).strip_edges()
 	if link.is_empty() or not link.begins_with("kingofegyptcity://auth-callback"):
 		return
-	if storage.has_method("clearPendingAuthLink"):
+	if _storage_has_method_exact(storage, "clearPendingAuthLink"):
 		storage.call("clearPendingAuthLink")
 	var parameters := _parse_deep_link_parameters(link)
 	var error_description := str(parameters.get("error_description", parameters.get("error", "")))
@@ -391,11 +391,18 @@ func _secure_storage() -> Object:
 	return Engine.get_singleton(SECURE_STORAGE_SINGLETON)
 
 func _storage_has_method(storage: Object, snake_case_name: String, camel_case_name: String) -> bool:
-	return storage.has_method(snake_case_name) or storage.has_method(camel_case_name)
+	# Android plugin singletons are JNISingleton objects. Their Java methods
+	# are queried through has_java_method(), not Object.has_method().
+	return _storage_has_method_exact(storage, snake_case_name) or _storage_has_method_exact(storage, camel_case_name)
+
+func _storage_has_method_exact(storage: Object, method_name: String) -> bool:
+	if storage.has_method("has_java_method"):
+		return bool(storage.call("has_java_method", method_name))
+	return storage.has_method(method_name)
 
 func _storage_call(storage: Object, snake_case_name: String, camel_case_name: String, arguments: Array = []) -> Variant:
-	var method_name := snake_case_name if storage.has_method(snake_case_name) else camel_case_name
-	if not storage.has_method(method_name):
+	var method_name := snake_case_name if _storage_has_method_exact(storage, snake_case_name) else camel_case_name
+	if not _storage_has_method_exact(storage, method_name):
 		return null
 	return storage.callv(method_name, arguments)
 
