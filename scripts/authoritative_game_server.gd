@@ -46,7 +46,7 @@ const JET_SKI_RACE_MIN_PARTICIPANTS := 2
 const JET_SKI_RACE_MAX_PARTICIPANTS := 4
 const JET_SKI_RACE_COUNTDOWN_SECONDS := 5
 const JET_SKI_RACE_DURATION_SECONDS := 300
-const JET_SKI_RACE_GATE_Z_POSITIONS := [96.0, 111.0, 126.0, 141.0, 148.0]
+const JET_SKI_RACE_GATE_POSITIONS := [Vector2(0.0, 96.0), Vector2(-10.0, 111.0), Vector2(10.0, 126.0), Vector2(-10.0, 141.0), Vector2(0.0, 156.0)]
 const JET_SKI_RACE_GATE_APERTURE_RADIUS := 8.5
 const JET_SKI_RACE_GATE_CENTER_HEIGHT := 8.25
 const JET_SKI_RACE_OFF_COURSE_LIMIT_SECONDS := 300
@@ -1920,14 +1920,14 @@ func _jet_ski_race_all_participants_mounted(participant_ids: Array[int], session
 	return true
 
 
-func _jet_ski_race_crossed_gate(previous_position: Vector3, current_position: Vector3, gate_z: float, aperture_radius: float) -> bool:
+func _jet_ski_race_crossed_gate(previous_position: Vector3, current_position: Vector3, gate_x: float, gate_z: float, aperture_radius: float) -> bool:
 	# Accept only a forward (+Z) segment crossing the actual circular ring plane.
 	# Evaluate the interpolated crossing point against the ring's circular opening.
 	if not is_finite(previous_position.x) or not is_finite(previous_position.y) or not is_finite(previous_position.z):
 		return false
 	if not is_finite(current_position.x) or not is_finite(current_position.y) or not is_finite(current_position.z):
 		return false
-	if not is_finite(gate_z) or not is_finite(aperture_radius) or aperture_radius <= 0.0:
+	if not is_finite(gate_x) or not is_finite(gate_z) or not is_finite(aperture_radius) or aperture_radius <= 0.0:
 		return false
 	var travel_z := current_position.z - previous_position.z
 	if travel_z <= 0.0001 or previous_position.z >= gate_z or current_position.z < gate_z:
@@ -1936,7 +1936,8 @@ func _jet_ski_race_crossed_gate(previous_position: Vector3, current_position: Ve
 	var crossing_x := lerpf(previous_position.x, current_position.x, crossing_fraction)
 	var crossing_y := lerpf(previous_position.y, current_position.y, crossing_fraction)
 	var vertical_offset := crossing_y - JET_SKI_RACE_GATE_CENTER_HEIGHT
-	return crossing_x * crossing_x + vertical_offset * vertical_offset <= aperture_radius * aperture_radius
+	var horizontal_offset := crossing_x - gate_x
+	return horizontal_offset * horizontal_offset + vertical_offset * vertical_offset <= aperture_radius * aperture_radius
 
 
 func _jet_ski_race_finished_count() -> int:
@@ -2527,12 +2528,12 @@ func _physics_process(delta: float) -> void:
 			var next_jet_position: Vector3 = jet_state["position"]
 			if _jet_ski_race_state == "racing" and _jet_ski_race_locked_participants.has(peer_id) and not bool(session.get("jet_ski_race_finished", false)):
 				var next_gate_index := int(session.get("jet_ski_race_next_gate_index", 0))
-				if next_gate_index >= 0 and next_gate_index < JET_SKI_RACE_GATE_Z_POSITIONS.size():
-					var gate_z := float(JET_SKI_RACE_GATE_Z_POSITIONS[next_gate_index])
-					if _jet_ski_race_crossed_gate(previous_jet_position, next_jet_position, gate_z, JET_SKI_RACE_GATE_APERTURE_RADIUS):
+				if next_gate_index >= 0 and next_gate_index < JET_SKI_RACE_GATE_POSITIONS.size():
+					var gate_position: Vector2 = JET_SKI_RACE_GATE_POSITIONS[next_gate_index]
+					if _jet_ski_race_crossed_gate(previous_jet_position, next_jet_position, gate_position.x, gate_position.y, JET_SKI_RACE_GATE_APERTURE_RADIUS):
 						next_gate_index += 1
 						session["jet_ski_race_next_gate_index"] = next_gate_index
-						if next_gate_index == JET_SKI_RACE_GATE_Z_POSITIONS.size():
+						if next_gate_index == JET_SKI_RACE_GATE_POSITIONS.size():
 							session["jet_ski_race_finished"] = true
 							session["jet_ski_race_status"] = "finished"
 							session["jet_ski_race_finish_time_usec"] = maxi(0, now_usec - _jet_ski_race_started_at_usec)
