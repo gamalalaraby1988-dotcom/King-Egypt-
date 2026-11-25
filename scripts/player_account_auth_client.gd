@@ -378,14 +378,12 @@ func _accept_session_response(response: Dictionary, was_restoring: bool) -> void
 		request_finished.emit(true, "تم تسجيل الدخول والتحقق من البريد الإلكتروني.")
 
 func _secure_storage() -> Object:
+	# Do not gate access on is_available(): Godot Android plugin bridges can
+	# expose the storage methods while omitting this optional probe method.
+	# The real capability check is the encrypted save/load operation itself.
 	if not Engine.has_singleton(SECURE_STORAGE_SINGLETON):
 		return null
-	var storage: Object = Engine.get_singleton(SECURE_STORAGE_SINGLETON)
-	if not _storage_has_method(storage, "is_available", "isAvailable"):
-		return null
-	if not bool(_storage_call(storage, "is_available", "isAvailable")):
-		return null
-	return storage
+	return Engine.get_singleton(SECURE_STORAGE_SINGLETON)
 
 func _storage_has_method(storage: Object, snake_case_name: String, camel_case_name: String) -> bool:
 	return storage.has_method(snake_case_name) or storage.has_method(camel_case_name)
