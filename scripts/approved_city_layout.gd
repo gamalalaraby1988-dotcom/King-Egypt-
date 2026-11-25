@@ -445,19 +445,20 @@ func _build_jet_ski_course() -> void:
 	course.add_to_group("city_world_geometry")
 	course.add_to_group("royal_jet_ski_course")
 	add_child(course)
-	_add_jet_ski_gate(course, "Start", 96.0, "START")
-	_add_jet_ski_gate(course, "Checkpoint1", 111.0, "CHECKPOINT 1")
-	_add_jet_ski_gate(course, "Checkpoint2", 126.0, "CHECKPOINT 2")
-	_add_jet_ski_gate(course, "Checkpoint3", 141.0, "CHECKPOINT 3")
-	_add_jet_ski_gate(course, "Finish", 148.0, "FINISH")
+	# A gentle slalom keeps the start/finish centered while alternating checkpoints.
+	_add_jet_ski_gate(course, "Start", 0.0, 96.0, "START")
+	_add_jet_ski_gate(course, "Checkpoint1", -10.0, 111.0, "CHECKPOINT 1")
+	_add_jet_ski_gate(course, "Checkpoint2", 10.0, 126.0, "CHECKPOINT 2")
+	_add_jet_ski_gate(course, "Checkpoint3", -10.0, 141.0, "CHECKPOINT 3")
+	_add_jet_ski_gate(course, "Finish", 0.0, 156.0, "FINISH")
 
 
-func _add_jet_ski_gate(parent: Node3D, gate_id: String, z_position: float, label_text: String) -> void:
+func _add_jet_ski_gate(parent: Node3D, gate_id: String, x_position: float, z_position: float, label_text: String) -> void:
 	# All five gates share the exact circular aperture used by the authoritative server.
 	# A continuous torus replaces the segmented box ring for a clean, smooth silhouette.
 	var gate := Node3D.new()
 	gate.name = "JetSkiGate_" + gate_id
-	gate.position = Vector3(0.0, 0.0, z_position)
+	gate.position = Vector3(x_position, 0.0, z_position)
 	parent.add_child(gate)
 
 	const RING_OUTER_RADIUS := 8.5
