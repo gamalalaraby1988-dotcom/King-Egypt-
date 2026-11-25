@@ -27,6 +27,31 @@ func _capture_previews() -> void:
 		mode_overlay.visible = false
 	await process_frame
 
+	# Capture the actual five procedural race rings from the production city scene.
+	# No preview-only or substitute gate geometry is created.
+	var jet_ski_course := current_scene.get_node_or_null(
+		"ApprovedCityLayout/RoyalJetSkiCourse"
+	) as Node3D
+	if jet_ski_course == null:
+		push_error("The production royal jet ski course was not found.")
+		quit(1)
+		return
+	for gate_name in ["Start", "Checkpoint1", "Checkpoint2", "Checkpoint3", "Finish"]:
+		var ring := jet_ski_course.get_node_or_null("JetSkiGate_" + gate_name) as Node3D
+		if ring == null or ring.get_child_count() < 28:
+			push_error("The production circular ring is missing or incomplete: " + gate_name)
+			quit(1)
+			return
+	var jet_ski_gate_ok := await _capture_view(
+		"royal_jet_ski_circular_gate_preview.png",
+		Vector3(0.0, 9.0, 72.0),
+		Vector3(0.0, 8.25, 96.0),
+		58.0
+	)
+	if not jet_ski_gate_ok:
+		quit(1)
+		return
+
 	var gate_node := current_scene.get_node_or_null("ApprovedCityLayout/RoyalFounderGate") as Node3D
 	if gate_node == null:
 		push_error("The production royal gate node was not found.")
