@@ -1778,8 +1778,8 @@ func _request_city_session_matchmaking() -> void:
 		mode_status_label.text = "جارٍ البحث عن جلسة مدينة مناسبة بالفعل."
 		return
 	var access_token := PlayerAccountAuthClient.get_access_token()
-	var base_url := str(ProjectSettings.get_setting("founder/auth/api_base_url", "")).strip_edges().trim_suffix("/")
-	var publishable_key := str(ProjectSettings.get_setting("founder/auth/publishable_key", "")).strip_edges()
+	var base_url := str(ProjectSettings.get_setting_with_override("founder/auth/api_base_url")).strip_edges().trim_suffix("/")
+	var publishable_key := str(ProjectSettings.get_setting_with_override("founder/auth/publishable_key")).strip_edges()
 	if access_token.is_empty() or not base_url.begins_with("https://") or publishable_key.is_empty():
 		mode_status_label.text = "سجّل الدخول أولًا، ثم أعد محاولة العثور على جلسة المدينة."
 		return
@@ -1836,8 +1836,8 @@ func _release_pending_city_reservation() -> void:
 	var reservation_id := _pending_city_reservation_id
 	_pending_city_reservation_id = ""
 	var access_token := PlayerAccountAuthClient.get_access_token()
-	var base_url := str(ProjectSettings.get_setting("founder/auth/api_base_url", "")).strip_edges().trim_suffix("/")
-	var publishable_key := str(ProjectSettings.get_setting("founder/auth/publishable_key", "")).strip_edges()
+	var base_url := str(ProjectSettings.get_setting_with_override("founder/auth/api_base_url")).strip_edges().trim_suffix("/")
+	var publishable_key := str(ProjectSettings.get_setting_with_override("founder/auth/publishable_key")).strip_edges()
 	if access_token.is_empty() or not base_url.begins_with("https://") or publishable_key.is_empty():
 		push_warning("تعذر تحرير حجز جلسة المدينة من العميل؛ سينتهي تلقائيًا عند انتهاء مهلته.")
 		return
