@@ -1870,6 +1870,14 @@ func _create_mode_selection_ui() -> void:
 	recovery_button.text = "استعادة كلمة المرور"
 	recovery_button.pressed.connect(_on_password_recovery_pressed)
 	content.add_child(recovery_button)
+	var verify_recovery_button := Button.new()
+	verify_recovery_button.text = "تأكيد رمز استعادة كلمة المرور"
+	verify_recovery_button.pressed.connect(_on_password_recovery_verify_pressed)
+	content.add_child(verify_recovery_button)
+	var update_password_button := Button.new()
+	update_password_button.text = "حفظ كلمة المرور الجديدة"
+	update_password_button.pressed.connect(_on_password_update_pressed)
+	content.add_child(update_password_button)
 	if PlayerAccountAuthClient.has_active_session():
 		player_account_button.text = "البريد - الحساب متصل"
 
@@ -1912,6 +1920,12 @@ func _on_email_sign_in_pressed() -> void:
 
 func _on_password_recovery_pressed() -> void:
 	PlayerAccountAuthClient.request_password_recovery(account_email_input.text)
+
+func _on_password_recovery_verify_pressed() -> void:
+	PlayerAccountAuthClient.verify_password_recovery_otp(account_email_input.text, account_otp_input.text)
+
+func _on_password_update_pressed() -> void:
+	PlayerAccountAuthClient.update_password(account_password_input.text)
 
 func _on_player_account_request_finished(success: bool, message: String) -> void:
 	if is_instance_valid(mode_status_label):
