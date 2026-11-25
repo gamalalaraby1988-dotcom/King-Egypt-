@@ -108,6 +108,9 @@ func request_password_recovery(email: String) -> bool:
 	if not _valid_email(normalized):
 		request_finished.emit(false, "أدخل بريدًا إلكترونيًا صحيحًا لاستعادة كلمة المرور.")
 		return false
+	if not _pending_action.is_empty():
+		request_finished.emit(false, "تشخيص: يوجد طلب حساب آخر قيد التنفيذ (" + _pending_action + "). انتظر قليلًا ثم أعد المحاولة.")
+		return false
 	var storage := _secure_storage()
 	if storage == null:
 		push_error("FounderSecureStorage diagnostic S1: Android singleton is not registered in this APK.")
@@ -197,9 +200,11 @@ func _send_auth_request(path: String, payload: Dictionary, action: String) -> bo
 		"Accept: application/json",
 		"apikey: " + _publishable_key()
 	])
-	var error := _auth_http.request(_api_base_url() + path, headers, HTTPClient.METHOD_POST, JSON.stringify(payload))
+	var request_url := _api_base_url() + path
+	var error := _auth_http.request(request_url, headers, HTTPClient.METHOD_POST, JSON.stringify(payload))
 	if error != OK:
-		request_finished.emit(false, "تعذر بدء الاتصال بخدمة الحسابات.")
+		push_error("Auth request start failed. action=" + action + " error_code=" + str(error) + " test_feature=" + str(OS.has_feature("TEST")) + " configured=" + str(is_configured()))
+		request_finished.emit(false, "تشخيص الاتصال: تعذر بدء الطلب. رمز Godot: " + str(error) + " | الإجراء: " + action + " | TEST: " + str(OS.has_feature("TEST")) + ". أرسل هذه الرسالة للدعم.")
 		return false
 	_pending_action = action
 	return true
@@ -209,10 +214,11 @@ func _on_auth_request_completed(result: int, response_code: int, _headers: Packe
 	_pending_action = ""
 	var parsed := JSON.new()
 	if result != HTTPRequest.RESULT_SUCCESS:
+		push_error("Auth transport failed. action=" + action + " result=" + str(result) + " response_code=" + str(response_code) + " test_feature=" + str(OS.has_feature("TEST")))
 		if action == "refresh":
 			_retry_refresh()
 		else:
-			request_finished.emit(false, "تعذر الاتصال بخدمة الحسابات. حاول لاحقًا.")
+			request_finished.emit(false, "تشخيص الاتصال: فشل النقل إلى الخادم. رمز النتيجة: " + str(result) + " | HTTP: " + str(response_code) + " | الإجراء: " + action + ". أرسل هذه الرسالة للدعم.")
 		return
 	if parsed.parse(body.get_string_from_utf8()) != OK or not (parsed.data is Dictionary):
 		if action == "refresh":
