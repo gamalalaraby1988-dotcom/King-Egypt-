@@ -182,13 +182,13 @@ func _clear_pending_oauth() -> void:
 	_pending_code_verifier = ""
 
 func _redirect_uri() -> String:
-	return str(ProjectSettings.get_setting_with_override(REDIRECT_URI_SETTING, "")).strip_edges()
+	return str(ProjectSettings.get_setting_with_override(REDIRECT_URI_SETTING)).strip_edges()
 
 func _api_base_url() -> String:
-	return str(ProjectSettings.get_setting_with_override(API_BASE_SETTING, "")).strip_edges().trim_suffix("/")
+	return str(ProjectSettings.get_setting_with_override(API_BASE_SETTING)).strip_edges().trim_suffix("/")
 
 func _publishable_key() -> String:
-	return str(ProjectSettings.get_setting_with_override(PUBLISHABLE_KEY_SETTING, "")).strip_edges()
+	return str(ProjectSettings.get_setting_with_override(PUBLISHABLE_KEY_SETTING)).strip_edges()
 
 func _valid_email(value: String) -> bool:
 	var at_pos := value.find("@")
