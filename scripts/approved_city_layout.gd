@@ -453,51 +453,117 @@ func _build_jet_ski_course() -> void:
 
 
 func _add_jet_ski_gate(parent: Node3D, gate_id: String, z_position: float, label_text: String) -> void:
-	# A full vertical luminous ring: its opening is centered on the race plane.
-	# Short overlapping segments keep the silhouette smooth while remaining mobile-friendly.
+	# All five gates share the exact circular aperture used by the authoritative server.
+	# A continuous torus replaces the segmented box ring for a clean, smooth silhouette.
 	var gate := Node3D.new()
 	gate.name = "JetSkiGate_" + gate_id
 	gate.position = Vector3(0.0, 0.0, z_position)
 	parent.add_child(gate)
 
+	const RING_OUTER_RADIUS := 8.5
+	const RING_INNER_RADIUS := 8.0
+	const RING_CENTER_Y := 8.25
 	var is_major_gate := gate_id == "Start" or gate_id == "Finish"
-	var ring_radius := 8.5 if is_major_gate else 8.0
-	var ring_center_y := 8.25 if is_major_gate else 7.75
-	var segment_count := 28
-	var segment_length := TAU * ring_radius / float(segment_count)
+
+	var ring := MeshInstance3D.new()
+	ring.name = "ContinuousLuminousRing"
+	var ring_mesh := TorusMesh.new()
+	ring_mesh.inner_radius = RING_INNER_RADIUS
+	ring_mesh.outer_radius = RING_OUTER_RADIUS
+	ring_mesh.rings = 16
+	ring_mesh.ring_segments = 64
+	ring.mesh = ring_mesh
+	# TorusMesh is horizontal by default; rotate it upright to face incoming racers.
+	ring.rotation.x = PI * 0.5
+	ring.position.y = RING_CENTER_Y
 	var ring_material := StandardMaterial3D.new()
-	ring_material.albedo_color = GOLD if is_major_gate else TEAL
-	ring_material.metallic = 0.62
-	ring_material.roughness = 0.22
+	ring_material.albedo_color = GOLD
+	ring_material.metallic = 0.68
+	ring_material.roughness = 0.2
 	ring_material.emission_enabled = true
-	ring_material.emission = Color(1.0, 0.58, 0.12) if is_major_gate else Color(0.05, 0.72, 1.0)
-	ring_material.emission_energy_multiplier = 2.4 if is_major_gate else 1.8
+	ring_material.emission = Color(1.0, 0.58, 0.12) if is_major_gate else Color(0.08, 0.68, 0.95)
+	ring_material.emission_energy_multiplier = 2.3 if is_major_gate else 1.9
+	ring.material_override = ring_material
+	ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	gate.add_child(ring)
 
-	for segment_index in range(segment_count):
-		var angle := TAU * float(segment_index) / float(segment_count)
-		var segment := MeshInstance3D.new()
-		segment.name = "LuminousRingSegment_%02d" % segment_index
-		var mesh := BoxMesh.new()
-		mesh.size = Vector3(segment_length + 0.10, 0.48, 0.42)
-		segment.mesh = mesh
-		segment.position = Vector3(
-			cos(angle) * ring_radius,
-			ring_center_y + sin(angle) * ring_radius,
-			0.0
-		)
-		segment.rotation.z = angle + PI * 0.5
-		segment.material_override = ring_material
-		segment.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		gate.add_child(segment)
+	# A slim cyan inner tracer gives the gold frame a refined royal-tech accent.
+	var tracer := MeshInstance3D.new()
+	tracer.name = "CyanInnerLightTracer"
+	var tracer_mesh := TorusMesh.new()
+	tracer_mesh.inner_radius = 7.78
+	tracer_mesh.outer_radius = 7.9
+	tracer_mesh.rings = 10
+	tracer_mesh.ring_segments = 64
+	tracer.mesh = tracer_mesh
+	tracer.rotation.x = PI * 0.5
+	tracer.position.y = RING_CENTER_Y
+	var tracer_material := StandardMaterial3D.new()
+	tracer_material.albedo_color = TEAL
+	tracer_material.emission_enabled = true
+	tracer_material.emission = Color(0.04, 0.72, 1.0)
+	tracer_material.emission_energy_multiplier = 2.6
+	tracer.material_override = tracer_material
+	tracer.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	gate.add_child(tracer)
 
+	# Twin gold support columns descend to small floating pontoons outside the race opening.
+	for side in [-1.0, 1.0]:
+		var support := MeshInstance3D.new()
+		support.name = "EgyptianGoldSupportPylon"
+		var support_mesh := CylinderMesh.new()
+		support_mesh.top_radius = 0.24
+		support_mesh.bottom_radius = 0.34
+		support_mesh.height = 3.5
+		support.mesh = support_mesh
+		support.position = Vector3(side * 6.8, 1.75, 0.0)
+		support.material_override = ring_material
+		support.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		gate.add_child(support)
+
+		var pontoon := MeshInstance3D.new()
+		pontoon.name = "FloatingGatePontoon"
+		var pontoon_mesh := CylinderMesh.new()
+		pontoon_mesh.top_radius = 0.42
+		pontoon_mesh.bottom_radius = 0.42
+		pontoon_mesh.height = 2.6
+		pontoon.mesh = pontoon_mesh
+		pontoon.rotation.x = PI * 0.5
+		pontoon.position = Vector3(side * 6.8, 0.32, 0.0)
+		var pontoon_material := StandardMaterial3D.new()
+		pontoon_material.albedo_color = Color(0.08, 0.12, 0.16)
+		pontoon_material.metallic = 0.35
+		pontoon_material.roughness = 0.42
+		pontoon.mesh.surface_set_material(0, pontoon_material)
+		pontoon.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		gate.add_child(pontoon)
+
+	# A small sun-disc crest adds an Egyptian motif without obstructing the aperture.
+	var crest := MeshInstance3D.new()
+	crest.name = "RoyalSunDiscCrest"
+	var crest_mesh := SphereMesh.new()
+	crest_mesh.radius = 0.62
+	crest_mesh.height = 1.05
+	crest.mesh = crest_mesh
+	crest.position = Vector3(0.0, RING_CENTER_Y + RING_OUTER_RADIUS + 0.25, 0.0)
+	crest.material_override = ring_material
+	crest.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	gate.add_child(crest)
+
+	var gate_number := 1
+	match gate_id:
+		"Checkpoint1": gate_number = 2
+		"Checkpoint2": gate_number = 3
+		"Checkpoint3": gate_number = 4
+		"Finish": gate_number = 5
 	var marker := Label3D.new()
 	marker.name = "GateLabel"
-	marker.text = label_text
-	marker.position = Vector3(0.0, ring_center_y + ring_radius + 1.2, 0.0)
-	marker.font_size = 26
+	marker.text = "%02d  %s" % [gate_number, label_text]
+	marker.position = Vector3(0.0, RING_CENTER_Y + RING_OUTER_RADIUS + 1.8, 0.0)
+	marker.font_size = 28
 	marker.pixel_size = 0.012
 	marker.modulate = Color(1.0, 0.88, 0.58)
-	marker.outline_size = 5
+	marker.outline_size = 6
 	marker.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	gate.add_child(marker)
 
