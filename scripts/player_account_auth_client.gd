@@ -33,7 +33,7 @@ var _deep_link_poll_elapsed := 0.0
 var _pending_code_verifier := ""
 var _recovery_access_token := ""
 var _recovery_expires_at := 0
-var _deep_link_poll_elapsed := 0.0
+
 
 func _ready() -> void:
 	set_process(true)
