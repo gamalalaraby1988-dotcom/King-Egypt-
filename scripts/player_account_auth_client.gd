@@ -232,7 +232,7 @@ func _poll_password_recovery_link() -> void:
 	var parameters := _parse_deep_link_parameters(link)
 	var error_description := str(parameters.get("error_description", parameters.get("error", "")))
 	if not error_description.is_empty():
-		request_finished.emit(false, "تعذر فتح رابط الاستعادة: " + uri_decode(error_description))
+		request_finished.emit(false, "تعذر فتح رابط الاستعادة: " + error_description.uri_decode())
 		return
 	if str(parameters.get("type", "")) != "recovery":
 		request_finished.emit(false, "رابط البريد ليس رابط استعادة كلمة المرور.")
@@ -273,8 +273,8 @@ func _merge_url_parameters(target: Dictionary, encoded_parameters: String) -> vo
 		var separator := pair.find("=")
 		if separator < 0:
 			continue
-		var key := uri_decode(pair.substr(0, separator).replace("+", " "))
-		var value := uri_decode(pair.substr(separator + 1).replace("+", " "))
+		var key := pair.substr(0, separator).replace("+", " ").uri_decode()
+		var value := pair.substr(separator + 1).replace("+", " ").uri_decode()
 		target[key] = value
 
 func _accept_session_response(response: Dictionary, was_restoring: bool) -> void:
