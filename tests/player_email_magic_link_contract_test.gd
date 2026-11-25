@@ -11,7 +11,7 @@ func _initialize() -> void:
 	_check(player_auth.contains('"/auth/v1/signup"') and player_auth.contains('"signup_email"'), "Email registration must use Supabase signup.")
 	_check(player_auth.contains('"/auth/v1/verify"') and player_auth.contains('"type": "email"'), "Email OTP must verify the signup email.")
 	_check(player_auth.contains('"/auth/v1/token?grant_type=password"'), "Email sign-in must use the password grant.")
-	_check(player_auth.contains('"/auth/v1/recover"'), "Password recovery must request a recovery email.")
+	_check(player_auth.contains('"/auth/v1/recover?redirect_to='), "Password recovery must request a recovery email with the app deep-link redirect.")
 	_check(player_auth.contains('"type": "recovery"'), "Password recovery OTP must use the recovery verification type.")
 	_check(player_auth.contains('"/auth/v1/user"') and player_auth.contains("HTTPClient.METHOD_PUT"), "Password updates must use the authenticated user endpoint with PUT.")
 	_check(player_auth.contains("email_confirmed_at"), "A session must not be accepted until the email is confirmed.")
