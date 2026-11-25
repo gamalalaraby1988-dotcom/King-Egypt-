@@ -46,10 +46,10 @@ func request_founder_entitlement_with_access_token(access_token: String) -> bool
 	return true
 
 func _api_base_url() -> String:
-	return str(ProjectSettings.get_setting_with_override(API_BASE_SETTING, "")).strip_edges().trim_suffix("/")
+	return str(ProjectSettings.get_setting_with_override(API_BASE_SETTING)).strip_edges().trim_suffix("/")
 
 func _publishable_key() -> String:
-	return str(ProjectSettings.get_setting_with_override(PUBLISHABLE_KEY_SETTING, "")).strip_edges()
+	return str(ProjectSettings.get_setting_with_override(PUBLISHABLE_KEY_SETTING)).strip_edges()
 
 func _on_request_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
 	_request_pending = false
