@@ -109,7 +109,7 @@ func request_password_recovery(email: String) -> bool:
 		request_finished.emit(false, "أدخل بريدًا إلكترونيًا صحيحًا لاستعادة كلمة المرور.")
 		return false
 	var storage := _secure_storage()
-	if storage == null or not storage.has_method("save_secret"):
+	if storage == null or not _storage_has_method(storage, "save_secret", "saveSecret"):
 		request_finished.emit(false, "التخزين الآمن غير متاح لإتمام استعادة كلمة المرور.")
 		return false
 	var random_bytes: PackedByteArray = Crypto.new().generate_random_bytes(32)
@@ -123,7 +123,7 @@ func request_password_recovery(email: String) -> bool:
 		request_finished.emit(false, "تعذر تجهيز طلب الاستعادة الآمن.")
 		return false
 	var challenge := Marshalls.raw_to_base64(hashing.finish()).replace("+", "-").replace("/", "_").trim_suffix("=")
-	if not bool(storage.call("save_secret", RECOVERY_CODE_VERIFIER_ALIAS, _pending_code_verifier)):
+	if not bool(_storage_call(storage, "save_secret", "saveSecret", [RECOVERY_CODE_VERIFIER_ALIAS, _pending_code_verifier])):
 		_clear_recovery_code_verifier()
 		request_finished.emit(false, "تعذر حفظ بيانات الاستعادة الآمنة على الجهاز.")
 		return false
@@ -287,7 +287,7 @@ func _poll_password_recovery_link() -> void:
 		return
 	var authorization_code := str(parameters.get("code", ""))
 	if not authorization_code.is_empty():
-		var verifier := str(storage.call("load_secret", RECOVERY_CODE_VERIFIER_ALIAS)) if storage.has_method("load_secret") else ""
+		var verifier := str(_storage_call(storage, "load_secret", "loadSecret", [RECOVERY_CODE_VERIFIER_ALIAS])) if _storage_has_method(storage, "load_secret", "loadSecret") else ""
 		if verifier.is_empty():
 			request_finished.emit(false, "انتهت بيانات رابط الاستعادة الآمن. اطلب رسالة استعادة جديدة.")
 			return
@@ -322,8 +322,8 @@ func _poll_password_recovery_link() -> void:
 func _clear_recovery_code_verifier() -> void:
 	_pending_code_verifier = ""
 	var storage := _secure_storage()
-	if storage != null and storage.has_method("delete_secret"):
-		storage.call("delete_secret", RECOVERY_CODE_VERIFIER_ALIAS)
+	if storage != null and _storage_has_method(storage, "delete_secret", "deleteSecret"):
+		_storage_call(storage, "delete_secret", "deleteSecret", [RECOVERY_CODE_VERIFIER_ALIAS])
 
 func _parse_deep_link_parameters(link: String) -> Dictionary:
 	var parameters: Dictionary = {}
@@ -381,25 +381,36 @@ func _secure_storage() -> Object:
 	if not Engine.has_singleton(SECURE_STORAGE_SINGLETON):
 		return null
 	var storage: Object = Engine.get_singleton(SECURE_STORAGE_SINGLETON)
-	if not storage.has_method("is_available") or not bool(storage.call("is_available")):
+	if not _storage_has_method(storage, "is_available", "isAvailable"):
+		return null
+	if not bool(_storage_call(storage, "is_available", "isAvailable")):
 		return null
 	return storage
 
+func _storage_has_method(storage: Object, snake_case_name: String, camel_case_name: String) -> bool:
+	return storage.has_method(snake_case_name) or storage.has_method(camel_case_name)
+
+func _storage_call(storage: Object, snake_case_name: String, camel_case_name: String, arguments: Array = []) -> Variant:
+	var method_name := snake_case_name if storage.has_method(snake_case_name) else camel_case_name
+	if not storage.has_method(method_name):
+		return null
+	return storage.callv(method_name, arguments)
+
 func _persist_refresh_token() -> void:
 	var storage := _secure_storage()
-	if storage == null or not storage.has_method("save_secret"):
+	if storage == null or not _storage_has_method(storage, "save_secret", "saveSecret"):
 		push_warning("مخزن Android الآمن غير متاح؛ جلسة اللاعب الحالية مؤقتة.")
 		return
-	if not bool(storage.call("save_secret", REFRESH_TOKEN_ALIAS, _refresh_token)):
-		if storage.has_method("delete_secret"):
-			storage.call("delete_secret", REFRESH_TOKEN_ALIAS)
+	if not bool(_storage_call(storage, "save_secret", "saveSecret", [REFRESH_TOKEN_ALIAS, _refresh_token])):
+		if _storage_has_method(storage, "delete_secret", "deleteSecret"):
+			_storage_call(storage, "delete_secret", "deleteSecret", [REFRESH_TOKEN_ALIAS])
 		push_warning("تعذر حفظ جلسة اللاعب في مخزن Android الآمن.")
 
 func _restore_session() -> void:
 	var storage := _secure_storage()
-	if storage == null or not storage.has_method("load_secret"):
+	if storage == null or not _storage_has_method(storage, "load_secret", "loadSecret"):
 		return
-	var saved := str(storage.call("load_secret", REFRESH_TOKEN_ALIAS))
+	var saved := str(_storage_call(storage, "load_secret", "loadSecret", [REFRESH_TOKEN_ALIAS]))
 	if saved.is_empty():
 		return
 	_refresh_token = saved
@@ -452,8 +463,8 @@ func _handle_refresh_error(response_code: int, response: Dictionary) -> void:
 
 func _expire_session() -> void:
 	var storage := _secure_storage()
-	if storage != null and storage.has_method("delete_secret"):
-		storage.call("delete_secret", REFRESH_TOKEN_ALIAS)
+	if storage != null and _storage_has_method(storage, "delete_secret", "deleteSecret"):
+		_storage_call(storage, "delete_secret", "deleteSecret", [REFRESH_TOKEN_ALIAS])
 	if is_instance_valid(_refresh_timer):
 		_refresh_timer.stop()
 	_access_token = ""
