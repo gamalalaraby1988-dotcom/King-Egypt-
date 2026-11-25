@@ -130,10 +130,12 @@ func request_google_sign_in() -> bool:
 	return false
 
 func _api_base_url() -> String:
-	return str(ProjectSettings.get_setting(API_BASE_SETTING, "")).strip_edges().trim_suffix("/")
+	var setting := "founder/auth/test_api_base_url" if OS.has_feature("TEST") else API_BASE_SETTING
+	return str(ProjectSettings.get_setting(setting, "")).strip_edges().trim_suffix("/")
 
 func _publishable_key() -> String:
-	return str(ProjectSettings.get_setting(PUBLISHABLE_KEY_SETTING, "")).strip_edges()
+	var setting := "founder/auth/test_publishable_key" if OS.has_feature("TEST") else PUBLISHABLE_KEY_SETTING
+	return str(ProjectSettings.get_setting(setting, "")).strip_edges()
 
 func _valid_email(value: String) -> bool:
 	var at_pos := value.find("@")
