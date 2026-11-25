@@ -12,7 +12,9 @@ on:
       - "android/plugins/founder_secure_storage/**"
       - ".github/workflows/android-debug-apk.yml"
   push:
-    branches: [main]
+    branches:
+      - main
+      - feature/email-password-auth-test
     paths:
       - "export_presets.cfg"
       - "project.godot"
@@ -28,7 +30,6 @@ permissions:
 
 jobs:
   android-debug:
-    if: github.event_name == 'workflow_dispatch'
     name: Export Android debug APK
     runs-on: ubuntu-latest
     timeout-minutes: 30
