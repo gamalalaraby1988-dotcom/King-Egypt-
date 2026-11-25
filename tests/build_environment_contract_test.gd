@@ -17,6 +17,8 @@ func _initialize() -> void:
 	_check(project.contains('auth/api_base_url.environment_production="https://lupmaktbymuaymhqsxxu.supabase.co"'), "PRODUCTION override must target the PRODUCTION project.")
 	_check(project.contains('auth/publishable_key.environment_test="sb_publishable_BrWeMmhyOpL73Uca40Ug0Q_8Zgw55si"'), "TEST publishable key must match the TEST project.")
 	_check(project.contains('auth/publishable_key.environment_production="sb_publishable_KMNgd88WnXikozVVI9TeLA_PxV5ap9P"'), "PRODUCTION publishable key must match the PRODUCTION project.")
+	_check(project.contains('auth/magic_link_redirect_uri.environment_test="kingofegyptcity://auth-callback"'), "TEST OAuth callback URI must be explicitly configured.")
+	_check(project.contains('auth/magic_link_redirect_uri.environment_production="kingofegyptcity://auth-callback"'), "PRODUCTION OAuth callback URI must be explicitly configured.")
 	_check(presets.contains('name="Android TEST"') and presets.contains('custom_features="environment_test"'), "Android TEST preset must carry only the TEST feature tag.")
 	_check(presets.contains('name="Android PRODUCTION"') and presets.contains('custom_features="environment_production"'), "Android PRODUCTION preset must carry only the PRODUCTION feature tag.")
 	_check(presets.contains('package/unique_name="com.kingofegyptcity.game.test"'), "TEST APK must use a distinct Android application ID.")
