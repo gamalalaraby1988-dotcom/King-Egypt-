@@ -89,9 +89,9 @@ func _initialize() -> void:
 		failures.append("A segment that did not cross the requested gate plane was incorrectly accepted.")
 	if SERVER_SCRIPT.JET_SKI_RACE_GATE_POSITIONS != [Vector2(0.0, 96.0), Vector2(-14.0, 126.0), Vector2(14.0, 156.0), Vector2(-14.0, 186.0), Vector2(0.0, 216.0)]:
 		failures.append("Server gate positions must match the approved staggered slalom course.")
-	if server._jet_ski_race_crossed_gate(Vector3(0.0, 0.34, 125.0), Vector3(0.0, 0.34, 127.0), -10.0, 111.0, aperture_radius):
+	if server._jet_ski_race_crossed_gate(Vector3(0.0, 0.34, 125.0), Vector3(0.0, 0.34, 127.0), -14.0, 126.0, aperture_radius):
 		failures.append("A straight-line crossing that misses the offset checkpoint must be rejected.")
-	if not server._jet_ski_race_crossed_gate(Vector3(-14.0, 0.34, 125.0), Vector3(-14.0, 0.34, 127.0), -10.0, 111.0, aperture_radius):
+	if not server._jet_ski_race_crossed_gate(Vector3(-14.0, 0.34, 125.0), Vector3(-14.0, 0.34, 127.0), -14.0, 126.0, aperture_radius):
 		failures.append("A correctly aligned crossing through the offset checkpoint must be accepted.")
 	if not is_equal_approx(aperture_radius, 8.5) or not is_equal_approx(gate_center_height, 8.25):
 		failures.append("Server gate aperture dimensions must match the approved circular ring geometry.")
