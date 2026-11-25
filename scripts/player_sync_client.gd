@@ -151,8 +151,8 @@ func is_server_activity_verified(activity_kind: String, activity_id: String) -> 
 func fetch_verified_activity_progress() -> void:
 	if _access_token.is_empty() or _session_user_id.is_empty() or _verified_progress_request_active:
 		return
-	var base_url := str(ProjectSettings.get_setting("founder/auth/api_base_url", "")).strip_edges().trim_suffix("/")
-	var publishable_key := str(ProjectSettings.get_setting("founder/auth/publishable_key", "")).strip_edges()
+	var base_url := str(ProjectSettings.get_setting_with_override("founder/auth/api_base_url")).strip_edges().trim_suffix("/")
+	var publishable_key := str(ProjectSettings.get_setting_with_override("founder/auth/publishable_key")).strip_edges()
 	if not base_url.begins_with("https://") or publishable_key.is_empty():
 		verified_activity_progress_finished.emit(false, "إعدادات سجل الإنجازات الخادمي غير مكتملة.")
 		return
@@ -271,8 +271,8 @@ func _is_valid_preference_snapshot(settings: Dictionary) -> bool:
 
 
 func _start_snapshot_request(rpc_name: String, payload: Dictionary, action: String) -> void:
-	var base_url := str(ProjectSettings.get_setting("founder/auth/api_base_url", "")).strip_edges().trim_suffix("/")
-	var publishable_key := str(ProjectSettings.get_setting("founder/auth/publishable_key", "")).strip_edges()
+	var base_url := str(ProjectSettings.get_setting_with_override("founder/auth/api_base_url")).strip_edges().trim_suffix("/")
+	var publishable_key := str(ProjectSettings.get_setting_with_override("founder/auth/publishable_key")).strip_edges()
 	if not base_url.begins_with("https://") or publishable_key.is_empty():
 		preference_snapshot_finished.emit(false, "إعدادات مزامنة الحساب غير مكتملة.")
 		return
@@ -350,8 +350,8 @@ func fetch_progress_observations() -> void:
 		return
 	if _access_token.is_empty() or _progress_request_active:
 		return
-	var base_url := str(ProjectSettings.get_setting("founder/auth/api_base_url", "")).strip_edges().trim_suffix("/")
-	var publishable_key := str(ProjectSettings.get_setting("founder/auth/publishable_key", "")).strip_edges()
+	var base_url := str(ProjectSettings.get_setting_with_override("founder/auth/api_base_url")).strip_edges().trim_suffix("/")
+	var publishable_key := str(ProjectSettings.get_setting_with_override("founder/auth/publishable_key")).strip_edges()
 	if not base_url.begins_with("https://") or publishable_key.is_empty():
 		progress_observations_finished.emit(false, "إعدادات استعادة التقدم غير مكتملة.")
 		return
@@ -448,8 +448,8 @@ func claim_verified_activity_reward(proof_id: String) -> void:
 	if uuid_pattern.search(proof_id.strip_edges()) == null:
 		verified_reward_claim_finished.emit(false, {}, "معرّف إثبات المكافأة غير صالح.")
 		return
-	var base_url := str(ProjectSettings.get_setting("founder/auth/api_base_url", "")).strip_edges().trim_suffix("/")
-	var publishable_key := str(ProjectSettings.get_setting("founder/auth/publishable_key", "")).strip_edges()
+	var base_url := str(ProjectSettings.get_setting_with_override("founder/auth/api_base_url")).strip_edges().trim_suffix("/")
+	var publishable_key := str(ProjectSettings.get_setting_with_override("founder/auth/publishable_key")).strip_edges()
 	if not base_url.begins_with("https://") or publishable_key.is_empty():
 		verified_reward_claim_finished.emit(false, {}, "إعدادات الحساب غير مكتملة.")
 		return
@@ -591,8 +591,8 @@ func flush_pending() -> void:
 	if _request_active or _access_token.is_empty() or _session_user_id.is_empty() or _events.is_empty():
 		return
 
-	var base_url := str(ProjectSettings.get_setting("founder/auth/api_base_url", "")).strip_edges().trim_suffix("/")
-	var publishable_key := str(ProjectSettings.get_setting("founder/auth/publishable_key", "")).strip_edges()
+	var base_url := str(ProjectSettings.get_setting_with_override("founder/auth/api_base_url")).strip_edges().trim_suffix("/")
+	var publishable_key := str(ProjectSettings.get_setting_with_override("founder/auth/publishable_key")).strip_edges()
 	if not base_url.begins_with("https://") or publishable_key.is_empty():
 		sync_finished.emit(false, 0, 0, "إعدادات مزامنة الحساب غير مكتملة.")
 		return
