@@ -165,7 +165,7 @@ func _physics_process(delta: float) -> void:
 		velocity.y = 0.0
 	if world_direction.length() > 0.1:
 		var target_angle := atan2(world_direction.x, world_direction.z)
-		rotation.y = lerp_angle(rotation.y, target_angle, turn_speed * delta)
+		_set_body_yaw_preserving_camera(lerp_angle(rotation.y, target_angle, turn_speed * delta))
 	_try_step_up(delta)
 	move_and_slide()
 	var planar_speed := Vector2(velocity.x, velocity.z).length()
@@ -200,11 +200,19 @@ func _process_online_input() -> void:
 	AuthoritativeGameServer.send_movement_input(world_direction, running)
 
 
+func _set_body_yaw_preserving_camera(target_yaw: float) -> void:
+	# دوران جسم اللاعب لا ينبغي أن يغيّر اتجاه الكاميرا أثناء المشي.
+	# نحفظ اتجاه الكاميرا العالمي ثم نعيده بعد تدوير جسم اللاعب.
+	var camera_world_rotation := camera_pivot.global_rotation
+	rotation.y = target_yaw
+	camera_pivot.global_rotation = camera_world_rotation
+
+
 func _apply_authoritative_state(server_position: Vector3, server_rotation_y: float, server_velocity: Vector3) -> void:
 	if not GameModeManager.is_online_ready():
 		return
 	global_position = server_position
-	rotation.y = server_rotation_y
+	_set_body_yaw_preserving_camera(server_rotation_y)
 	velocity = server_velocity
 	var planar_speed := Vector2(velocity.x, velocity.z).length()
 	_update_avatar_animation(_active_emote if not _active_emote.is_empty() else ("run" if planar_speed > 4.2 else "walk" if planar_speed > 0.25 else ("sit" if sitting else "idle")), planar_speed)
