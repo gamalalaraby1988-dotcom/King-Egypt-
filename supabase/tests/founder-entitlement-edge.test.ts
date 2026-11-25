@@ -112,8 +112,8 @@ Deno.test("only a small empty JSON object is accepted as the request body", asyn
   const claims = await handler(postRequest(JSON.stringify({ subject_id: FOUNDER_USER_ID })));
   const malformed = await handler(postRequest("{"));
   const oversized = await handler(postRequest(JSON.stringify({ padding: "x".repeat(2048) })));
-  if (claims.status !== 400 || malformed.status !== 400 || oversized.status !== 400) {
-    throw new Error("Client-supplied claims, malformed JSON, and oversized bodies must be rejected");
+  if (claims.status !== 400 || malformed.status !== 400 || oversized.status !== 413) {
+    throw new Error("Client-supplied claims and malformed JSON must return 400; oversized bodies must return 413");
   }
   if (calls !== 0) throw new Error("Invalid request body reached Supabase Auth");
 });
