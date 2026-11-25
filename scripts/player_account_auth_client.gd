@@ -205,7 +205,6 @@ func _accept_session_response(response: Dictionary, was_restoring: bool) -> void
 	if user_id.is_empty() or verified_email.is_empty() or confirmed_at.is_empty():
 		request_finished.emit(false, "لم يثبت الخادم ملكية البريد الإلكتروني.")
 		return
-	_clear_pending_oauth()
 	_user_id = user_id
 	_email = verified_email
 	_access_token = access
@@ -372,7 +371,5 @@ func _safe_error(response: Dictionary) -> String:
 			return "انتهت صلاحية الرمز. اطلب رمزًا جديدًا."
 		"otp_disabled":
 			return "التحقق عبر البريد غير مفعّل حاليًا."
-		"flow_state_expired", "bad_code_verifier":
-			return "انتهت صلاحية جلسة Google أو تعذر التحقق منها. أعد المحاولة."
 		_:
 			return "تعذر تسجيل الدخول بالبريد الإلكتروني. تحقق من البيانات وحاول مجددًا."
