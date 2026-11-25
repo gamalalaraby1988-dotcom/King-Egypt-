@@ -14,6 +14,7 @@ const DEEP_LINK_PLUGIN_SINGLETON := "FounderSecureStorage"
 const PROFILE_PATH := "/rest/v1/player_profiles"
 const SECURE_STORAGE_SINGLETON := "FounderSecureStorage"
 const REFRESH_TOKEN_ALIAS := "king_of_egypt_city.player.refresh_token.v1"
+const RECOVERY_CODE_VERIFIER_ALIAS := "king_of_egypt_city.player.recovery_code_verifier.v1"
 
 var _auth_http: HTTPRequest
 var _profile_http: HTTPRequest
@@ -107,7 +108,34 @@ func request_password_recovery(email: String) -> bool:
 	if not _valid_email(normalized):
 		request_finished.emit(false, "أدخل بريدًا إلكترونيًا صحيحًا لاستعادة كلمة المرور.")
 		return false
-	return _send_auth_request("/auth/v1/recover?redirect_to=kingofegyptcity%3A%2F%2Fauth-callback", {"email": normalized}, "recover_password")
+	var storage := _secure_storage()
+	if storage == null or not storage.has_method("save_secret"):
+		request_finished.emit(false, "التخزين الآمن غير متاح لإتمام استعادة كلمة المرور.")
+		return false
+	var random_bytes: PackedByteArray = Crypto.new().generate_random_bytes(32)
+	if random_bytes.is_empty():
+		request_finished.emit(false, "تعذر تجهيز طلب الاستعادة الآمن.")
+		return false
+	_pending_code_verifier = Marshalls.raw_to_base64(random_bytes).replace("+", "-").replace("/", "_").trim_suffix("=")
+	var hashing := HashingContext.new()
+	if hashing.start(HashingContext.HASH_SHA256) != OK or hashing.update(_pending_code_verifier.to_utf8_buffer()) != OK:
+		_clear_recovery_code_verifier()
+		request_finished.emit(false, "تعذر تجهيز طلب الاستعادة الآمن.")
+		return false
+	var challenge := Marshalls.raw_to_base64(hashing.finish()).replace("+", "-").replace("/", "_").trim_suffix("=")
+	if not bool(storage.call("save_secret", RECOVERY_CODE_VERIFIER_ALIAS, _pending_code_verifier)):
+		_clear_recovery_code_verifier()
+		request_finished.emit(false, "تعذر حفظ بيانات الاستعادة الآمنة على الجهاز.")
+		return false
+	var payload := {
+		"email": normalized,
+		"code_challenge": challenge,
+		"code_challenge_method": "s256"
+	}
+	if not _send_auth_request("/auth/v1/recover?redirect_to=kingofegyptcity%3A%2F%2Fauth-callback", payload, "recover_password"):
+		_clear_recovery_code_verifier()
+		return false
+	return true
 
 func verify_password_recovery_otp(email: String, token: String) -> bool:
 	var normalized := email.strip_edges().to_lower()
@@ -192,6 +220,8 @@ func _on_auth_request_completed(result: int, response_code: int, _headers: Packe
 		if action == "refresh":
 			_handle_refresh_error(response_code, response)
 		else:
+			if action == "recovery_pkce_exchange":
+				_clear_recovery_code_verifier()
 			request_finished.emit(false, _safe_error(response))
 		return
 	match action:
@@ -200,7 +230,28 @@ func _on_auth_request_completed(result: int, response_code: int, _headers: Packe
 		"verify_email", "sign_in_email", "verify_recovery":
 			_accept_session_response(response, false)
 		"recover_password":
-			request_finished.emit(true, "إذا كان البريد مسجلًا، فستصلك رسالة. افتحها واضغط رابط استعادة كلمة المرور؛ ستعود إلى اللعبة لإدخال كلمة مرور جديدة.")
+			request_finished.emit(true, "إذا كان البريد مسجلًا، فستصلك رسالة. افتح رابط الاستعادة؛ ستعود إلى اللعبة لتعيين كلمة مرور جديدة دون إدخال رمز.")
+		"recovery_pkce_exchange":
+			var access := str(response.get("access_token", ""))
+			var expires := int(response.get("expires_in", 0))
+			_clear_recovery_code_verifier()
+			if access.is_empty() or expires <= 0:
+				request_finished.emit(false, "لم يُرجع رابط الاستعادة جلسة صالحة. اطلب رسالة جديدة.")
+				return
+			_recovery_access_token = access
+			_recovery_expires_at = int(Time.get_unix_time_from_system()) + expires
+			var verify_headers := PackedStringArray([
+				"Accept: application/json",
+				"apikey: " + _publishable_key(),
+				"Authorization: Bearer " + _recovery_access_token
+			])
+			var verify_error := _auth_http.request(_api_base_url() + "/auth/v1/user", verify_headers, HTTPClient.METHOD_GET)
+			if verify_error != OK:
+				_recovery_access_token = ""
+				_recovery_expires_at = 0
+				request_finished.emit(false, "تعذر التحقق من رابط الاستعادة. اطلب رسالة جديدة.")
+				return
+			_pending_action = "recovery_link_user"
 		"recovery_link_user":
 			var user_id := str(response.get("id", ""))
 			var email := str(response.get("email", "")).strip_edges().to_lower()
@@ -234,13 +285,24 @@ func _poll_password_recovery_link() -> void:
 	if not error_description.is_empty():
 		request_finished.emit(false, "تعذر فتح رابط الاستعادة: " + error_description.uri_decode())
 		return
+	var authorization_code := str(parameters.get("code", ""))
+	if not authorization_code.is_empty():
+		var verifier := str(storage.call("load_secret", RECOVERY_CODE_VERIFIER_ALIAS)) if storage.has_method("load_secret") else ""
+		if verifier.is_empty():
+			request_finished.emit(false, "انتهت بيانات رابط الاستعادة الآمن. اطلب رسالة استعادة جديدة.")
+			return
+		_pending_code_verifier = verifier
+		var payload := {"auth_code": authorization_code, "code_verifier": verifier}
+		if not _send_auth_request("/auth/v1/token?grant_type=pkce", payload, "recovery_pkce_exchange"):
+			request_finished.emit(false, "تعذر بدء التحقق من رابط الاستعادة.")
+		return
 	if str(parameters.get("type", "")) != "recovery":
 		request_finished.emit(false, "رابط البريد ليس رابط استعادة كلمة المرور.")
 		return
 	var access := str(parameters.get("access_token", ""))
 	var expires := int(parameters.get("expires_in", 0))
 	if access.is_empty() or expires <= 0:
-		request_finished.emit(false, "عاد رابط البريد دون جلسة استعادة صالحة. تأكد من إعداد رابط العودة ثم اطلب رسالة جديدة.")
+		request_finished.emit(false, "عاد رابط البريد دون جلسة استعادة صالحة. اطلب رسالة جديدة.")
 		return
 	_recovery_access_token = access
 	_recovery_expires_at = int(Time.get_unix_time_from_system()) + expires
@@ -256,6 +318,12 @@ func _poll_password_recovery_link() -> void:
 		request_finished.emit(false, "تعذر التحقق من رابط الاستعادة. افتح الرسالة وجرّب مرة أخرى.")
 		return
 	_pending_action = "recovery_link_user"
+
+func _clear_recovery_code_verifier() -> void:
+	_pending_code_verifier = ""
+	var storage := _secure_storage()
+	if storage != null and storage.has_method("delete_secret"):
+		storage.call("delete_secret", RECOVERY_CODE_VERIFIER_ALIAS)
 
 func _parse_deep_link_parameters(link: String) -> Dictionary:
 	var parameters: Dictionary = {}
