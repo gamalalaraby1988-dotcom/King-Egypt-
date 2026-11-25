@@ -1958,9 +1958,9 @@ func _on_player_account_session_expired() -> void:
 	ProfileConfigStore.complete_account_switch()
 	PlayerSyncClient.clear_session_access_token()
 	if is_instance_valid(player_account_button):
-		player_account_button.text = "المتابعة باستخدام Google"
+		player_account_button.text = "تسجيل الدخول بالبريد"
 	if is_instance_valid(mode_status_label):
-		mode_status_label.text = "انتهت جلسة الحساب. سجّل الدخول مجددًا باستخدام Google."
+		mode_status_label.text = "انتهت جلسة الحساب. سجّل الدخول مجددًا بالبريد الإلكتروني."
 	if GameModeManager.is_online_ready():
 		_on_mode_status_changed("انتهت جلسة حساب اللاعب؛ تم إنهاء اتصال Online لحماية الحساب.")
 		GameModeManager.disconnect_online()
@@ -1984,7 +1984,7 @@ func _on_founder_entitlement_received(payload: String, signature_base64: String)
 	if is_instance_valid(game_mode_controls):
 		game_mode_controls.visible = true
 	if is_instance_valid(mode_status_label):
-		mode_status_label.text = "تم التعرف على حساب المؤسس تلقائيًا من Google. يمكنك المتابعة."
+		mode_status_label.text = "تم التعرف على حساب المؤسس تلقائيًا عبر البريد الموثق. يمكنك المتابعة."
 
 func _on_founder_entitlement_failed(message: String) -> void:
 	if is_instance_valid(game_mode_controls):
