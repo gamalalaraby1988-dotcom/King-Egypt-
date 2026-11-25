@@ -510,7 +510,7 @@ func _add_jet_ski_gate(parent: Node3D, gate_id: String, z_position: float, label
 	# Twin gold support columns descend to small floating pontoons outside the race opening.
 	for side in [-1.0, 1.0]:
 		var support := MeshInstance3D.new()
-		support.name = "EgyptianGoldSupportPylon"
+		support.name = "EgyptianGoldSupportPylon_Left" if side < 0.0 else "EgyptianGoldSupportPylon_Right"
 		var support_mesh := CylinderMesh.new()
 		support_mesh.top_radius = 0.24
 		support_mesh.bottom_radius = 0.34
