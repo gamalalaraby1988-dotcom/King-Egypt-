@@ -591,14 +591,25 @@ func _add_jet_ski_gate(parent: Node3D, gate_id: String, x_position: float, z_pos
 		"Finish": gate_number = 5
 	var marker := Label3D.new()
 	marker.name = "GateLabel"
-	marker.text = "%02d  %s" % [gate_number, label_text]
-	marker.position = Vector3(0.0, RING_CENTER_Y + RING_OUTER_RADIUS + 1.8, 0.0)
-	marker.font_size = 28
-	marker.pixel_size = 0.012
-	marker.modulate = Color(1.0, 0.88, 0.58)
-	marker.outline_size = 6
+	marker.text = "FINISH" if gate_id == "Finish" else "%02d  %s" % [gate_number, label_text]
+	# The finish word floats above the upper rim, leaving the entire racing aperture clear.
+	marker.position = Vector3(0.0, RING_CENTER_Y + RING_OUTER_RADIUS + (2.8 if gate_id == "Finish" else 1.8), 0.0)
+	marker.font_size = 52 if gate_id == "Finish" else 28
+	marker.pixel_size = 0.016 if gate_id == "Finish" else 0.012
+	marker.modulate = Color(0.18, 0.92, 1.0) if gate_id == "Finish" else Color(1.0, 0.88, 0.58)
+	marker.outline_modulate = Color(0.01, 0.16, 0.24) if gate_id == "Finish" else Color(0.08, 0.06, 0.02)
+	marker.outline_size = 10 if gate_id == "Finish" else 6
 	marker.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	gate.add_child(marker)
+	if gate_id == "Finish":
+		var finish_glow := OmniLight3D.new()
+		finish_glow.name = "FinishWordGlow"
+		finish_glow.position = marker.position + Vector3(0.0, 0.3, 0.0)
+		finish_glow.light_color = Color(0.08, 0.78, 1.0)
+		finish_glow.light_energy = 2.2
+		finish_glow.omni_range = 9.0
+		finish_glow.shadow_enabled = false
+		gate.add_child(finish_glow)
 
 func _build_pyramids() -> void:
 	# Place the Giza landmarks beyond the northern city skyline so they read as a distant desert region.
