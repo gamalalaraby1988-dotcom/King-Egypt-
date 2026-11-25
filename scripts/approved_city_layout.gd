@@ -447,10 +447,10 @@ func _build_jet_ski_course() -> void:
 	add_child(course)
 	# A gentle slalom keeps the start/finish centered while alternating checkpoints.
 	_add_jet_ski_gate(course, "Start", 0.0, 96.0, "START")
-	_add_jet_ski_gate(course, "Checkpoint1", -10.0, 111.0, "CHECKPOINT 1")
-	_add_jet_ski_gate(course, "Checkpoint2", 10.0, 126.0, "CHECKPOINT 2")
-	_add_jet_ski_gate(course, "Checkpoint3", -10.0, 141.0, "CHECKPOINT 3")
-	_add_jet_ski_gate(course, "Finish", 0.0, 156.0, "FINISH")
+	_add_jet_ski_gate(course, "Checkpoint1", -14.0, 126.0, "CHECKPOINT 1")
+	_add_jet_ski_gate(course, "Checkpoint2", 14.0, 156.0, "CHECKPOINT 2")
+	_add_jet_ski_gate(course, "Checkpoint3", -14.0, 186.0, "CHECKPOINT 3")
+	_add_jet_ski_gate(course, "Finish", 0.0, 216.0, "FINISH")
 	_add_jet_ski_route_guides(course)
 
 
@@ -459,10 +459,10 @@ func _add_jet_ski_route_guides(parent: Node3D) -> void:
 	# Continuous low-profile cyan light strips trace the approved slalom over the water.
 	var gate_points: Array[Vector3] = [
 		Vector3(0.0, 0.24, 96.0),
-		Vector3(-10.0, 0.24, 111.0),
-		Vector3(10.0, 0.24, 126.0),
-		Vector3(-10.0, 0.24, 141.0),
-		Vector3(0.0, 0.24, 156.0)
+		Vector3(-14.0, 0.24, 126.0),
+		Vector3(14.0, 0.24, 156.0),
+		Vector3(-14.0, 0.24, 186.0),
+		Vector3(0.0, 0.24, 216.0)
 	]
 	var guide_material := StandardMaterial3D.new()
 	guide_material.albedo_color = Color(0.04, 0.72, 1.0, 0.92)
