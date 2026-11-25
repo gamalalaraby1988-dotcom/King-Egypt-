@@ -66,6 +66,9 @@ func _ready() -> void:
 		_create_desert_camp()
 		_create_pyramids_area()
 		return
+	# Build the entry UI before expensive world generation so startup failures
+	# cannot leave Android users with only the sky and the player visible.
+	_create_mode_selection_ui()
 	_create_ground()
 	_create_city()
 	_create_approved_city_layout()
@@ -87,7 +90,6 @@ func _ready() -> void:
 	_create_interior_transition_ui()
 	_create_palace_navigation_ui()
 	_create_player_vehicle()
-	_create_mode_selection_ui()
 	_create_founder_update_panel()
 	GameModeManager.status_changed.connect(_on_mode_status_changed)
 	GameModeManager.online_connected.connect(_on_mode_connected)
