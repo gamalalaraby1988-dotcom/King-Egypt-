@@ -36,6 +36,14 @@ func _capture_previews() -> void:
 		push_error("The production royal jet ski course was not found.")
 		quit(1)
 		return
+	var route_guide_count := 0
+	for child in jet_ski_course.get_children():
+		if child.name.begins_with("LuminousRouteGuide_") and child is MeshInstance3D:
+			route_guide_count += 1
+	if route_guide_count != 4:
+		push_error("The production slalom must contain four luminous route guide segments.")
+		quit(1)
+		return
 	for gate_name in ["Start", "Checkpoint1", "Checkpoint2", "Checkpoint3", "Finish"]:
 		var ring := jet_ski_course.get_node_or_null("JetSkiGate_" + gate_name) as Node3D
 		if ring == null:
