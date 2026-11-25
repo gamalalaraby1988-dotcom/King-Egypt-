@@ -38,8 +38,22 @@ func _capture_previews() -> void:
 		return
 	for gate_name in ["Start", "Checkpoint1", "Checkpoint2", "Checkpoint3", "Finish"]:
 		var ring := jet_ski_course.get_node_or_null("JetSkiGate_" + gate_name) as Node3D
-		if ring == null or ring.get_child_count() < 28:
-			push_error("The production circular ring is missing or incomplete: " + gate_name)
+		if ring == null:
+			push_error("The production circular ring is missing: " + gate_name)
+			quit(1)
+			return
+		var continuous_ring := ring.get_node_or_null("ContinuousLuminousRing") as MeshInstance3D
+		var cyan_tracer := ring.get_node_or_null("CyanInnerLightTracer") as MeshInstance3D
+		var gate_label := ring.get_node_or_null("GateLabel") as Label3D
+		var support_count := 0
+		var pontoon_count := 0
+		for child in ring.get_children():
+			if child.name == "EgyptianGoldSupportPylon":
+				support_count += 1
+			elif child.name == "FloatingGatePontoon":
+				pontoon_count += 1
+		if continuous_ring == null or cyan_tracer == null or gate_label == null or support_count != 2 or pontoon_count != 2:
+			push_error("The production circular ring components are incomplete: " + gate_name)
 			quit(1)
 			return
 	var jet_ski_gate_ok := await _capture_view(
