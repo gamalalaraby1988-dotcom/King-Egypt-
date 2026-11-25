@@ -53,7 +53,7 @@ func _capture_previews() -> void:
 			elif child.name == "FloatingGatePontoon":
 				pontoon_count += 1
 		if continuous_ring == null or cyan_tracer == null or gate_label == null or support_count != 2 or pontoon_count != 2:
-			push_error("The production circular ring components are incomplete: " + gate_name)
+			push_error("The production circular ring components are incomplete: %s (ring=%s, tracer=%s, label=%s, supports=%d, pontoons=%d, children=%s)" % [gate_name, str(continuous_ring != null), str(cyan_tracer != null), str(gate_label != null), support_count, pontoon_count, str(ring.get_children().map(func(child): return child.name))])
 			quit(1)
 			return
 	var jet_ski_gate_ok := await _capture_view(
