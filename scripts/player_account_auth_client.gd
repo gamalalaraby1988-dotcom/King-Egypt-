@@ -32,22 +32,6 @@ var _restore_retry_pending := false
 var _deep_link_poll_elapsed := 0.0
 var _pending_code_verifier := ""
 
-func _process(delta: float) -> void:
-	_deep_link_poll_elapsed += delta
-	if _deep_link_poll_elapsed < 0.4:
-		return
-	_deep_link_poll_elapsed = 0.0
-	if _pending_action != "" or not Engine.has_singleton(DEEP_LINK_PLUGIN_SINGLETON):
-		return
-	var plugin: Object = Engine.get_singleton(DEEP_LINK_PLUGIN_SINGLETON)
-	if not plugin.has_method("getPendingAuthLink") or not plugin.has_method("clearPendingAuthLink"):
-		return
-	var pending_link := str(plugin.call("getPendingAuthLink"))
-	if pending_link.is_empty():
-		return
-	plugin.call("clearPendingAuthLink")
-	_handle_google_oauth_callback(pending_link)
-
 func _ready() -> void:
 	_auth_http = HTTPRequest.new()
 	_auth_http.name = "PlayerAccountAuthHTTPRequest"
