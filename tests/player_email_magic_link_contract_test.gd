@@ -7,6 +7,7 @@ func _initialize() -> void:
 	var founder_auth := FileAccess.get_file_as_string("res://scripts/founder_auth_client.gd")
 	var main_source := FileAccess.get_file_as_string("res://scripts/main.gd")
 	var export_preset := FileAccess.get_file_as_string("res://export_presets.cfg")
+	var secure_plugin := FileAccess.get_file_as_string("res://android/plugins/founder_secure_storage/plugin/src/main/java/com/kingofegyptcity/security/FounderSecureStoragePlugin.kt")
 
 	_check(player_auth.contains('"/auth/v1/signup"') and player_auth.contains('"signup_email"'), "Email registration must use Supabase signup.")
 	_check(player_auth.contains('"/auth/v1/verify"') and player_auth.contains('"type": "email"'), "Email OTP must verify the signup email.")
@@ -14,6 +15,8 @@ func _initialize() -> void:
 	_check(player_auth.contains('"/auth/v1/recover?redirect_to='), "Password recovery must request a recovery email with the app deep-link redirect.")
 	_check(player_auth.contains('"code_challenge": challenge') and player_auth.contains('"code_challenge_method": "s256"'), "Password recovery must use a PKCE challenge.")
 	_check(player_auth.contains('RECOVERY_CODE_VERIFIER_ALIAS') and player_auth.contains('save_secret'), "Password recovery verifier must be stored securely across app launches.")
+	_check(player_auth.contains('"saveSecret"') and player_auth.contains('"isAvailable"') and player_auth.contains("storage.callv"), "The auth client must support both Android plugin bridge method naming styles.")
+	_check(secure_plugin.contains("fun isAvailable()") and secure_plugin.contains("fun saveSecret(") and secure_plugin.contains("fun loadSecret("), "The Android plugin must expose camelCase aliases for secure storage methods.")
 	_check(player_auth.contains('parameters.get("code", "")') and player_auth.contains('"/auth/v1/token?grant_type=pkce"'), "Password recovery deep links must exchange PKCE authorization codes.")
 	_check(player_auth.contains('"auth_code": authorization_code') and player_auth.contains('"code_verifier": verifier'), "PKCE exchange must submit the authorization code and matching verifier.")
 	_check(player_auth.contains('"type": "recovery"'), "Password recovery OTP must use the recovery verification type.")
