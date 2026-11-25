@@ -1947,8 +1947,8 @@ func _on_player_account_authenticated(user_id: String, email: String) -> void:
 		player_account_profile_label.text = "معرّف الحساب: " + user_id
 
 func _on_player_account_access_token_changed(access_token: String) -> void:
-	var account_id := PlayerAccountAuthClient.get_user_id()
-	var account_changed := ProfileConfigStore.get_active_account_id() != account_id
+	var account_id: String = PlayerAccountAuthClient.get_user_id()
+	var account_changed: bool = ProfileConfigStore.get_active_account_id() != account_id
 	if account_changed:
 		if not ProfileConfigStore.begin_account_switch(account_id):
 			push_error("Could not activate the isolated local profile for the authenticated account.")
@@ -2043,7 +2043,7 @@ func _request_city_session_matchmaking() -> void:
 	if is_instance_valid(_city_matchmaking_request):
 		mode_status_label.text = "جارٍ البحث عن جلسة مدينة مناسبة بالفعل."
 		return
-	var access_token := PlayerAccountAuthClient.get_access_token()
+	var access_token: String = PlayerAccountAuthClient.get_access_token()
 	var base_url := str(ProjectSettings.get_setting("founder/auth/api_base_url", "")).strip_edges().trim_suffix("/")
 	var publishable_key := str(ProjectSettings.get_setting("founder/auth/publishable_key", "")).strip_edges()
 	if access_token.is_empty() or not base_url.begins_with("https://") or publishable_key.is_empty():
@@ -2101,7 +2101,7 @@ func _release_pending_city_reservation() -> void:
 		return
 	var reservation_id := _pending_city_reservation_id
 	_pending_city_reservation_id = ""
-	var access_token := PlayerAccountAuthClient.get_access_token()
+	var access_token: String = PlayerAccountAuthClient.get_access_token()
 	var base_url := str(ProjectSettings.get_setting("founder/auth/api_base_url", "")).strip_edges().trim_suffix("/")
 	var publishable_key := str(ProjectSettings.get_setting("founder/auth/publishable_key", "")).strip_edges()
 	if access_token.is_empty() or not base_url.begins_with("https://") or publishable_key.is_empty():
@@ -2143,7 +2143,7 @@ func _on_mode_status_changed(message: String) -> void:
 		mode_status_label.text = message
 
 func _on_mode_connected() -> void:
-	var access_token := PlayerAccountAuthClient.get_access_token()
+	var access_token: String = PlayerAccountAuthClient.get_access_token()
 	if access_token.is_empty():
 		_on_mode_status_changed("سجّل الدخول إلى حساب اللاعب قبل دخول Online.")
 		GameModeManager.disconnect_online()
