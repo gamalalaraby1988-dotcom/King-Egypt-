@@ -25,6 +25,7 @@
 
 - لم يتم بعد تصدير APK TEST بنجاح على آخر commit.
 - preset الإنتاج موجود ومحدد البيئة، لكن توقيع Release الإنتاجي وإصدار APK/AAB النهائي لم يُفعّلا؛ يحتاج ذلك إعداد مفاتيح توقيع آمنة خارج المستودع.
+- عنوان OAuth callback ما زال مشتركًا بين TEST وPRODUCTION (`kingofegyptcity://auth-callback`). لا تثبّت النسختين معًا على الهاتف قبل فصل مخطط الرابط وتسجيل كل رابط في Supabase Auth وإعداد Android المقابل.
 - لم يتم اختبار OAuth فعليًا على هاتف Android لكل بيئة.
 - لم يتم نشر أو تعديل أي Edge Function، بما فيها `founder-entitlement`.
 - لم تُنفذ أي SQL أو تغييرات على إعدادات Auth أو قواعد البيانات في TEST أو PRODUCTION.
