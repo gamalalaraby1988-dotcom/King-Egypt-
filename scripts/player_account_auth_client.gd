@@ -97,6 +97,34 @@ func request_password_recovery(email: String) -> bool:
 		return false
 	return _send_auth_request("/auth/v1/recover", {"email": normalized}, "recover_password")
 
+func verify_password_recovery_otp(email: String, token: String) -> bool:
+	var normalized := email.strip_edges().to_lower()
+	var code := token.strip_edges()
+	if not _valid_email(normalized) or code.length() < 6:
+		request_finished.emit(false, "أدخل البريد ورمز استعادة كلمة المرور.")
+		return false
+	return _send_auth_request("/auth/v1/verify", {"email": normalized, "token": code, "type": "recovery"}, "verify_recovery")
+
+func update_password(new_password: String) -> bool:
+	if not has_active_session() or new_password.length() < 8:
+		request_finished.emit(false, "تحقق من رمز الاستعادة أولًا، ثم أدخل كلمة مرور جديدة من 8 أحرف على الأقل.")
+		return false
+	if _pending_action != "":
+		request_finished.emit(false, "هناك طلب حساب قيد التنفيذ.")
+		return false
+	var headers := PackedStringArray([
+		"Content-Type: application/json",
+		"Accept: application/json",
+		"apikey: " + _publishable_key(),
+		"Authorization: Bearer " + _access_token
+	])
+	var error := _auth_http.request(_api_base_url() + "/auth/v1/user", headers, HTTPClient.METHOD_PATCH, JSON.stringify({"password": new_password}))
+	if error != OK:
+		request_finished.emit(false, "تعذر بدء تحديث كلمة المرور.")
+		return false
+	_pending_action = "update_password"
+	return true
+
 func request_google_sign_in() -> bool:
 	request_finished.emit(false, "تسجيل الدخول عبر Google غير مفعّل حاليًا؛ استخدم البريد الإلكتروني.")
 	return false
@@ -151,10 +179,12 @@ func _on_auth_request_completed(result: int, response_code: int, _headers: Packe
 	match action:
 		"signup_email":
 			request_finished.emit(true, "إذا كان البريد جديدًا، أرسلنا إليه رمز التحقق. أدخل الرمز لإكمال إنشاء الحساب.")
-		"verify_email", "sign_in_email":
+		"verify_email", "sign_in_email", "verify_recovery":
 			_accept_session_response(response, false)
 		"recover_password":
-			request_finished.emit(true, "إذا كان البريد مسجلًا، فستصلك رسالة لاستعادة كلمة المرور.")
+			request_finished.emit(true, "إذا كان البريد مسجلًا، فسيصلك رمز استعادة كلمة المرور. أدخله في خانة الرمز.")
+		"update_password":
+			request_finished.emit(true, "تم تحديث كلمة المرور. يمكنك تسجيل الدخول بها الآن.")
 		"refresh":
 			_accept_session_response(response, _restoring)
 		_:
