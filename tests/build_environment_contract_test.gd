@@ -25,8 +25,8 @@ func _initialize() -> void:
 	_check(player_auth.contains("ProjectSettings.get_setting_with_override(API_BASE_SETTING") and player_auth.contains("ProjectSettings.get_setting_with_override(PUBLISHABLE_KEY_SETTING"), "Player auth client must honor the selected environment.")
 	_check(player_auth.contains("ProjectSettings.get_setting_with_override(REDIRECT_URI_SETTING"), "OAuth redirect URI must honor the selected environment.")
 	for client_source in [main_source, friends_client, sync_client, game_server]:
-		_check(client_source.contains("ProjectSettings.get_setting_with_override(\\"founder/auth/api_base_url\\")"), "Every Supabase caller must honor the selected API endpoint.")
-		_check(client_source.contains("ProjectSettings.get_setting_with_override(\\"founder/auth/publishable_key\\")"), "Every Supabase caller must honor the selected publishable key.")
+		_check(client_source.contains('ProjectSettings.get_setting_with_override("founder/auth/api_base_url")'), "Every Supabase caller must honor the selected API endpoint.")
+		_check(client_source.contains('ProjectSettings.get_setting_with_override("founder/auth/publishable_key")'), "Every Supabase caller must honor the selected publishable key.")
 		_check(not client_source.contains('ProjectSettings.get_setting("founder/auth/api_base_url"'), "No Supabase caller may bypass environment overrides.")
 		_check(not client_source.contains('ProjectSettings.get_setting("founder/auth/publishable_key"'), "No Supabase caller may bypass environment overrides.")
 	_check(not project.contains("service_role") and not project.contains("secret_key"), "Project settings must not contain privileged Supabase keys.")
