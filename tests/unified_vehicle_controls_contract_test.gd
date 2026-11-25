@@ -15,56 +15,76 @@ func _run_vehicle_control_contract() -> void:
 	var vehicle := vehicle_scene.instantiate() as CharacterBody3D
 	root.add_child(vehicle)
 	await process_frame
+
 	var cabin := vehicle.get_node_or_null("Cabin") as MeshInstance3D
 	var cabin_material := cabin.material_override as BaseMaterial3D if is_instance_valid(cabin) else null
 	if cabin_material == null or cabin_material.transparency != BaseMaterial3D.TRANSPARENCY_ALPHA:
 		push_error("Vehicle cabin is not transparent enough to show the seated avatar.")
+		vehicle.queue_free()
 		quit(1)
 		return
+
 	var main_source := FileAccess.get_file_as_string("res://scripts/main.gd")
 	if not main_source.contains("vehicle_exit_button") or not main_source.contains("_on_contextual_interaction_down") or not main_source.contains("_sync_vehicle_occupant_pose"):
 		push_error("Main scene is missing the separate exit, contextual brake, or visible driver-seat binding.")
+		vehicle.queue_free()
 		quit(1)
 		return
 
 	var hud := vehicle.get_node_or_null("VehicleHUDLayer/VehicleHUD") as Control
-	if hud == null or not hud.has_method("_update_layout"):
-		push_error("Vehicle HUD does not expose the shared joystick layout.")
+	if hud == null or not hud.has_method("_update_layout") or not hud.has_method("_press") or not hud.has_method("_clear_controls"):
+		push_error("Vehicle HUD is missing its current touch-control contract.")
+		vehicle.queue_free()
 		quit(1)
 		return
+
 	hud.call("_update_layout")
-	var joystick_center: Vector2 = hud.get("joystick_center")
-	var radius := float(hud.get("joystick_draw_radius"))
-	hud.call("_handle_touch_press", 0, joystick_center + Vector2(0.0, -radius))
-	if int(hud.get("joystick_finger")) != 0:
-		push_error("Vehicle HUD failed to capture the same left-side movement joystick.")
-		quit(1)
-		return
-	var input_value: Vector2 = hud.get("joystick_vector")
-	if input_value.y > -0.95:
-		push_error("Forward joystick input was not preserved for vehicle movement.")
-		quit(1)
-		return
-	vehicle.call("set_move_input", input_value)
-	if (vehicle.get("move_input") as Vector2).y > -0.95:
-		push_error("Vehicle controller did not receive the shared movement vector.")
+	var drive_rect: Rect2 = hud.get("drive_rect")
+	var brake_rect: Rect2 = hud.get("brake_rect")
+	if drive_rect.size == Vector2.ZERO or brake_rect.size == Vector2.ZERO:
+		push_error("Vehicle drive or brake touch target has no layout.")
+		vehicle.queue_free()
 		quit(1)
 		return
 
-	vehicle.call("set_brake", true)
+	# Exercise the current press-and-hold drive control, not the retired joystick API.
+	hud.call("_press", 0, drive_rect.get_center())
+	if int(hud.get("drive_touch")) != 0:
+		push_error("Vehicle HUD failed to capture the drive touch.")
+		vehicle.queue_free()
+		quit(1)
+		return
+	hud.call("_process", 0.016)
+	if not bool(vehicle.get("drive_pressed")):
+		push_error("Vehicle controller did not receive the held drive input.")
+		vehicle.queue_free()
+		quit(1)
+		return
+
+	# Brake is an independent touch target and must reach the vehicle controller.
+	hud.call("_press", 1, brake_rect.get_center())
+	if int(hud.get("brake_touch")) != 1:
+		push_error("Vehicle HUD failed to capture the independent brake touch.")
+		vehicle.queue_free()
+		quit(1)
+		return
+	hud.call("_process", 0.016)
 	if not bool(vehicle.get("brake_pressed")):
-		push_error("Contextual brake state did not activate.")
-		quit(1)
-		return
-	vehicle.call("set_brake", false)
-	if bool(vehicle.get("brake_pressed")):
-		push_error("Contextual brake state did not release.")
+		push_error("Vehicle controller did not receive the brake input.")
+		vehicle.queue_free()
 		quit(1)
 		return
 
+	# Clearing controls must release every held command.
 	hud.call("_clear_controls")
-	if not (vehicle.get("move_input") as Vector2).is_zero_approx():
-		push_error("Vehicle movement input remained stuck after controls cleared.")
+	if int(hud.get("drive_touch")) != -1 or int(hud.get("brake_touch")) != -1:
+		push_error("Vehicle HUD retained a touch after controls were cleared.")
+		vehicle.queue_free()
+		quit(1)
+		return
+	if bool(vehicle.get("drive_pressed")) or bool(vehicle.get("brake_pressed")) or bool(vehicle.get("reverse_requested")):
+		push_error("Vehicle controller retained a movement or brake command after controls cleared.")
+		vehicle.queue_free()
 		quit(1)
 		return
 

@@ -2,7 +2,7 @@ name: Godot project check
 
 on:
   push:
-    branches: [main, sync-latest-approved-decisions-77-79, feature/approved-mobile-controls, feature/unified-vehicle-driving]
+    branches: [main, sync-latest-approved-decisions-77-79, feature/approved-mobile-controls, feature/royal-jet-ski-championship, feature/unified-vehicle-driving]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -210,6 +210,86 @@ jobs:
           set -e
           if [ "$GODOT_STATUS" -ne 0 ] || grep -E '(^|[[:space:]])(ERROR|SCRIPT ERROR):|Parse Error:' "$LOG"; then
             echo "Arcade slot machine contract tests failed."
+            exit 1
+          fi
+
+      - name: Run development progression registry contract tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          GODOT="/tmp/godot/Godot_v4.7.2-stable_linux.x86_64"
+          LOG="/tmp/godot-development-progression-registry.log"
+          set +e
+          timeout 45s "$GODOT" --headless --path . --script res://tests/development_progression_registry_contract_test.gd 2>&1 | tee "$LOG"
+          GODOT_STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$GODOT_STATUS" -eq 124 ]; then
+            echo "Development progression registry contract tests exceeded their 45-second limit."
+            exit 124
+          fi
+          if [ "$GODOT_STATUS" -ne 0 ] || grep -E '(^|[[:space:]])(ERROR|SCRIPT ERROR):|Parse Error:' "$LOG"; then
+            echo "Development progression registry contract tests failed."
+            exit 1
+          fi
+
+
+      - name: Run royal jet ski participant gate tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          GODOT="/tmp/godot/Godot_v4.7.2-stable_linux.x86_64"
+          LOG="/tmp/godot-royal-jet-ski-participant-gate.log"
+          set +e
+          "$GODOT" --headless --path . --script res://tests/royal_jet_ski_race_participant_gate_test.gd 2>&1 | tee "$LOG"
+          GODOT_STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$GODOT_STATUS" -ne 0 ] || grep -E '(^|[[:space:]])(ERROR|SCRIPT ERROR):|Parse Error:' "$LOG"; then
+            echo "Royal jet ski participant gate tests failed."
+            exit 1
+          fi
+
+      - name: Run jet ski network input and hydrodynamics contract tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          GODOT="/tmp/godot/Godot_v4.7.2-stable_linux.x86_64"
+          LOG="/tmp/godot-jet-ski-network-contract.log"
+          set +e
+          "$GODOT" --headless --path . --script res://tests/jet_ski_network_contract_test.gd 2>&1 | tee "$LOG"
+          GODOT_STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$GODOT_STATUS" -ne 0 ] || grep -E '(^|[[:space:]])(ERROR|SCRIPT ERROR):|Parse Error:|Jet ski network contract tests failed' "$LOG"; then
+            echo "Jet ski network contract tests failed."
+            exit 1
+          fi
+
+      - name: Run authoritative jet ski server synchronization contract tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          GODOT="/tmp/godot/Godot_v4.7.2-stable_linux.x86_64"
+          LOG="/tmp/godot-jet-ski-server-sync-contract.log"
+          set +e
+          "$GODOT" --headless --path . --script res://tests/jet_ski_server_sync_contract_test.gd 2>&1 | tee "$LOG"
+          GODOT_STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$GODOT_STATUS" -ne 0 ] || grep -E '(^|[[:space:]])(ERROR|SCRIPT ERROR):|Parse Error:|Jet ski server synchronization contract tests failed' "$LOG"; then
+            echo "Jet ski server synchronization contract tests failed."
+            exit 1
+          fi
+
+      - name: Run royal jet ski water handling contract tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          GODOT="/tmp/godot/Godot_v4.7.2-stable_linux.x86_64"
+          LOG="/tmp/godot-jet-ski-water-handling.log"
+          set +e
+          "$GODOT" --headless --path . --script res://tests/jet_ski_water_handling_contract_test.gd 2>&1 | tee "$LOG"
+          GODOT_STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$GODOT_STATUS" -ne 0 ] || grep -E '(^|[[:space:]])(ERROR|SCRIPT ERROR):|Parse Error:' "$LOG"; then
+            echo "Royal jet ski water handling contract tests failed."
             exit 1
           fi
 
@@ -516,6 +596,9 @@ jobs:
 
       - name: Run trusted city session directory Edge Function tests
         run: deno test supabase/tests/city-session-directory-edge.test.ts
+
+      - name: Run jet ski race result HMAC ingestion tests
+        run: deno test supabase/tests/jet-ski-race-results-edge.test.ts
       - name: Run royal gate bidirectional physics clearance test
         shell: bash
         run: |
@@ -573,9 +656,13 @@ jobs:
           GODOT="/tmp/godot/Godot_v4.7.2-stable_linux.x86_64"
           LOG="/tmp/godot-unified-vehicle-controls.log"
           set +e
-          "$GODOT" --headless --path . --script res://tests/unified_vehicle_controls_contract_test.gd 2>&1 | tee "$LOG"
+          timeout 60s "$GODOT" --headless --path . --script res://tests/unified_vehicle_controls_contract_test.gd 2>&1 | tee "$LOG"
           GODOT_STATUS=${PIPESTATUS[0]}
           set -e
+          if [ "$GODOT_STATUS" -eq 124 ]; then
+            echo "Unified vehicle control contract tests exceeded their 60-second limit."
+            exit 124
+          fi
           if [ "$GODOT_STATUS" -ne 0 ] || grep -E '(^|[[:space:]])(ERROR|SCRIPT ERROR):|Parse Error:|Unified vehicle control contract tests failed' "$LOG"; then
             echo "Unified vehicle control contract tests failed."
             exit 1

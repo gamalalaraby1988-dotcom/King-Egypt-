@@ -1,4 +1,9 @@
 extends Node
+
+const JetSkiNetworkContract = preload("res://scripts/jet_ski_network_contract.gd")
+const JET_SKI_SERVER_LAUNCH_POSITION := Vector3(0.0, 0.34, 82.0)
+const JET_SKI_SERVER_BOARDING_RADIUS := 8.0
+const JET_SKI_RIDER_OFFSET := Vector3(0.0, 0.88, 0.28)
 ## Dedicated WSS game authority. Clients submit bounded movement input, never positions.
 ## Server-side collision uses the loaded city physics world. Objective zones remain disabled
 ## until their canonical server coordinates and evidence rules are configured.
@@ -21,6 +26,12 @@ signal arcade_session_state_changed(session_id: String, state: String, machine_i
 signal arcade_session_verified(session_id: String, server_event_id: String, machine_id: String, zone_id: String, mode: String, participants: Dictionary, results: Dictionary)
 signal arcade_slot_spin_settled(session_id: String, result: Dictionary)
 signal arcade_slot_spin_failed(session_id: String, message: String)
+signal jet_ski_race_state_changed(state: String, participant_count: int, message: String)
+signal jet_ski_race_progress_changed(next_gate_index: int, status: String, place: int)
+signal jet_ski_race_results_received(results: Array)
+signal jet_ski_mount_result_received(success: bool, message: String)
+signal jet_ski_unmount_result_received(success: bool, server_position: Vector3)
+signal jet_ski_authoritative_state_received(position: Vector3, rotation_y: float, velocity: Vector3)
 
 const DEFAULT_PORT := 2456
 const MAX_PLAYERS := 64
@@ -31,6 +42,19 @@ const ACCELERATION := 18.0
 const GRAVITY := 20.0
 const SNAPSHOT_INTERVAL := 0.05
 const MAX_PLAYER_VISIBILITY_DISTANCE := 140.0
+const JET_SKI_RACE_MIN_PARTICIPANTS := 2
+const JET_SKI_RACE_MAX_PARTICIPANTS := 4
+const JET_SKI_RACE_COUNTDOWN_SECONDS := 5
+const JET_SKI_RACE_DURATION_SECONDS := 300
+const JET_SKI_RACE_GATE_POSITIONS := [Vector2(0.0, 96.0), Vector2(-14.0, 126.0), Vector2(14.0, 156.0), Vector2(-14.0, 186.0), Vector2(0.0, 216.0)]
+const JET_SKI_RACE_GATE_APERTURE_RADIUS := 8.5
+const JET_SKI_RACE_GATE_CENTER_HEIGHT := 8.25
+const JET_SKI_RACE_OFF_COURSE_LIMIT_SECONDS := 300
+const JET_SKI_RACE_DAILY_REWARD_WINNING_RANKS := 3
+const JET_SKI_RACE_WEEKLY_DAYS := [1, 4, 6] # Godot weekday: Monday=1, Thursday=4, Saturday=6.
+const JET_SKI_RACE_START_HOUR_EGYPT := 20
+const JET_SKI_RACE_START_MINUTE_EGYPT := 0
+const JET_SKI_RACE_ANNOUNCEMENT_MINUTES := 15
 const SPAWN_POSITION := Vector3(0.0, 1.0, -42.0)
 
 var _server_peer: WebSocketMultiplayerPeer
@@ -40,11 +64,29 @@ var _walk_progress_requests: Dictionary = {}
 var _pending_mission_progress_lookups: Dictionary = {}
 var _is_dedicated_server := false
 var _input_sequence := 0
+var _jet_ski_input_sequence := 0
 var _snapshot_elapsed := 0.0
 var _client_authenticated := false
 var _objective_zones: Dictionary = {}
 var _proof_hmac_secret := PackedByteArray()
 var _proof_secret_warning_shown := false
+var _jet_ski_race_participants: Array[int] = []
+var _jet_ski_race_locked_participants: Array[int] = []
+var _jet_ski_race_spectators: Array[int] = []
+var _jet_ski_race_state := "waiting"
+var _jet_ski_race_countdown_until_usec := 0
+var _jet_ski_race_ends_at_usec := 0
+var _jet_ski_race_started_at_usec := 0
+var _jet_ski_race_started_at_unix_usec := 0
+var _jet_ski_race_id := ""
+var _jet_ski_race_results: Array[Dictionary] = []
+var _jet_ski_results_url := ""
+var _jet_ski_results_server_id := ""
+var _jet_ski_results_hmac_key := PackedByteArray()
+var _jet_ski_results_outbox: Array[Dictionary] = []
+var _jet_ski_results_request: HTTPRequest
+var _jet_ski_results_retry_at_usec := 0
+const JET_SKI_RESULTS_OUTBOX_PATH := "user://king_city_jet_ski_results_outbox.cfg"
 var _arcade_machines: Dictionary = {}
 var _arcade_sessions: Dictionary = {}
 var _peer_arcade_sessions: Dictionary = {}
@@ -78,6 +120,19 @@ const WEEKLY_JOB_SCHEDULE := {}
 
 func _egypt_datetime() -> Dictionary:
 	return Time.get_datetime_dict_from_unix_time(int(Time.get_unix_time_from_system()) + EGYPT_UTC_OFFSET_SECONDS)
+
+func _jet_ski_race_is_scheduled_day(date_time: Dictionary) -> bool:
+	return JET_SKI_RACE_WEEKLY_DAYS.has(int(date_time.get("weekday", -1)))
+
+
+func _jet_ski_race_is_announcement_time(date_time: Dictionary) -> bool:
+	if not _jet_ski_race_is_scheduled_day(date_time):
+		return false
+	var minutes_since_midnight := int(date_time.get("hour", -1)) * 60 + int(date_time.get("minute", -1))
+	var announcement_start := JET_SKI_RACE_START_HOUR_EGYPT * 60 + JET_SKI_RACE_START_MINUTE_EGYPT - JET_SKI_RACE_ANNOUNCEMENT_MINUTES
+	var race_start := JET_SKI_RACE_START_HOUR_EGYPT * 60 + JET_SKI_RACE_START_MINUTE_EGYPT
+	return minutes_since_midnight >= announcement_start and minutes_since_midnight < race_start
+
 
 func _egypt_day_key() -> String:
 	var date := _egypt_datetime()
@@ -117,6 +172,8 @@ func _ready() -> void:
 		if not secret_b64.is_empty():
 			_proof_hmac_secret = Marshalls.base64_to_raw(secret_b64)
 		_configure_city_session_directory()
+		_configure_jet_ski_results_ingestion()
+		_load_jet_ski_results_outbox()
 		call_deferred("start_dedicated_server")
 
 
@@ -157,6 +214,139 @@ func start_dedicated_server() -> void:
 	multiplayer.peer_connected.connect(_on_peer_connected)
 	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
 	print("KING OF EGYPT CITY authoritative WSS server listening on TCP port %d." % port)
+
+
+func _configure_jet_ski_results_ingestion() -> void:
+	var base_url := str(ProjectSettings.get_setting("founder/auth/api_base_url", "")).strip_edges().trim_suffix("/")
+	_jet_ski_results_url = OS.get_environment("KING_CITY_JET_SKI_RESULTS_URL").strip_edges()
+	if _jet_ski_results_url.is_empty() and base_url.begins_with("https://"):
+		_jet_ski_results_url = base_url + "/functions/v1/jet-ski-race-results"
+	_jet_ski_results_server_id = OS.get_environment("KING_CITY_SESSION_SERVER_ID").strip_edges()
+	_jet_ski_results_hmac_key = Marshalls.base64_to_raw(OS.get_environment("KING_CITY_JET_SKI_RESULTS_HMAC_SECRET_B64").strip_edges())
+	var id_regex := RegEx.new()
+	id_regex.compile("^[A-Za-z0-9][A-Za-z0-9_-]{2,63}$")
+	var valid := _jet_ski_results_url.begins_with("https://")
+	valid = valid and id_regex.search(_jet_ski_results_server_id) != null
+	valid = valid and _jet_ski_results_hmac_key.size() >= 32
+	if not valid:
+		push_warning("Jet ski result persistence is disabled: configure KING_CITY_JET_SKI_RESULTS_HMAC_SECRET_B64 (32+ decoded bytes) and server ID.")
+		return
+	print("Royal jet ski persistent result sender configured for server %s." % _jet_ski_results_server_id)
+
+
+func _load_jet_ski_results_outbox() -> void:
+	var config := ConfigFile.new()
+	var error := config.load(JET_SKI_RESULTS_OUTBOX_PATH)
+	if error != OK:
+		if FileAccess.file_exists(JET_SKI_RESULTS_OUTBOX_PATH):
+			push_warning("Could not read jet ski result outbox; preserving the file and not overwriting it.")
+		return
+	var stored: Variant = config.get_value("results", "pending", [])
+	if stored is Array:
+		for item in stored:
+			if item is Dictionary and not str(item.get("server_event_id", "")).is_empty():
+				_jet_ski_results_outbox.append(item.duplicate(true))
+	if not _jet_ski_results_outbox.is_empty():
+		print("Restored %d pending royal jet ski result(s) from the server outbox." % _jet_ski_results_outbox.size())
+
+
+func _save_jet_ski_results_outbox() -> void:
+	var config := ConfigFile.new()
+	var load_error := config.load(JET_SKI_RESULTS_OUTBOX_PATH)
+	if load_error != OK and FileAccess.file_exists(JET_SKI_RESULTS_OUTBOX_PATH):
+		push_warning("Could not safely read jet ski result outbox; refusing to overwrite pending results.")
+		return
+	config.set_value("results", "pending", _jet_ski_results_outbox)
+	var error := config.save(JET_SKI_RESULTS_OUTBOX_PATH)
+	if error != OK:
+		push_warning("Could not persist the jet ski result outbox: %s" % error_string(error))
+
+
+func _queue_jet_ski_race_result(user_id: String, status: String, place: int, finish_time_usec: int, reason: String, finished_at_unix_usec: int) -> void:
+	if not _is_dedicated_server or _jet_ski_race_id.is_empty():
+		return
+	var normalized_user_id := user_id.strip_edges()
+	if normalized_user_id.is_empty():
+		push_warning("Jet ski race result could not be queued: missing authenticated user.")
+		return
+	var event_id := _city_directory_uuid()
+	if event_id.is_empty():
+		push_warning("Jet ski race result could not be queued: failed to generate event ID.")
+		return
+	var row := {
+		"server_id": _jet_ski_results_server_id,
+		"race_id": _jet_ski_race_id,
+		"server_event_id": event_id,
+		"user_id": normalized_user_id,
+		"status": status,
+		"place": place if status == "finished" else null,
+		"finish_time_usec": finish_time_usec if status == "finished" else null,
+		"race_finished_at": Time.get_datetime_string_from_unix_time(int(finished_at_unix_usec / 1000000), true) + "Z",
+		"reason": reason if status == "dnf" else null
+	}
+	_jet_ski_results_outbox.append(row)
+	_save_jet_ski_results_outbox()
+	if _jet_ski_results_hmac_key.size() < 32:
+		push_warning("Jet ski result retained in the durable outbox until the dedicated server HMAC secret is configured.")
+		return
+	_pump_jet_ski_results_outbox(Time.get_ticks_usec())
+
+
+func _pump_jet_ski_results_outbox(now_usec: int) -> void:
+	if not _is_dedicated_server or _jet_ski_results_request != null or _jet_ski_results_outbox.is_empty():
+		return
+	if _jet_ski_results_url.is_empty() or _jet_ski_results_hmac_key.size() < 32 or now_usec < _jet_ski_results_retry_at_usec:
+		return
+	var row: Dictionary = _jet_ski_results_outbox[0]
+	var raw_body := JSON.stringify(row)
+	var timestamp := str(int(Time.get_unix_time_from_system()))
+	var nonce := _city_directory_uuid()
+	if nonce.is_empty():
+		_jet_ski_results_retry_at_usec = now_usec + 5000000
+		return
+	var signer := HMACContext.new()
+	if signer.start(HashingContext.HASH_SHA256, _jet_ski_results_hmac_key) != OK:
+		_jet_ski_results_retry_at_usec = now_usec + 5000000
+		return
+	if signer.update((timestamp + "\n" + nonce + "\n" + raw_body).to_utf8_buffer()) != OK:
+		_jet_ski_results_retry_at_usec = now_usec + 5000000
+		return
+	var signature := signer.finish().hex_encode()
+	var request := HTTPRequest.new()
+	request.timeout = 10.0
+	add_child(request)
+	_jet_ski_results_request = request
+	request.request_completed.connect(_on_jet_ski_results_request_completed.bind(request, str(row.get("server_event_id", ""))))
+	var headers := PackedStringArray([
+		"Content-Type: application/json",
+		"apikey: " + str(ProjectSettings.get_setting("founder/auth/publishable_key", "")),
+		"x-king-city-timestamp: " + timestamp,
+		"x-king-city-nonce: " + nonce,
+		"x-king-city-signature: " + signature
+	])
+	var error := request.request(_jet_ski_results_url, headers, HTTPClient.METHOD_POST, raw_body)
+	if error != OK:
+		_jet_ski_results_request = null
+		request.queue_free()
+		_jet_ski_results_retry_at_usec = now_usec + 5000000
+
+
+func _on_jet_ski_results_request_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray, request: HTTPRequest, event_id: String) -> void:
+	if _jet_ski_results_request == request:
+		_jet_ski_results_request = null
+	if is_instance_valid(request):
+		request.queue_free()
+	if result == HTTPRequest.RESULT_SUCCESS and response_code == 200:
+		if not _jet_ski_results_outbox.is_empty() and str(_jet_ski_results_outbox[0].get("server_event_id", "")) == event_id:
+			_jet_ski_results_outbox.pop_front()
+			_save_jet_ski_results_outbox()
+			_jet_ski_results_retry_at_usec = 0
+			_pump_jet_ski_results_outbox(Time.get_ticks_usec())
+		return
+	push_warning("Jet ski result submission failed (HTTP %d, transport %d); retained in durable outbox. %s" % [
+		response_code, result, body.get_string_from_utf8().substr(0, 180)
+	])
+	_jet_ski_results_retry_at_usec = Time.get_ticks_usec() + 5000000
 
 
 func _configure_city_session_directory() -> void:
@@ -357,6 +547,30 @@ func _process(_delta: float) -> void:
 	if not multiplayer.is_server():
 		return
 	var now_usec := Time.get_ticks_usec()
+	_pump_jet_ski_results_outbox(now_usec)
+	if _jet_ski_race_state == "countdown" and now_usec >= _jet_ski_race_countdown_until_usec:
+		_jet_ski_race_state = "racing"
+		_jet_ski_race_countdown_until_usec = 0
+		_jet_ski_race_started_at_usec = now_usec
+		_jet_ski_race_started_at_unix_usec = int(Time.get_unix_time_from_system() * 1000000.0)
+		_jet_ski_race_id = _city_directory_uuid()
+		if _jet_ski_race_id.is_empty():
+			push_error("Could not create a unique royal jet ski race ID; results will not be persisted.")
+		_jet_ski_race_ends_at_usec = now_usec + JET_SKI_RACE_DURATION_SECONDS * 1000000
+		_jet_ski_race_results.clear()
+		for participant_peer_id in _jet_ski_race_locked_participants:
+			if not _sessions.has(participant_peer_id):
+				continue
+			var participant_session: Dictionary = _sessions[participant_peer_id]
+			participant_session["jet_ski_race_next_gate_index"] = 0
+			participant_session["jet_ski_race_previous_position"] = participant_session.get("jet_ski_position", JET_SKI_SERVER_LAUNCH_POSITION)
+			participant_session["jet_ski_race_finished"] = false
+			participant_session["jet_ski_race_finish_time_usec"] = 0
+			participant_session["jet_ski_race_status"] = "racing"
+			_sessions[participant_peer_id] = participant_session
+		_notify_jet_ski_race_participants("انطلق السباق! اعبر بوابة البداية ثم البوابات الثلاث بالترتيب وصولًا إلى خط النهاية. مدة المسابقة خمس دقائق.")
+	elif _jet_ski_race_state == "racing" and _jet_ski_race_duration_expired(now_usec, _jet_ski_race_ends_at_usec):
+		_jet_ski_race_finish_round("انتهت مدة المسابقة (خمس دقائق). تم تسجيل من لم يصل إلى خط النهاية كمنسحب.")
 	if _city_directory_enabled and _server_peer != null and now_usec >= _city_directory_next_heartbeat_usec:
 		if _city_directory_registered:
 			_send_city_session_heartbeat()
@@ -388,6 +602,18 @@ func _on_peer_connected(peer_id: int) -> void:
 		"sprint": false,
 		"velocity": Vector3.ZERO,
 		"last_sequence": -1,
+		"jet_ski_mounted": false,
+		"jet_ski_slot": -1,
+		"jet_ski_position": Vector3.ZERO,
+		"jet_ski_rotation_y": 0.0,
+		"jet_ski_velocity": Vector3.ZERO,
+		"jet_ski_throttle": 0.0,
+		"jet_ski_brake": 0.0,
+		"jet_ski_steering": 0.0,
+		"jet_ski_last_sequence": 0,
+		"jet_ski_last_input_usec": 0,
+		"jet_ski_input_window_usec": Time.get_ticks_usec(),
+		"jet_ski_input_count": 0,
 		"last_input_usec": 0,
 		"last_emote_usec": 0,
 		"active_emote": "",
@@ -442,7 +668,32 @@ func _on_peer_disconnected(peer_id: int) -> void:
 	var body := session.get("body") as CharacterBody3D
 	if is_instance_valid(body):
 		body.queue_free()
+	var was_jet_ski_race_participant := _jet_ski_race_participants.has(peer_id)
+	if _jet_ski_race_state == "racing" and _jet_ski_race_locked_participants.has(peer_id) and not bool(session.get("jet_ski_race_finished", false)):
+		_jet_ski_race_results.append({
+			"peer_id": peer_id,
+			"user_id": str(session.get("user_id", "")),
+			"status": "dnf",
+			"reason": "disconnect"
+		})
+		_queue_jet_ski_race_result(
+			str(session.get("user_id", "")), "dnf", 0, 0, "disconnect",
+			int(Time.get_unix_time_from_system() * 1000000.0)
+		)
 	_sessions.erase(peer_id)
+	_jet_ski_race_participants.erase(peer_id)
+	if _jet_ski_race_state == "racing" and _jet_ski_race_all_locked_participants_finished():
+		_jet_ski_race_finish_round("انتهت الجولة بعد اكتمال وصول المتسابقين أو تسجيل حالات عدم الإكمال.")
+	_jet_ski_race_spectators.erase(peer_id)
+	if _jet_ski_race_state not in ["racing", "finished"]:
+		_jet_ski_race_locked_participants.erase(peer_id)
+	if _jet_ski_race_should_reopen_after_disconnect(was_jet_ski_race_participant, _jet_ski_race_state):
+		_jet_ski_race_state = "waiting"
+		_jet_ski_race_countdown_until_usec = 0
+		_jet_ski_race_locked_participants.clear()
+		_notify_jet_ski_race_participants("غادر متسابق قبل بدء الجولة؛ أُعيد فتح التسجيل.")
+	elif was_jet_ski_race_participant:
+		_notify_jet_ski_race_participants("غادر متسابق؛ تم تحديث عدد المشاركين.")
 	if _auth_requests.has(peer_id):
 		var request := _auth_requests[peer_id] as HTTPRequest
 		if is_instance_valid(request):
@@ -581,6 +832,157 @@ func request_leave_arcade_session(session_id: String) -> void:
 	request_leave_arcade_session_rpc.rpc_id(1, session_id)
 
 
+func request_jet_ski_mount() -> void:
+	if _is_dedicated_server or not is_authenticated() or not multiplayer.has_multiplayer_peer():
+		return
+	_jet_ski_input_sequence = 0
+	request_jet_ski_mount_rpc.rpc_id(1)
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func request_jet_ski_mount_rpc() -> void:
+	if not multiplayer.is_server():
+		return
+	var peer_id := multiplayer.get_remote_sender_id()
+	if not _sessions.has(peer_id):
+		return
+	var session: Dictionary = _sessions[peer_id]
+	if not bool(session.get("authenticated", false)) or bool(session.get("jet_ski_mounted", false)) or bool(session.get("is_sitting", false)):
+		return
+	var body := session.get("body") as CharacterBody3D
+	if not is_instance_valid(body) or body.global_position.distance_to(JET_SKI_SERVER_LAUNCH_POSITION) > JET_SKI_SERVER_BOARDING_RADIUS:
+		rpc_id(peer_id, "receive_jet_ski_mount_result", false, "اقترب من بوابة الجت سكي الملكية أولًا.")
+		return
+	var used_jet_ski_slots: Dictionary = {}
+	for other_variant in _sessions.keys():
+		var other_session: Dictionary = _sessions[int(other_variant)]
+		if bool(other_session.get("jet_ski_mounted", false)):
+			var occupied_slot := int(other_session.get("jet_ski_slot", -1))
+			if occupied_slot >= 0:
+				used_jet_ski_slots[occupied_slot] = true
+	var slot_index := 0
+	while used_jet_ski_slots.has(slot_index):
+		slot_index += 1
+	var slot_column := slot_index % 5
+	var slot_row := floori(float(slot_index) / 5.0)
+	var launch_slot := JET_SKI_SERVER_LAUNCH_POSITION + Vector3(float(slot_column - 2) * 2.2, 0.0, float(slot_row) * 3.2)
+	var now_usec := Time.get_ticks_usec()
+	session["jet_ski_last_sequence"] = 0
+	session["jet_ski_input_window_usec"] = now_usec
+	session["jet_ski_input_count"] = 0
+	session["jet_ski_mounted"] = true
+	session["jet_ski_slot"] = slot_index
+	session["jet_ski_position"] = launch_slot
+	session["jet_ski_rotation_y"] = body.rotation.y
+	session["jet_ski_velocity"] = Vector3.ZERO
+	session["jet_ski_throttle"] = 0.0
+	session["jet_ski_brake"] = 0.0
+	session["jet_ski_steering"] = 0.0
+	session["jet_ski_last_input_usec"] = now_usec
+	session["is_sitting"] = true
+	session["direction"] = Vector3.ZERO
+	session["sprint"] = false
+	body.global_position = launch_slot + JET_SKI_RIDER_OFFSET
+	body.velocity = Vector3.ZERO
+	session["velocity"] = Vector3.ZERO
+	_sessions[peer_id] = session
+	rpc_id(peer_id, "receive_jet_ski_mount_result", true, "تم تأكيد ركوب الجت سكي على الخادم.")
+
+
+func request_jet_ski_unmount() -> void:
+	if _is_dedicated_server or not is_authenticated() or not multiplayer.has_multiplayer_peer():
+		return
+	request_jet_ski_unmount_rpc.rpc_id(1)
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func request_jet_ski_unmount_rpc() -> void:
+	if not multiplayer.is_server():
+		return
+	var peer_id := multiplayer.get_remote_sender_id()
+	if not _sessions.has(peer_id):
+		return
+	var session: Dictionary = _sessions[peer_id]
+	if _jet_ski_race_state in ["countdown", "racing"] and _jet_ski_race_locked_participants.has(peer_id):
+		rpc_id(peer_id, "receive_jet_ski_unmount_result", false, Vector3.ZERO)
+		return
+	if not bool(session.get("authenticated", false)) or not bool(session.get("jet_ski_mounted", false)):
+		rpc_id(peer_id, "receive_jet_ski_unmount_result", false, Vector3.ZERO)
+		return
+	var body := session.get("body") as CharacterBody3D
+	if not is_instance_valid(body):
+		rpc_id(peer_id, "receive_jet_ski_unmount_result", false, Vector3.ZERO)
+		return
+	var craft_position: Vector3 = session.get("jet_ski_position", JET_SKI_SERVER_LAUNCH_POSITION)
+	var craft_rotation := float(session.get("jet_ski_rotation_y", 0.0))
+	var right := Vector3(cos(craft_rotation), 0.0, -sin(craft_rotation))
+	body.global_position = craft_position + right * 2.0 + Vector3.UP * 0.15
+	body.velocity = Vector3.ZERO
+	session["jet_ski_mounted"] = false
+	session["jet_ski_slot"] = -1
+	session["jet_ski_throttle"] = 0.0
+	session["jet_ski_brake"] = 0.0
+	session["jet_ski_steering"] = 0.0
+	session["jet_ski_velocity"] = Vector3.ZERO
+	session["is_sitting"] = false
+	session["velocity"] = Vector3.ZERO
+	session["last_input_usec"] = Time.get_ticks_usec()
+	_sessions[peer_id] = session
+	rpc_id(peer_id, "receive_jet_ski_unmount_result", true, body.global_position)
+
+
+@rpc("authority", "call_remote", "reliable")
+func receive_jet_ski_unmount_result(success: bool, server_position: Vector3) -> void:
+	if multiplayer.is_server() or not is_authenticated():
+		return
+	if not is_finite(server_position.x) or not is_finite(server_position.y) or not is_finite(server_position.z):
+		return
+	jet_ski_unmount_result_received.emit(success, server_position)
+
+
+func send_jet_ski_input(throttle: float, brake: float, steering: float) -> void:
+	if _is_dedicated_server or not is_authenticated() or not multiplayer.has_multiplayer_peer():
+		return
+	_jet_ski_input_sequence += 1
+	submit_jet_ski_input.rpc_id(1, _jet_ski_input_sequence, throttle, brake, steering)
+
+
+@rpc("any_peer", "call_remote", "unreliable_ordered")
+func submit_jet_ski_input(sequence: int, throttle: Variant, brake: Variant, steering: Variant) -> void:
+	if not multiplayer.is_server():
+		return
+	var peer_id := multiplayer.get_remote_sender_id()
+	if not _sessions.has(peer_id):
+		return
+	var session: Dictionary = _sessions[peer_id]
+	if not bool(session.get("authenticated", false)) or not bool(session.get("jet_ski_mounted", false)):
+		return
+	var now_usec := Time.get_ticks_usec()
+	var validation := JetSkiNetworkContract.validate_input(
+		throttle, brake, steering, sequence,
+		int(session.get("jet_ski_last_sequence", 0)), now_usec,
+		int(session.get("jet_ski_input_window_usec", now_usec)),
+		int(session.get("jet_ski_input_count", 0))
+	)
+	if not bool(validation.get("accepted", false)):
+		return
+	session["jet_ski_last_sequence"] = sequence
+	session["jet_ski_last_input_usec"] = now_usec
+	session["jet_ski_input_window_usec"] = int(validation["window_start_usec"])
+	session["jet_ski_input_count"] = int(validation["window_count"])
+	session["jet_ski_throttle"] = float(validation["throttle"])
+	session["jet_ski_brake"] = float(validation["brake"])
+	session["jet_ski_steering"] = float(validation["steering"])
+	_sessions[peer_id] = session
+
+
+@rpc("authority", "call_remote", "reliable")
+func receive_jet_ski_mount_result(success: bool, message: String) -> void:
+	if multiplayer.is_server() or not is_authenticated():
+		return
+	jet_ski_mount_result_received.emit(success, message)
+
+
 func send_movement_input(world_direction: Vector3, sprint: bool) -> void:
 	if _is_dedicated_server or not is_authenticated():
 		return
@@ -608,6 +1010,9 @@ func request_safe_return_rpc() -> void:
 		return
 	var session: Dictionary = _sessions[peer_id]
 	if not bool(session.get("authenticated", false)):
+		return
+	if bool(session.get("jet_ski_mounted", false)):
+		rpc_id(peer_id, "receive_safe_return_result", false, "انزل من الجت سكي قبل طلب العودة الآمنة.")
 		return
 	var now_usec := Time.get_ticks_usec()
 	if now_usec - int(session.get("last_safe_return_usec", 0)) < 5000000:
@@ -652,7 +1057,7 @@ func submit_player_sit(is_sitting: bool) -> void:
 		return
 	var peer_id := multiplayer.get_remote_sender_id()
 	var session: Dictionary = _sessions[peer_id]
-	if not bool(session.get("authenticated", false)) or typeof(is_sitting) != TYPE_BOOL:
+	if not bool(session.get("authenticated", false)) or bool(session.get("jet_ski_mounted", false)) or typeof(is_sitting) != TYPE_BOOL:
 		return
 	var now_usec := Time.get_ticks_usec()
 	if now_usec - int(session.get("last_sit_usec", 0)) < 200000:
@@ -1461,6 +1866,326 @@ func receive_arcade_session_state(session_id: String, state: String, machine_id:
 
 
 
+# Royal jet ski race lobby gate. The server owns the roster and start eligibility.
+func request_join_jet_ski_race() -> bool:
+	if _is_dedicated_server or not is_authenticated() or not multiplayer.has_multiplayer_peer():
+		return false
+	request_join_jet_ski_race_rpc.rpc_id(1)
+	return true
+
+
+func request_leave_jet_ski_race() -> bool:
+	if _is_dedicated_server or not is_authenticated() or not multiplayer.has_multiplayer_peer():
+		return false
+	request_leave_jet_ski_race_rpc.rpc_id(1)
+	return true
+
+
+func request_start_jet_ski_race() -> bool:
+	if _is_dedicated_server or not is_authenticated() or not multiplayer.has_multiplayer_peer():
+		return false
+	request_start_jet_ski_race_rpc.rpc_id(1)
+	return true
+
+
+func request_watch_jet_ski_race() -> bool:
+	if _is_dedicated_server or not is_authenticated() or not multiplayer.has_multiplayer_peer():
+		return false
+	request_watch_jet_ski_race_rpc.rpc_id(1)
+	return true
+
+
+func request_stop_watching_jet_ski_race() -> bool:
+	if _is_dedicated_server or not is_authenticated() or not multiplayer.has_multiplayer_peer():
+		return false
+	request_stop_watching_jet_ski_race_rpc.rpc_id(1)
+	return true
+
+
+func _jet_ski_race_can_start(participant_count: int) -> bool:
+	return participant_count >= JET_SKI_RACE_MIN_PARTICIPANTS and participant_count <= JET_SKI_RACE_MAX_PARTICIPANTS
+
+
+func _jet_ski_race_all_participants_mounted(participant_ids: Array[int], sessions: Dictionary) -> bool:
+	if not _jet_ski_race_can_start(participant_ids.size()):
+		return false
+	var seen: Dictionary = {}
+	for peer_id in participant_ids:
+		if seen.has(peer_id) or not sessions.has(peer_id):
+			return false
+		seen[peer_id] = true
+		var session: Dictionary = sessions[peer_id]
+		if not bool(session.get("authenticated", false)) or not bool(session.get("jet_ski_mounted", false)):
+			return false
+	return true
+
+
+func _jet_ski_race_crossed_gate(previous_position: Vector3, current_position: Vector3, gate_x: float, gate_z: float, aperture_radius: float) -> bool:
+	# Accept only a forward (+Z) segment crossing the actual circular ring plane.
+	# Evaluate the interpolated crossing point against the ring's circular opening.
+	if not is_finite(previous_position.x) or not is_finite(previous_position.y) or not is_finite(previous_position.z):
+		return false
+	if not is_finite(current_position.x) or not is_finite(current_position.y) or not is_finite(current_position.z):
+		return false
+	if not is_finite(gate_x) or not is_finite(gate_z) or not is_finite(aperture_radius) or aperture_radius <= 0.0:
+		return false
+	var travel_z := current_position.z - previous_position.z
+	if travel_z <= 0.0001 or previous_position.z >= gate_z or current_position.z < gate_z:
+		return false
+	var crossing_fraction := (gate_z - previous_position.z) / travel_z
+	var crossing_x := lerpf(previous_position.x, current_position.x, crossing_fraction)
+	var crossing_y := lerpf(previous_position.y, current_position.y, crossing_fraction)
+	var vertical_offset := crossing_y - JET_SKI_RACE_GATE_CENTER_HEIGHT
+	var horizontal_offset := crossing_x - gate_x
+	return horizontal_offset * horizontal_offset + vertical_offset * vertical_offset <= aperture_radius * aperture_radius
+
+
+func _jet_ski_race_finished_count() -> int:
+	var count := 0
+	for result in _jet_ski_race_results:
+		if str(result.get("status", "")) == "finished":
+			count += 1
+	return count
+
+
+func _jet_ski_race_place_for_finish_time(finish_time_usec: int) -> int:
+	var earlier_finishers := 0
+	for result in _jet_ski_race_results:
+		if str(result.get("status", "")) == "finished" and int(result.get("finish_time_usec", 0)) < finish_time_usec:
+			earlier_finishers += 1
+	return earlier_finishers + 1
+
+
+func _jet_ski_race_all_locked_participants_finished() -> bool:
+	if _jet_ski_race_locked_participants.is_empty():
+		return false
+	for peer_id in _jet_ski_race_locked_participants:
+		var has_result := false
+		for result in _jet_ski_race_results:
+			if int(result.get("peer_id", 0)) == peer_id:
+				has_result = true
+				break
+		if has_result:
+			continue
+		if not _sessions.has(peer_id) or not bool(_sessions[peer_id].get("jet_ski_race_finished", false)):
+			return false
+	return true
+
+
+func _jet_ski_race_finish_round(message: String) -> void:
+	if _jet_ski_race_state == "finished":
+		return
+	for peer_id in _jet_ski_race_locked_participants:
+		if not _sessions.has(peer_id):
+			continue
+		var session: Dictionary = _sessions[peer_id]
+		if not bool(session.get("jet_ski_race_finished", false)):
+			session["jet_ski_race_status"] = "dnf"
+			session["jet_ski_race_finished"] = true
+			_jet_ski_race_results.append({
+				"peer_id": peer_id,
+				"user_id": str(session.get("user_id", "")),
+				"status": "dnf",
+				"reason": "time_limit"
+			})
+			_queue_jet_ski_race_result(
+				str(session.get("user_id", "")), "dnf", 0, 0, "time_limit",
+				int(Time.get_unix_time_from_system() * 1000000.0)
+			)
+			_sessions[peer_id] = session
+	_jet_ski_race_state = "finished"
+	_jet_ski_race_ends_at_usec = 0
+	_jet_ski_race_countdown_until_usec = 0
+	_broadcast_jet_ski_race_results()
+	_notify_jet_ski_race_participants(message)
+
+
+func _jet_ski_race_duration_expired(now_usec: int, ends_at_usec: int) -> bool:
+	return ends_at_usec > 0 and now_usec >= ends_at_usec
+
+
+func _jet_ski_race_reward_rank_eligible(rank: int) -> bool:
+	return rank >= 1 and rank <= JET_SKI_RACE_DAILY_REWARD_WINNING_RANKS
+
+
+func _jet_ski_race_daily_reward_claim_key(user_id: String, utc_day_key: String) -> String:
+	var normalized_user_id := user_id.strip_edges()
+	var normalized_day_key := utc_day_key.strip_edges()
+	if normalized_user_id.is_empty() or normalized_day_key.is_empty():
+		return ""
+	return "%s:%s" % [normalized_user_id, normalized_day_key]
+
+
+func _jet_ski_race_should_reopen_after_disconnect(was_participant: bool, race_state: String) -> bool:
+	return was_participant and race_state in ["ready", "countdown"]
+
+
+func _jet_ski_race_can_watch(peer_id: int, participant_ids: Array[int]) -> bool:
+	return peer_id > 0 and not participant_ids.has(peer_id)
+
+
+func _jet_ski_race_public_results() -> Array[Dictionary]:
+	var rows: Array[Dictionary] = []
+	for result in _jet_ski_race_results:
+		var peer_id := int(result.get("peer_id", 0))
+		var slot := _jet_ski_race_locked_participants.find(peer_id) + 1
+		rows.append({
+			"slot": slot,
+			"status": str(result.get("status", "dnf")),
+			"place": int(result.get("place", 0)),
+			"finish_time_usec": int(result.get("finish_time_usec", 0))
+		})
+	rows.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		var a_finished := str(a.get("status", "")) == "finished"
+		var b_finished := str(b.get("status", "")) == "finished"
+		if a_finished != b_finished:
+			return a_finished
+		if a_finished:
+			return int(a.get("place", 999)) < int(b.get("place", 999))
+		return int(a.get("slot", 999)) < int(b.get("slot", 999))
+	)
+	return rows
+
+
+func _broadcast_jet_ski_race_results() -> void:
+	var public_results := _jet_ski_race_public_results()
+	var audience: Array[int] = _jet_ski_race_participants.duplicate()
+	for spectator_peer_id in _jet_ski_race_spectators:
+		if not audience.has(spectator_peer_id):
+			audience.append(spectator_peer_id)
+	for peer_id in audience:
+		if _sessions.has(peer_id) and bool(_sessions[peer_id].get("authenticated", false)):
+			rpc_id(peer_id, "receive_jet_ski_race_results", public_results)
+
+
+func _notify_jet_ski_race_participants(message: String) -> void:
+	var audience: Array[int] = _jet_ski_race_participants.duplicate()
+	for spectator_peer_id in _jet_ski_race_spectators:
+		if not audience.has(spectator_peer_id):
+			audience.append(spectator_peer_id)
+	for peer_id in audience:
+		if _sessions.has(peer_id) and bool(_sessions[peer_id].get("authenticated", false)):
+			rpc_id(peer_id, "receive_jet_ski_race_state", _jet_ski_race_state, _jet_ski_race_participants.size(), message)
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func request_join_jet_ski_race_rpc() -> void:
+	if not multiplayer.is_server():
+		return
+	var peer_id := multiplayer.get_remote_sender_id()
+	if not _sessions.has(peer_id) or not bool(_sessions[peer_id].get("authenticated", false)):
+		return
+	if _jet_ski_race_state != "waiting":
+		rpc_id(peer_id, "receive_jet_ski_race_state", _jet_ski_race_state, _jet_ski_race_participants.size(), "قائمة المتسابقين أُغلقت لهذه الجولة.")
+		return
+	if _jet_ski_race_participants.has(peer_id):
+		rpc_id(peer_id, "receive_jet_ski_race_state", _jet_ski_race_state, _jet_ski_race_participants.size(), "أنت مسجل بالفعل في المسابقة.")
+		return
+	if _jet_ski_race_participants.size() >= JET_SKI_RACE_MAX_PARTICIPANTS:
+		rpc_id(peer_id, "receive_jet_ski_race_state", _jet_ski_race_state, _jet_ski_race_participants.size(), "اكتملت خانات المتسابقين الأربعة.")
+		return
+	_jet_ski_race_spectators.erase(peer_id)
+	_jet_ski_race_participants.append(peer_id)
+	_notify_jet_ski_race_participants("تم تسجيلك في بطولة الجت سكي الملكية.")
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func request_watch_jet_ski_race_rpc() -> void:
+	if not multiplayer.is_server():
+		return
+	var peer_id := multiplayer.get_remote_sender_id()
+	if not _sessions.has(peer_id) or not bool(_sessions[peer_id].get("authenticated", false)):
+		return
+	if not _jet_ski_race_can_watch(peer_id, _jet_ski_race_participants):
+		rpc_id(peer_id, "receive_jet_ski_race_state", _jet_ski_race_state, _jet_ski_race_participants.size(), "أنت متسابق في هذه الجولة ولا يمكنك دخول وضع المشاهدة.")
+		return
+	if not _jet_ski_race_spectators.has(peer_id):
+		_jet_ski_race_spectators.append(peer_id)
+	rpc_id(peer_id, "receive_jet_ski_race_state", _jet_ski_race_state, _jet_ski_race_participants.size(), "تم تفعيل وضع المشاهدة. لن تتمكن من قيادة الجت سكي أو التأثير في نتيجة السباق.")
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func request_stop_watching_jet_ski_race_rpc() -> void:
+	if not multiplayer.is_server():
+		return
+	var peer_id := multiplayer.get_remote_sender_id()
+	if not _sessions.has(peer_id) or not bool(_sessions[peer_id].get("authenticated", false)):
+		return
+	_jet_ski_race_spectators.erase(peer_id)
+	rpc_id(peer_id, "receive_jet_ski_race_state", _jet_ski_race_state, _jet_ski_race_participants.size(), "تم إيقاف وضع مشاهدة السباق.")
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func request_leave_jet_ski_race_rpc() -> void:
+	if not multiplayer.is_server():
+		return
+	var peer_id := multiplayer.get_remote_sender_id()
+	if _jet_ski_race_state != "waiting" or not _jet_ski_race_participants.has(peer_id):
+		return
+	_jet_ski_race_participants.erase(peer_id)
+	_notify_jet_ski_race_participants("تم تحديث قائمة المتسابقين بعد مغادرة لاعب.")
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func request_start_jet_ski_race_rpc() -> void:
+	if not multiplayer.is_server():
+		return
+	var peer_id := multiplayer.get_remote_sender_id()
+	if not _sessions.has(peer_id) or not bool(_sessions[peer_id].get("authenticated", false)):
+		return
+	if not _jet_ski_race_participants.has(peer_id):
+		rpc_id(peer_id, "receive_jet_ski_race_state", _jet_ski_race_state, _jet_ski_race_participants.size(), "سجل نفسك في المسابقة أولًا.")
+		return
+	var participant_count := _jet_ski_race_participants.size()
+	if not _jet_ski_race_can_start(participant_count):
+		rpc_id(peer_id, "receive_jet_ski_race_state", "waiting", participant_count, "تحتاج المسابقة إلى متسابقين على الأقل لبدء الجولة.")
+		return
+	if not _jet_ski_race_all_participants_mounted(_jet_ski_race_participants, _sessions):
+		rpc_id(peer_id, "receive_jet_ski_race_state", "waiting", participant_count, "يجب على جميع المتسابقين المسجلين ركوب الجت سكي قبل بدء العد التنازلي.")
+		return
+	if _jet_ski_race_state != "waiting":
+		rpc_id(peer_id, "receive_jet_ski_race_state", _jet_ski_race_state, participant_count, "تم تقديم طلب بدء الجولة بالفعل.")
+		return
+	_jet_ski_race_locked_participants = _jet_ski_race_participants.duplicate()
+	_jet_ski_race_results.clear()
+	_jet_ski_race_started_at_usec = 0
+	_jet_ski_race_state = "countdown"
+	_jet_ski_race_countdown_until_usec = Time.get_ticks_usec() + JET_SKI_RACE_COUNTDOWN_SECONDS * 1000000
+	_jet_ski_race_ends_at_usec = 0
+	_notify_jet_ski_race_participants("تم قفل المتسابقين الأربعة أو أقل. يبدأ السباق بعد 5 ثوانٍ، ومدة المسابقة خمس دقائق.")
+
+
+@rpc("authority", "call_remote", "reliable")
+func receive_jet_ski_race_state(state: String, participant_count: int, message: String) -> void:
+	if multiplayer.is_server() or not is_authenticated():
+		return
+	jet_ski_race_state_changed.emit(state, participant_count, message)
+
+
+@rpc("authority", "call_remote", "reliable")
+func receive_jet_ski_race_progress(next_gate_index: int, status: String, place: int) -> void:
+	if multiplayer.is_server() or not is_authenticated():
+		return
+	jet_ski_race_progress_changed.emit(clampi(next_gate_index, 0, JET_SKI_RACE_GATE_POSITIONS.size()), status, maxi(0, place))
+
+
+@rpc("authority", "call_remote", "reliable")
+func receive_jet_ski_race_results(results: Array) -> void:
+	if multiplayer.is_server() or not is_authenticated():
+		return
+	var safe_results: Array = []
+	for item in results:
+		if item is Dictionary:
+			safe_results.append({
+				"slot": clampi(int(item.get("slot", 0)), 0, JET_SKI_RACE_MAX_PARTICIPANTS),
+				"status": str(item.get("status", "dnf")) if str(item.get("status", "")) in ["finished", "dnf"] else "dnf",
+				"place": clampi(int(item.get("place", 0)), 0, JET_SKI_RACE_MAX_PARTICIPANTS),
+				"finish_time_usec": maxi(0, int(item.get("finish_time_usec", 0)))
+			})
+	jet_ski_race_results_received.emit(safe_results)
+
+
+
 func _walk_signature_message(action: String, user_id: String, issued_at: int, event_id: String = "", distance_meters: float = 0.0, expires_at: int = 0) -> String:
 	if action == "lookup":
 		return "v1|walk|lookup|%s|%d" % [user_id, issued_at]
@@ -1784,6 +2509,69 @@ func _physics_process(delta: float) -> void:
 		var body := session.get("body") as CharacterBody3D
 		if not is_instance_valid(body):
 			continue
+		if bool(session.get("jet_ski_mounted", false)):
+			var last_jet_input_usec := int(session.get("jet_ski_last_input_usec", 0))
+			if now_usec - last_jet_input_usec > 250000:
+				session["jet_ski_throttle"] = 0.0
+				session["jet_ski_brake"] = 0.0
+				session["jet_ski_steering"] = 0.0
+			var previous_jet_position: Vector3 = session.get("jet_ski_position", JET_SKI_SERVER_LAUNCH_POSITION)
+			var jet_state := JetSkiNetworkContract.step_motion(
+				previous_jet_position,
+				float(session.get("jet_ski_rotation_y", 0.0)),
+				session.get("jet_ski_velocity", Vector3.ZERO),
+				float(session.get("jet_ski_throttle", 0.0)),
+				float(session.get("jet_ski_brake", 0.0)),
+				float(session.get("jet_ski_steering", 0.0)),
+				safe_delta
+			)
+			var next_jet_position: Vector3 = jet_state["position"]
+			if _jet_ski_race_state == "racing" and _jet_ski_race_locked_participants.has(peer_id) and not bool(session.get("jet_ski_race_finished", false)):
+				var next_gate_index := int(session.get("jet_ski_race_next_gate_index", 0))
+				if next_gate_index >= 0 and next_gate_index < JET_SKI_RACE_GATE_POSITIONS.size():
+					var gate_position: Vector2 = JET_SKI_RACE_GATE_POSITIONS[next_gate_index]
+					if _jet_ski_race_crossed_gate(previous_jet_position, next_jet_position, gate_position.x, gate_position.y, JET_SKI_RACE_GATE_APERTURE_RADIUS):
+						next_gate_index += 1
+						session["jet_ski_race_next_gate_index"] = next_gate_index
+						if next_gate_index == JET_SKI_RACE_GATE_POSITIONS.size():
+							session["jet_ski_race_finished"] = true
+							session["jet_ski_race_status"] = "finished"
+							session["jet_ski_race_finish_time_usec"] = maxi(0, now_usec - _jet_ski_race_started_at_usec)
+							session["jet_ski_race_place"] = _jet_ski_race_place_for_finish_time(int(session["jet_ski_race_finish_time_usec"]))
+							_jet_ski_race_results.append({
+								"peer_id": peer_id,
+								"user_id": str(session.get("user_id", "")),
+								"status": "finished",
+								"finish_time_usec": int(session["jet_ski_race_finish_time_usec"]),
+								"place": int(session["jet_ski_race_place"])
+							})
+							_queue_jet_ski_race_result(
+								str(session.get("user_id", "")), "finished",
+								int(session["jet_ski_race_place"]),
+								int(session["jet_ski_race_finish_time_usec"]), "",
+								_jet_ski_race_started_at_unix_usec + int(session["jet_ski_race_finish_time_usec"])
+							)
+							rpc_id(peer_id, "receive_jet_ski_race_progress", next_gate_index, "finished", int(session["jet_ski_race_place"]))
+						elif next_gate_index == 1:
+							rpc_id(peer_id, "receive_jet_ski_race_progress", next_gate_index, "racing", 0)
+							_notify_jet_ski_race_participants("اجتاز أحد المتسابقين بوابة البداية.")
+						else:
+							rpc_id(peer_id, "receive_jet_ski_race_progress", next_gate_index, "racing", 0)
+							_notify_jet_ski_race_participants("اجتاز أحد المتسابقين نقطة التفتيش %d من 3." % (next_gate_index - 1))
+			session["jet_ski_race_previous_position"] = next_jet_position
+			session["jet_ski_position"] = next_jet_position
+			session["jet_ski_rotation_y"] = jet_state["rotation_y"]
+			session["jet_ski_velocity"] = jet_state["velocity"]
+			body.global_position = jet_state["position"] + JET_SKI_RIDER_OFFSET.rotated(Vector3.UP, float(jet_state["rotation_y"]))
+			body.rotation.y = float(jet_state["rotation_y"])
+			body.velocity = Vector3.ZERO
+			session["velocity"] = Vector3.ZERO
+			session["direction"] = Vector3.ZERO
+			session["sprint"] = false
+			_sessions[peer_id] = session
+			if _jet_ski_race_state == "racing" and _jet_ski_race_all_locked_participants_finished():
+				_jet_ski_race_finish_round("اكتمل السباق! تم اعتماد ترتيب الوصول على الخادم.")
+			continue
 		var current_position := body.global_position
 		var movement_start_position := current_position
 		var was_grounded := body.is_on_floor()
@@ -1900,6 +2688,8 @@ func _physics_process(delta: float) -> void:
 			if not is_instance_valid(body):
 				continue
 			rpc_id(peer_id, "receive_authoritative_state", body.global_position, body.rotation.y, body.velocity)
+			if bool(session.get("jet_ski_mounted", false)):
+				rpc_id(peer_id, "receive_jet_ski_authoritative_state", session.get("jet_ski_position", JET_SKI_SERVER_LAUNCH_POSITION), float(session.get("jet_ski_rotation_y", 0.0)), session.get("jet_ski_velocity", Vector3.ZERO))
 			var remote_players: Array = remote_snapshots_by_peer.get(peer_id, [])
 			rpc_id(peer_id, "receive_remote_players", remote_players)
 
@@ -1923,6 +2713,10 @@ func _build_remote_player_snapshots() -> Dictionary:
 			"position": source_body.global_position,
 			"rotation_y": source_body.rotation.y,
 			"velocity": source_body.velocity,
+			"is_jet_ski_riding": bool(source_session.get("jet_ski_mounted", false)),
+			"jet_ski_position": source_session.get("jet_ski_position", Vector3.ZERO),
+			"jet_ski_rotation_y": float(source_session.get("jet_ski_rotation_y", 0.0)),
+			"jet_ski_velocity": source_session.get("jet_ski_velocity", Vector3.ZERO),
 			"active_emote": str(source_session.get("active_emote", "")),
 			"emote_remaining": maxf(0.0, float(int(source_session.get("emote_until_usec", 0)) - Time.get_ticks_usec()) / 1000000.0),
 			"is_sitting": bool(source_session.get("is_sitting", false))
@@ -1950,6 +2744,17 @@ func _build_remote_player_snapshots() -> Dictionary:
 
 
 
+
+
+@rpc("authority", "call_remote", "unreliable_ordered")
+func receive_jet_ski_authoritative_state(position: Vector3, rotation_y: float, velocity: Vector3) -> void:
+	if multiplayer.is_server() or not is_authenticated():
+		return
+	if not is_finite(position.x) or not is_finite(position.y) or not is_finite(position.z):
+		return
+	if not is_finite(velocity.x) or not is_finite(velocity.y) or not is_finite(velocity.z) or not is_finite(rotation_y):
+		return
+	jet_ski_authoritative_state_received.emit(position, rotation_y, velocity)
 
 
 @rpc("authority", "call_remote", "unreliable_ordered")
@@ -1994,6 +2799,15 @@ func receive_remote_players(players: Array) -> void:
 		if safe_emote_remaining <= 0.0:
 			safe_emote = ""
 		var safe_sitting: bool = bool(sitting_variant) if sitting_variant is bool else false
+		var riding_variant: Variant = player.get("is_jet_ski_riding", false)
+		var jet_position_variant: Variant = player.get("jet_ski_position", Vector3.ZERO)
+		var jet_velocity_variant: Variant = player.get("jet_ski_velocity", Vector3.ZERO)
+		var jet_rotation_variant: Variant = player.get("jet_ski_rotation_y", 0.0)
+		var safe_jet_position: Vector3 = jet_position_variant if jet_position_variant is Vector3 else Vector3.ZERO
+		var safe_jet_velocity: Vector3 = jet_velocity_variant if jet_velocity_variant is Vector3 else Vector3.ZERO
+		var safe_jet_rotation := float(jet_rotation_variant) if jet_rotation_variant is float or jet_rotation_variant is int else 0.0
+		var safe_jet_vectors_finite := jet_position_variant is Vector3 and jet_velocity_variant is Vector3 and is_finite(safe_jet_position.x) and is_finite(safe_jet_position.y) and is_finite(safe_jet_position.z) and is_finite(safe_jet_velocity.x) and is_finite(safe_jet_velocity.y) and is_finite(safe_jet_velocity.z)
+		var safe_jet_riding := riding_variant is bool and bool(riding_variant) and safe_jet_vectors_finite and is_finite(safe_jet_rotation)
 		seen_peer_ids[int(peer_id_variant)] = true
 		safe_players.append({
 			"peer_id": int(peer_id_variant),
@@ -2002,7 +2816,11 @@ func receive_remote_players(players: Array) -> void:
 			"velocity": remote_velocity,
 			"active_emote": safe_emote,
 			"emote_remaining": safe_emote_remaining,
-			"is_sitting": safe_sitting
+			"is_sitting": safe_sitting,
+			"is_jet_ski_riding": safe_jet_riding,
+			"jet_ski_position": safe_jet_position,
+			"jet_ski_rotation_y": safe_jet_rotation,
+			"jet_ski_velocity": safe_jet_velocity
 		})
 		if safe_players.size() >= MAX_PLAYERS - 1:
 			break

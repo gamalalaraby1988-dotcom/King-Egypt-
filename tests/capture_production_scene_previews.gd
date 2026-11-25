@@ -27,6 +27,59 @@ func _capture_previews() -> void:
 		mode_overlay.visible = false
 	await process_frame
 
+	# Capture the actual five procedural race rings from the production city scene.
+	# No preview-only or substitute gate geometry is created.
+	var jet_ski_course := current_scene.get_node_or_null(
+		"ApprovedCityLayout/RoyalJetSkiCourse"
+	) as Node3D
+	if jet_ski_course == null:
+		push_error("The production royal jet ski course was not found.")
+		quit(1)
+		return
+	var route_guide_count := 0
+	for child in jet_ski_course.get_children():
+		if child.name.begins_with("LuminousRouteGuide_") and child is MeshInstance3D:
+			route_guide_count += 1
+	if route_guide_count != 4:
+		push_error("The production slalom must contain four luminous route guide segments.")
+		quit(1)
+		return
+	for gate_name in ["Start", "Checkpoint1", "Checkpoint2", "Checkpoint3", "Finish"]:
+		var ring := jet_ski_course.get_node_or_null("JetSkiGate_" + gate_name) as Node3D
+		if ring == null:
+			push_error("The production circular ring is missing: " + gate_name)
+			quit(1)
+			return
+		var continuous_ring := ring.get_node_or_null("ContinuousLuminousRing") as MeshInstance3D
+		var cyan_tracer := ring.get_node_or_null("CyanInnerLightTracer") as MeshInstance3D
+		var gate_label := ring.get_node_or_null("GateLabel") as Label3D
+		if gate_name == "Finish":
+			var finish_glow := ring.get_node_or_null("FinishWordGlow") as OmniLight3D
+			if gate_label == null or gate_label.text != "FINISH" or finish_glow == null or gate_label.position.y <= 16.75:
+				push_error("The finish word must glow above the clear gate opening.")
+				quit(1)
+				return
+		var support_count := 0
+		var pontoon_count := 0
+		for child in ring.get_children():
+			if child.name.begins_with("EgyptianGoldSupportPylon_"):
+				support_count += 1
+			elif child.name.begins_with("FloatingGatePontoon_"):
+				pontoon_count += 1
+		if continuous_ring == null or cyan_tracer == null or gate_label == null or support_count != 2 or pontoon_count != 2:
+			push_error("The production circular ring components are incomplete: " + gate_name)
+			quit(1)
+			return
+	var jet_ski_gate_ok := await _capture_view(
+		"royal_jet_ski_circular_gate_preview.png",
+		Vector3(0.0, 9.0, 72.0),
+		Vector3(0.0, 8.25, 96.0),
+		58.0
+	)
+	if not jet_ski_gate_ok:
+		quit(1)
+		return
+
 	var gate_node := current_scene.get_node_or_null("ApprovedCityLayout/RoyalFounderGate") as Node3D
 	if gate_node == null:
 		push_error("The production royal gate node was not found.")

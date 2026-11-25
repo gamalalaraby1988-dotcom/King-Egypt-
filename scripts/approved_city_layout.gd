@@ -15,6 +15,8 @@ func _ready() -> void:
 	_build_districts()
 	_build_main_street_wall_ads()
 	_build_nile_waterfront()
+	_build_royal_sea_bridge()
+	_build_jet_ski_course()
 	_build_pyramids()
 	_build_royal_gate_and_square()
 	_build_royal_square_mosaic_mural()
@@ -278,18 +280,17 @@ func _build_districts() -> void:
 		["apartment_palace_2","قصر الشقق الثاني",Vector3(-30,0,30),Vector2(12,12),12.0],
 		["apartment_palace_3","قصر الشقق الثالث",Vector3(0,0,30),Vector2(12,12),12.0],
 		["apartment_palace_4","قصر الشقق الرابع",Vector3(30,0,30),Vector2(12,12),12.0],
-		["cinema","السينما",Vector3(60,0,30),Vector2(12,10),7.0],
-		["royal_theater","المسرح الملكي",Vector3(-60,0,60),Vector2(13,11),9.0],
-		["stadium","الملعب الرياضي",Vector3(-30,0,60),Vector2(16,12),8.0],
-		["sports_club","النادي الرياضي",Vector3(0,0,60),Vector2(12,10),7.0],
-		["water_city","المدينة المائية",Vector3(30,0,60),Vector2(14,12),6.0],
-		["daily_arcade","مركز DAILY ARCADE",Vector3(60,0,60),Vector2(13,10),8.0],
+		["cinema","السينما",Vector3(0,0,-150),Vector2(12,10),7.0],
+		["royal_theater","المسرح الملكي",Vector3(-35,0,-120),Vector2(13,11),9.0],
+		["stadium","الملعب الرياضي",Vector3(0,0,-120),Vector2(16,12),8.0],
+		["sports_club","النادي الرياضي",Vector3(35,0,-120),Vector2(12,10),7.0],
+		["water_city","المدينة المائية",Vector3(-35,0,-150),Vector2(14,12),6.0],
+		["daily_arcade","مركز DAILY ARCADE",Vector3(35,0,-150),Vector2(13,10),8.0],
 		["police_station","مركز الشرطة",Vector3(-75,0,-5),Vector2(10,9),7.0],
 		["courthouse","المحكمة",Vector3(75,0,-5),Vector2(11,9),8.0],
 		["fire_rescue","مركز الإطفاء والإنقاذ",Vector3(-75,0,15),Vector2(11,9),7.0],
 		["train_station","محطة القطار",Vector3(75,0,15),Vector2(13,9),7.0],
-		["marina_terminal","محطة المارينا البحرية",Vector3(75,0,38),Vector2(13,9),7.0],
-		["royal_yacht_club","نادي اليخوت الملكي",Vector3(75,0,58),Vector2(13,9),7.0],
+				["royal_yacht_club","النادي الشاطئي الملكي",Vector3(75,0,58),Vector2(13,9),7.0],
 		["adventure_center","مركز المغامرات",Vector3(-75,0,58),Vector2(11,9),7.0],
 		["desert_lodge","نزل المخيم الصحراوي الملكي",Vector3(-75,0,75),Vector2(12,10),6.0],
 		["mountain_temple","المعبد الملكي أعلى الجبل",Vector3(75,0,75),Vector2(13,11),10.0]
@@ -345,22 +346,270 @@ func _build_open_fuel_station() -> void:
 
 
 func _build_nile_waterfront() -> void:
-	# A real open basin: the matching ground section is omitted in main.gd, so
-	# the player cannot walk on a hidden terrain floor beneath the water.
-	var water := _box(self, "NileWaterfront", Vector3(24.0, 0.18, 24.0), Vector3(0, -0.12, 90.0), Color(0.025, 0.24, 0.34))
+	# The former enclosed marina basin is replaced by open sea. main.gd removes
+	# the matching terrain footprint so there is no hidden walkable floor.
+	var water := _box(self, "RoyalOpenSea", Vector3(120.0, 0.18, 72.0), Vector3(0.0, -0.12, 114.0), Color(0.025, 0.24, 0.34))
 	var water_material := _mat(Color(0.025, 0.24, 0.34), 0.12)
 	water_material.roughness = 0.2
 	water.material_override = water_material
-	# Low sandstone quay edges define the basin without moving the promenade,
-	# ship, pier, or the service roads that pass outside the basin.
+	# A continuous promenade forms the northern edge of the open-water beach.
+	_box(self, "WaterfrontPromenade", Vector3(180.0, 0.28, 3.0), Vector3(0.0, 0.02, 76.0), SAND)
+	for x in [-65.0, -45.0, -25.0, 25.0, 45.0, 65.0]:
+		_box(self, "PromenadeLamp", Vector3(0.18, 3.0, 0.18), Vector3(x, 1.5, 74.0), GOLD)
+		_box(self, "PromenadeLampHead", Vector3(0.8, 0.18, 0.8), Vector3(x, 3.0, 74.0), GOLD)
+		_add_city_night_light(self, "PromenadeNightLight", Vector3(x, 2.9, 74.0), 8.0)
+
+
+func _build_royal_sea_bridge() -> void:
+	# Extended vehicle-capable copy of the Royal Ship Pier's ivory-and-gold visual language.
+	# This is scene geometry only; boarding and vehicle availability are a later gameplay task.
+	var bridge := Node3D.new()
+	bridge.name = "RoyalShipStyleSeaBridge"
+	bridge.position = Vector3(48.0, 0.0, 0.0)
+	bridge.add_to_group("city_world_geometry")
+	bridge.add_to_group("royal_sea_bridge")
+	add_child(bridge)
+
+	# Vehicle approach ties the bridge directly into the Royal Beach Club's
+	# existing eastern access walk; the deck begins at the waterfront promenade.
+	_path_segment(self, "RoyalSeaBridgeVehicleApproach", Vector3(84.0, 0.12, 62.5), Vector3(48.0, 0.12, 76.0), 6.2, DARK)
+	_path_segment(self, "RoyalSeaBridgePedestrianApproach", Vector3(75.0, 0.12, 62.6), Vector3(43.0, 0.12, 76.0), 2.6, SAND)
+	var deck_length := 60.0
+	var deck_width := 10.0
+	var deck_center_z := 106.0
+	_box(bridge, "RoyalSeaBridgeFoundation", Vector3(deck_width + 0.8, 0.55, deck_length + 1.0), Vector3(0.0, -0.30, deck_center_z), DARK)
+	_box(bridge, "RoyalSeaBridgeDeck", Vector3(deck_width, 0.32, deck_length), Vector3(0.0, 0.08, deck_center_z), IVORY)
+	_box(bridge, "RoyalSeaBridgeGoldCenterLine", Vector3(0.16, 0.035, deck_length - 1.0), Vector3(0.0, 0.255, deck_center_z), GOLD)
+	# Raised curbs separate the vehicle carriageway from the pedestrian strip.
 	for side in [-1.0, 1.0]:
-		_box(self, "MarinaQuayEdge", Vector3(0.8, 0.55, 24.0), Vector3(side * 12.4, 0.12, 90.0), SAND)
-	_box(self, "MarinaSouthQuay", Vector3(24.0, 0.55, 0.8), Vector3(0, 0.12, 102.4), SAND)
-	_box(self, "WaterfrontPromenade", Vector3(180, 0.28, 3.0), Vector3(0, 0.02, 76), SAND)
-	for x in [-65.0,-45.0,-25.0,25.0,45.0,65.0]:
-		_box(self, "PromenadeLamp", Vector3(0.18, 3.0, 0.18), Vector3(x, 1.5, 74), GOLD)
-		_box(self, "PromenadeLampHead", Vector3(0.8, 0.18, 0.8), Vector3(x, 3.0, 74), GOLD)
-		_add_city_night_light(self, "PromenadeNightLight", Vector3(x, 2.9, 74), 8.0)
+		_box(bridge, "RoyalSeaBridgeSafetyCurb", Vector3(0.24, 0.42, deck_length), Vector3(side * 3.35, 0.38, deck_center_z), GOLD)
+		_box(bridge, "RoyalSeaBridgePedestrianLane", Vector3(2.75, 0.12, deck_length - 0.5), Vector3(side * 3.95, 0.30, deck_center_z), SAND)
+		_box(bridge, "RoyalSeaBridgeOuterRailBase", Vector3(0.32, 0.38, deck_length), Vector3(side * 4.82, 0.40, deck_center_z), GOLD)
+		_box(bridge, "RoyalSeaBridgeTopHandrail", Vector3(0.22, 0.22, deck_length), Vector3(side * 4.82, 1.65, deck_center_z), GOLD)
+		for post_index in range(16):
+			var post_z := 77.5 + float(post_index) * 3.8
+			_box(bridge, "RoyalSeaBridgeSafetyPost", Vector3(0.22, 1.35, 0.22), Vector3(side * 4.82, 0.92, post_z), IVORY)
+			_box(bridge, "RoyalSeaBridgePostCap", Vector3(0.42, 0.12, 0.42), Vector3(side * 4.82, 1.66, post_z), GOLD)
+		for lamp_z in [80.0, 92.0, 104.0, 116.0, 128.0]:
+			_box(bridge, "RoyalSeaBridgeWarmGuideLight", Vector3(0.22, 0.18, 0.22), Vector3(side * 4.45, 0.42, lamp_z), GOLD)
+
+	_add_static_box_collision(bridge, "RoyalSeaBridgeVehicleAndPedestrianCollision", Vector3(deck_width, 0.48, deck_length), Vector3(0.0, 0.0, deck_center_z))
+	# Wider end platform with a marked stop line and a short stair run to the floating dock.
+	_box(bridge, "RoyalJetSkiArrivalPlatform", Vector3(18.0, 0.38, 14.0), Vector3(0.0, 0.08, 139.0), IVORY)
+	_box(bridge, "RoyalJetSkiStopStrip", Vector3(15.0, 0.07, 0.55), Vector3(0.0, 0.32, 134.0), GOLD)
+	for step_index in range(5):
+		var step_size := Vector3(8.0, 0.22, 1.0)
+		var step_at := Vector3(0.0, 0.42 + float(step_index) * 0.18, 141.0 + float(step_index) * 0.95)
+		_box(bridge, "RoyalJetSkiAccessStep", step_size, step_at, SAND)
+		_add_static_box_collision(bridge, "RoyalJetSkiAccessStepCollision", step_size, step_at)
+	# Low bollards and continuous side rails protect the vehicle/pedestrian approach.
+	for side in [-1.0, 1.0]:
+		for post_index in range(4):
+			var post_z := 65.0 + float(post_index) * 3.2
+			_box(bridge, "RoyalSeaBridgeApproachSafetyPost", Vector3(0.28, 1.05, 0.28), Vector3(side * 3.0, 0.55, post_z), IVORY)
+			_box(bridge, "RoyalSeaBridgeApproachGoldCap", Vector3(0.42, 0.12, 0.42), Vector3(side * 3.0, 1.10, post_z), GOLD)
+	_add_static_box_collision(bridge, "RoyalJetSkiArrivalPlatformCollision", Vector3(18.0, 0.48, 14.0), Vector3(0.0, 0.0, 139.0))
+	# Glowing circular interaction marker is a visual placeholder until the boarding system is built.
+	var interaction_ring := MeshInstance3D.new()
+	interaction_ring.name = "RoyalJetSkiInteractionCirclePreview"
+	var ring_mesh := TorusMesh.new()
+	ring_mesh.inner_radius = 1.05
+	ring_mesh.outer_radius = 1.35
+	ring_mesh.rings = 8
+	ring_mesh.ring_segments = 24
+	interaction_ring.mesh = ring_mesh
+	interaction_ring.position = Vector3(0.0, 0.42, 132.0)
+	var ring_material := StandardMaterial3D.new()
+	ring_material.albedo_color = Color(0.20, 0.82, 0.92)
+	ring_material.emission_enabled = true
+	ring_material.emission = Color(0.10, 0.72, 1.0)
+	ring_material.emission_energy_multiplier = 2.0
+	interaction_ring.material_override = ring_material
+	bridge.add_child(interaction_ring)
+	var title := Label3D.new()
+	title.name = "RoyalJetSkiBoardingLabel"
+	title.text = "ROYAL JET SKI"
+	title.position = Vector3(0.0, 2.2, 130.0)
+	title.font_size = 34
+	title.pixel_size = 0.012
+	title.modulate = Color(1.0, 0.88, 0.58)
+	title.outline_size = 6
+	bridge.add_child(title)
+
+
+func _build_jet_ski_course() -> void:
+	# Visual course layout only: authoritative watercraft movement and race
+	# validation are implemented in a later gameplay stage.
+	var course := Node3D.new()
+	course.name = "RoyalJetSkiCourse"
+	course.add_to_group("city_world_geometry")
+	course.add_to_group("royal_jet_ski_course")
+	add_child(course)
+	# A gentle slalom keeps the start/finish centered while alternating checkpoints.
+	_add_jet_ski_gate(course, "Start", 0.0, 96.0, "START")
+	_add_jet_ski_gate(course, "Checkpoint1", -14.0, 126.0, "CHECKPOINT 1")
+	_add_jet_ski_gate(course, "Checkpoint2", 14.0, 156.0, "CHECKPOINT 2")
+	_add_jet_ski_gate(course, "Checkpoint3", -14.0, 186.0, "CHECKPOINT 3")
+	_add_jet_ski_gate(course, "Finish", 0.0, 216.0, "FINISH")
+	_add_jet_ski_route_guides(course)
+
+
+
+func _add_jet_ski_route_guides(parent: Node3D) -> void:
+	# Continuous low-profile cyan light strips trace the approved slalom over the water.
+	var gate_points: Array[Vector3] = [
+		Vector3(0.0, 0.24, 96.0),
+		Vector3(-14.0, 0.24, 126.0),
+		Vector3(14.0, 0.24, 156.0),
+		Vector3(-14.0, 0.24, 186.0),
+		Vector3(0.0, 0.24, 216.0)
+	]
+	var guide_material := StandardMaterial3D.new()
+	guide_material.albedo_color = Color(0.04, 0.72, 1.0, 0.92)
+	guide_material.emission_enabled = true
+	guide_material.emission = Color(0.02, 0.78, 1.0)
+	guide_material.emission_energy_multiplier = 3.2
+	guide_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	for index in range(gate_points.size() - 1):
+		var start: Vector3 = gate_points[index]
+		var finish: Vector3 = gate_points[index + 1]
+		var delta := finish - start
+		var guide := MeshInstance3D.new()
+		guide.name = "LuminousRouteGuide_%02d" % (index + 1)
+		var strip := BoxMesh.new()
+		strip.size = Vector3(0.22, 0.055, delta.length())
+		guide.mesh = strip
+		guide.position = (start + finish) * 0.5
+		guide.rotation.y = atan2(delta.x, delta.z)
+		guide.material_override = guide_material
+		guide.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		parent.add_child(guide)
+
+func _add_jet_ski_gate(parent: Node3D, gate_id: String, x_position: float, z_position: float, label_text: String) -> void:
+	# All five gates share the exact circular aperture used by the authoritative server.
+	# A continuous torus replaces the segmented box ring for a clean, smooth silhouette.
+	var gate := Node3D.new()
+	gate.name = "JetSkiGate_" + gate_id
+	gate.position = Vector3(x_position, 0.0, z_position)
+	parent.add_child(gate)
+
+	const RING_OUTER_RADIUS := 8.5
+	const RING_INNER_RADIUS := 8.0
+	const RING_CENTER_Y := 8.25
+	var is_major_gate := gate_id == "Start" or gate_id == "Finish"
+
+	var ring := MeshInstance3D.new()
+	ring.name = "ContinuousLuminousRing"
+	var ring_mesh := TorusMesh.new()
+	ring_mesh.inner_radius = RING_INNER_RADIUS
+	ring_mesh.outer_radius = RING_OUTER_RADIUS
+	ring_mesh.rings = 16
+	ring_mesh.ring_segments = 64
+	ring.mesh = ring_mesh
+	# TorusMesh is horizontal by default; rotate it upright to face incoming racers.
+	ring.rotation.x = PI * 0.5
+	ring.position.y = RING_CENTER_Y
+	var ring_material := StandardMaterial3D.new()
+	ring_material.albedo_color = GOLD
+	ring_material.metallic = 0.68
+	ring_material.roughness = 0.2
+	ring_material.emission_enabled = true
+	ring_material.emission = Color(1.0, 0.58, 0.12) if is_major_gate else Color(0.08, 0.68, 0.95)
+	ring_material.emission_energy_multiplier = 2.3 if is_major_gate else 1.9
+	ring.material_override = ring_material
+	ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	gate.add_child(ring)
+
+	# A slim cyan inner tracer gives the gold frame a refined royal-tech accent.
+	var tracer := MeshInstance3D.new()
+	tracer.name = "CyanInnerLightTracer"
+	var tracer_mesh := TorusMesh.new()
+	tracer_mesh.inner_radius = 7.78
+	tracer_mesh.outer_radius = 7.9
+	tracer_mesh.rings = 10
+	tracer_mesh.ring_segments = 64
+	tracer.mesh = tracer_mesh
+	tracer.rotation.x = PI * 0.5
+	tracer.position.y = RING_CENTER_Y
+	var tracer_material := StandardMaterial3D.new()
+	tracer_material.albedo_color = TEAL
+	tracer_material.emission_enabled = true
+	tracer_material.emission = Color(0.04, 0.72, 1.0)
+	tracer_material.emission_energy_multiplier = 2.6
+	tracer.material_override = tracer_material
+	tracer.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	gate.add_child(tracer)
+
+	# Twin gold support columns descend to small floating pontoons outside the race opening.
+	for side in [-1.0, 1.0]:
+		var support := MeshInstance3D.new()
+		support.name = "EgyptianGoldSupportPylon_Left" if side < 0.0 else "EgyptianGoldSupportPylon_Right"
+		var support_mesh := CylinderMesh.new()
+		support_mesh.top_radius = 0.24
+		support_mesh.bottom_radius = 0.34
+		support_mesh.height = 3.5
+		support.mesh = support_mesh
+		support.position = Vector3(side * 6.8, 1.75, 0.0)
+		support.material_override = ring_material
+		support.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		gate.add_child(support)
+
+		var pontoon := MeshInstance3D.new()
+		pontoon.name = "FloatingGatePontoon_Left" if side < 0.0 else "FloatingGatePontoon_Right"
+		var pontoon_mesh := CylinderMesh.new()
+		pontoon_mesh.top_radius = 0.42
+		pontoon_mesh.bottom_radius = 0.42
+		pontoon_mesh.height = 2.6
+		pontoon.mesh = pontoon_mesh
+		pontoon.rotation.x = PI * 0.5
+		pontoon.position = Vector3(side * 6.8, 0.32, 0.0)
+		var pontoon_material := StandardMaterial3D.new()
+		pontoon_material.albedo_color = Color(0.08, 0.12, 0.16)
+		pontoon_material.metallic = 0.35
+		pontoon_material.roughness = 0.42
+		pontoon.mesh.surface_set_material(0, pontoon_material)
+		pontoon.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		gate.add_child(pontoon)
+
+	# A small sun-disc crest adds an Egyptian motif without obstructing the aperture.
+	var crest := MeshInstance3D.new()
+	crest.name = "RoyalSunDiscCrest"
+	var crest_mesh := SphereMesh.new()
+	crest_mesh.radius = 0.62
+	crest_mesh.height = 1.05
+	crest.mesh = crest_mesh
+	crest.position = Vector3(0.0, RING_CENTER_Y + RING_OUTER_RADIUS + 0.25, 0.0)
+	crest.material_override = ring_material
+	crest.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	gate.add_child(crest)
+
+	var gate_number := 1
+	match gate_id:
+		"Checkpoint1": gate_number = 2
+		"Checkpoint2": gate_number = 3
+		"Checkpoint3": gate_number = 4
+		"Finish": gate_number = 5
+	var marker := Label3D.new()
+	marker.name = "GateLabel"
+	marker.text = "FINISH" if gate_id == "Finish" else "%02d  %s" % [gate_number, label_text]
+	# The finish word floats above the upper rim, leaving the entire racing aperture clear.
+	marker.position = Vector3(0.0, RING_CENTER_Y + RING_OUTER_RADIUS + (2.8 if gate_id == "Finish" else 1.8), 0.0)
+	marker.font_size = 52 if gate_id == "Finish" else 28
+	marker.pixel_size = 0.016 if gate_id == "Finish" else 0.012
+	marker.modulate = Color(0.18, 0.92, 1.0) if gate_id == "Finish" else Color(1.0, 0.88, 0.58)
+	marker.outline_modulate = Color(0.01, 0.16, 0.24) if gate_id == "Finish" else Color(0.08, 0.06, 0.02)
+	marker.outline_size = 10 if gate_id == "Finish" else 6
+	marker.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	gate.add_child(marker)
+	if gate_id == "Finish":
+		var finish_glow := OmniLight3D.new()
+		finish_glow.name = "FinishWordGlow"
+		finish_glow.position = marker.position + Vector3(0.0, 0.3, 0.0)
+		finish_glow.light_color = Color(0.08, 0.78, 1.0)
+		finish_glow.light_energy = 2.2
+		finish_glow.omni_range = 9.0
+		finish_glow.shadow_enabled = false
+		gate.add_child(finish_glow)
 
 func _build_pyramids() -> void:
 	# Place the Giza landmarks beyond the northern city skyline so they read as a distant desert region.
@@ -737,11 +986,11 @@ func _build_waterfront_landscaping() -> void:
 
 
 func _build_beach_handball_court() -> void:
-	# Open sandy beach-handball area beside the marina's south-east shoreline.
+	# Open sandy beach-handball area on the expanded eastern beach.
 	# It is a walkable outdoor court, not an enclosed building or interaction point.
 	var beach := Node3D.new()
 	beach.name = "BeachHandballCourt"
-	beach.position = Vector3(40.0, 0.0, 125.0)
+	beach.position = Vector3(90.0, 0.0, 130.0)
 	beach.add_to_group("city_world_geometry")
 	add_child(beach)
 
@@ -901,14 +1150,11 @@ func _build_access_roads_and_parking() -> void:
 	_path_segment(self, "WestAdventureAccess_02", Vector3(-84.0, 0.12, 58.0), Vector3(-84.0, 0.12, 75.0), 3.6, SAND)
 	_path_segment(self, "AdventureCenterEntranceWalk", Vector3(-84.0, 0.12, 62.5), Vector3(-75.0, 0.12, 62.6), 3.0, SAND)
 	_path_segment(self, "DesertLodgeEntranceWalk", Vector3(-84.0, 0.12, 75.0), Vector3(-75.0, 0.12, 80.7), 3.0, SAND)
-	# Marina terminal and yacht club: a clear pedestrian spine runs beside the building fronts.
-	_path_segment(self, "MarinaTerminalAccess_01", Vector3(95.0, 0.12, 38.0), Vector3(84.0, 0.12, 38.0), 3.6, SAND)
-	_path_segment(self, "MarinaPromenadeSpine", Vector3(84.0, 0.12, 38.0), Vector3(84.0, 0.12, 62.0), 3.6, SAND)
-	_path_segment(self, "MarinaTerminalEntranceWalk", Vector3(84.0, 0.12, 42.5), Vector3(75.0, 0.12, 42.6), 3.0, SAND)
-	_path_segment(self, "YachtClubEntranceWalk", Vector3(84.0, 0.12, 62.0), Vector3(75.0, 0.12, 62.6), 3.0, SAND)
-	# Beach handball court access joins the waterfront promenade to the open sand apron.
-	_path_segment(self, "BeachHandballPromenadeConnector", Vector3(32.0, 0.12, 76.0), Vector3(32.0, 0.12, 106.0), 3.6, SAND)
-	_path_segment(self, "BeachHandballApronEntry", Vector3(32.0, 0.12, 106.0), Vector3(40.0, 0.12, 107.0), 3.6, SAND)
+	# The former yacht-club building is now the Royal Beach Club; no marina terminal remains.
+	_path_segment(self, "RoyalBeachClubEntranceWalk", Vector3(84.0, 0.12, 62.0), Vector3(75.0, 0.12, 62.6), 3.0, SAND)
+	# Beach handball access stays on dry land east of the expanded open sea.
+	_path_segment(self, "BeachHandballPromenadeConnector", Vector3(72.0, 0.12, 76.0), Vector3(72.0, 0.12, 106.0), 3.6, SAND)
+	_path_segment(self, "BeachHandballApronEntry", Vector3(72.0, 0.12, 106.0), Vector3(90.0, 0.12, 112.0), 3.6, SAND)
 	# Temple approach branches from the mountain trail without moving the temple or summit.
 	_path_segment(self, "MountainTempleEntranceWalk", Vector3(83.0, 0.12, 68.0), Vector3(75.0, 0.12, 80.7), 3.2, SAND)
 	# Short, collision-backed approaches connect visible entrances to the nearest public walk.
@@ -925,15 +1171,19 @@ func _build_access_roads_and_parking() -> void:
 		["ApartmentTwoEntranceWalk", Vector3(-30.0, 0.12, 37.4), Vector3(-30.0, 0.12, 40.0)],
 		["ApartmentThreeEntranceWalk", Vector3(0.0, 0.12, 37.4), Vector3(0.0, 0.12, 40.0)],
 		["ApartmentFourEntranceWalk", Vector3(30.0, 0.12, 37.4), Vector3(30.0, 0.12, 40.0)],
-		["CinemaEntranceWalk", Vector3(60.0, 0.12, 36.4), Vector3(60.0, 0.12, 40.0)],
-		["TheaterEntranceWalk", Vector3(-60.0, 0.12, 66.9), Vector3(-60.0, 0.12, 74.0)],
-		["StadiumEntranceWalk", Vector3(-30.0, 0.12, 66.9), Vector3(-30.0, 0.12, 74.0)],
-		["SportsClubEntranceWalk", Vector3(0.0, 0.12, 66.9), Vector3(0.0, 0.12, 74.0)],
-		["WaterCityEntranceWalk", Vector3(30.0, 0.12, 66.9), Vector3(30.0, 0.12, 74.0)],
-		["DailyArcadeEntranceWalk", Vector3(60.0, 0.12, 66.9), Vector3(60.0, 0.12, 74.0)]
+		["CinemaEntranceWalk", Vector3(0.0, 0.12, -143.6), Vector3(0.0, 0.12, -138.0)],
+		["TheaterEntranceWalk", Vector3(-35.0, 0.12, -113.1), Vector3(-35.0, 0.12, -108.0)],
+		["StadiumEntranceWalk", Vector3(0.0, 0.12, -113.1), Vector3(0.0, 0.12, -108.0)],
+		["SportsClubEntranceWalk", Vector3(35.0, 0.12, -113.1), Vector3(35.0, 0.12, -108.0)],
+		["WaterCityEntranceWalk", Vector3(-35.0, 0.12, -143.1), Vector3(-35.0, 0.12, -138.0)],
+		["DailyArcadeEntranceWalk", Vector3(35.0, 0.12, -143.1), Vector3(35.0, 0.12, -138.0)]
 	]
 	for walk in entrance_walks:
 		_path_segment(self, str(walk[0]), walk[1], walk[2], 2.6, SAND)
+	# Shared northern access spine connects both relocated building rows to the north perimeter road.
+	_path_segment(self, "NorthDistrictAccess_RowSouth", Vector3(-52.0, 0.12, -105.0), Vector3(52.0, 0.12, -105.0), 3.6, SAND)
+	_path_segment(self, "NorthDistrictAccess_RowNorth", Vector3(-52.0, 0.12, -135.0), Vector3(52.0, 0.12, -135.0), 3.6, SAND)
+	_path_segment(self, "NorthDistrictAccess_Spine", Vector3(0.0, 0.12, -135.0), Vector3(0.0, 0.12, -98.0), 3.6, SAND)
 	_path_segment(self, "PoliceServiceAccess", Vector3(-95.0, 0.12, -5.0), Vector3(-84.0, 0.12, -5.0), 3.2, SAND)
 	_path_segment(self, "PoliceEntranceTurn", Vector3(-84.0, 0.12, -5.0), Vector3(-84.0, 0.12, 0.9), 3.2, SAND)
 	_path_segment(self, "PoliceFrontWalk", Vector3(-84.0, 0.12, 0.9), Vector3(-75.0, 0.12, 0.9), 3.2, SAND)
