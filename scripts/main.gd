@@ -1783,7 +1783,7 @@ func _create_pyramids_area() -> void:
 	add_child(pyramids)
 
 
-# اختيار وضع اللعب مع تسجيل دخول Google والتحقق الخادمي من هوية المؤسس.
+# اختيار وضع اللعب مع تسجيل الدخول بالبريد الإلكتروني والتحقق الخادمي من هوية المؤسس.
 var mode_selection_layer: CanvasLayer
 var mode_selection_panel: PanelContainer
 var mode_status_label: Label
@@ -1792,6 +1792,9 @@ var game_mode_controls: VBoxContainer
 var player_account_status_label: Label
 var player_account_button: Button
 var player_account_profile_label: Label
+var account_email_input: LineEdit
+var account_password_input: LineEdit
+var account_otp_input: LineEdit
 
 
 func _create_mode_selection_ui() -> void:
@@ -1821,9 +1824,9 @@ func _create_mode_selection_ui() -> void:
 	mode_selection_layer.add_child(backdrop)
 
 	mode_selection_panel = PanelContainer.new()
-	mode_selection_panel.custom_minimum_size = Vector2(360, 590)
+	mode_selection_panel.custom_minimum_size = Vector2(380, 690)
 	mode_selection_panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-	mode_selection_panel.position = Vector2(-180, -295)
+	mode_selection_panel.position = Vector2(-190, -345)
 	mode_selection_panel.add_theme_stylebox_override("panel", _make_mode_panel_style())
 	backdrop.add_child(mode_selection_panel)
 	var content := VBoxContainer.new()
@@ -1837,13 +1840,38 @@ func _create_mode_selection_ui() -> void:
 	heading.add_theme_color_override("font_color", Color(0.94, 0.79, 0.43))
 	content.add_child(heading)
 
+	account_email_input = LineEdit.new()
+	account_email_input.placeholder_text = "البريد الإلكتروني"
+	account_email_input.custom_minimum_size.y = 40
+	content.add_child(account_email_input)
+	account_password_input = LineEdit.new()
+	account_password_input.placeholder_text = "كلمة المرور (8 أحرف على الأقل)"
+	account_password_input.secret = true
+	account_password_input.custom_minimum_size.y = 40
+	content.add_child(account_password_input)
+	account_otp_input = LineEdit.new()
+	account_otp_input.placeholder_text = "رمز التحقق المرسل إلى بريدك"
+	account_otp_input.custom_minimum_size.y = 40
+	content.add_child(account_otp_input)
+	var signup_button := Button.new()
+	signup_button.text = "إنشاء حساب وإرسال رمز التحقق"
+	signup_button.pressed.connect(_on_email_signup_pressed)
+	content.add_child(signup_button)
+	var verify_button := Button.new()
+	verify_button.text = "تأكيد البريد بالرمز"
+	verify_button.pressed.connect(_on_email_verify_pressed)
+	content.add_child(verify_button)
 	player_account_button = Button.new()
-	player_account_button.text = "المتابعة باستخدام Google"
+	player_account_button.text = "تسجيل الدخول بالبريد"
 	player_account_button.custom_minimum_size.y = 40
-	player_account_button.pressed.connect(_on_google_sign_in_pressed)
+	player_account_button.pressed.connect(_on_email_sign_in_pressed)
 	content.add_child(player_account_button)
+	var recovery_button := Button.new()
+	recovery_button.text = "استعادة كلمة المرور"
+	recovery_button.pressed.connect(_on_password_recovery_pressed)
+	content.add_child(recovery_button)
 	if PlayerAccountAuthClient.has_active_session():
-		player_account_button.text = "Google - الحساب متصل"
+		player_account_button.text = "البريد - الحساب متصل"
 
 	var is_verified_founder := FounderIdentityManager.is_founder
 	mode_status_label = Label.new()
@@ -1873,13 +1901,17 @@ func _create_mode_selection_ui() -> void:
 	game_mode_controls.visible = not is_verified_founder
 
  
-func _on_google_sign_in_pressed() -> void:
-	if not PlayerAccountAuthClient.request_google_sign_in():
-		if is_instance_valid(mode_status_label):
-			mode_status_label.text = "تعذر بدء تسجيل الدخول باستخدام Google."
-		return
-	if is_instance_valid(mode_status_label):
-		mode_status_label.text = "أكمل اختيار حساب Google المرتبط بشخصيتك الأصلية، ثم ستعود إلى اللعبة تلقائيًا."
+func _on_email_signup_pressed() -> void:
+	PlayerAccountAuthClient.request_email_sign_up(account_email_input.text, account_password_input.text)
+
+func _on_email_verify_pressed() -> void:
+	PlayerAccountAuthClient.verify_email_otp(account_email_input.text, account_otp_input.text)
+
+func _on_email_sign_in_pressed() -> void:
+	PlayerAccountAuthClient.request_email_sign_in(account_email_input.text, account_password_input.text)
+
+func _on_password_recovery_pressed() -> void:
+	PlayerAccountAuthClient.request_password_recovery(account_email_input.text)
 
 func _on_player_account_request_finished(success: bool, message: String) -> void:
 	if is_instance_valid(mode_status_label):
@@ -1887,7 +1919,7 @@ func _on_player_account_request_finished(success: bool, message: String) -> void
 
 func _on_player_account_authenticated(user_id: String, email: String) -> void:
 	if is_instance_valid(player_account_button):
-		player_account_button.text = "Google - الحساب متصل"
+		player_account_button.text = "البريد - الحساب متصل"
 	if is_instance_valid(mode_status_label):
 		mode_status_label.text = "تم تسجيل الدخول بالحساب %s." % email
 	if is_instance_valid(player_account_profile_label):
@@ -1912,7 +1944,7 @@ func _on_player_account_access_token_changed(access_token: String) -> void:
 		ProfileConfigStore.complete_account_switch()
 		if FounderIdentityManager.is_founder and FounderIdentityManager.founder_subject_id != account_id:
 			FounderIdentityManager.clear_entitlement()
-		# Founder status is checked automatically with the same Google-authenticated player session.
+		# Founder status is checked automatically with the same verified email/password player session.
 		FounderAuthClient.request_founder_entitlement_with_access_token(access_token)
 
 func _reload_scene_for_account_profile() -> void:
