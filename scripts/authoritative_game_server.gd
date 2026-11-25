@@ -160,7 +160,7 @@ func start_dedicated_server() -> void:
 
 
 func _configure_city_session_directory() -> void:
-	var base_url := str(ProjectSettings.get_setting("founder/auth/api_base_url", "")).strip_edges().trim_suffix("/")
+	var base_url := str(ProjectSettings.get_setting_with_override("founder/auth/api_base_url")).strip_edges().trim_suffix("/")
 	_city_directory_url = OS.get_environment("KING_CITY_SESSION_DIRECTORY_URL").strip_edges()
 	if _city_directory_url.is_empty() and base_url.begins_with("https://"):
 		_city_directory_url = base_url + "/functions/v1/city-session-directory"
@@ -216,7 +216,7 @@ func _send_city_directory_server_action(payload: Dictionary, callback: Callable 
 	request.request_completed.connect(_on_city_directory_request_completed.bind(request, callback))
 	var headers := PackedStringArray([
 		"Content-Type: application/json",
-		"apikey: " + str(ProjectSettings.get_setting("founder/auth/publishable_key", "")),
+		"apikey: " + str(ProjectSettings.get_setting_with_override("founder/auth/publishable_key")),
 		"x-king-city-timestamp: " + timestamp,
 		"x-king-city-nonce: " + nonce,
 		"x-king-city-signature: " + signature
@@ -472,8 +472,8 @@ func authenticate_player(access_token: String, reservation_id: String = "") -> v
 	if access_token.length() < 40 or access_token.length() > 8192:
 		_reject_peer(peer_id, "رمز جلسة الحساب غير صالح.")
 		return
-	var base_url := str(ProjectSettings.get_setting("founder/auth/api_base_url", "")).strip_edges().trim_suffix("/")
-	var publishable_key := str(ProjectSettings.get_setting("founder/auth/publishable_key", "")).strip_edges()
+	var base_url := str(ProjectSettings.get_setting_with_override("founder/auth/api_base_url")).strip_edges().trim_suffix("/")
+	var publishable_key := str(ProjectSettings.get_setting_with_override("founder/auth/publishable_key")).strip_edges()
 	if not base_url.begins_with("https://") or publishable_key.is_empty():
 		_reject_peer(peer_id, "إعدادات التحقق من حساب اللاعب غير مكتملة على الخادم.")
 		return
@@ -879,8 +879,8 @@ func _request_server_mission_progress_lookup(peer_id: int, mission_id: String) -
 	if user_id.is_empty() or _proof_hmac_secret.size() < 32:
 		rpc_id(peer_id, "receive_mission_start_result", false, mission_id, Vector3.ZERO, "خدمة التحقق من سجل الإنجازات غير مهيأة؛ لم تبدأ المهمة.")
 		return
-	var base_url := str(ProjectSettings.get_setting("founder/auth/api_base_url", "")).strip_edges().trim_suffix("/")
-	var publishable_key := str(ProjectSettings.get_setting("founder/auth/publishable_key", "")).strip_edges()
+	var base_url := str(ProjectSettings.get_setting_with_override("founder/auth/api_base_url")).strip_edges().trim_suffix("/")
+	var publishable_key := str(ProjectSettings.get_setting_with_override("founder/auth/publishable_key")).strip_edges()
 	if not base_url.begins_with("https://") or publishable_key.is_empty():
 		rpc_id(peer_id, "receive_mission_start_result", false, mission_id, Vector3.ZERO, "إعدادات سجل الإنجازات الخادمي غير مكتملة.")
 		return
@@ -1477,8 +1477,8 @@ func _request_walk_progress(peer_id: int, action: String) -> void:
 	if _proof_hmac_secret.size() < 32:
 		session["walk_retry_after_usec"] = Time.get_ticks_usec() + 60000000
 		return
-	var base_url := str(ProjectSettings.get_setting("founder/auth/api_base_url", "")).strip_edges().trim_suffix("/")
-	var publishable_key := str(ProjectSettings.get_setting("founder/auth/publishable_key", "")).strip_edges()
+	var base_url := str(ProjectSettings.get_setting_with_override("founder/auth/api_base_url")).strip_edges().trim_suffix("/")
+	var publishable_key := str(ProjectSettings.get_setting_with_override("founder/auth/publishable_key")).strip_edges()
 	if not base_url.begins_with("https://") or publishable_key.is_empty():
 		session["walk_retry_after_usec"] = Time.get_ticks_usec() + 30000000
 		return
@@ -1618,8 +1618,8 @@ func _issue_activity_proof(peer_id: int, user_id: String, activity_kind: String,
 			_proof_secret_warning_shown = true
 		_notify_proof_issue_failed(peer_id, activity_kind, activity_id, "إعداد إثبات المكافأة غير مكتمل على الخادم.")
 		return
-	var base_url := str(ProjectSettings.get_setting("founder/auth/api_base_url", "")).strip_edges().trim_suffix("/")
-	var publishable_key := str(ProjectSettings.get_setting("founder/auth/publishable_key", "")).strip_edges()
+	var base_url := str(ProjectSettings.get_setting_with_override("founder/auth/api_base_url")).strip_edges().trim_suffix("/")
+	var publishable_key := str(ProjectSettings.get_setting_with_override("founder/auth/publishable_key")).strip_edges()
 	if not base_url.begins_with("https://") or publishable_key.is_empty():
 		push_warning("Cannot issue activity proof: Supabase project settings are missing on the dedicated server.")
 		_notify_proof_issue_failed(peer_id, activity_kind, activity_id, "خدمة اعتماد المكافآت غير مهيأة على الخادم.")

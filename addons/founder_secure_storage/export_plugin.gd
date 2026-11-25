@@ -24,15 +24,16 @@ class AndroidExportPlugin extends EditorExportPlugin:
             "res://addons/founder_secure_storage/bin/%s/FounderSecureStorage-%s.aar" % [build_type, build_type]
         ])
 
-    func _get_android_manifest_activity_element_contents(_platform, _debug: bool) -> String:
+    func _get_android_manifest_activity_element_contents(_platform, debug: bool) -> String:
+        var callback_scheme := "kingofegyptcity-test" if debug else "kingofegyptcity"
         return """
 <intent-filter>
     <action android:name="android.intent.action.VIEW" />
     <category android:name="android.intent.category.DEFAULT" />
     <category android:name="android.intent.category.BROWSABLE" />
-    <data android:scheme="kingofegyptcity" android:host="auth-callback" />
+    <data android:scheme="%s" android:host="auth-callback" />
 </intent-filter>
-"""
+""" % callback_scheme
 
     func _get_name() -> String:
         return _plugin_name
