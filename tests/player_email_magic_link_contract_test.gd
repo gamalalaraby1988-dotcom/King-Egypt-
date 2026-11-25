@@ -12,7 +12,7 @@ func _initialize() -> void:
 
 	_check(player_auth.contains("provider=google") and player_auth.contains("OS.shell_open(authorize_url)"), "Sign-in must open the Google OAuth page.");
 	_check(player_auth.contains("code_challenge_method=s256") and player_auth.contains("code_challenge="), "Google OAuth must use PKCE.")
-	_check(player_auth.contains('kingofegyptcity://auth-callback'), "Google OAuth must use the registered Android callback URI.")
+	_check(player_auth.contains('ProjectSettings.get_setting_with_override(REDIRECT_URI_SETTING') and player_auth.contains('REDIRECT_URI_SETTING := "founder/auth/magic_link_redirect_uri"'), "Google OAuth must use the callback URI selected for the build environment.")
 	_check(player_auth.contains('"/auth/v1/token?grant_type=pkce"'), "Google callbacks must exchange the PKCE authorization code.")
 	_check(player_auth.contains('getPendingAuthLink') and player_auth.contains('clearPendingAuthLink'), "Google OAuth must consume and clear Android callback links.")
 	_check(founder_auth.contains("request_founder_entitlement_with_access_token"), "Founder entitlement must accept the player session.")
