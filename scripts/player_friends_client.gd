@@ -94,8 +94,8 @@ func _start_rpc(rpc_name: String, payload: Dictionary, action: String) -> void:
 	if not _active_action.is_empty():
 		operation_finished.emit(action, false, "request_in_progress")
 		return
-	var base_url := str(ProjectSettings.get_setting("founder/auth/api_base_url", "")).strip_edges().trim_suffix("/")
-	var publishable_key := str(ProjectSettings.get_setting("founder/auth/publishable_key", "")).strip_edges()
+	var base_url := str(ProjectSettings.get_setting_with_override("founder/auth/api_base_url")).strip_edges().trim_suffix("/")
+	var publishable_key := str(ProjectSettings.get_setting_with_override("founder/auth/publishable_key")).strip_edges()
 	if not base_url.begins_with("https://") or publishable_key.is_empty():
 		operation_finished.emit(action, false, "service_not_configured")
 		return
