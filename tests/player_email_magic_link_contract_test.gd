@@ -26,7 +26,7 @@ func _initialize() -> void:
 	_check(main_source.contains("المتابعة باستخدام Google"), "The login screen must expose the single Google sign-in button.")
 	_check(not main_source.contains("player_account_code_input") and not main_source.contains("player_account_email_input") and not main_source.contains("founder_email_gate"), "Player UI must not ask for an email or a six-digit code.")
 	_check(android_plugin.contains("getPendingAuthLink") and android_plugin.contains("clearPendingAuthLink"), "Android plugin must expose callback retrieval and clearing.")
-	_check(export_plugin.contains("android.intent.action.VIEW") and export_plugin.contains('android:scheme="kingofegyptcity"'), "Android manifest must register the app callback scheme.")
+	_check(export_plugin.contains("android.intent.action.VIEW") and export_plugin.contains('"kingofegyptcity-test" if debug else "kingofegyptcity"'), "Android manifest must select the matching TEST or PRODUCTION callback scheme.")
 	_check(export_preset.contains("gradle_build/use_gradle_build=true") and export_preset.contains("permissions/internet=true"), "Android export must use Gradle plugins and Internet permission.")
 
 	if _failed:
