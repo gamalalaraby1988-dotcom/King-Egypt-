@@ -159,3 +159,7 @@ Do not describe the championship as playable or multiplayer-validated until thes
 - The five visible gates form a moderate alternating slalom: start (X=0, Z=96), checkpoint 1 (X=-10, Z=111), checkpoint 2 (X=10, Z=126), checkpoint 3 (X=-10, Z=141), finish (X=0, Z=156).
 - The dedicated server validates the interpolated crossing point against each gate center in both horizontal and vertical axes; driving straight through the old centerline cannot clear offset checkpoints.
 - The race remains ordered and forward-only. The stagger requires deliberate steering without making the course excessively tight.
+
+
+### Widely spaced slalom gates and luminous route
+The five gates are spaced 30 metres apart along the course, with alternating lateral offsets of 14 metres at checkpoints. Their center positions are (0,96), (-14,126), (14,156), (-14,186), and (0,216). Four continuous cyan luminous guide segments connect the gates over the water. The authoritative server gate positions, production scene, and participant gate tests use the same coordinates.
