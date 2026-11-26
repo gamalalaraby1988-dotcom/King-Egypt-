@@ -64,6 +64,8 @@ var social_requests_cache: Array = []
 var social_friends_cache: Array = []
 var social_active_tab := "friends"
 var emotes_popup: PanelContainer
+var _wallet_refresh_elapsed := 0.0
+const WALLET_REFRESH_INTERVAL := 0.5
 
 
 const GROUP_MAX_MEMBERS := 4
@@ -126,12 +128,16 @@ func _exit_tree() -> void:
 		if is_instance_valid(meeting_marker):
 			meeting_marker.queue_free()
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	if not is_instance_valid(mission_manager) and is_instance_valid(main_scene):
 		mission_manager = main_scene.get_node_or_null("MissionManager")
 	if not safe_return_position_captured:
 		_capture_safe_spawn()
-	_refresh_wallet()
+	# Wallet values do not need to be polled every rendered frame.
+	_wallet_refresh_elapsed += delta
+	if _wallet_refresh_elapsed >= WALLET_REFRESH_INTERVAL:
+		_wallet_refresh_elapsed = 0.0
+		_refresh_wallet()
 
 
 func _unhandled_input(event: InputEvent) -> void:
