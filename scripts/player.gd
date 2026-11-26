@@ -164,7 +164,7 @@ func _physics_process(delta: float) -> void:
 	else:
 		velocity.y = 0.0
 	if world_direction.length() > 0.1:
-		var target_angle := atan2(world_direction.x, world_direction.z)
+		var target_angle := atan2(world_direction.x, -world_direction.z)
 		_set_body_yaw_preserving_camera(lerp_angle(rotation.y, target_angle, turn_speed * delta))
 	_try_step_up(delta)
 	move_and_slide()
