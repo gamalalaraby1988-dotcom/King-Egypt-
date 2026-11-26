@@ -16,10 +16,24 @@ func _run_bidirectional_gate_clearance_test() -> void:
 	var scene := packed_scene.instantiate() as Node3D
 	root.add_child(scene)
 	await process_frame
+	# City generation now starts only after a mode is selected. Exercise that
+	# same deferred startup path before querying production gate physics.
+	if scene.has_method("_enter_selected_game_mode"):
+		scene.call("_enter_selected_game_mode")
+	var gate: Node3D
+	for _frame in range(600):
+		gate = scene.get_node_or_null("ApprovedCityLayout/RoyalFounderGate") as Node3D
+		if is_instance_valid(gate):
+			break
+		await process_frame
+	if not is_instance_valid(gate):
+		push_error("Production city did not finish deferred startup before gate clearance test.")
+		quit(1)
+		return
 	await physics_frame
 	await physics_frame
 
-	var gate := scene.get_node_or_null("ApprovedCityLayout/RoyalFounderGate") as Node3D
+	gate = scene.get_node_or_null("ApprovedCityLayout/RoyalFounderGate") as Node3D
 	_expect(gate != null, "Production royal founder gate exists in the live scene")
 	if gate == null:
 		quit(1)
