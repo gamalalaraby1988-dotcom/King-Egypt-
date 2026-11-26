@@ -61,6 +61,7 @@ var social_chat_input: LineEdit
 var social_status_label: Label
 var social_content_columns: HBoxContainer
 var social_group_page: ScrollContainer
+var social_group_chat_page: ScrollContainer
 var social_add_code_input: LineEdit
 var social_requests_cache: Array = []
 var social_friends_cache: Array = []
@@ -456,6 +457,24 @@ func _build_social_popup() -> void:
 			group_content.reparent(social_group_page)
 		group_popup.visible = false
 
+	social_group_chat_page = ScrollContainer.new()
+	social_group_chat_page.name = "SocialGroupChatTabPage"
+	social_group_chat_page.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	social_group_chat_page.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	social_group_chat_page.visible = false
+	outer.add_child(social_group_chat_page)
+	if is_instance_valid(group_chat_popup) and group_chat_popup.get_child_count() > 0:
+		var group_chat_content := group_chat_popup.get_child(0) as Control
+		if is_instance_valid(group_chat_content):
+			group_chat_content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			var back_to_group := Button.new()
+			back_to_group.text = "← العودة إلى المجموعة"
+			back_to_group.pressed.connect(_show_social_group_members_page)
+			group_chat_content.add_child(back_to_group)
+			group_chat_content.move_child(back_to_group, 0)
+			group_chat_content.reparent(social_group_chat_page)
+		group_chat_popup.visible = false
+
 	var columns := HBoxContainer.new()
 	columns.name = "SocialFriendsAndPublicPages"
 	social_content_columns = columns
@@ -549,6 +568,8 @@ func _show_social_tab(tab: String) -> void:
 		social_content_columns.visible = tab != "group"
 	if is_instance_valid(social_group_page):
 		social_group_page.visible = tab == "group"
+	if is_instance_valid(social_group_chat_page):
+		social_group_chat_page.visible = false
 	if tab == "group":
 		_refresh_group_popup()
 		social_status_label.text = "مجموعة واحدة بحد أقصى أربعة أعضاء، تشمل القائد وثلاثة أعضاء."
@@ -1656,14 +1677,19 @@ func _build_group_chat_popup() -> void:
 	var close_top := Button.new()
 	close_top.text = "✕"
 	close_top.custom_minimum_size = Vector2(38, 34)
-	close_top.pressed.connect(func(): group_chat_popup.visible = false)
+	close_top.pressed.connect(func():
+		if is_instance_valid(social_popup):
+			social_popup.visible = false
+		else:
+			group_chat_popup.visible = false
+	)
 	header.add_child(close_top)
 	group_chat_log = RichTextLabel.new()
 	group_chat_log.bbcode_enabled = true
 	group_chat_log.scroll_following = true
 	group_chat_log.fit_content = false
 	group_chat_log.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	group_chat_log.custom_minimum_size = Vector2(0, 300)
+	group_chat_log.custom_minimum_size = Vector2(0, 140)
 	group_chat_log.text = "[color=gray]رسائل المجموعة ستظهر هنا.[/color]"
 	box.add_child(group_chat_log)
 	group_chat_input = LineEdit.new()
@@ -1679,17 +1705,36 @@ func _build_group_chat_popup() -> void:
 	actions.add_child(send)
 	var close := Button.new()
 	close.text = "إغلاق"
-	close.pressed.connect(func(): group_chat_popup.visible = false)
+	close.pressed.connect(func():
+		if is_instance_valid(social_popup):
+			social_popup.visible = false
+		else:
+			group_chat_popup.visible = false
+	)
 	actions.add_child(close)
 
 
+func _show_social_group_members_page() -> void:
+	if is_instance_valid(social_group_chat_page):
+		social_group_chat_page.visible = false
+	if is_instance_valid(social_group_page):
+		social_group_page.visible = true
+	if is_instance_valid(social_content_columns):
+		social_content_columns.visible = false
+
+
 func _open_group_chat() -> void:
-	if not is_instance_valid(group_chat_popup):
-		_build_group_chat_popup()
-	group_chat_popup.visible = true
-	group_popup.visible = false
-	if is_instance_valid(social_popup):
-		social_popup.visible = false
+	if not is_instance_valid(social_popup):
+		return
+	if is_instance_valid(group_popup):
+		group_popup.visible = false
+	if is_instance_valid(group_chat_popup):
+		group_chat_popup.visible = false
+	social_active_tab = "group"
+	social_popup.visible = true
+	social_content_columns.visible = false
+	social_group_page.visible = false
+	social_group_chat_page.visible = true
 	group_chat_input.grab_focus()
 
 
