@@ -25,15 +25,15 @@ func _run_city_street_access_contract() -> void:
 		_expect(path != null, "Entrance access path is a visible mesh")
 		if path == null:
 			continue
-		_expect(is_equal_approx(float(path.get_meta("access_width", 0.0)), 3.2), path.name + " uses the standard 3.2 m access width")
+		_expect(is_equal_approx(float(path.get_meta("access_width", 0.0)), 3.2), str(path.name) + " uses the standard 3.2 m access width")
 		var mesh := path.mesh as BoxMesh
-		_expect(mesh != null and is_equal_approx(mesh.size.x, 3.2), path.name + " visible width matches the standard")
-		var body := layout.get_node_or_null(path.name + "WalkCollision") as StaticBody3D
-		_expect(body != null, path.name + " has matching walkable collision")
+		_expect(mesh != null and is_equal_approx(mesh.size.x, 3.2), str(path.name) + " visible width matches the standard")
+		var body := layout.get_node_or_null(str(path.name) + "WalkCollision") as StaticBody3D
+		_expect(body != null, str(path.name) + " has matching walkable collision")
 		if body != null:
 			var collision := body.get_child(0) as CollisionShape3D
 			var shape := collision.shape as BoxShape3D if collision != null else null
-			_expect(shape != null and is_equal_approx(shape.size.x, 3.2), path.name + " collision width matches its visible mesh")
+			_expect(shape != null and is_equal_approx(shape.size.x, 3.2), str(path.name) + " collision width matches its visible mesh")
 
 	var main_script := load("res://scripts/main.gd") as Script
 	_expect(main_script != null, "Main city script loads for curb-cut validation")
