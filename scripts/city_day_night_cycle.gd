@@ -1,7 +1,7 @@
 extends Node
 
 @export_range(60.0, 1800.0, 30.0) var cycle_duration_seconds: float = 720.0
-@export_range(10.0, 120.0, 5.0) var night_duration_seconds: float = 30.0
+@export_range(10.0, 120.0, 5.0) var night_duration_seconds: float = 15.0
 @export_range(0.0, 1.0, 0.01) var initial_cycle_progress: float = 0.34
 
 var _elapsed_seconds: float = 0.0
