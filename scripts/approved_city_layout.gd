@@ -1408,16 +1408,16 @@ func _build_mountain_route() -> void:
 			_box(lantern, "LanternBody", Vector3(0.32, 0.72, 0.32), Vector3(0.0, 0.72, 0.0), IVORY)
 			_box(lantern, "LanternCap", Vector3(0.62, 0.16, 0.62), Vector3(0.0, 1.18, 0.0), GOLD)
 
-	# New four-flight switchback ramp joins the existing trail end to the plaza.
+	# A six-flight, low-gradient switchback ramp joins the existing trail end to the plaza.
 	# Each flight has a walkable sloped mesh and a matching StaticBody collider.
 	var ramp_points: Array[Vector3] = [
-		Vector3(-3.0, 0.18, 28.0),
-		Vector3(25.0, 3.65, 10.0),
-		Vector3(25.0, 7.12, -20.0),
-		Vector3(0.0, 10.59, -30.0),
-		Vector3(-25.0, 14.06, -20.0),
-		Vector3(-25.0, 17.53, 10.0),
-		Vector3(0.0, 21.0, -1.0)
+		Vector3(-2.0, 0.18, -3.0),
+		Vector3(-25.0, 3.65, -3.0),
+		Vector3(-25.0, 7.12, -23.0),
+		Vector3(-10.0, 10.59, -38.0),
+		Vector3(15.0, 14.06, -38.0),
+		Vector3(30.0, 17.53, -20.0),
+		Vector3(15.0, 21.0, -1.0)
 	]
 	for ramp_index in range(ramp_points.size() - 1):
 		var ramp_start: Vector3 = ramp_points[ramp_index]
