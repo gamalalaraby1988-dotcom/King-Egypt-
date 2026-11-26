@@ -379,6 +379,7 @@ func _create_player_vehicle() -> void:
 	var bottom_margin := 8.0 * control_scale
 
 	vehicle_summon_button = Button.new()
+	vehicle_summon_button.layout_direction = Control.LAYOUT_DIRECTION_LTR
 	vehicle_summon_button.name = "VehicleSummonButton"
 	vehicle_summon_button.text = "🚗 إحضار السيارة"
 	vehicle_summon_button.custom_minimum_size = Vector2(control_width, control_height)
@@ -395,6 +396,7 @@ func _create_player_vehicle() -> void:
 	layer.add_child(vehicle_summon_button)
 
 	scooter_toggle_button = Button.new()
+	scooter_toggle_button.layout_direction = Control.LAYOUT_DIRECTION_LTR
 	scooter_toggle_button.name = "ElectricScooterToggleButton"
 	scooter_toggle_button.text = "🛴"
 	scooter_toggle_button.custom_minimum_size = Vector2(control_width, control_height)
@@ -412,6 +414,7 @@ func _create_player_vehicle() -> void:
 	layer.add_child(scooter_toggle_button)
 
 	vehicle_interaction_button = Button.new()
+	vehicle_interaction_button.layout_direction = Control.LAYOUT_DIRECTION_LTR
 	vehicle_interaction_button.name = "VehicleInteractionButton"
 	vehicle_interaction_button.text = "🚪↗"
 	vehicle_interaction_button.custom_minimum_size = Vector2(control_width, control_height)
@@ -431,6 +434,7 @@ func _create_player_vehicle() -> void:
 	layer.add_child(vehicle_interaction_button)
 
 	vehicle_exit_button = Button.new()
+	vehicle_exit_button.layout_direction = Control.LAYOUT_DIRECTION_LTR
 	vehicle_exit_button.name = "VehicleExitButton"
 	vehicle_exit_button.text = "🚪"
 	vehicle_exit_button.custom_minimum_size = Vector2(control_width, control_height)
