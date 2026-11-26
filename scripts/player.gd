@@ -162,12 +162,15 @@ func _physics_process(delta: float) -> void:
 		velocity.y -= gravity * delta
 	else:
 		velocity.y = 0.0
-	if world_direction.length() > 0.1:
-		var target_angle := atan2(world_direction.x, -world_direction.z)
-		_set_body_yaw_preserving_camera(rotate_toward(rotation.y, target_angle, turn_speed * delta))
 	_try_step_up(delta)
 	move_and_slide()
-	var planar_speed := Vector2(velocity.x, velocity.z).length()
+	# وجّه الشخصية حسب اتجاه انتقالها الفعلي بعد التسارع والاصطدام،
+	# حتى لا تواجه الاتجاه الجديد بينما جسمها ما زال يتحرك في الاتجاه السابق.
+	var planar_velocity := Vector3(velocity.x, 0.0, velocity.z)
+	if planar_velocity.length() > 0.18:
+		var target_angle := atan2(planar_velocity.x, -planar_velocity.z)
+		_set_body_yaw_preserving_camera(rotate_toward(rotation.y, target_angle, turn_speed * delta))
+	var planar_speed := planar_velocity.length()
 	var motion_state := "idle"
 	if planar_speed > 0.25:
 		motion_state = "run" if running else "walk"
