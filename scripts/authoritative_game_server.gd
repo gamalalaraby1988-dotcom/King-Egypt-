@@ -2610,7 +2610,7 @@ func _physics_process(delta: float) -> void:
 		_try_player_step_up(body, safe_delta)
 		body.move_and_slide()
 		if direction.length() > 0.1:
-			body.rotation.y = atan2(direction.x, direction.z)
+			body.rotation.y = atan2(direction.x, -direction.z)
 		if bool(session.get("walk_progress_ready", false)) and not bool(session.get("first_steps_recorded", false)) and was_grounded and body.is_on_floor() and direction.length() > 0.1 and not outside_city:
 			var verified_step := Vector2(body.global_position.x - movement_start_position.x, body.global_position.z - movement_start_position.z).length()
 			var maximum_step := RUN_SPEED * safe_delta + 0.12
