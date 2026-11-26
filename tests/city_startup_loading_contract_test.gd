@@ -17,6 +17,14 @@ func _run_startup_loading_contract() -> void:
 		quit(1)
 		return
 	var ready_block := source.substr(ready_start, ready_end - ready_start)
+	# Dedicated servers intentionally build the world immediately and return.
+	# The deferred-startup contract applies only to the client path below.
+	var client_ready_marker := ready_block.find("# The entry screen is now the first client UI.")
+	if client_ready_marker < 0:
+		push_error("Could not locate the client startup path.")
+		quit(1)
+		return
+	ready_block = ready_block.substr(client_ready_marker)
 	if not ready_block.contains("_create_mode_selection_ui()"):
 		push_error("The entry screen must be created during initial startup.")
 		quit(1)
