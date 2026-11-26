@@ -6,6 +6,11 @@ const RemotePlayerVisual = preload("res://scripts/remote_player_visual.gd")
 @export var city_half_size: int = 3
 @export var block_spacing: float = 24.0
 
+var startup_loading_layer: CanvasLayer
+var startup_loading_label: Label
+var startup_loading_progress: ProgressBar
+var _world_initialized := false
+var _world_initializing := false
 var interior_root: Node3D = null
 var interior_player: CharacterBody3D = null
 var interior_return_transform: Transform3D
@@ -66,31 +71,9 @@ func _ready() -> void:
 		_create_desert_camp()
 		_create_pyramids_area()
 		return
-	# Build the entry UI before expensive world generation so startup failures
-	# cannot leave Android users with only the sky and the player visible.
+	# The entry screen is now the first client UI. City geometry is deliberately
+	# deferred until a game mode is selected, so the city cannot appear behind it.
 	_create_mode_selection_ui()
-	_create_ground()
-	_create_city()
-	_create_approved_city_layout()
-	_create_city_signage()
-	_create_mobile_hud()
-	var initial_player := get_node_or_null("Player") as CharacterBody3D
-	if is_instance_valid(initial_player):
-		_last_safe_player_position = initial_player.global_position
-		_initial_player_spawn_position = initial_player.global_position
-		_initial_player_spawn_captured = true
-	var key_light := get_node_or_null("DirectionalLight3D")
-	if key_light:
-		key_light.add_to_group("quality_shadow_light")
-	_create_interactive_buildings()
-	_create_desert_camp()
-	_create_pyramids_area()
-	_create_city_npc_population()
-	_create_navigation_destinations()
-	_create_interior_transition_ui()
-	_create_palace_navigation_ui()
-	_create_player_vehicle()
-	_create_founder_update_panel()
 	GameModeManager.status_changed.connect(_on_mode_status_changed)
 	GameModeManager.online_connected.connect(_on_mode_connected)
 	AuthoritativeGameServer.authentication_completed.connect(_on_player_server_authenticated)
@@ -99,6 +82,134 @@ func _ready() -> void:
 	AuthoritativeGameServer.jet_ski_unmount_result_received.connect(_on_jet_ski_unmount_result_received)
 	AuthoritativeGameServer.jet_ski_authoritative_state_received.connect(_on_jet_ski_authoritative_state_received)
 	GameModeManager.online_disconnected.connect(_on_mode_disconnected)
+
+
+func _create_startup_loading_ui() -> void:
+	if is_instance_valid(startup_loading_layer):
+		return
+	startup_loading_layer = CanvasLayer.new()
+	startup_loading_layer.name = "CityStartupLoading"
+	startup_loading_layer.layer = 110
+	add_child(startup_loading_layer)
+	var backdrop := ColorRect.new()
+	backdrop.name = "RoyalLoadingBackdrop"
+	backdrop.color = Color(0.012, 0.009, 0.006, 1.0)
+	backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	startup_loading_layer.add_child(backdrop)
+	var frame := Panel.new()
+	frame.name = "RoyalLoadingFrame"
+	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	frame.offset_left = 24
+	frame.offset_top = 24
+	frame.offset_right = -24
+	frame.offset_bottom = -24
+	var frame_style := StyleBoxFlat.new()
+	frame_style.bg_color = Color(0.035, 0.025, 0.014, 0.0)
+	frame_style.border_color = Color(0.78, 0.57, 0.23, 0.95)
+	frame_style.set_border_width_all(2)
+	frame_style.set_corner_radius_all(12)
+	frame.add_theme_stylebox_override("panel", frame_style)
+	backdrop.add_child(frame)
+	var content := VBoxContainer.new()
+	content.name = "LoadingContent"
+	content.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	content.position = Vector2(-230, -75)
+	content.size = Vector2(460, 150)
+	content.alignment = BoxContainer.ALIGNMENT_CENTER
+	content.add_theme_constant_override("separation", 18)
+	backdrop.add_child(content)
+	var title := Label.new()
+	title.text = "𓂀   KING OF EGYPT CITY   𓂀"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 24)
+	title.add_theme_color_override("font_color", Color(0.98, 0.82, 0.48))
+	content.add_child(title)
+	startup_loading_label = Label.new()
+	startup_loading_label.name = "StartupLoadingStatus"
+	startup_loading_label.text = "جارٍ تجهيز المدينة الملكية..."
+	startup_loading_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	startup_loading_label.add_theme_font_size_override("font_size", 17)
+	startup_loading_label.add_theme_color_override("font_color", Color(0.91, 0.84, 0.68))
+	content.add_child(startup_loading_label)
+	startup_loading_progress = ProgressBar.new()
+	startup_loading_progress.name = "StartupLoadingProgress"
+	startup_loading_progress.custom_minimum_size = Vector2(420, 22)
+	startup_loading_progress.min_value = 0.0
+	startup_loading_progress.max_value = 100.0
+	startup_loading_progress.value = 0.0
+	startup_loading_progress.show_percentage = true
+	var progress_bg := StyleBoxFlat.new()
+	progress_bg.bg_color = Color(0.12, 0.09, 0.06)
+	progress_bg.border_color = Color(0.78, 0.57, 0.23)
+	progress_bg.set_border_width_all(2)
+	progress_bg.set_corner_radius_all(8)
+	startup_loading_progress.add_theme_stylebox_override("background", progress_bg)
+	var progress_fill := StyleBoxFlat.new()
+	progress_fill.bg_color = Color(0.86, 0.65, 0.27)
+	progress_fill.set_corner_radius_all(6)
+	startup_loading_progress.add_theme_stylebox_override("fill", progress_fill)
+	content.add_child(startup_loading_progress)
+
+
+func _set_startup_loading_progress(value: float, message: String) -> void:
+	if is_instance_valid(startup_loading_progress):
+		startup_loading_progress.value = value
+	if is_instance_valid(startup_loading_label):
+		startup_loading_label.text = message
+	await get_tree().process_frame
+
+
+func _initialize_game_world() -> void:
+	if _world_initialized or _world_initializing:
+		return
+	_world_initializing = true
+	_create_startup_loading_ui()
+	startup_loading_layer.visible = true
+	if is_instance_valid(mode_selection_layer):
+		mode_selection_layer.visible = false
+	await get_tree().process_frame
+
+	_create_ground()
+	await _set_startup_loading_progress(8.0, "تجهيز أرض المدينة...")
+	_create_city()
+	await _set_startup_loading_progress(18.0, "إنشاء الطرق والساحات...")
+	_create_approved_city_layout()
+	await _set_startup_loading_progress(48.0, "إنشاء المباني الملكية...")
+	_create_city_signage()
+	await _set_startup_loading_progress(54.0, "تجهيز اللوحات والإرشادات...")
+	_create_mobile_hud()
+	var initial_player := get_node_or_null("Player") as CharacterBody3D
+	if is_instance_valid(initial_player):
+		_last_safe_player_position = initial_player.global_position
+		_initial_player_spawn_position = initial_player.global_position
+		_initial_player_spawn_captured = true
+	var key_light := get_node_or_null("DirectionalLight3D")
+	if is_instance_valid(key_light):
+		key_light.add_to_group("quality_shadow_light")
+	await _set_startup_loading_progress(60.0, "تجهيز أدوات التحكم...")
+	_create_interactive_buildings()
+	await _set_startup_loading_progress(70.0, "تجهيز المباني التفاعلية...")
+	_create_desert_camp()
+	_create_pyramids_area()
+	await _set_startup_loading_progress(79.0, "تجهيز المناطق الملكية...")
+	_create_city_npc_population()
+	await _set_startup_loading_progress(85.0, "تجهيز الشخصيات الافتراضية...")
+	_create_navigation_destinations()
+	await _set_startup_loading_progress(90.0, "تجهيز التنقل داخل المدينة...")
+	_create_interior_transition_ui()
+	_create_palace_navigation_ui()
+	await _set_startup_loading_progress(95.0, "تجهيز واجهات المباني...")
+	_create_player_vehicle()
+	_create_founder_update_panel()
+	await _set_startup_loading_progress(100.0, "اكتمل تجهيز المدينة!")
+	_world_initialized = true
+	_world_initializing = false
+	if is_instance_valid(startup_loading_layer):
+		startup_loading_layer.visible = false
+	var player := get_node_or_null("Player")
+	if is_instance_valid(player):
+		player.set_process(true)
+		player.set_physics_process(true)
 
 
 func _create_city_npc_population() -> void:
@@ -2314,12 +2425,17 @@ func _on_city_reservation_release_completed(result: int, response_code: int, _he
 		push_warning("لم يؤكد دليل الجلسات تحرير الحجز؛ ستنهيه مهلة الحجز تلقائيًا.")
 
 func _enter_selected_game_mode() -> void:
-	if is_instance_valid(mode_selection_layer):
-		mode_selection_layer.visible = false
-	var player := get_node_or_null("Player")
-	if is_instance_valid(player):
-		player.set_process(true)
-		player.set_physics_process(true)
+	if _world_initialized:
+		if is_instance_valid(mode_selection_layer):
+			mode_selection_layer.visible = false
+		var existing_player := get_node_or_null("Player")
+		if is_instance_valid(existing_player):
+			existing_player.set_process(true)
+			existing_player.set_physics_process(true)
+		return
+	if _world_initializing:
+		return
+	_initialize_game_world()
 
 func _on_mode_status_changed(message: String) -> void:
 	if is_instance_valid(mode_status_label):
