@@ -1650,6 +1650,27 @@ func _create_city() -> void:
 			_create_box(self, "RoadMark_X_%s_%d" % [str(side), i], Vector3(3, 0.025, 0.16), Vector3(mark_x, 0.06, -45), Color(0.92, 0.86, 0.62))
 	_create_city_pedestrian_network()
 
+func _create_horizontal_curb_with_access_gaps(road_z: float, side: float, curb_z: float, curb_color: Color) -> void:
+	# Keep the curb continuous except for deliberate, aligned pedestrian entrances.
+	# The openings are 4.4 m wide, leaving a small tolerance around each 3.2 m walk.
+	var gap_centres: Array[float] = []
+	if side < 0.0:
+		match int(road_z):
+			-15: gap_centres = [-30.0, 30.0, 60.0]
+			15: gap_centres = [-60.0, 0.0, 60.0]
+			45: gap_centres = [-60.0, -30.0, 0.0, 30.0]
+	var cursor := -66.0
+	for gap_centre in gap_centres:
+		var gap_start := gap_centre - 2.2
+		if gap_start > cursor:
+			var length := gap_start - cursor
+			_create_box(self, "Curb_H_%d_%d_Segment" % [int(road_z), int(cursor)], Vector3(length, 0.22, 0.16), Vector3((cursor + gap_start) * 0.5, 0.11, curb_z), curb_color)
+		cursor = gap_centre + 2.2
+	if cursor < 66.0:
+		var length := 66.0 - cursor
+		_create_box(self, "Curb_H_%d_%d_Segment" % [int(road_z), int(cursor)], Vector3(length, 0.22, 0.16), Vector3((cursor + 66.0) * 0.5, 0.11, curb_z), curb_color)
+
+
 func _create_city_pedestrian_network() -> void:
 	var sidewalk_color := Color(0.58, 0.51, 0.40)
 	var curb_color := Color(0.78, 0.69, 0.53)
@@ -1657,7 +1678,7 @@ func _create_city_pedestrian_network() -> void:
 		for side in [-1.0, 1.0]:
 			var walk_z: float = road_z + side * 4.0
 			_create_box(self, "Sidewalk_H_%d_%d" % [int(road_z), int(side)], Vector3(132.0, 0.14, 1.7), Vector3(0.0, 0.07, walk_z), sidewalk_color)
-			_create_box(self, "Curb_H_%d_%d" % [int(road_z), int(side)], Vector3(132.0, 0.22, 0.16), Vector3(0.0, 0.11, road_z + side * 4.92), curb_color)
+			_create_horizontal_curb_with_access_gaps(road_z, side, road_z + side * 4.92, curb_color)
 	for road_x in [-15.0, 15.0]:
 		for side in [-1.0, 1.0]:
 			var walk_x: float = road_x + side * 3.65
