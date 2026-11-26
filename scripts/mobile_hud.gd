@@ -124,7 +124,8 @@ func _update_layout() -> void:
 	var scale_factor := clampf(short_side / 720.0, 0.58, 1.0)
 	var margin := 24.0 * scale_factor
 	_joystick_draw_radius = joystick_radius * scale_factor
-	joystick_center = Vector2(maxf(margin + _joystick_draw_radius, size.x * 0.12), size.y - margin - _joystick_draw_radius)
+	# إبقاء العصا أقرب إلى حافة اليسار لترك فصل بصري واضح بينها وبين أزرار الوظائف اليمنى.
+	joystick_center = Vector2(maxf(margin + _joystick_draw_radius, size.x * 0.08), size.y - margin - _joystick_draw_radius)
 	_camera_drag_scale = clampf(720.0 / maxf(360.0, size.y), 0.5, 1.8)
 
 func _draw() -> void:
