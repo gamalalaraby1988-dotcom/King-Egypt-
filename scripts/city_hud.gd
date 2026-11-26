@@ -234,6 +234,7 @@ func _set_local_player_phone_pose(enabled: bool) -> void:
 func _build() -> void:
 	root = Control.new()
 	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	root.layout_direction = Control.LAYOUT_DIRECTION_LTR
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(root)
 
