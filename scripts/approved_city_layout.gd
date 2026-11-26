@@ -1047,6 +1047,8 @@ func _build_royal_ship() -> void:
 	var ship := Node3D.new()
 	ship.name = "RoyalCivilizationsShip"
 	ship.position = Vector3(0, 0, 85)
+	# Enlarge the harbor landmark so it reads as the main FIVE CIVILIZATIONS SHIP from the city.
+	ship.scale = Vector3(2.4, 1.45, 2.4)
 	add_child(ship)
 	_box(ship, "RoyalShipHull", Vector3(4.8, 1.8, 17.0), Vector3(0, 1.0, 0), Color(0.16, 0.20, 0.23))
 	_box(ship, "RoyalShipGoldTrim", Vector3(5.0, 0.22, 16.0), Vector3(0, 1.92, 0), GOLD)
@@ -1410,10 +1412,10 @@ func _build_mountain_route() -> void:
 	# Each flight has a walkable sloped mesh and a matching StaticBody collider.
 	var ramp_points: Array[Vector3] = [
 		Vector3(-2.0, 0.18, -3.0),
-		Vector3(-11.0, 5.4, -3.0),
-		Vector3(-11.0, 10.6, -12.0),
-		Vector3(10.0, 15.8, -12.0),
-		Vector3(10.0, 21.0, -3.0)
+		Vector3(-42.0, 5.4, -3.0),
+		Vector3(-42.0, 10.6, -45.0),
+		Vector3(0.0, 15.8, -45.0),
+		Vector3(0.0, 21.0, -1.0)
 	]
 	for ramp_index in range(ramp_points.size() - 1):
 		var ramp_start: Vector3 = ramp_points[ramp_index]
@@ -1421,7 +1423,7 @@ func _build_mountain_route() -> void:
 		var ramp_delta := ramp_end - ramp_start
 		var ramp_length := ramp_delta.length()
 		var ramp_midpoint := (ramp_start + ramp_end) * 0.5
-		var ramp := _box(mountain, "SummitAccessRamp_%02d" % (ramp_index + 1), Vector3(3.8, 0.28, ramp_length), ramp_midpoint, SAND)
+		var ramp := _box(mountain, "SummitAccessRamp_%02d" % (ramp_index + 1), Vector3(5.0, 0.28, ramp_length), ramp_midpoint, SAND)
 		ramp.look_at_from_position(mountain.to_global(ramp_midpoint), mountain.to_global(ramp_end), Vector3.UP)
 		var ramp_body := StaticBody3D.new()
 		ramp_body.name = "SummitAccessRampCollision_%02d" % (ramp_index + 1)
@@ -1430,14 +1432,14 @@ func _build_mountain_route() -> void:
 		ramp_body.add_to_group("city_world_geometry")
 		var ramp_collision := CollisionShape3D.new()
 		var ramp_shape := BoxShape3D.new()
-		ramp_shape.size = Vector3(3.8, 0.32, ramp_length)
+		ramp_shape.size = Vector3(5.0, 0.32, ramp_length)
 		ramp_collision.shape = ramp_shape
 		ramp_body.add_child(ramp_collision)
 		mountain.add_child(ramp_body)
 		# Narrow gold edge markers make each ramp flight legible at a glance.
 		var ramp_side := Vector3(-ramp_delta.z, 0.0, ramp_delta.x).normalized()
 		for edge in [-1.0, 1.0]:
-			var edge_marker := _box(mountain, "SummitRampEdge", Vector3(0.12, 0.22, ramp_length), ramp_midpoint + ramp_side * edge * 1.92 + Vector3(0.0, 0.18, 0.0), GOLD)
+			var edge_marker := _box(mountain, "SummitRampEdge", Vector3(0.12, 0.22, ramp_length), ramp_midpoint + ramp_side * edge * 2.55 + Vector3(0.0, 0.18, 0.0), GOLD)
 			edge_marker.rotation = ramp.rotation
 
 	# Separate low-gradient access for cars and electric scooters. The original
