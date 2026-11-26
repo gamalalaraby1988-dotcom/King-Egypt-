@@ -269,14 +269,12 @@ func _process(_delta: float) -> void:
 	var player_needs_exit: bool = is_instance_valid(player) and (player.get("sitting") == true or player.get("animal_riding") == true)
 	if vehicle_occupied or scooter_occupied or jet_ski_occupied or player_needs_exit:
 		if is_instance_valid(vehicle_interaction_button):
-			vehicle_interaction_button.visible = true
+			# لا يوجد زر قيادة أو فرامل إضافي؛ العصا تتولى قيادة السيارة.
+			vehicle_interaction_button.visible = not vehicle_occupied
 			if jet_ski_occupied:
 				vehicle_interaction_button.text = "🚪↗"
 				vehicle_interaction_button.tooltip_text = "النزول من الجت سكي" if CityLanguage.get_language() == "ar" else "Exit jet ski"
-			elif vehicle_occupied:
-				vehicle_interaction_button.text = "⏹"
-				vehicle_interaction_button.tooltip_text = "فرامل" if CityLanguage.get_language() == "ar" else "Brake"
-			else:
+			elif not vehicle_occupied:
 				vehicle_interaction_button.text = "🚪↗"
 				vehicle_interaction_button.tooltip_text = "الخروج" if CityLanguage.get_language() == "ar" else "Exit"
 		if is_instance_valid(vehicle_exit_button):
@@ -780,7 +778,8 @@ func _toggle_vehicle_use() -> void:
 		return
 	if player.get("animal_riding") == true or player.get("sitting") == true:
 		return
-	_set_mobile_hud_active(false)
+	_set_mobile_hud_vehicle(city_vehicle)
+	_set_mobile_hud_active(true)
 	vehicle_occupied = true
 	_player_saved_collision_layer = player.collision_layer
 	_player_saved_collision_mask = player.collision_mask
@@ -803,14 +802,14 @@ func _toggle_vehicle_use() -> void:
 	city_vehicle.set_physics_process(true)
 	var vehicle_hud := city_vehicle.get_node_or_null("VehicleHUDLayer/VehicleHUD") as Control
 	if is_instance_valid(vehicle_hud):
-		vehicle_hud.visible = true
+		if vehicle_hud.has_method("_clear_controls"):
+			vehicle_hud.call("_clear_controls")
+		vehicle_hud.visible = false
 	var vehicle_camera := city_vehicle.get_node_or_null("VehicleCameraPivot/SpringArm3D/VehicleCamera") as Camera3D
 	if is_instance_valid(vehicle_camera):
 		vehicle_camera.current = true
 	if is_instance_valid(vehicle_interaction_button):
-		vehicle_interaction_button.text = "⏹"
-		vehicle_interaction_button.tooltip_text = "فرامل" if CityLanguage.get_language() == "ar" else "Brake"
-		vehicle_interaction_button.visible = true
+		vehicle_interaction_button.visible = false
 	if is_instance_valid(vehicle_exit_button):
 		vehicle_exit_button.visible = true
 
@@ -963,6 +962,7 @@ func _recover_vehicle_occupancy() -> void:
 		if is_instance_valid(player_camera):
 			player_camera.current = true
 	vehicle_occupied = false
+	_set_mobile_hud_vehicle(null)
 	_set_mobile_hud_active(is_instance_valid(player))
 	if is_instance_valid(vehicle_interaction_button):
 		vehicle_interaction_button.visible = false
@@ -1007,6 +1007,7 @@ func _exit_player_vehicle() -> void:
 	city_vehicle.call("set_steering", 0.0)
 	city_vehicle.set_physics_process(false)
 	vehicle_occupied = false
+	_set_mobile_hud_vehicle(null)
 	_set_mobile_hud_active(true)
 	if is_instance_valid(vehicle_interaction_button):
 		vehicle_interaction_button.visible = false
@@ -1719,6 +1720,12 @@ func _create_mobile_hud() -> void:
 		hud_layer.name = "CityActionHUD"
 		hud_layer.set_script(load("res://scripts/city_hud.gd"))
 		add_child(hud_layer)
+
+func _set_mobile_hud_vehicle(vehicle: CharacterBody3D) -> void:
+	var touch_hud := get_node_or_null("MobileHUD/TouchControls") as Control
+	if is_instance_valid(touch_hud) and touch_hud.has_method("set_controlled_vehicle"):
+		touch_hud.call("set_controlled_vehicle", vehicle)
+
 
 func _set_mobile_hud_active(active: bool) -> void:
 	var touch_hud := get_node_or_null("MobileHUD/TouchControls") as Control
