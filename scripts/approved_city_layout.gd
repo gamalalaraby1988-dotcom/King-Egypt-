@@ -1303,8 +1303,8 @@ func _build_mountain_route() -> void:
 	var lower := MeshInstance3D.new()
 	lower.name = "MountainLowerSlope"
 	var lower_mesh := CylinderMesh.new()
-	lower_mesh.top_radius = 1.8
-	lower_mesh.bottom_radius = 10.5
+	lower_mesh.top_radius = 5.5
+	lower_mesh.bottom_radius = 28.0
 	lower_mesh.height = 15.0
 	lower_mesh.radial_segments = 7
 	lower_mesh.rings = 3
@@ -1316,7 +1316,7 @@ func _build_mountain_route() -> void:
 	upper.name = "MountainUpperPeak"
 	var upper_mesh := CylinderMesh.new()
 	upper_mesh.top_radius = 0.0
-	upper_mesh.bottom_radius = 6.0
+	upper_mesh.bottom_radius = 15.0
 	upper_mesh.height = 12.0
 	upper_mesh.radial_segments = 7
 	upper_mesh.rings = 2
@@ -1411,10 +1411,12 @@ func _build_mountain_route() -> void:
 	# New four-flight switchback ramp joins the existing trail end to the plaza.
 	# Each flight has a walkable sloped mesh and a matching StaticBody collider.
 	var ramp_points: Array[Vector3] = [
-		Vector3(-2.0, 0.18, -3.0),
-		Vector3(-42.0, 5.4, -3.0),
-		Vector3(-42.0, 10.6, -45.0),
-		Vector3(0.0, 15.8, -45.0),
+		Vector3(-3.0, 0.18, 28.0),
+		Vector3(25.0, 3.65, 10.0),
+		Vector3(25.0, 7.12, -20.0),
+		Vector3(0.0, 10.59, -30.0),
+		Vector3(-25.0, 14.06, -20.0),
+		Vector3(-25.0, 17.53, 10.0),
 		Vector3(0.0, 21.0, -1.0)
 	]
 	for ramp_index in range(ramp_points.size() - 1):
