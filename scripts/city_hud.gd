@@ -21,6 +21,7 @@ var popup_body: Label
 var money_label: Button
 var chips_label: Button
 var gems_label: Button
+var wallet_bar: HBoxContainer
 var phone_popup: PanelContainer
 var phone_entry_button: Button
 var vehicle_store_list: VBoxContainer
@@ -98,6 +99,7 @@ func _ready() -> void:
 	if not AuthoritativeGameServer.safe_return_completed.is_connected(_on_safe_return_completed):
 		AuthoritativeGameServer.safe_return_completed.connect(_on_safe_return_completed)
 	_build()
+	_build_wallet_bar()
 	_build_player_interaction_popup()
 	_build_group_popup()
 	_build_group_chat_popup()
@@ -1153,15 +1155,68 @@ func _select_horus_color_from_phone(color_id: String) -> void:
 		vehicle_store_status.text = "لا يمكن اختيار لون غير مملوك."
 	_refresh_vehicle_store_phone()
 
+func _build_wallet_bar() -> void:
+	# شريط أرصدة صغير أعلى منتصف الشاشة حتى لا يحجب اللاعب أو مجال الرؤية.
+	wallet_bar = HBoxContainer.new()
+	wallet_bar.name = "CompactWalletBar"
+	wallet_bar.anchor_left = 0.5
+	wallet_bar.anchor_right = 0.5
+	wallet_bar.anchor_top = 0.0
+	wallet_bar.anchor_bottom = 0.0
+	wallet_bar.offset_left = -190.0
+	wallet_bar.offset_right = 190.0
+	wallet_bar.offset_top = 7.0
+	wallet_bar.offset_bottom = 34.0
+	wallet_bar.alignment = BoxContainer.ALIGNMENT_CENTER
+	wallet_bar.add_theme_constant_override("separation", 4)
+	wallet_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(wallet_bar)
+
+	money_label = _make_wallet_item("💵 0")
+	money_label.name = "PaperMoneyBalance"
+	wallet_bar.add_child(money_label)
+	chips_label = _make_wallet_item("🪙 0")
+	chips_label.name = "ChipsBalance"
+	wallet_bar.add_child(chips_label)
+	gems_label = _make_wallet_item("💎 0")
+	gems_label.name = "GemsBalance"
+	wallet_bar.add_child(gems_label)
+
+
+func _make_wallet_item(initial_text: String) -> Button:
+	var item := Button.new()
+	item.text = initial_text
+	item.custom_minimum_size = Vector2(104.0, 25.0)
+	item.add_theme_font_size_override("font_size", 12)
+	item.add_theme_color_override("font_color", Color(1.0, 0.88, 0.62, 1.0))
+	item.add_theme_stylebox_override("normal", _make_hud_panel_style())
+	item.add_theme_stylebox_override("hover", _make_hud_panel_style())
+	item.add_theme_stylebox_override("pressed", _make_hud_panel_style())
+	item.focus_mode = Control.FOCUS_NONE
+	item.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return item
+
+
+func _format_wallet_amount(amount: int) -> String:
+	var value := float(maxi(amount, 0))
+	if value >= 1000000000000.0:
+		return "%.2fT" % (value / 1000000000000.0)
+	if value >= 1000000000.0:
+		return "%.2fB" % (value / 1000000000.0)
+	if value >= 1000000.0:
+		return "%.2fM" % (value / 1000000.0)
+	return str(amount)
+
+
 func _refresh_wallet() -> void:
 	if not is_instance_valid(mission_manager):
 		return
 	if is_instance_valid(money_label):
-		money_label.text = "ذهب: %d  +" % floori(float(mission_manager.get("money")))
+		money_label.text = "💵 %s" % _format_wallet_amount(floori(float(mission_manager.get("money"))))
 	if is_instance_valid(chips_label):
-		chips_label.text = "رقائق: %d  +" % floori(float(mission_manager.get("chips")))
+		chips_label.text = "🪙 %s" % _format_wallet_amount(floori(float(mission_manager.get("chips"))))
 	if is_instance_valid(gems_label):
-		gems_label.text = "جواهر: %d" % WalletManager.get_balance("gems")
+		gems_label.text = "💎 %s" % _format_wallet_amount(WalletManager.get_balance("gems"))
 
 
 func _build_player_interaction_popup() -> void:
