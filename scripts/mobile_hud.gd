@@ -5,6 +5,7 @@ extends Control
 @export var camera_sensitivity: float = 0.006
 
 var player: CharacterBody3D
+var controlled_vehicle: CharacterBody3D
 var joystick_center := Vector2.ZERO
 var joystick_vector := Vector2.ZERO
 var joystick_finger := -1
@@ -64,6 +65,20 @@ func _on_interaction_button_pressed() -> void:
 		manager.call("interact")
 
 func _process(_delta: float) -> void:
+	# نفس عصا الحركة تتحكم في السيارة: أعلى للأمام، أسفل للخلف، يمين/يسار للتوجيه.
+	if is_instance_valid(controlled_vehicle):
+		if not visible:
+			_clear_vehicle_input()
+			return
+		var has_direction := absf(joystick_vector.y) > 0.12
+		controlled_vehicle.call("set_drive", has_direction)
+		controlled_vehicle.call("set_brake", false)
+		controlled_vehicle.call("set_reverse", has_direction and joystick_vector.y > 0.12)
+		controlled_vehicle.call("set_steering", joystick_vector.x)
+		if is_instance_valid(player):
+			player.set_mobile_move(Vector2.ZERO)
+			player.set_mobile_sprint(false)
+		return
 	if not is_instance_valid(player):
 		return
 	# Arcade seating owns camera input; discard any held joystick/camera touch
@@ -80,6 +95,21 @@ func _process(_delta: float) -> void:
 	# دفع عصا الاتجاه للأمام حتى قرب أقصى امتدادها يشغّل الجري دون زر مستقل.
 	var forward_sprint := joystick_vector.y <= -MOBILE_SPRINT_FORWARD_THRESHOLD and joystick_vector.length() >= MOBILE_SPRINT_FORWARD_THRESHOLD
 	player.set_mobile_sprint(forward_sprint)
+
+func set_controlled_vehicle(value: CharacterBody3D) -> void:
+	if is_instance_valid(controlled_vehicle) and controlled_vehicle != value:
+		_clear_vehicle_input()
+	controlled_vehicle = value
+	if is_instance_valid(controlled_vehicle):
+		_clear_vehicle_input()
+
+func _clear_vehicle_input() -> void:
+	if not is_instance_valid(controlled_vehicle):
+		return
+	controlled_vehicle.call("set_drive", false)
+	controlled_vehicle.call("set_brake", false)
+	controlled_vehicle.call("set_reverse", false)
+	controlled_vehicle.call("set_steering", 0.0)
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_RESIZED:
@@ -157,9 +187,13 @@ func _update_joystick(pos: Vector2) -> void:
 	queue_redraw()
 
 func _apply_camera_drag(delta_pos: Vector2) -> void:
-	if not is_instance_valid(player):
+	var pivot: Node3D
+	if is_instance_valid(controlled_vehicle):
+		pivot = controlled_vehicle.get_node_or_null("VehicleCameraPivot") as Node3D
+	elif is_instance_valid(player):
+		pivot = player.get_node_or_null("CameraPivot") as Node3D
+	else:
 		return
-	var pivot := player.get_node_or_null("CameraPivot") as Node3D
 	if pivot == null:
 		return
 	var sensitivity := camera_sensitivity * _camera_drag_scale
@@ -174,6 +208,7 @@ func _clear_touch_state() -> void:
 	camera_finger = -1
 	joystick_vector = Vector2.ZERO
 	mouse_camera_active = false
+	_clear_vehicle_input()
 	if is_instance_valid(player):
 		player.set_mobile_move(Vector2.ZERO)
 		player.set_mobile_sprint(false)
