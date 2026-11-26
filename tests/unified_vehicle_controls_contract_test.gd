@@ -6,88 +6,64 @@ func _initialize() -> void:
 func _run_vehicle_control_contract() -> void:
 	var vehicle_scene := load("res://scenes/vehicle.tscn") as PackedScene
 	var controller_script := load("res://scripts/vehicle_controller.gd") as Script
-	var hud_script := load("res://scripts/vehicle_hud.gd") as Script
-	if vehicle_scene == null or controller_script == null or hud_script == null:
-		push_error("Unified vehicle control resources failed to load.")
+	var mobile_hud_script := load("res://scripts/mobile_hud.gd") as Script
+	if vehicle_scene == null or controller_script == null or mobile_hud_script == null:
+		push_error("Vehicle or shared mobile joystick resources failed to load.")
 		quit(1)
 		return
 
 	var vehicle := vehicle_scene.instantiate() as CharacterBody3D
 	root.add_child(vehicle)
-	await process_frame
+	var hud := Control.new()
+	hud.set_script(mobile_hud_script)
+	root.add_child(hud)
+	hud.set("player", null)
+	hud.call("set_controlled_vehicle", vehicle)
+	hud.set("visible", true)
 
-	var cabin := vehicle.get_node_or_null("Cabin") as MeshInstance3D
-	var cabin_material := cabin.material_override as BaseMaterial3D if is_instance_valid(cabin) else null
-	if cabin_material == null or cabin_material.transparency != BaseMaterial3D.TRANSPARENCY_ALPHA:
-		push_error("Vehicle cabin is not transparent enough to show the seated avatar.")
-		vehicle.queue_free()
-		quit(1)
-		return
-
-	var main_source := FileAccess.get_file_as_string("res://scripts/main.gd")
-	if not main_source.contains("vehicle_exit_button") or not main_source.contains("_on_contextual_interaction_down") or not main_source.contains("_sync_vehicle_occupant_pose"):
-		push_error("Main scene is missing the separate exit, contextual brake, or visible driver-seat binding.")
-		vehicle.queue_free()
-		quit(1)
-		return
-
-	var hud := vehicle.get_node_or_null("VehicleHUDLayer/VehicleHUD") as Control
-	if hud == null or not hud.has_method("_update_layout") or not hud.has_method("_press") or not hud.has_method("_clear_controls"):
-		push_error("Vehicle HUD is missing its current touch-control contract.")
-		vehicle.queue_free()
-		quit(1)
-		return
-
-	hud.call("_update_layout")
-	var drive_rect: Rect2 = hud.get("drive_rect")
-	var brake_rect: Rect2 = hud.get("brake_rect")
-	if drive_rect.size == Vector2.ZERO or brake_rect.size == Vector2.ZERO:
-		push_error("Vehicle drive or brake touch target has no layout.")
-		vehicle.queue_free()
-		quit(1)
-		return
-
-	# Exercise the current press-and-hold drive control, not the retired joystick API.
-	hud.call("_press", 0, drive_rect.get_center())
-	if int(hud.get("drive_touch")) != 0:
-		push_error("Vehicle HUD failed to capture the drive touch.")
-		vehicle.queue_free()
-		quit(1)
-		return
+	# Push the shared joystick forward and steer right.
+	hud.set("joystick_vector", Vector2(0.55, -1.0))
 	hud.call("_process", 0.016)
 	if not bool(vehicle.get("drive_pressed")):
-		push_error("Vehicle controller did not receive the held drive input.")
-		vehicle.queue_free()
+		push_error("Shared joystick did not drive the vehicle forward.")
+		quit(1)
+		return
+	if bool(vehicle.get("reverse_requested")):
+		push_error("Forward joystick input incorrectly selected reverse.")
+		quit(1)
+		return
+	if absf(float(vehicle.get("steering_input")) - 0.55) > 0.01:
+		push_error("Shared joystick horizontal input did not steer the vehicle.")
 		quit(1)
 		return
 
-	# Brake is an independent touch target and must reach the vehicle controller.
-	hud.call("_press", 1, brake_rect.get_center())
-	if int(hud.get("brake_touch")) != 1:
-		push_error("Vehicle HUD failed to capture the independent brake touch.")
-		vehicle.queue_free()
-		quit(1)
-		return
+	# Pull the same joystick down to reverse.
+	hud.set("joystick_vector", Vector2(-0.35, 0.8))
 	hud.call("_process", 0.016)
-	if not bool(vehicle.get("brake_pressed")):
-		push_error("Vehicle controller did not receive the brake input.")
-		vehicle.queue_free()
+	if not bool(vehicle.get("drive_pressed")) or not bool(vehicle.get("reverse_requested")):
+		push_error("Shared joystick did not select reverse while pulled down.")
 		quit(1)
 		return
 
-	# Clearing controls must release every held command.
-	hud.call("_clear_controls")
-	if int(hud.get("drive_touch")) != -1 or int(hud.get("brake_touch")) != -1:
-		push_error("Vehicle HUD retained a touch after controls were cleared.")
-		vehicle.queue_free()
+	# Releasing the joystick must stop and clear steering/reverse.
+	hud.set("joystick_vector", Vector2.ZERO)
+	hud.call("_process", 0.016)
+	if bool(vehicle.get("drive_pressed")) or bool(vehicle.get("reverse_requested")):
+		push_error("Vehicle kept moving after the shared joystick was released.")
 		quit(1)
 		return
-	if bool(vehicle.get("drive_pressed")) or bool(vehicle.get("brake_pressed")) or bool(vehicle.get("reverse_requested")):
-		push_error("Vehicle controller retained a movement or brake command after controls cleared.")
-		vehicle.queue_free()
+	if absf(float(vehicle.get("steering_input"))) > 0.01:
+		push_error("Vehicle steering remained active after joystick release.")
 		quit(1)
 		return
 
+	hud.call("_clear_touch_state")
+	if bool(vehicle.get("drive_pressed")) or bool(vehicle.get("brake_pressed")):
+		push_error("Vehicle controls were not cleared with the mobile HUD.")
+		quit(1)
+		return
+
+	hud.queue_free()
 	vehicle.queue_free()
-	print("Unified vehicle control contract tests passed.")
+	print("Shared mobile joystick vehicle control contract tests passed.")
 	quit(0)
