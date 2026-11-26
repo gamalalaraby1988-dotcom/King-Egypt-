@@ -7,7 +7,7 @@ extends CharacterBody3D
 @export var gravity: float = 20.0
 @export var max_step_height: float = 0.38
 @export var step_forward_probe: float = 0.32
-@export var turn_speed: float = 10.0
+@export var turn_speed: float = 14.0
 
 var mobile_move: Vector2 = Vector2.ZERO
 var mobile_sprint: bool = false
@@ -147,11 +147,10 @@ func _physics_process(delta: float) -> void:
 
 	var basis := camera_pivot.global_transform.basis
 	var forward := -basis.z
-	var right := basis.x
 	forward.y = 0.0
-	right.y = 0.0
 	forward = forward.normalized()
-	right = right.normalized()
+	# اشتق محور اليمين من الأمام الأفقي لضمان تعامد اتجاهي الحركة.
+	var right := forward.cross(Vector3.UP).normalized()
 	var world_direction := (right * direction.x + forward * -direction.z).normalized()
 	var running := Input.is_action_pressed("sprint") or mobile_sprint
 	var target_speed := (8.0 if running else 6.0) if animal_riding else (run_speed if running else walk_speed)
@@ -165,7 +164,7 @@ func _physics_process(delta: float) -> void:
 		velocity.y = 0.0
 	if world_direction.length() > 0.1:
 		var target_angle := atan2(world_direction.x, -world_direction.z)
-		_set_body_yaw_preserving_camera(lerp_angle(rotation.y, target_angle, turn_speed * delta))
+		_set_body_yaw_preserving_camera(rotate_toward(rotation.y, target_angle, turn_speed * delta))
 	_try_step_up(delta)
 	move_and_slide()
 	var planar_speed := Vector2(velocity.x, velocity.z).length()
@@ -190,11 +189,10 @@ func _process_online_input() -> void:
 		direction = direction.normalized()
 	var basis := camera_pivot.global_transform.basis
 	var forward := -basis.z
-	var right := basis.x
 	forward.y = 0.0
-	right.y = 0.0
 	forward = forward.normalized()
-	right = right.normalized()
+	# اشتق محور اليمين من الأمام الأفقي لضمان تعامد اتجاهي الحركة.
+	var right := forward.cross(Vector3.UP).normalized()
 	var world_direction := (right * direction.x + forward * -direction.z).normalized()
 	var running := Input.is_action_pressed("sprint") or mobile_sprint
 	AuthoritativeGameServer.send_movement_input(world_direction, running)
