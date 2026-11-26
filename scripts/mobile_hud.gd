@@ -19,7 +19,49 @@ func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_update_layout()
+	_build_interaction_button()
 	queue_redraw()
+
+func _build_interaction_button() -> void:
+	# زر التفاعل اليدوي الكبير — ثابت وواضح في يمين الشاشة مثل التصميم المعتمد.
+	var viewport_size := get_viewport_rect().size
+	var scale_factor := clampf(minf(viewport_size.x, viewport_size.y) / 720.0, 0.62, 1.0)
+	var button_size := 76.0 * scale_factor
+	var button := Button.new()
+	button.name = "PlayerInteractionButton"
+	button.text = "✋"
+	button.tooltip_text = "تفاعل"
+	button.custom_minimum_size = Vector2(button_size, button_size)
+	button.anchor_left = 1.0
+	button.anchor_right = 1.0
+	button.anchor_top = 1.0
+	button.anchor_bottom = 1.0
+	button.offset_left = -button_size - 22.0 * scale_factor
+	button.offset_right = -22.0 * scale_factor
+	button.offset_top = -button_size - 148.0 * scale_factor
+	button.offset_bottom = -148.0 * scale_factor
+	button.add_theme_font_size_override("font_size", 34)
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.035, 0.045, 0.06, 0.92)
+	style.border_color = Color(0.88, 0.70, 0.34, 0.98)
+	style.set_border_width_all(2)
+	style.set_corner_radius_all(38)
+	button.add_theme_stylebox_override("normal", style)
+	button.add_theme_stylebox_override("hover", style)
+	button.add_theme_stylebox_override("pressed", style)
+	button.pressed.connect(_on_interaction_button_pressed)
+	button.mouse_filter = Control.MOUSE_FILTER_STOP
+	add_child(button)
+
+func _on_interaction_button_pressed() -> void:
+	if not is_instance_valid(player):
+		return
+	var scene := get_tree().current_scene
+	if not is_instance_valid(scene):
+		return
+	var manager := scene.get_node_or_null("MissionManager")
+	if is_instance_valid(manager) and manager.has_method("interact"):
+		manager.call("interact")
 
 func _process(_delta: float) -> void:
 	if not is_instance_valid(player):
