@@ -59,6 +59,8 @@ var social_friend_list: VBoxContainer
 var social_chat_log: RichTextLabel
 var social_chat_input: LineEdit
 var social_status_label: Label
+var social_content_columns: HBoxContainer
+var social_group_page: ScrollContainer
 var social_add_code_input: LineEdit
 var social_requests_cache: Array = []
 var social_friends_cache: Array = []
@@ -430,13 +432,33 @@ func _build_social_popup() -> void:
 	friends_tab.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	friends_tab.pressed.connect(_show_social_tab.bind("friends"))
 	tabs.add_child(friends_tab)
+	var group_tab := Button.new()
+	group_tab.text = "المجموعة"
+	group_tab.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	group_tab.pressed.connect(_show_social_tab.bind("group"))
+	tabs.add_child(group_tab)
 	var public_tab := Button.new()
 	public_tab.text = "العامة"
 	public_tab.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	public_tab.pressed.connect(_show_social_tab.bind("public"))
 	tabs.add_child(public_tab)
 
+	social_group_page = ScrollContainer.new()
+	social_group_page.name = "SocialGroupTabPage"
+	social_group_page.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	social_group_page.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	social_group_page.visible = false
+	outer.add_child(social_group_page)
+	if is_instance_valid(group_popup) and group_popup.get_child_count() > 0:
+		var group_content := group_popup.get_child(0) as Control
+		if is_instance_valid(group_content):
+			group_content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			group_content.reparent(social_group_page)
+		group_popup.visible = false
+
 	var columns := HBoxContainer.new()
+	columns.name = "SocialFriendsAndPublicPages"
+	social_content_columns = columns
 	columns.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	columns.add_theme_constant_override("separation", 6)
 	outer.add_child(columns)
@@ -523,6 +545,14 @@ func _show_social_tab(tab: String) -> void:
 		return
 	for child in social_friend_list.get_children():
 		child.queue_free()
+	if is_instance_valid(social_content_columns):
+		social_content_columns.visible = tab != "group"
+	if is_instance_valid(social_group_page):
+		social_group_page.visible = tab == "group"
+	if tab == "group":
+		_refresh_group_popup()
+		social_status_label.text = "مجموعة واحدة بحد أقصى أربعة أعضاء، تشمل القائد وثلاثة أعضاء."
+		return
 	if tab == "friends":
 		social_chat_log.text = "المحادثات الخاصة ستُفعّل في مرحلة مستقلة بعد تجهيز خادم الرسائل."
 		social_chat_input.placeholder_text = "المحادثة الخاصة غير متاحة بعد"
@@ -1306,14 +1336,18 @@ func _build_group_popup() -> void:
 	var close := Button.new()
 	close.text = "✕"
 	close.custom_minimum_size = Vector2(38, 34)
-	close.pressed.connect(func(): group_popup.visible = false)
+	close.pressed.connect(func():
+		if is_instance_valid(social_popup):
+			social_popup.visible = false
+		else:
+			group_popup.visible = false
+	)
 	box.add_child(close)
 	_refresh_group_popup()
 
 
 func _open_group_popup() -> void:
-	_refresh_group_popup()
-	group_popup.visible = true
+	_open_social_popup("group")
 
 
 func _refresh_group_popup() -> void:
@@ -1654,6 +1688,8 @@ func _open_group_chat() -> void:
 		_build_group_chat_popup()
 	group_chat_popup.visible = true
 	group_popup.visible = false
+	if is_instance_valid(social_popup):
+		social_popup.visible = false
 	group_chat_input.grab_focus()
 
 
