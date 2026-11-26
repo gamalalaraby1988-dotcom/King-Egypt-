@@ -99,8 +99,8 @@ func _start_rpc(rpc_name: String, payload: Dictionary, action: String) -> void:
 	if not base_url.begins_with("https://") or publishable_key.is_empty():
 		operation_finished.emit(action, false, "service_not_configured")
 		return
-	var token := PlayerAccountAuthClient.get_access_token()
-	var user_id := PlayerAccountAuthClient.get_user_id()
+	var token: String = PlayerAccountAuthClient.get_access_token()
+	var user_id: String = PlayerAccountAuthClient.get_user_id()
 	var headers := PackedStringArray([
 		"Content-Type: application/json",
 		"Accept: application/json",

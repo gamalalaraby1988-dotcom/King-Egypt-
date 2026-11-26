@@ -64,6 +64,8 @@ var social_requests_cache: Array = []
 var social_friends_cache: Array = []
 var social_active_tab := "friends"
 var emotes_popup: PanelContainer
+var _wallet_refresh_elapsed := 0.0
+const WALLET_REFRESH_INTERVAL := 0.5
 
 
 const GROUP_MAX_MEMBERS := 4
@@ -98,6 +100,7 @@ func _ready() -> void:
 	_build_group_chat_popup()
 	_build_social_popup()
 	_build_phone_entry_button()
+	_build_social_entry_button()
 	call_deferred("_capture_safe_spawn")
 	if not PlayerFriendsClient.friends_updated.is_connected(_on_social_friends_updated):
 		PlayerFriendsClient.friends_updated.connect(_on_social_friends_updated)
@@ -125,12 +128,16 @@ func _exit_tree() -> void:
 		if is_instance_valid(meeting_marker):
 			meeting_marker.queue_free()
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	if not is_instance_valid(mission_manager) and is_instance_valid(main_scene):
 		mission_manager = main_scene.get_node_or_null("MissionManager")
 	if not safe_return_position_captured:
 		_capture_safe_spawn()
-	_refresh_wallet()
+	# Wallet values do not need to be polled every rendered frame.
+	_wallet_refresh_elapsed += delta
+	if _wallet_refresh_elapsed >= WALLET_REFRESH_INTERVAL:
+		_wallet_refresh_elapsed = 0.0
+		_refresh_wallet()
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -179,6 +186,36 @@ func _build_phone_entry_button() -> void:
 	root.add_child(phone_entry_button)
 
 
+func _build_social_entry_button() -> void:
+	# أيقونة النافذة الاجتماعية بجوار زر السكوتر مباشرةً في أسفل يمين الشاشة.
+	var viewport_size := get_viewport().get_visible_rect().size
+	var scale_factor := clampf(minf(viewport_size.x, viewport_size.y) / 720.0, 0.58, 1.0)
+	var button_width := 42.0 * scale_factor
+	var button_height := 36.0 * scale_factor
+	var vehicle_button_width := 142.0 * scale_factor
+	var right_margin := 7.0 * scale_factor
+	var bottom_margin := 8.0 * scale_factor
+	var control_height := 36.0 * scale_factor
+	var control_gap := 4.0 * scale_factor
+	var entry := Button.new()
+	entry.name = "SocialHubEntryButton"
+	entry.text = "👥"
+	entry.tooltip_text = "الأصدقاء والمجموعات والدردشة العامة والخاصة"
+	entry.custom_minimum_size = Vector2(button_width, button_height)
+	entry.anchor_left = 1.0
+	entry.anchor_right = 1.0
+	entry.anchor_top = 1.0
+	entry.anchor_bottom = 1.0
+	entry.offset_left = -(vehicle_button_width + right_margin + 5.0 * scale_factor + button_width)
+	entry.offset_right = -(vehicle_button_width + right_margin + 5.0 * scale_factor)
+	entry.offset_top = -(bottom_margin + control_height * 3.0 + control_gap * 2.0)
+	entry.offset_bottom = entry.offset_top + button_height
+	entry.add_theme_font_size_override("font_size", 19)
+	entry.add_theme_stylebox_override("normal", _make_hud_panel_style())
+	entry.pressed.connect(func(): _open_social_popup("friends"))
+	root.add_child(entry)
+
+
 func _on_phone_entry_pressed() -> void:
 	_open_vehicle_store_phone()
 
@@ -195,49 +232,7 @@ func _build() -> void:
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(root)
 
-	# أزرار المدينة على اليسار؛ نترك الجانب الأيمن لنافذة الأصدقاء والمحادثات.
-	_build_season_entry()
-	var dock := PanelContainer.new()
-	dock.name = "LeftCityDock"
-	dock.anchor_left = 0.012
-	dock.anchor_right = 0.012
-	dock.anchor_top = 0.15
-	dock.anchor_bottom = 0.68
-	dock.offset_left = 0
-	dock.offset_right = 143
-	dock.add_theme_stylebox_override("panel", _make_hud_panel_style())
-	root.add_child(dock)
-
-	var scroll := ScrollContainer.new()
-	scroll.name = "CityDockScroll"
-	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	dock.add_child(scroll)
-
-	var actions := VBoxContainer.new()
-	actions.name = "CityDockActions"
-	actions.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	actions.add_theme_constant_override("separation", 4)
-	scroll.add_child(actions)
-
-	money_label = _make_button(actions, "ذهب: 0 +", "wallet")
-	chips_label = _make_button(actions, "رقائق: 0 +", "wallet")
-	gems_label = _make_button(actions, "جواهر: 0", "wallet")
-	_make_button(actions, "👤 الملف", "profile")
-	_make_button(actions, "📜 المهام", "missions")
-	_make_button(actions, "🎁 المكافآت", "rewards")
-	_make_button(actions, "🏆 الإنجازات", "missions")
-	_make_button(actions, "👑 الفعاليات", "events")
-	_make_button(actions, "📱 الهاتف", "phone")
-	_make_button(actions, "🗺 الخريطة", "map")
-	_make_button(actions, "🐈 الحيوانات", "pets")
-	_make_button(actions, "💬 محادثة", "chat")
-	_make_button(actions, "👥 أصدقاء", "social")
-	_make_button(actions, "🛡 مجموعتي", "group")
-	_make_button(actions, "😊 تعبيرات", "emotes")
-	_make_button(actions, "🎉 حفلة", "party")
-	_make_button(actions, "⚙ الإعدادات", "settings")
+	# واجهة التحكم الأساسية على اليمين؛ عصا الحركة تبقى في أسفل اليسار.
 
 	popup = PanelContainer.new()
 	popup.anchor_left = 0.5

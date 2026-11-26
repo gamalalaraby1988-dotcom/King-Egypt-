@@ -18,13 +18,30 @@ func _capture_previews() -> void:
 	root.add_child(production_scene)
 	current_scene = production_scene
 	await process_frame
+	# Production world generation is deferred until a game mode is selected.
+	# Enter through the same startup path used by the offline player before capturing it.
+	if current_scene.has_method("_enter_selected_game_mode"):
+		current_scene.call("_enter_selected_game_mode")
+	var world_ready := false
+	for _frame in range(600):
+		if is_instance_valid(current_scene.get_node_or_null("ApprovedCityLayout/RoyalJetSkiCourse")):
+			world_ready = true
+			break
+		await process_frame
+	if not world_ready:
+		push_error("The production city did not finish its deferred startup loading.")
+		quit(1)
+		return
 	for _frame in range(12):
 		await process_frame
 
-	# Hide only the startup mode-selection overlay for clean production-scene renders.
+	# Hide any remaining entry/loading overlays for clean production-scene renders.
 	var mode_overlay := current_scene.get_node_or_null("GameModeSelection") as CanvasLayer
 	if is_instance_valid(mode_overlay):
 		mode_overlay.visible = false
+	var startup_overlay := current_scene.get_node_or_null("CityStartupLoading") as CanvasLayer
+	if is_instance_valid(startup_overlay):
+		startup_overlay.visible = false
 	await process_frame
 
 	# Capture the actual five procedural race rings from the production city scene.

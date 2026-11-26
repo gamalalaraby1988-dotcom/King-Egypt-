@@ -46,10 +46,12 @@ func request_founder_entitlement_with_access_token(access_token: String) -> bool
 	return true
 
 func _api_base_url() -> String:
-	return str(ProjectSettings.get_setting(API_BASE_SETTING, "")).strip_edges().trim_suffix("/")
+	var setting := "founder/auth/test_api_base_url" if OS.has_feature("TEST") else API_BASE_SETTING
+	return str(ProjectSettings.get_setting(setting, "")).strip_edges().trim_suffix("/")
 
 func _publishable_key() -> String:
-	return str(ProjectSettings.get_setting(PUBLISHABLE_KEY_SETTING, "")).strip_edges()
+	var setting := "founder/auth/test_publishable_key" if OS.has_feature("TEST") else PUBLISHABLE_KEY_SETTING
+	return str(ProjectSettings.get_setting(setting, "")).strip_edges()
 
 func _on_request_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
 	_request_pending = false

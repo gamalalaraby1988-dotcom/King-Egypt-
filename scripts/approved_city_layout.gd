@@ -9,6 +9,7 @@ const IVORY := Color(0.82, 0.77, 0.65)
 const SAND := Color(0.62, 0.48, 0.31)
 const TEAL := Color(0.10, 0.42, 0.43)
 const DARK := Color(0.12, 0.16, 0.17)
+const PEDESTRIAN_ACCESS_WIDTH := 3.2
 
 func _ready() -> void:
 	name = "ApprovedCityLayout"
@@ -1265,13 +1266,20 @@ func _build_pedestrian_green_pockets() -> void:
 		_path_segment(self, "PocketSouthWalk_%02d" % (index + 1), Vector3(centre.x, 0.12, centre.y + 5.0), Vector3(centre.x, 0.12, lower_road_z), 2.4, SAND)
 
 func _path_segment(parent: Node3D, label: String, start: Vector3, finish: Vector3, width: float, color: Color) -> void:
+	var is_building_access := label.contains("EntranceWalk") or label.contains("FrontWalk") or label.contains("EntranceTurn")
+	var final_width := PEDESTRIAN_ACCESS_WIDTH if is_building_access else width
 	var delta := finish - start
-	var segment_size := Vector3(width, 0.12, delta.length())
+	var segment_size := Vector3(final_width, 0.12, delta.length())
 	var segment_position := (start + finish) * 0.5
 	var segment := _box(parent, label, segment_size, segment_position, color)
 	var segment_rotation := atan2(delta.x, delta.z)
 	segment.rotation.y = segment_rotation
-	# Every access path is physically walkable, not only a visible strip.
+	if is_building_access:
+		segment.add_to_group("city_pedestrian_access")
+		segment.set_meta("access_width", final_width)
+		segment.set_meta("access_start", start)
+		segment.set_meta("access_finish", finish)
+	# The collision strip exactly matches the visible access path.
 	var body := StaticBody3D.new()
 	body.name = label + "WalkCollision"
 	body.position = segment_position
@@ -1279,7 +1287,7 @@ func _path_segment(parent: Node3D, label: String, start: Vector3, finish: Vector
 	body.add_to_group("city_world_geometry")
 	var collision := CollisionShape3D.new()
 	var shape := BoxShape3D.new()
-	shape.size = Vector3(width, 0.22, delta.length())
+	shape.size = Vector3(final_width, 0.22, delta.length())
 	collision.shape = shape
 	body.add_child(collision)
 	parent.add_child(body)

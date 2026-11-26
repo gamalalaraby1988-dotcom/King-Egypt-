@@ -6,6 +6,11 @@ const RemotePlayerVisual = preload("res://scripts/remote_player_visual.gd")
 @export var city_half_size: int = 3
 @export var block_spacing: float = 24.0
 
+var startup_loading_layer: CanvasLayer
+var startup_loading_label: Label
+var startup_loading_progress: ProgressBar
+var _world_initialized := false
+var _world_initializing := false
 var interior_root: Node3D = null
 var interior_player: CharacterBody3D = null
 var interior_return_transform: Transform3D
@@ -66,29 +71,9 @@ func _ready() -> void:
 		_create_desert_camp()
 		_create_pyramids_area()
 		return
-	_create_ground()
-	_create_city()
-	_create_approved_city_layout()
-	_create_city_signage()
-	_create_mobile_hud()
-	var initial_player := get_node_or_null("Player") as CharacterBody3D
-	if is_instance_valid(initial_player):
-		_last_safe_player_position = initial_player.global_position
-		_initial_player_spawn_position = initial_player.global_position
-		_initial_player_spawn_captured = true
-	var key_light := get_node_or_null("DirectionalLight3D")
-	if key_light:
-		key_light.add_to_group("quality_shadow_light")
-	_create_interactive_buildings()
-	_create_desert_camp()
-	_create_pyramids_area()
-	_create_city_npc_population()
-	_create_navigation_destinations()
-	_create_interior_transition_ui()
-	_create_palace_navigation_ui()
-	_create_player_vehicle()
+	# The entry screen is now the first client UI. City geometry is deliberately
+	# deferred until a game mode is selected, so the city cannot appear behind it.
 	_create_mode_selection_ui()
-	_create_founder_update_panel()
 	GameModeManager.status_changed.connect(_on_mode_status_changed)
 	GameModeManager.online_connected.connect(_on_mode_connected)
 	AuthoritativeGameServer.authentication_completed.connect(_on_player_server_authenticated)
@@ -97,6 +82,134 @@ func _ready() -> void:
 	AuthoritativeGameServer.jet_ski_unmount_result_received.connect(_on_jet_ski_unmount_result_received)
 	AuthoritativeGameServer.jet_ski_authoritative_state_received.connect(_on_jet_ski_authoritative_state_received)
 	GameModeManager.online_disconnected.connect(_on_mode_disconnected)
+
+
+func _create_startup_loading_ui() -> void:
+	if is_instance_valid(startup_loading_layer):
+		return
+	startup_loading_layer = CanvasLayer.new()
+	startup_loading_layer.name = "CityStartupLoading"
+	startup_loading_layer.layer = 110
+	add_child(startup_loading_layer)
+	var backdrop := ColorRect.new()
+	backdrop.name = "RoyalLoadingBackdrop"
+	backdrop.color = Color(0.012, 0.009, 0.006, 1.0)
+	backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	startup_loading_layer.add_child(backdrop)
+	var frame := Panel.new()
+	frame.name = "RoyalLoadingFrame"
+	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	frame.offset_left = 24
+	frame.offset_top = 24
+	frame.offset_right = -24
+	frame.offset_bottom = -24
+	var frame_style := StyleBoxFlat.new()
+	frame_style.bg_color = Color(0.035, 0.025, 0.014, 0.0)
+	frame_style.border_color = Color(0.78, 0.57, 0.23, 0.95)
+	frame_style.set_border_width_all(2)
+	frame_style.set_corner_radius_all(12)
+	frame.add_theme_stylebox_override("panel", frame_style)
+	backdrop.add_child(frame)
+	var content := VBoxContainer.new()
+	content.name = "LoadingContent"
+	content.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	content.position = Vector2(-230, -75)
+	content.size = Vector2(460, 150)
+	content.alignment = BoxContainer.ALIGNMENT_CENTER
+	content.add_theme_constant_override("separation", 18)
+	backdrop.add_child(content)
+	var title := Label.new()
+	title.text = "𓂀   KING OF EGYPT CITY   𓂀"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 24)
+	title.add_theme_color_override("font_color", Color(0.98, 0.82, 0.48))
+	content.add_child(title)
+	startup_loading_label = Label.new()
+	startup_loading_label.name = "StartupLoadingStatus"
+	startup_loading_label.text = "جارٍ تجهيز المدينة الملكية..."
+	startup_loading_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	startup_loading_label.add_theme_font_size_override("font_size", 17)
+	startup_loading_label.add_theme_color_override("font_color", Color(0.91, 0.84, 0.68))
+	content.add_child(startup_loading_label)
+	startup_loading_progress = ProgressBar.new()
+	startup_loading_progress.name = "StartupLoadingProgress"
+	startup_loading_progress.custom_minimum_size = Vector2(420, 22)
+	startup_loading_progress.min_value = 0.0
+	startup_loading_progress.max_value = 100.0
+	startup_loading_progress.value = 0.0
+	startup_loading_progress.show_percentage = true
+	var progress_bg := StyleBoxFlat.new()
+	progress_bg.bg_color = Color(0.12, 0.09, 0.06)
+	progress_bg.border_color = Color(0.78, 0.57, 0.23)
+	progress_bg.set_border_width_all(2)
+	progress_bg.set_corner_radius_all(8)
+	startup_loading_progress.add_theme_stylebox_override("background", progress_bg)
+	var progress_fill := StyleBoxFlat.new()
+	progress_fill.bg_color = Color(0.86, 0.65, 0.27)
+	progress_fill.set_corner_radius_all(6)
+	startup_loading_progress.add_theme_stylebox_override("fill", progress_fill)
+	content.add_child(startup_loading_progress)
+
+
+func _set_startup_loading_progress(value: float, message: String) -> void:
+	if is_instance_valid(startup_loading_progress):
+		startup_loading_progress.value = value
+	if is_instance_valid(startup_loading_label):
+		startup_loading_label.text = message
+	await get_tree().process_frame
+
+
+func _initialize_game_world() -> void:
+	if _world_initialized or _world_initializing:
+		return
+	_world_initializing = true
+	_create_startup_loading_ui()
+	startup_loading_layer.visible = true
+	if is_instance_valid(mode_selection_layer):
+		mode_selection_layer.visible = false
+	await get_tree().process_frame
+
+	_create_ground()
+	await _set_startup_loading_progress(8.0, "تجهيز أرض المدينة...")
+	_create_city()
+	await _set_startup_loading_progress(18.0, "إنشاء الطرق والساحات...")
+	_create_approved_city_layout()
+	await _set_startup_loading_progress(48.0, "إنشاء المباني الملكية...")
+	_create_city_signage()
+	await _set_startup_loading_progress(54.0, "تجهيز اللوحات والإرشادات...")
+	_create_mobile_hud()
+	var initial_player := get_node_or_null("Player") as CharacterBody3D
+	if is_instance_valid(initial_player):
+		_last_safe_player_position = initial_player.global_position
+		_initial_player_spawn_position = initial_player.global_position
+		_initial_player_spawn_captured = true
+	var key_light := get_node_or_null("DirectionalLight3D")
+	if is_instance_valid(key_light):
+		key_light.add_to_group("quality_shadow_light")
+	await _set_startup_loading_progress(60.0, "تجهيز أدوات التحكم...")
+	_create_interactive_buildings()
+	await _set_startup_loading_progress(70.0, "تجهيز المباني التفاعلية...")
+	_create_desert_camp()
+	_create_pyramids_area()
+	await _set_startup_loading_progress(79.0, "تجهيز المناطق الملكية...")
+	_create_city_npc_population()
+	await _set_startup_loading_progress(85.0, "تجهيز الشخصيات الافتراضية...")
+	_create_navigation_destinations()
+	await _set_startup_loading_progress(90.0, "تجهيز التنقل داخل المدينة...")
+	_create_interior_transition_ui()
+	_create_palace_navigation_ui()
+	await _set_startup_loading_progress(95.0, "تجهيز واجهات المباني...")
+	_create_player_vehicle()
+	_create_founder_update_panel()
+	await _set_startup_loading_progress(100.0, "اكتمل تجهيز المدينة!")
+	_world_initialized = true
+	_world_initializing = false
+	if is_instance_valid(startup_loading_layer):
+		startup_loading_layer.visible = false
+	var player := get_node_or_null("Player")
+	if is_instance_valid(player):
+		player.set_process(true)
+		player.set_physics_process(true)
 
 
 func _create_city_npc_population() -> void:
@@ -1537,6 +1650,27 @@ func _create_city() -> void:
 			_create_box(self, "RoadMark_X_%s_%d" % [str(side), i], Vector3(3, 0.025, 0.16), Vector3(mark_x, 0.06, -45), Color(0.92, 0.86, 0.62))
 	_create_city_pedestrian_network()
 
+func _create_horizontal_curb_with_access_gaps(road_z: float, side: float, curb_z: float, curb_color: Color) -> void:
+	# Keep the curb continuous except for deliberate, aligned pedestrian entrances.
+	# The openings are 4.4 m wide, leaving a small tolerance around each 3.2 m walk.
+	var gap_centres: Array[float] = []
+	if side < 0.0:
+		match int(road_z):
+			-15: gap_centres = [-30.0, 30.0, 60.0]
+			15: gap_centres = [-60.0, 0.0, 60.0]
+			45: gap_centres = [-60.0, -30.0, 0.0, 30.0]
+	var cursor := -66.0
+	for gap_centre in gap_centres:
+		var gap_start := gap_centre - 2.2
+		if gap_start > cursor:
+			var length := gap_start - cursor
+			_create_box(self, "Curb_H_%d_%d_Segment" % [int(road_z), int(cursor)], Vector3(length, 0.22, 0.16), Vector3((cursor + gap_start) * 0.5, 0.11, curb_z), curb_color)
+		cursor = gap_centre + 2.2
+	if cursor < 66.0:
+		var length := 66.0 - cursor
+		_create_box(self, "Curb_H_%d_%d_Segment" % [int(road_z), int(cursor)], Vector3(length, 0.22, 0.16), Vector3((cursor + 66.0) * 0.5, 0.11, curb_z), curb_color)
+
+
 func _create_city_pedestrian_network() -> void:
 	var sidewalk_color := Color(0.58, 0.51, 0.40)
 	var curb_color := Color(0.78, 0.69, 0.53)
@@ -1544,7 +1678,7 @@ func _create_city_pedestrian_network() -> void:
 		for side in [-1.0, 1.0]:
 			var walk_z: float = road_z + side * 4.0
 			_create_box(self, "Sidewalk_H_%d_%d" % [int(road_z), int(side)], Vector3(132.0, 0.14, 1.7), Vector3(0.0, 0.07, walk_z), sidewalk_color)
-			_create_box(self, "Curb_H_%d_%d" % [int(road_z), int(side)], Vector3(132.0, 0.22, 0.16), Vector3(0.0, 0.11, road_z + side * 4.92), curb_color)
+			_create_horizontal_curb_with_access_gaps(road_z, side, road_z + side * 4.92, curb_color)
 	for road_x in [-15.0, 15.0]:
 		for side in [-1.0, 1.0]:
 			var walk_x: float = road_x + side * 3.65
@@ -1783,7 +1917,7 @@ func _create_pyramids_area() -> void:
 	add_child(pyramids)
 
 
-# اختيار وضع اللعب مع تسجيل دخول Google والتحقق الخادمي من هوية المؤسس.
+# اختيار وضع اللعب مع تسجيل الدخول بالبريد الإلكتروني والتحقق الخادمي من هوية المؤسس.
 var mode_selection_layer: CanvasLayer
 var mode_selection_panel: PanelContainer
 var mode_status_label: Label
@@ -1792,6 +1926,9 @@ var game_mode_controls: VBoxContainer
 var player_account_status_label: Label
 var player_account_button: Button
 var player_account_profile_label: Label
+var account_email_input: LineEdit
+var account_password_input: LineEdit
+var account_otp_input: LineEdit
 
 
 func _create_mode_selection_ui() -> void:
@@ -1804,6 +1941,7 @@ func _create_mode_selection_ui() -> void:
 	mode_selection_layer.name = "GameModeSelection"
 	mode_selection_layer.layer = 100
 	add_child(mode_selection_layer)
+
 	# Connect auth lifecycle even when the founder identity is already cached locally.
 	FounderAuthClient.founder_entitlement_received.connect(_on_founder_entitlement_received)
 	FounderAuthClient.founder_entitlement_failed.connect(_on_founder_entitlement_failed)
@@ -1815,50 +1953,236 @@ func _create_mode_selection_ui() -> void:
 	PlayerAccountAuthClient.player_profile_failed.connect(_on_player_profile_failed)
 	if PlayerAccountAuthClient.has_active_session():
 		_on_player_account_access_token_changed(PlayerAccountAuthClient.get_access_token())
+
+	# Keep the 3D city visible; only a light cinematic tint sits over the live background.
 	var backdrop := ColorRect.new()
-	backdrop.color = Color(0.025, 0.035, 0.05, 0.94)
+	backdrop.name = "EntryScreenTint"
+	backdrop.color = Color(0.012, 0.018, 0.028, 0.24)
 	backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	mode_selection_layer.add_child(backdrop)
 
-	mode_selection_panel = PanelContainer.new()
-	mode_selection_panel.custom_minimum_size = Vector2(360, 590)
-	mode_selection_panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-	mode_selection_panel.position = Vector2(-180, -295)
-	mode_selection_panel.add_theme_stylebox_override("panel", _make_mode_panel_style())
-	backdrop.add_child(mode_selection_panel)
-	var content := VBoxContainer.new()
-	content.add_theme_constant_override("separation", 10)
-	mode_selection_panel.add_child(content)
-
 	var heading := Label.new()
+	heading.name = "RoyalEntryTitle"
 	heading.text = "KING OF EGYPT CITY"
 	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	heading.add_theme_font_size_override("font_size", 22)
-	heading.add_theme_color_override("font_color", Color(0.94, 0.79, 0.43))
-	content.add_child(heading)
+	heading.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	heading.add_theme_font_size_override("font_size", 25)
+	heading.add_theme_color_override("font_color", Color(1.0, 0.84, 0.48))
+	heading.add_theme_color_override("font_shadow_color", Color(0.02, 0.015, 0.005, 0.95))
+	heading.add_theme_constant_override("shadow_offset_x", 2)
+	heading.add_theme_constant_override("shadow_offset_y", 2)
+	heading.anchor_left = 0.5
+	heading.anchor_right = 0.5
+	heading.anchor_top = 0.0
+	heading.anchor_bottom = 0.0
+	heading.offset_left = -240
+	heading.offset_right = 240
+	heading.offset_top = 28
+	heading.offset_bottom = 76
+	mode_selection_layer.add_child(heading)
 
+	# Two royal medallions are the only permanent entry controls on the screen.
+	var entry_buttons := HBoxContainer.new()
+	entry_buttons.name = "RoyalEntryIcons"
+	entry_buttons.alignment = BoxContainer.ALIGNMENT_CENTER
+	entry_buttons.add_theme_constant_override("separation", 54)
+	entry_buttons.anchor_left = 0.5
+	entry_buttons.anchor_right = 0.5
+	entry_buttons.anchor_top = 1.0
+	entry_buttons.anchor_bottom = 1.0
+	entry_buttons.offset_left = -170
+	entry_buttons.offset_right = 170
+	entry_buttons.offset_top = -188
+	entry_buttons.offset_bottom = -18
+	mode_selection_layer.add_child(entry_buttons)
+
+	var account_group := VBoxContainer.new()
+	account_group.alignment = BoxContainer.ALIGNMENT_CENTER
+	account_group.add_theme_constant_override("separation", 7)
+	entry_buttons.add_child(account_group)
+	var account_icon := Button.new()
+	account_icon.name = "AccountRoyalMedallion"
+	account_icon.text = "♛"
+	account_icon.tooltip_text = "الدخول إلى حساب اللاعب"
+	account_icon.custom_minimum_size = Vector2(116, 116)
+	account_icon.add_theme_font_size_override("font_size", 48)
+	account_icon.add_theme_color_override("font_color", Color(1.0, 0.86, 0.53))
+	account_icon.add_theme_color_override("font_hover_color", Color(1.0, 0.96, 0.76))
+	account_icon.add_theme_stylebox_override("normal", _make_royal_medallion_style(false))
+	account_icon.add_theme_stylebox_override("hover", _make_royal_medallion_style(true))
+	account_icon.add_theme_stylebox_override("pressed", _make_royal_medallion_style(true))
+	account_icon.pressed.connect(_show_account_entry)
+	account_group.add_child(account_icon)
+	var account_caption := Label.new()
+	account_caption.text = "دخول الحساب"
+	account_caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	account_caption.add_theme_font_size_override("font_size", 15)
+	account_caption.add_theme_color_override("font_color", Color(1.0, 0.87, 0.59))
+	account_group.add_child(account_caption)
+
+	var options_group := VBoxContainer.new()
+	options_group.alignment = BoxContainer.ALIGNMENT_CENTER
+	options_group.add_theme_constant_override("separation", 7)
+	entry_buttons.add_child(options_group)
+	var options_icon := Button.new()
+	options_icon.name = "OtherEntryRoyalMedallion"
+	options_icon.text = "☷"
+	options_icon.tooltip_text = "خيارات الدخول الأخرى"
+	options_icon.custom_minimum_size = Vector2(116, 116)
+	options_icon.add_theme_font_size_override("font_size", 43)
+	options_icon.add_theme_color_override("font_color", Color(1.0, 0.86, 0.53))
+	options_icon.add_theme_color_override("font_hover_color", Color(1.0, 0.96, 0.76))
+	options_icon.add_theme_stylebox_override("normal", _make_royal_medallion_style(false))
+	options_icon.add_theme_stylebox_override("hover", _make_royal_medallion_style(true))
+	options_icon.add_theme_stylebox_override("pressed", _make_royal_medallion_style(true))
+	options_icon.pressed.connect(_show_game_options)
+	options_group.add_child(options_icon)
+	var options_caption := Label.new()
+	options_caption.text = "خيارات الدخول"
+	options_caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	options_caption.add_theme_font_size_override("font_size", 15)
+	options_caption.add_theme_color_override("font_color", Color(1.0, 0.87, 0.59))
+	options_group.add_child(options_caption)
+
+	# Account window: hidden until its medallion is pressed.
+	mode_selection_panel = PanelContainer.new()
+	mode_selection_panel.name = "AccountEntryWindow"
+	mode_selection_panel.custom_minimum_size = Vector2(400, 620)
+	mode_selection_panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	mode_selection_panel.position = Vector2(-200, -310)
+	mode_selection_panel.add_theme_stylebox_override("panel", _make_mode_panel_style())
+	mode_selection_panel.visible = false
+	mode_selection_layer.add_child(mode_selection_panel)
+
+	var account_window_content := VBoxContainer.new()
+	account_window_content.add_theme_constant_override("separation", 10)
+	mode_selection_panel.add_child(account_window_content)
+	var account_header := HBoxContainer.new()
+	account_window_content.add_child(account_header)
+	var account_heading := Label.new()
+	account_heading.text = "بوابة الحساب الملكية"
+	account_heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	account_heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	account_heading.add_theme_font_size_override("font_size", 20)
+	account_heading.add_theme_color_override("font_color", Color(0.96, 0.79, 0.42))
+	account_header.add_child(account_heading)
+	var account_close := Button.new()
+	account_close.text = "✕"
+	account_close.custom_minimum_size = Vector2(38, 38)
+	account_close.pressed.connect(_close_entry_windows)
+	account_header.add_child(account_close)
+
+	var account_scroll := ScrollContainer.new()
+	account_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	account_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	account_window_content.add_child(account_scroll)
+	var content := VBoxContainer.new()
+	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	content.add_theme_constant_override("separation", 9)
+	account_scroll.add_child(content)
+
+	account_email_input = LineEdit.new()
+	account_email_input.placeholder_text = "البريد الإلكتروني"
+	account_email_input.custom_minimum_size.y = 42
+	content.add_child(account_email_input)
+	account_password_input = LineEdit.new()
+	account_password_input.placeholder_text = "كلمة المرور (8 أحرف على الأقل)"
+	account_password_input.secret = true
+	account_password_input.custom_minimum_size.y = 42
+	content.add_child(account_password_input)
+	account_otp_input = LineEdit.new()
+	account_otp_input.placeholder_text = "رمز التحقق المرسل إلى بريدك"
+	account_otp_input.custom_minimum_size.y = 42
+	content.add_child(account_otp_input)
+
+	var signup_button := Button.new()
+	signup_button.text = "إنشاء حساب وإرسال رمز التحقق"
+	signup_button.custom_minimum_size.y = 42
+	signup_button.pressed.connect(_on_email_signup_pressed)
+	content.add_child(signup_button)
+	var verify_button := Button.new()
+	verify_button.text = "تأكيد البريد بالرمز"
+	verify_button.custom_minimum_size.y = 42
+	verify_button.pressed.connect(_on_email_verify_pressed)
+	content.add_child(verify_button)
 	player_account_button = Button.new()
-	player_account_button.text = "المتابعة باستخدام Google"
-	player_account_button.custom_minimum_size.y = 40
-	player_account_button.pressed.connect(_on_google_sign_in_pressed)
+	player_account_button.text = "تسجيل الدخول بالبريد"
+	player_account_button.custom_minimum_size.y = 42
+	player_account_button.pressed.connect(_on_email_sign_in_pressed)
 	content.add_child(player_account_button)
+	var recovery_button := Button.new()
+	recovery_button.text = "استعادة كلمة المرور"
+	recovery_button.custom_minimum_size.y = 42
+	recovery_button.pressed.connect(_on_password_recovery_pressed)
+	content.add_child(recovery_button)
+	var recovery_help := Label.new()
+	recovery_help.text = "بعد طلب الاستعادة، اتبع رسالة البريد لإكمال التحقق وتعيين كلمة مرور جديدة."
+	recovery_help.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	recovery_help.add_theme_font_size_override("font_size", 12)
+	content.add_child(recovery_help)
+	var verify_recovery_button := Button.new()
+	verify_recovery_button.text = "تأكيد رمز الاستعادة"
+	verify_recovery_button.custom_minimum_size.y = 42
+	verify_recovery_button.pressed.connect(_on_password_recovery_verify_pressed)
+	content.add_child(verify_recovery_button)
+	var update_password_button := Button.new()
+	update_password_button.text = "حفظ كلمة المرور الجديدة"
+	update_password_button.custom_minimum_size.y = 42
+	update_password_button.pressed.connect(_on_password_update_pressed)
+	content.add_child(update_password_button)
 	if PlayerAccountAuthClient.has_active_session():
-		player_account_button.text = "Google - الحساب متصل"
+		player_account_button.text = "البريد - الحساب متصل"
 
-	var is_verified_founder := FounderIdentityManager.is_founder
+	# A single status line is shared by both entry windows and all auth/network callbacks.
 	mode_status_label = Label.new()
-	mode_status_label.text = "جارٍ التحقق من هوية المؤسس بالحساب الحالي..." if is_verified_founder else "اختر طريقة اللعب."
+	mode_status_label.name = "EntryStatus"
+	mode_status_label.text = "جارٍ التحقق من هوية المؤسس بالحساب الحالي..." if FounderIdentityManager.is_founder else ""
 	mode_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	mode_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	content.add_child(mode_status_label)
+	mode_status_label.add_theme_color_override("font_color", Color(1.0, 0.88, 0.62))
+	mode_status_label.anchor_left = 0.5
+	mode_status_label.anchor_right = 0.5
+	mode_status_label.anchor_top = 1.0
+	mode_status_label.anchor_bottom = 1.0
+	mode_status_label.offset_left = -280
+	mode_status_label.offset_right = 280
+	mode_status_label.offset_top = -78
+	mode_status_label.offset_bottom = -42
+	mode_selection_layer.add_child(mode_status_label)
 
-
+	# The second window contains the existing offline and secure online paths.
+	var options_panel := PanelContainer.new()
+	options_panel.name = "OtherEntryOptionsWindow"
+	options_panel.custom_minimum_size = Vector2(400, 330)
+	options_panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	options_panel.position = Vector2(-200, -165)
+	options_panel.add_theme_stylebox_override("panel", _make_mode_panel_style())
+	options_panel.visible = false
+	mode_selection_layer.add_child(options_panel)
 	game_mode_controls = VBoxContainer.new()
-	game_mode_controls.add_theme_constant_override("separation", 8)
-	content.add_child(game_mode_controls)
+	game_mode_controls.add_theme_constant_override("separation", 10)
+	options_panel.add_child(game_mode_controls)
+
+	var options_header := HBoxContainer.new()
+	game_mode_controls.add_child(options_header)
+	var options_heading := Label.new()
+	options_heading.text = "خيارات دخول المدينة"
+	options_heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	options_heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	options_heading.add_theme_font_size_override("font_size", 20)
+	options_heading.add_theme_color_override("font_color", Color(0.96, 0.79, 0.42))
+	options_header.add_child(options_heading)
+	var options_close := Button.new()
+	options_close.text = "✕"
+	options_close.custom_minimum_size = Vector2(38, 38)
+	options_close.pressed.connect(_close_entry_windows)
+	options_header.add_child(options_close)
+
+	var is_verified_founder := FounderIdentityManager.is_founder
 	var offline_button := Button.new()
 	offline_button.text = "اللعب دون إنترنت"
-	offline_button.custom_minimum_size.y = 44
+	offline_button.custom_minimum_size.y = 48
 	offline_button.pressed.connect(_select_offline_mode)
 	game_mode_controls.add_child(offline_button)
 	online_address_input = LineEdit.new()
@@ -1867,19 +2191,63 @@ func _create_mode_selection_ui() -> void:
 	game_mode_controls.add_child(online_address_input)
 	var online_button := Button.new()
 	online_button.text = "اللعب عبر الإنترنت"
-	online_button.custom_minimum_size.y = 44
+	online_button.custom_minimum_size.y = 48
 	online_button.pressed.connect(_select_online_mode)
 	game_mode_controls.add_child(online_button)
-	game_mode_controls.visible = not is_verified_founder
+	game_mode_controls.visible = true
 
- 
-func _on_google_sign_in_pressed() -> void:
-	if not PlayerAccountAuthClient.request_google_sign_in():
-		if is_instance_valid(mode_status_label):
-			mode_status_label.text = "تعذر بدء تسجيل الدخول باستخدام Google."
-		return
-	if is_instance_valid(mode_status_label):
-		mode_status_label.text = "أكمل اختيار حساب Google المرتبط بشخصيتك الأصلية، ثم ستعود إلى اللعبة تلقائيًا."
+
+func _make_royal_medallion_style(highlighted: bool) -> StyleBox:
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.075, 0.055, 0.028, 0.84) if not highlighted else Color(0.16, 0.115, 0.045, 0.94)
+	style.border_color = Color(0.68, 0.49, 0.19, 0.98) if not highlighted else Color(1.0, 0.82, 0.39, 1.0)
+	style.set_border_width_all(3 if not highlighted else 4)
+	style.set_corner_radius_all(64)
+	style.set_content_margin_all(8)
+	style.shadow_color = Color(0.0, 0.0, 0.0, 0.55)
+	style.shadow_size = 10 if highlighted else 6
+	style.shadow_offset = Vector2(0, 3)
+	return style
+
+
+func _show_account_entry() -> void:
+	mode_selection_panel.visible = true
+	var options_panel := mode_selection_layer.get_node_or_null("OtherEntryOptionsWindow") as Control
+	if is_instance_valid(options_panel):
+		options_panel.visible = false
+
+
+func _show_game_options() -> void:
+	mode_selection_panel.visible = false
+	var options_panel := mode_selection_layer.get_node_or_null("OtherEntryOptionsWindow") as Control
+	if is_instance_valid(options_panel):
+		options_panel.visible = true
+
+
+func _close_entry_windows() -> void:
+	if is_instance_valid(mode_selection_panel):
+		mode_selection_panel.visible = false
+	var options_panel := mode_selection_layer.get_node_or_null("OtherEntryOptionsWindow") as Control
+	if is_instance_valid(options_panel):
+		options_panel.visible = false
+
+func _on_email_signup_pressed() -> void:
+	PlayerAccountAuthClient.request_email_sign_up(account_email_input.text, account_password_input.text)
+
+func _on_email_verify_pressed() -> void:
+	PlayerAccountAuthClient.verify_email_otp(account_email_input.text, account_otp_input.text)
+
+func _on_email_sign_in_pressed() -> void:
+	PlayerAccountAuthClient.request_email_sign_in(account_email_input.text, account_password_input.text)
+
+func _on_password_recovery_pressed() -> void:
+	PlayerAccountAuthClient.request_password_recovery(account_email_input.text)
+
+func _on_password_recovery_verify_pressed() -> void:
+	PlayerAccountAuthClient.verify_password_recovery_otp(account_email_input.text, account_otp_input.text)
+
+func _on_password_update_pressed() -> void:
+	PlayerAccountAuthClient.update_password(account_password_input.text)
 
 func _on_player_account_request_finished(success: bool, message: String) -> void:
 	if is_instance_valid(mode_status_label):
@@ -1887,15 +2255,15 @@ func _on_player_account_request_finished(success: bool, message: String) -> void
 
 func _on_player_account_authenticated(user_id: String, email: String) -> void:
 	if is_instance_valid(player_account_button):
-		player_account_button.text = "Google - الحساب متصل"
+		player_account_button.text = "البريد - الحساب متصل"
 	if is_instance_valid(mode_status_label):
 		mode_status_label.text = "تم تسجيل الدخول بالحساب %s." % email
 	if is_instance_valid(player_account_profile_label):
 		player_account_profile_label.text = "معرّف الحساب: " + user_id
 
 func _on_player_account_access_token_changed(access_token: String) -> void:
-	var account_id := PlayerAccountAuthClient.get_user_id()
-	var account_changed := ProfileConfigStore.get_active_account_id() != account_id
+	var account_id: String = PlayerAccountAuthClient.get_user_id()
+	var account_changed: bool = ProfileConfigStore.get_active_account_id() != account_id
 	if account_changed:
 		if not ProfileConfigStore.begin_account_switch(account_id):
 			push_error("Could not activate the isolated local profile for the authenticated account.")
@@ -1912,7 +2280,7 @@ func _on_player_account_access_token_changed(access_token: String) -> void:
 		ProfileConfigStore.complete_account_switch()
 		if FounderIdentityManager.is_founder and FounderIdentityManager.founder_subject_id != account_id:
 			FounderIdentityManager.clear_entitlement()
-		# Founder status is checked automatically with the same Google-authenticated player session.
+		# Founder status is checked automatically with the same verified email/password player session.
 		FounderAuthClient.request_founder_entitlement_with_access_token(access_token)
 
 func _reload_scene_for_account_profile() -> void:
@@ -1926,9 +2294,9 @@ func _on_player_account_session_expired() -> void:
 	ProfileConfigStore.complete_account_switch()
 	PlayerSyncClient.clear_session_access_token()
 	if is_instance_valid(player_account_button):
-		player_account_button.text = "المتابعة باستخدام Google"
+		player_account_button.text = "تسجيل الدخول بالبريد"
 	if is_instance_valid(mode_status_label):
-		mode_status_label.text = "انتهت جلسة الحساب. سجّل الدخول مجددًا باستخدام Google."
+		mode_status_label.text = "انتهت جلسة الحساب. سجّل الدخول مجددًا بالبريد الإلكتروني."
 	if GameModeManager.is_online_ready():
 		_on_mode_status_changed("انتهت جلسة حساب اللاعب؛ تم إنهاء اتصال Online لحماية الحساب.")
 		GameModeManager.disconnect_online()
@@ -1952,7 +2320,7 @@ func _on_founder_entitlement_received(payload: String, signature_base64: String)
 	if is_instance_valid(game_mode_controls):
 		game_mode_controls.visible = true
 	if is_instance_valid(mode_status_label):
-		mode_status_label.text = "تم التعرف على حساب المؤسس تلقائيًا من Google. يمكنك المتابعة."
+		mode_status_label.text = "تم التعرف على حساب المؤسس تلقائيًا عبر البريد الموثق. يمكنك المتابعة."
 
 func _on_founder_entitlement_failed(message: String) -> void:
 	if is_instance_valid(game_mode_controls):
@@ -1990,7 +2358,7 @@ func _request_city_session_matchmaking() -> void:
 	if is_instance_valid(_city_matchmaking_request):
 		mode_status_label.text = "جارٍ البحث عن جلسة مدينة مناسبة بالفعل."
 		return
-	var access_token := PlayerAccountAuthClient.get_access_token()
+	var access_token: String = PlayerAccountAuthClient.get_access_token()
 	var base_url := str(ProjectSettings.get_setting("founder/auth/api_base_url", "")).strip_edges().trim_suffix("/")
 	var publishable_key := str(ProjectSettings.get_setting("founder/auth/publishable_key", "")).strip_edges()
 	if access_token.is_empty() or not base_url.begins_with("https://") or publishable_key.is_empty():
@@ -2048,7 +2416,7 @@ func _release_pending_city_reservation() -> void:
 		return
 	var reservation_id := _pending_city_reservation_id
 	_pending_city_reservation_id = ""
-	var access_token := PlayerAccountAuthClient.get_access_token()
+	var access_token: String = PlayerAccountAuthClient.get_access_token()
 	var base_url := str(ProjectSettings.get_setting("founder/auth/api_base_url", "")).strip_edges().trim_suffix("/")
 	var publishable_key := str(ProjectSettings.get_setting("founder/auth/publishable_key", "")).strip_edges()
 	if access_token.is_empty() or not base_url.begins_with("https://") or publishable_key.is_empty():
@@ -2078,19 +2446,24 @@ func _on_city_reservation_release_completed(result: int, response_code: int, _he
 		push_warning("لم يؤكد دليل الجلسات تحرير الحجز؛ ستنهيه مهلة الحجز تلقائيًا.")
 
 func _enter_selected_game_mode() -> void:
-	if is_instance_valid(mode_selection_layer):
-		mode_selection_layer.visible = false
-	var player := get_node_or_null("Player")
-	if is_instance_valid(player):
-		player.set_process(true)
-		player.set_physics_process(true)
+	if _world_initialized:
+		if is_instance_valid(mode_selection_layer):
+			mode_selection_layer.visible = false
+		var existing_player := get_node_or_null("Player")
+		if is_instance_valid(existing_player):
+			existing_player.set_process(true)
+			existing_player.set_physics_process(true)
+		return
+	if _world_initializing:
+		return
+	_initialize_game_world()
 
 func _on_mode_status_changed(message: String) -> void:
 	if is_instance_valid(mode_status_label):
 		mode_status_label.text = message
 
 func _on_mode_connected() -> void:
-	var access_token := PlayerAccountAuthClient.get_access_token()
+	var access_token: String = PlayerAccountAuthClient.get_access_token()
 	if access_token.is_empty():
 		_on_mode_status_changed("سجّل الدخول إلى حساب اللاعب قبل دخول Online.")
 		GameModeManager.disconnect_online()
