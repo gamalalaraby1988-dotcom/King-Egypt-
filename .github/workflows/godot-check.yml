@@ -667,3 +667,18 @@ jobs:
             echo "Unified vehicle control contract tests failed."
             exit 1
           fi
+
+      - name: Run city startup and staged loading contract tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          GODOT="/tmp/godot/Godot_v4.7.2-stable_linux.x86_64"
+          LOG="/tmp/godot-city-startup-loading.log"
+          set +e
+          timeout 60s "$GODOT" --headless --path . --script res://tests/city_startup_loading_contract_test.gd 2>&1 | tee "$LOG"
+          GODOT_STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$GODOT_STATUS" -ne 0 ] || grep -E '(^|[[:space:]])(ERROR|SCRIPT ERROR):|Parse Error:|City startup and staged loading contract tests failed' "$LOG"; then
+            echo "City startup and staged loading contract tests failed."
+            exit 1
+          fi
