@@ -18,6 +18,7 @@ const MOBILE_SPRINT_FORWARD_THRESHOLD := 0.92
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	layout_direction = Control.LAYOUT_DIRECTION_LTR
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_update_layout()
 	_build_interaction_button()
