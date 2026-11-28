@@ -168,9 +168,43 @@ func _build_royal_panorama_link() -> void:
 	for i in range(route_points.size() - 1):
 		_add_route_segment("RoyalSemicircleRoad_%02d" % (i + 1), route_points[i], route_points[i + 1], ROYAL_ROUTE_WIDTH)
 
+	# Northern exit: leave the elevated overlook toward the eastern desert edge,
+	# keeping clear of the fixed pyramid positions before descending to ground level.
+	_build_short_branch(
+		"RoyalNorthDescendingBranch", route_points[ROYAL_ROUTE_SEGMENTS / 2],
+		Vector3(215.0, 7.0, -260.0), Vector3(165.0, 1.6, -335.0),
+		Vector3(125.0, 0.25, -365.0), 14.0, 12
+	)
+
+	# Right-hand exit: a smooth descending spur reconnects to the first circular ring.
+	var right_branch_start := route_points[27]
+	var right_ring_join := CITY_CENTER + Vector3(cos(0.45) * RING_RADII[0], 0.25, sin(0.45) * RING_RADII[0])
+	_build_short_branch(
+		"RoyalRightDescendingBranch", right_branch_start,
+		right_branch_start.lerp(right_ring_join, 0.34) + Vector3(22.0, -0.8, 8.0),
+		right_branch_start.lerp(right_ring_join, 0.72) + Vector3(12.0, -2.2, 4.0),
+		right_ring_join, 13.0, 9
+	)
+
 	# A spectacular circular royal overlook is integrated into the middle of the arc.
 	var plaza_center := route_points[ROYAL_ROUTE_SEGMENTS / 2]
 	_build_royal_panorama_plaza(plaza_center)
+
+func _build_short_branch(label: String, start: Vector3, control_a: Vector3, control_b: Vector3, finish: Vector3, width: float, segments: int) -> void:
+	# Cubic Bezier sampling keeps the exits smooth; segment elevation gradually
+	# falls from the elevated route to the existing ground road level.
+	var points: Array[Vector3] = []
+	for i in range(segments + 1):
+		var t := float(i) / float(segments)
+		var one_minus_t := 1.0 - t
+		var point := start * (one_minus_t * one_minus_t * one_minus_t)
+		point += control_a * (3.0 * one_minus_t * one_minus_t * t)
+		point += control_b * (3.0 * one_minus_t * t * t)
+		point += finish * (t * t * t)
+		points.append(point)
+	for i in range(points.size() - 1):
+		_add_route_segment(label + "_%02d" % (i + 1), points[i], points[i + 1], width)
+
 
 func _build_royal_panorama_plaza(center: Vector3) -> void:
 	var deck := MeshInstance3D.new()
