@@ -1,6 +1,6 @@
 extends Node3D
-## Lightweight circular road network and elevated royal semicircle overlook.
-## The royal route joins the first ring at its north and east sides, on the pyramid-facing side.
+## Lightweight circular road network and elevated southern royal boundary route.
+## The royal route sits on the south side of the city, opposite the waterfront.
 
 const ROAD := Color(0.105, 0.12, 0.14)
 const ROAD_EDGE := Color(0.82, 0.62, 0.28)
@@ -141,10 +141,10 @@ func _add_route_segment(label: String, start: Vector3, finish: Vector3, width: f
 			add_child(post)
 
 func _build_royal_panorama_link() -> void:
-	# The royal road is the northern outer boundary, joining the west and east shoulders of ring one.
+	# The royal road is the southern outer boundary, opposite the waterfront.
 	var west_join := CITY_CENTER + Vector3(-RING_RADII[0], 0.0, 0.0)
 	var east_join := CITY_CENTER + Vector3(RING_RADII[0], 0.0, 0.0)
-	var desert_control := Vector3(0.0, 0.0, -600.0)
+	var desert_control := Vector3(0.0, 0.0, 850.0)
 	var route_points: Array[Vector3] = []
 	for i in range(ROYAL_ROUTE_SEGMENTS + 1):
 		var t := float(i) / float(ROYAL_ROUTE_SEGMENTS)
@@ -158,8 +158,8 @@ func _build_royal_panorama_link() -> void:
 	for i in range(route_points.size() - 1):
 		_add_route_segment("RoyalSemicircleRoad_%02d" % (i + 1), route_points[i], route_points[i + 1], ROYAL_ROUTE_WIDTH)
 
-	# Four short descending exits are distributed across the royal road and reconnect to ring one.
-	var branch_angles := [PI * 1.18, PI * 1.38, PI * 1.62, PI * 1.82]
+	# Four short descending exits are distributed across the southern royal road and reconnect to ring one.
+	var branch_angles := [PI * 0.18, PI * 0.38, PI * 0.62, PI * 0.82]
 	var branch_names := ["RoyalWestDesertBranch", "RoyalWestCenterBranch", "RoyalEastCenterBranch", "RoyalEastDesertBranch"]
 	var branch_samples := [7, 14, 22, 29]
 	for branch_index in range(branch_samples.size()):
