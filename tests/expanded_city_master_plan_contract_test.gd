@@ -62,15 +62,15 @@ func _initialize() -> void:
 	for turn_name in ["RoyalLoopRoad_NorthWestTurn", "RoyalLoopRoad_NorthEastTurn", "RoyalLoopRoad_SouthWestTurn", "RoyalLoopRoad_SouthEastTurn"]:
 		if not main_script.contains(turn_name):
 			failures.append("The royal loop road is missing a rounded corner: " + turn_name)
-	if not main_script.contains("Vector3(125.0, 0.0, 285.0)") or not main_script.contains("Vector3(-145.0, 0.0, 285.0)"):
-		failures.append("The desert camp and pyramids are not placed inside the southern royal boundary.")
+	if not main_script.contains("Vector3(80.0, 0.0, 270.0)") or not main_script.contains("Vector3(-105.0, 0.0, 230.0)"):
+		failures.append("The desert camp and pyramids are not placed in the central viewing area of the southern royal arc.")
 	if not transport.contains("var control_a := west_join + Vector3(0.0, 0.0, 520.0)") or not transport.contains("var control_b := east_join + Vector3(0.0, 0.0, 520.0)") or not transport.contains("west_join := CITY_CENTER + Vector3(-RING_RADII[2], 0.0, 0.0)") or not transport.contains("east_join := CITY_CENTER + Vector3(RING_RADII[2], 0.0, 0.0)"):
 		failures.append("The elevated royal boundary road is not on the southern side opposite the waterfront.")
 	if main_script.contains("BeachAccessRoad_West") or main_script.contains("BeachAccessConnector_West"):
 		failures.append("West beach spurs still cut across the ship/pyramid sightline.")
-	if not city_map.contains('"key": "desert_camp", "position": Vector3(125.0, 0.0, 285.0)'):
+	if not city_map.contains('"key": "desert_camp", "position": Vector3(80.0, 0.0, 270.0)'):
 		failures.append("Desert camp navigation was not moved to the southern desert district.")
-	if not city_map.contains('"key": "pyramids_camp", "position": Vector3(-145.0, 0.0, 285.0)'):
+	if not city_map.contains('"key": "pyramids_camp", "position": Vector3(-105.0, 0.0, 230.0)'):
 		failures.append("Pyramids navigation was not moved to the southern landmark district.")
 	if not city_map.contains('"key": "royal_ship", "position": Vector3(-45.0, 0.0, -657.0)'):
 		failures.append("Navigation map does not point to the relocated civilizations ship.")
