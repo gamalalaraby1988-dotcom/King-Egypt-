@@ -379,11 +379,11 @@ func _build_nile_waterfront() -> void:
 	shore_material.roughness = 0.94
 	_box(self, "RoyalBeachShoreline", Vector3(440.0, 0.06, 0.42), Vector3(0.0, 0.015, -520.0), Color(0.72, 0.66, 0.51)).material_override = shore_material
 	# A continuous promenade forms the northern edge of the open-water beach.
-	_box(self, "WaterfrontPromenade", Vector3(440.0, 0.28, 3.0), Vector3(0.0, 0.02, -536.0), SAND)
+	_box(self, "WaterfrontPromenade", Vector3(440.0, 0.28, 3.0), Vector3(0.0, 0.02, -505.0), SAND)
 	for x in [-180.0, -120.0, -60.0, 60.0, 120.0, 180.0]:
-		_box(self, "PromenadeLamp", Vector3(0.18, 3.0, 0.18), Vector3(x, 1.5, -540.0), GOLD)
-		_box(self, "PromenadeLampHead", Vector3(0.8, 0.18, 0.8), Vector3(x, 3.0, -540.0), GOLD)
-		_add_city_night_light(self, "PromenadeNightLight", Vector3(x, 2.9, -540.0), 8.0)
+		_box(self, "PromenadeLamp", Vector3(0.18, 3.0, 0.18), Vector3(x, 1.5, -508.0), GOLD)
+		_box(self, "PromenadeLampHead", Vector3(0.8, 0.18, 0.8), Vector3(x, 3.0, -508.0), GOLD)
+		_add_city_night_light(self, "PromenadeNightLight", Vector3(x, 2.9, -508.0), 8.0)
 
 
 func _build_royal_sea_bridge() -> void:
@@ -900,7 +900,7 @@ func _build_waterfront_landscaping() -> void:
 	for x in range(-60, 61, 20):
 		# Keep the ship approach and pier centerline free of palms.
 		if x != 0:
-			_tree(self, "WaterfrontPalm", Vector3(float(x) * 3.0, 0, -548.0), 0.9)
+			_tree(self, "WaterfrontPalm", Vector3(float(x) * 3.0, 0, -498.0), 0.9)
 
 
 func _build_beach_handball_court() -> void:
