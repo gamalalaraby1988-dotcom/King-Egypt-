@@ -1496,6 +1496,12 @@ func _create_box(parent: Node3D, name: String, size: Vector3, pos: Vector3, colo
 		body.add_child(shape_node)
 		parent.add_child(body)
 
+func _create_rotated_box(parent: Node3D, name: String, size: Vector3, pos: Vector3, rotation_y: float, color: Color) -> void:
+	_create_box(parent, name, size, pos, color)
+	var road := parent.get_node_or_null(name) as MeshInstance3D
+	if is_instance_valid(road):
+		road.rotation.y = rotation_y
+
 func _create_ground() -> void:
 	# Keep the full northern city ground while opening a broad, collision-free
 	# sea footprint from the promenade southward. East/west land strips remain
@@ -1513,17 +1519,20 @@ func _create_city() -> void:
 
 	var road_color := Color(0.12, 0.13, 0.15)
 	var side_road_color := Color(0.15, 0.16, 0.17)
-	# طريق محيطي مستطيل يحيط بالمدينة مع خلوّ مسافة عن مباني الأطراف.
-	_create_box(self, "MainRoad_North", Vector3(440, 0.08, 14), Vector3(0, 0.0, -315), road_color)
-	# Perimeter roads continue along the dry east/west shoreline strips;
-	# no road or collision surface crosses the open-water race area.
-	_create_box(self, "MainRoad_West", Vector3(14, 0.08, 870), Vector3(-205, 0.0, 105), road_color)
-	_create_box(self, "MainRoad_East", Vector3(14, 0.08, 870), Vector3(205, 0.0, 105), road_color)
-	_create_box(self, "MainRoad_South", Vector3(440, 0.08, 14), Vector3(0, 0.0, 540), road_color)
-	# The two west-side beach spurs are removed to clear the ship/pyramid sightline.
+	# Royal City Loop: one continuous perimeter route with chamfered turns,
+	# keeping the road clear of approved building footprints.
+	_create_box(self, "MainRoad_North", Vector3(340, 0.08, 14), Vector3(0, 0.0, -315), road_color)
+	_create_box(self, "MainRoad_West", Vector3(14, 0.08, 785), Vector3(-205, 0.0, 112.5), road_color)
+	_create_box(self, "MainRoad_East", Vector3(14, 0.08, 785), Vector3(205, 0.0, 112.5), road_color)
+	_create_box(self, "MainRoad_South", Vector3(340, 0.08, 14), Vector3(0, 0.0, 540), road_color)
+	_create_rotated_box(self, "RoyalLoopRoad_NorthWestTurn", Vector3(14, 0.08, 49.5), Vector3(-187.5, 0.0, -297.5), -PI / 4.0, road_color)
+	_create_rotated_box(self, "RoyalLoopRoad_NorthEastTurn", Vector3(14, 0.08, 49.5), Vector3(187.5, 0.0, -297.5), PI / 4.0, road_color)
+	_create_rotated_box(self, "RoyalLoopRoad_SouthWestTurn", Vector3(14, 0.08, 49.5), Vector3(-187.5, 0.0, 522.5), PI / 4.0, road_color)
+	_create_rotated_box(self, "RoyalLoopRoad_SouthEastTurn", Vector3(14, 0.08, 49.5), Vector3(187.5, 0.0, 522.5), -PI / 4.0, road_color)
+	# The beach spur meets the eastern loop; the ship and race bridges remain separate.
 	_create_box(self, "BeachAccessRoad_East", Vector3(10, 0.08, 90), Vector3(130, 0.0, 120), road_color)
 	_create_box(self, "BeachAccessConnector_East", Vector3(72, 0.08, 10), Vector3(160, 0.0, 120), road_color)
-	# Southern desert and summit districts connect directly to the continuous ring road.
+	# Dedicated branches connect the loop to the desert camp, pyramids and summit.
 	_create_box(self, "DesertDistrictRingConnector", Vector3(75, 0.08, 10), Vector3(-167.5, 0.0, 370), road_color, true)
 	_create_box(self, "PyramidsDistrictRingConnector", Vector3(106, 0.08, 10), Vector3(-152, 0.0, 480), road_color, true)
 	_create_box(self, "KingsMountainRingConnector", Vector3(75, 0.08, 10), Vector3(167.5, 0.0, 424), road_color, true)
@@ -1769,7 +1778,8 @@ func _create_service_staff(display_name: String, role: String, dialogue: String,
 
 func _create_desert_camp() -> void:
 	# المخيم الملكي هو منطقة الضيافة الصحراوية الوحيدة؛ الجمال والخيول جزء من تصميمه.
-	_create_box(self, "DesertCampApproachRoad", Vector3(10, 0.08, 45), Vector3(-130, 0.01, 407.5), Color(0.12, 0.13, 0.15), true)
+	# Touch the desert loop connector directly; no gap remains at the camp entrance.
+	_create_box(self, "DesertCampApproachRoad", Vector3(10, 0.08, 55), Vector3(-130, 0.01, 402.5), Color(0.12, 0.13, 0.15), true)
 	var camp := Node3D.new()
 	camp.name = "RoyalDesertCamp"
 	camp.position = Vector3(-130, 0, 370)
