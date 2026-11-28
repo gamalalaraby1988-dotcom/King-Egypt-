@@ -32,7 +32,7 @@ var jet_ski_occupied := false
 var _jet_ski_unmount_pending := false
 var _jet_ski_saved_collision_layer := 1
 var _jet_ski_saved_collision_mask := 1
-const JET_SKI_LAUNCH_POSITION := Vector3(0.0, 0.34, 82.0)
+const JET_SKI_LAUNCH_POSITION := Vector3(0.0, 0.34, -514.0)
 const JET_SKI_BOARDING_RADIUS := 8.0
 var _scooter_saved_collision_layer := 1
 var _scooter_saved_collision_mask := 1
@@ -48,7 +48,7 @@ var _city_matchmaking_request: HTTPRequest
 var _pending_city_reservation_id := ""
 const PLAYER_RECOVERY_FALL_LIMIT := -3.0
 const CITY_SAFE_X_LIMIT := 280.0
-const CITY_SAFE_Z_MIN := -400.0
+const CITY_SAFE_Z_MIN := -850.0
 const CITY_SAFE_Z_MAX := 600.0
 const INTERIOR_WORLD_POSITION := Vector3(1000.0, 0.0, 1000.0)
 
@@ -1503,15 +1503,15 @@ func _create_rotated_box(parent: Node3D, name: String, size: Vector3, pos: Vecto
 		road.rotation.y = rotation_y
 
 func _create_ground() -> void:
-	# Keep the full northern city ground while opening a broad, collision-free
-	# sea footprint from the promenade southward. East/west land strips remain
-	# continuous and provide dry beach-club and sports access.
+	# Keep the approved city terrain and add a full-width northern beach shelf.
+	# The open sea begins beyond the shore; no ground slab continues behind it.
 	var ground_color := Color(0.34, 0.42, 0.31)
 	_create_box(self, "Ground_West", Vector3(160, 1, 1000), Vector3(-190, -0.55, 50), ground_color, true)
 	_create_box(self, "Ground_East", Vector3(160, 1, 1000), Vector3(190, -0.55, 50), ground_color, true)
 	_create_box(self, "Ground_Center_North", Vector3(220, 1, 418), Vector3(0, -0.55, -131), ground_color, true)
 	# Southern land closes the loop below the Nile while leaving the water and race course open.
 	_create_box(self, "Ground_Center_South", Vector3(440, 1, 240), Vector3(0, -0.55, 440), ground_color, true)
+	_create_box(self, "Ground_North_Beach", Vector3(440, 1, 180), Vector3(0, -0.55, -430), ground_color, true)
 
 func _create_city() -> void:
 	# المباني المرئية تُنشأ من قائمة المدينة المعتمدة في ApprovedCityLayout.
