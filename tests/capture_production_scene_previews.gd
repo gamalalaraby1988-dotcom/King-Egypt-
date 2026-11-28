@@ -101,11 +101,18 @@ func _capture_previews() -> void:
 	# Full-city aerial now includes the southern desert, pyramids and Kings Summit districts.
 	# Render the full north-to-south production map through a dedicated portrait SubViewport.
 	# Changing Window.size is ignored by some headless runners, so capture the SubViewport texture directly.
+	var aerial_environment := current_scene.get_node_or_null("WorldEnvironment") as WorldEnvironment
+	var aerial_fog_was_enabled := false
+	if aerial_environment != null and aerial_environment.environment != null:
+		aerial_fog_was_enabled = aerial_environment.environment.fog_enabled
+		aerial_environment.environment.fog_enabled = false
 	var master_plan_ok := await _capture_portrait_master_plan(
 		"expanded_city_aerial_master_plan_preview.png",
 		Vector3(0.0, 1420.0, -110.0),
 		Vector3(0.0, 0.0, -110.0)
 	)
+	if aerial_environment != null and aerial_environment.environment != null:
+		aerial_environment.environment.fog_enabled = aerial_fog_was_enabled
 	if not master_plan_ok:
 		quit(1)
 		return
