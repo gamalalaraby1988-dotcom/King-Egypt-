@@ -57,5 +57,15 @@ func _run_city_npc_social_contract() -> void:
 				push_error("NPC spawn points are too close: %d and %d." % [i + 1, j + 1])
 				quit(1)
 				return
+			var first_wander := 0.0 if i < 50 and i % 3 == 0 else (1.35 if i < 50 else (0.0 if (i - 50) % 4 == 0 else 1.1))
+			var second_wander := 0.0 if j < 50 and j % 3 == 0 else (1.35 if j < 50 else (0.0 if (j - 50) % 4 == 0 else 1.1))
+			if first.distance_to(second) - first_wander - second_wander < 6.5:
+				push_error("NPC movement paths can approach too closely: %d and %d." % [i + 1, j + 1])
+				quit(1)
+				return
+	if not population_source.contains("_disable_npc_collisions(actor)") or not population_source.contains("collision_object.collision_layer = 0") or not population_source.contains("collision_object.collision_mask = 0"):
+		push_error("NPC visuals must remain non-blocking for players and world actors.")
+		quit(1)
+		return
 	print("City NPC social interaction and spawn spacing contract tests passed.")
 	quit(0)
