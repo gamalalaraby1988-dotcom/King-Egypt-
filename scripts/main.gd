@@ -1656,7 +1656,7 @@ func _create_adventure_hub_interaction() -> void:
 	hub.required_level = 1
 	hub.requires_interior = false
 	hub.interaction_radius = 4.5
-	hub.position = Vector3(-75.0, 0.0, 63.9)
+	hub.position = Vector3(-150.0, 0.0, 93.9)
 	add_child(hub)
 
 
