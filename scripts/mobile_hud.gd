@@ -6,6 +6,7 @@ extends Control
 
 var player: CharacterBody3D
 var controlled_vehicle: CharacterBody3D
+var interaction_button: Button
 var joystick_center := Vector2.ZERO
 var joystick_vector := Vector2.ZERO
 var joystick_finger := -1
@@ -29,7 +30,8 @@ func _build_interaction_button() -> void:
 	var viewport_size := get_viewport_rect().size
 	var scale_factor := clampf(minf(viewport_size.x, viewport_size.y) / 720.0, 0.62, 1.0)
 	var button_size := 76.0 * scale_factor
-	var button := Button.new()
+	interaction_button = Button.new()
+	var button := interaction_button
 	button.name = "PlayerInteractionButton"
 	button.text = "✋"
 	button.tooltip_text = "تفاعل"
@@ -52,10 +54,34 @@ func _build_interaction_button() -> void:
 	button.add_theme_stylebox_override("hover", style)
 	button.add_theme_stylebox_override("pressed", style)
 	button.pressed.connect(_on_interaction_button_pressed)
+	button.button_down.connect(_on_interaction_button_down)
+	button.button_up.connect(_on_interaction_button_up)
 	button.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(button)
 
+	_update_interaction_button_state()
+
+func _update_interaction_button_state() -> void:
+	if not is_instance_valid(interaction_button):
+		return
+	if is_instance_valid(controlled_vehicle):
+		interaction_button.text = "🛑"
+		interaction_button.tooltip_text = "فرامل — استمر بالضغط"
+	else:
+		interaction_button.text = "✋"
+		interaction_button.tooltip_text = "تفاعل"
+
+func _on_interaction_button_down() -> void:
+	if is_instance_valid(controlled_vehicle):
+		controlled_vehicle.call("set_brake", true)
+
+func _on_interaction_button_up() -> void:
+	if is_instance_valid(controlled_vehicle):
+		controlled_vehicle.call("set_brake", false)
+
 func _on_interaction_button_pressed() -> void:
+	if is_instance_valid(controlled_vehicle):
+		return
 	if not is_instance_valid(player):
 		return
 	var scene := get_tree().current_scene
@@ -103,6 +129,7 @@ func set_controlled_vehicle(value: CharacterBody3D) -> void:
 	controlled_vehicle = value
 	if is_instance_valid(controlled_vehicle):
 		_clear_vehicle_input()
+	_update_interaction_button_state()
 
 func _clear_vehicle_input() -> void:
 	if not is_instance_valid(controlled_vehicle):
