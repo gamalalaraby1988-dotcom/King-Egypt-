@@ -56,7 +56,7 @@ var _pending_city_reservation_id := ""
 const PLAYER_RECOVERY_FALL_LIMIT := -3.0
 const CITY_SAFE_X_LIMIT := 155.0
 const CITY_SAFE_Z_MIN := -340.0
-const CITY_SAFE_Z_MAX := 180.0
+const CITY_SAFE_Z_MAX := 215.0
 const INTERIOR_WORLD_POSITION := Vector3(1000.0, 0.0, 1000.0)
 
 func _ready() -> void:
