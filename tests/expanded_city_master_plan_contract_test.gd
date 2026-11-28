@@ -29,11 +29,13 @@ func _initialize() -> void:
 	var road_contracts := [
 		"const CITY_SAFE_X_LIMIT := 280.0",
 		"const CITY_SAFE_Z_MIN := -400.0",
+		"const CITY_SAFE_Z_MAX := 600.0",
 		"Vector3(160, 1, 1000)",
 		"Vector3(220, 1, 418)",
 		"Vector3(440, 0.08, 14)",
 		"MainRoad_South",
 		"Vector3(0, 0.0, 540)",
+		"Vector3(440, 1, 240)",
 		"Ground_Center_South",
 		"Vector3(-130, 0, 370)",
 		"Vector3(-130, 0, 450)",
