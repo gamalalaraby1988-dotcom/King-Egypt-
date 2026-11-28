@@ -67,6 +67,11 @@ func _run_city_npc_social_contract() -> void:
 		push_error("NPC visuals must remain non-blocking for players and world actors.")
 		quit(1)
 		return
+	var population_factory := main_source.get_slice("func _create_city_npc_population() -> void:", "func _create_approved_city_layout() -> void:")
+	if not population_factory.contains('get_node_or_null("CityNPCPopulation")'):
+		push_error("City NPC population factory must guard against duplicate initialization.")
+		quit(1)
+		return
 	var service_source := FileAccess.get_file_as_string("res://scripts/service_npc.gd")
 	if main_source.count("_create_service_staff(") != 4 or main_source.count("_create_interior_staff(interior_root, building_title)") != 1:
 		push_error("Approved outdoor and interior service staff creation points changed unexpectedly.")
