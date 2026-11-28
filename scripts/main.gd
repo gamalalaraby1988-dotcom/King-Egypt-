@@ -1533,8 +1533,8 @@ func _create_city() -> void:
 	# خطوط إرشادية على جزأي الطريق المحيط بالميدان.
 	for side in [-1.0, 1.0]:
 		for i in range(4):
-			var mark_x: float = side * (28.0 + float(i) * 18.0)
-			_create_box(self, "RoadMark_X_%s_%d" % [str(side), i], Vector3(3, 0.025, 0.16), Vector3(mark_x, 0.06, -45), Color(0.92, 0.86, 0.62))
+			var mark_x: float = side * (56.0 + float(i) * 36.0)
+			_create_box(self, "RoadMark_X_%s_%d" % [str(side), i], Vector3(3, 0.025, 0.16), Vector3(mark_x, 0.06, -67.5), Color(0.92, 0.86, 0.62))
 	_create_city_pedestrian_network()
 
 func _create_city_pedestrian_network() -> void:
@@ -1548,18 +1548,18 @@ func _create_city_pedestrian_network() -> void:
 	for road_x in [-30.0, 30.0]:
 		for side in [-1.0, 1.0]:
 			var walk_x: float = road_x + side * 7.0
-			_create_box(self, "Sidewalk_V_%d_%d" % [int(road_x), int(side)], Vector3(1.65, 0.14, 118.0), Vector3(walk_x, 0.07, 36.0), sidewalk_color)
-			_create_box(self, "Curb_V_%d_%d" % [int(road_x), int(side)], Vector3(0.16, 0.22, 118.0), Vector3(road_x + side * 8.0, 0.11, 36.0), curb_color)
-	for road_z in [-15.0, 15.0, 45.0]:
+			_create_box(self, "Sidewalk_V_%d_%d" % [int(road_x), int(side)], Vector3(1.65, 0.14, 177.0), Vector3(walk_x, 0.07, 54.0), sidewalk_color)
+			_create_box(self, "Curb_V_%d_%d" % [int(road_x), int(side)], Vector3(0.16, 0.22, 177.0), Vector3(road_x + side * 8.0, 0.11, 54.0), curb_color)
+	for road_z in [-22.5, 22.5, 67.5]:
 		for mark_index in range(12):
 			var mark_x := -124.0 + float(mark_index) * 22.0
 			_create_box(self, "LaneDash_H_%d_%d" % [int(road_z), mark_index], Vector3(2.4, 0.025, 0.12), Vector3(mark_x, 0.065, road_z), Color(0.91, 0.85, 0.68))
-	for road_x in [-15.0, 15.0]:
+	for road_x in [-30.0, 30.0]:
 		for mark_index in range(10):
 			var mark_z := -27.0 + float(mark_index) * 16.5
 			_create_box(self, "LaneDash_V_%d_%d" % [int(road_x), mark_index], Vector3(0.12, 0.025, 2.4), Vector3(road_x, 0.065, mark_z), Color(0.91, 0.85, 0.68))
 	for road_x in [-15.0, 15.0]:
-		for road_z in [-15.0, 15.0, 45.0]:
+		for road_z in [-22.5, 22.5, 67.5]:
 			for stripe in range(5):
 				var stripe_z: float = road_z - 2.1 + float(stripe) * 1.05
 				_create_box(self, "Crosswalk_H_%d_%d_%d" % [int(road_x), int(road_z), stripe], Vector3(3.4, 0.035, 0.42), Vector3(road_x, 0.075, stripe_z), Color(0.88, 0.85, 0.76))
@@ -1599,9 +1599,9 @@ func _create_interactive_buildings() -> void:
 	_create_adventure_hub_interaction()
 	if AuthoritativeGameServer.is_dedicated_server_requested():
 		_add_functional_building(null, "المتجر", "مهمة شراء احتياجات", "تعرّف على المتجر واستلم قائمة احتياجات تجريبية من البوابة.", Vector3(0, 0, 6.4), Color(0.20, 0.48, 0.30), 150, 0, 1)
-		_add_functional_building(null, "المطعم", "مهمة توصيل وجبة", "استلم طلب توصيل تجريبي من المطعم.", Vector3(60, 0, -23.6), Color(0.65, 0.30, 0.18), 220, 2, 1)
-		_add_functional_building(null, "مركز التوظيف", "مهمة التسجيل في وظيفة", "تعرّف على الوظائف المتاحة وشروط الالتحاق بها.", Vector3(30, 0, -23.6), Color(0.22, 0.34, 0.62), 300, 5, 1)
-		_create_job_board("مكتب الوظائف", "اختر من الوظائف السبع المعتمدة: الشحنات، البريد، البيتزا، الصيدلية، الزهور والهدايا، طلبات المنازل، والأمتعة.", Vector3(30, 0, -22.0), Vector3.ZERO, 0, 0, 0, "city_jobs_hub")
+		_add_functional_building(null, "المطعم", "مهمة توصيل وجبة", "استلم طلب توصيل تجريبي من المطعم.", Vector3(120, 0, -35.4), Color(0.65, 0.30, 0.18), 220, 2, 1)
+		_add_functional_building(null, "مركز التوظيف", "مهمة التسجيل في وظيفة", "تعرّف على الوظائف المتاحة وشروط الالتحاق بها.", Vector3(60, 0, -35.4), Color(0.22, 0.34, 0.62), 300, 5, 1)
+		_create_job_board("مكتب الوظائف", "اختر من الوظائف السبع المعتمدة: الشحنات، البريد، البيتزا، الصيدلية، الزهور والهدايا، طلبات المنازل، والأمتعة.", Vector3(60, 0, -33.0), Vector3.ZERO, 0, 0, 0, "city_jobs_hub")
 		return
 	var manager := Node.new()
 	manager.name = "MissionManager"
@@ -1631,12 +1631,12 @@ func _create_interactive_buildings() -> void:
 	add_child(profile_ui)
 
 	_add_functional_building(manager, "المتجر", "مهمة شراء احتياجات", "تعرّف على المتجر واستلم قائمة احتياجات تجريبية من البوابة.", Vector3(0, 0, 6.4), Color(0.20, 0.48, 0.30), 150, 0, 1)
-	_add_functional_building(manager, "المطعم", "مهمة توصيل وجبة", "استلم طلب توصيل تجريبي من المطعم. ستصبح أهداف التوصيل الفعلية جزءًا من مرحلة لاحقة.", Vector3(60, 0, -23.6), Color(0.65, 0.30, 0.18), 220, 2, 1)
-	_add_functional_building(manager, "مركز التوظيف", "مهمة التسجيل في وظيفة", "تعرّف على الوظائف المتاحة وشروط الالتحاق بها.", Vector3(30, 0, -23.6), Color(0.22, 0.34, 0.62), 300, 5, 1)
-	_create_job_board("مكتب الوظائف", "اختر من الوظائف السبع المعتمدة: الشحنات، البريد، البيتزا، الصيدلية، الزهور والهدايا، طلبات المنازل، والأمتعة.", Vector3(30, 0, -22.0), Vector3.ZERO, 0, 0, 0, "city_jobs_hub")
+	_add_functional_building(manager, "المطعم", "مهمة توصيل وجبة", "استلم طلب توصيل تجريبي من المطعم. ستصبح أهداف التوصيل الفعلية جزءًا من مرحلة لاحقة.", Vector3(120, 0, -35.4), Color(0.65, 0.30, 0.18), 220, 2, 1)
+	_add_functional_building(manager, "مركز التوظيف", "مهمة التسجيل في وظيفة", "تعرّف على الوظائف المتاحة وشروط الالتحاق بها.", Vector3(60, 0, -35.4), Color(0.22, 0.34, 0.62), 300, 5, 1)
+	_create_job_board("مكتب الوظائف", "اختر من الوظائف السبع المعتمدة: الشحنات، البريد، البيتزا، الصيدلية، الزهور والهدايا، طلبات المنازل، والأمتعة.", Vector3(60, 0, -33.0), Vector3.ZERO, 0, 0, 0, "city_jobs_hub")
 	_create_service_staff("صاحب المتجر", "صاحب محل", "أهلًا بك! يمكنني مساعدتك في احتياجاتك ومشترياتك من المتجر.", Vector3(3.5, 0, 7.0))
-	_create_service_staff("موظف المطعم", "موظف", "مرحبًا! أستقبل طلبات المطعم وأساعدك في أنشطة التوصيل.", Vector3(63.5, 0, -23.0))
-	_create_service_staff("موظف مركز التوظيف", "موظف", "أهلًا بك! يمكنك مراجعة الوظائف المتاحة وشروطها هنا.", Vector3(33.5, 0, -23.0))
+	_create_service_staff("موظف المطعم", "موظف", "مرحبًا! أستقبل طلبات المطعم وأساعدك في أنشطة التوصيل.", Vector3(127.0, 0, -34.5))
+	_create_service_staff("موظف مركز التوظيف", "موظف", "أهلًا بك! يمكنك مراجعة الوظائف المتاحة وشروطها هنا.", Vector3(67.0, 0, -34.5))
 
 func _create_adventure_hub_interaction() -> void:
 	# Invisible interaction anchor at the entrance of the existing adventure_center building.
