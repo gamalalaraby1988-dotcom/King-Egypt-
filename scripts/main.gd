@@ -1512,7 +1512,7 @@ func _create_city() -> void:
 	var road_color := Color(0.12, 0.13, 0.15)
 	var side_road_color := Color(0.15, 0.16, 0.17)
 	# طريق محيطي مستطيل يحيط بالمدينة مع خلوّ مسافة عن مباني الأطراف.
-	_create_box(self, "MainRoad_North", Vector3(440, 0.08, 14), Vector3(0, 0.0, -260), road_color)
+	_create_box(self, "MainRoad_North", Vector3(440, 0.08, 14), Vector3(0, 0.0, -315), road_color)
 	# Perimeter roads continue along the dry east/west shoreline strips;
 	# no road or collision surface crosses the open-water race area.
 	_create_box(self, "MainRoad_West", Vector3(14, 0.08, 520), Vector3(-205, 0.0, -70), road_color)
