@@ -54,8 +54,8 @@ func _initialize() -> void:
 		failures.append("The royal road endpoints are not tangent-aligned with the outer ring.")
 
 	for required in [
-		"Vector3(125.0, 0.0, 285.0)",
-		"Vector3(-145.0, 0.0, 285.0)"
+		"Vector3(80.0, 0.0, 270.0)",
+		"Vector3(-105.0, 0.0, 230.0)"
 	]:
 		if not main_script.contains(required):
 			failures.append("Southern desert area is missing: " + required)
