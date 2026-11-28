@@ -24,7 +24,7 @@ const CITY_LANDMARKS := [
 	{"key": "royal_yacht_club", "position": Vector3(150, 0, 87)},
 	{"key": "desert_lodge", "position": Vector3(-150, 0, 112.50)},
 	{"key": "mountain_temple", "position": Vector3(150, 0, 112.50)},
-	{"key": "royal_ship", "position": Vector3(0, 0, 127.50)},
+	{"key": "royal_ship", "position": Vector3(-45.0, 0.0, 216.0)},
 	{"key": "beach_handball", "position": Vector3(80, 0, 187.50)}
 ]
 
