@@ -159,13 +159,13 @@ func _build_royal_panorama_link() -> void:
 		_add_route_segment("RoyalSemicircleRoad_%02d" % (i + 1), route_points[i], route_points[i + 1], ROYAL_ROUTE_WIDTH)
 
 	# Four short descending exits are distributed across the royal road and reconnect to ring one.
-	var branch_angles := [PI * 0.82, PI * 0.62, PI * 0.38, PI * 0.18]
+	var branch_angles := [PI * 1.18, PI * 1.38, PI * 1.62, PI * 1.82]
 	var branch_names := ["RoyalWestDesertBranch", "RoyalWestCenterBranch", "RoyalEastCenterBranch", "RoyalEastDesertBranch"]
 	var branch_samples := [7, 14, 22, 29]
 	for branch_index in range(branch_samples.size()):
 		var sample_index: int = branch_samples[branch_index]
 		var branch_start: Vector3 = route_points[sample_index]
-		var angle: float = branch_angles[branch_index]
+		var angle: float = float(branch_angles[branch_index])
 		var branch_finish := CITY_CENTER + Vector3(cos(angle) * RING_RADII[0], 0.25, sin(angle) * RING_RADII[0])
 		var midpoint := branch_start.lerp(branch_finish, 0.5)
 		var control_a := branch_start.lerp(midpoint, 0.42) + Vector3(0.0, -1.0, 0.0)
