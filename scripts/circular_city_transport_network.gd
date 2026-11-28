@@ -1,6 +1,6 @@
 extends Node3D
-## Lightweight circular road network and elevated southern royal boundary route.
-## The royal route sits on the south side of the city, opposite the waterfront.
+## Lightweight circular road network and elevated southern royal boundary arc.
+## The royal route joins both ends to the outermost circular road.
 
 const ROAD := Color(0.105, 0.12, 0.14)
 const ROAD_EDGE := Color(0.82, 0.62, 0.28)
@@ -142,8 +142,8 @@ func _add_route_segment(label: String, start: Vector3, finish: Vector3, width: f
 
 func _build_royal_panorama_link() -> void:
 	# The royal road is the southern outer boundary, opposite the waterfront.
-	var west_join := CITY_CENTER + Vector3(-RING_RADII[0], 0.0, 0.0)
-	var east_join := CITY_CENTER + Vector3(RING_RADII[0], 0.0, 0.0)
+	var west_join := CITY_CENTER + Vector3(-RING_RADII[2], 0.0, 0.0)
+	var east_join := CITY_CENTER + Vector3(RING_RADII[2], 0.0, 0.0)
 	var desert_control := Vector3(0.0, 0.0, 850.0)
 	var route_points: Array[Vector3] = []
 	for i in range(ROYAL_ROUTE_SEGMENTS + 1):
@@ -158,37 +158,9 @@ func _build_royal_panorama_link() -> void:
 	for i in range(route_points.size() - 1):
 		_add_route_segment("RoyalSemicircleRoad_%02d" % (i + 1), route_points[i], route_points[i + 1], ROYAL_ROUTE_WIDTH)
 
-	# Four short descending exits are distributed across the southern royal road and reconnect to ring one.
-	var branch_angles := [PI * 0.18, PI * 0.38, PI * 0.62, PI * 0.82]
-	var branch_names := ["RoyalWestDesertBranch", "RoyalWestCenterBranch", "RoyalEastCenterBranch", "RoyalEastDesertBranch"]
-	var branch_samples := [7, 14, 22, 29]
-	for branch_index in range(branch_samples.size()):
-		var sample_index: int = branch_samples[branch_index]
-		var branch_start: Vector3 = route_points[sample_index]
-		var angle: float = float(branch_angles[branch_index])
-		var branch_finish := CITY_CENTER + Vector3(cos(angle) * RING_RADII[0], 0.25, sin(angle) * RING_RADII[0])
-		var midpoint := branch_start.lerp(branch_finish, 0.5)
-		var control_a := branch_start.lerp(midpoint, 0.42) + Vector3(0.0, -1.0, 0.0)
-		var control_b := branch_finish.lerp(midpoint, 0.42) + Vector3(0.0, -0.4, 0.0)
-		_build_short_branch(str(branch_names[branch_index]), branch_start, control_a, control_b, branch_finish, 13.0, 12)
-
+	# Both ends of the southern royal arc meet the outermost circular road; inner branches are intentionally omitted to preserve desert space.
 	var panorama_center := route_points[ROYAL_ROUTE_SEGMENTS / 2]
 	_build_royal_panorama_plaza(panorama_center)
-
-func _build_short_branch(label: String, start: Vector3, control_a: Vector3, control_b: Vector3, finish: Vector3, width: float, segments: int) -> void:
-	# Cubic Bezier sampling keeps the exits smooth; segment elevation gradually
-	# falls from the elevated route to the existing ground road level.
-	var points: Array[Vector3] = []
-	for i in range(segments + 1):
-		var t := float(i) / float(segments)
-		var one_minus_t := 1.0 - t
-		var point := start * (one_minus_t * one_minus_t * one_minus_t)
-		point += control_a * (3.0 * one_minus_t * one_minus_t * t)
-		point += control_b * (3.0 * one_minus_t * t * t)
-		point += finish * (t * t * t)
-		points.append(point)
-	for i in range(points.size() - 1):
-		_add_route_segment(label + "_%02d" % (i + 1), points[i], points[i + 1], width)
 
 
 func _build_royal_panorama_plaza(center: Vector3) -> void:
