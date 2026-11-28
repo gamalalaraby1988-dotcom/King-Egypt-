@@ -99,16 +99,13 @@ func _capture_previews() -> void:
 		return
 
 	# Full-city aerial now includes the southern desert, pyramids and Kings Summit districts.
-	# Use a portrait viewport for the long, narrow north-to-south city footprint.
-	# This makes the full production map occupy the frame instead of leaving large side margins.
-	root.size = Vector2i(900, 1600)
-	var master_plan_ok := await _capture_view(
+	# Render the full north-to-south production map through a dedicated portrait SubViewport.
+	# Changing Window.size is ignored by some headless runners, so capture the SubViewport texture directly.
+	var master_plan_ok := await _capture_portrait_master_plan(
 		"expanded_city_aerial_master_plan_preview.png",
 		Vector3(0.0, 1420.0, -110.0),
-		Vector3(0.0, 0.0, -110.0),
-		60.0
+		Vector3(0.0, 0.0, -110.0)
 	)
-	root.size = Vector2i(1600, 900)
 	if not master_plan_ok:
 		quit(1)
 		return
@@ -214,6 +211,43 @@ func _capture_previews() -> void:
 
 	print("Production-scene previews saved in ", OUTPUT_DIR)
 	quit(0)
+
+func _capture_portrait_master_plan(file_name: String, camera_position: Vector3, target: Vector3) -> bool:
+	var portrait := SubViewport.new()
+	portrait.name = "PortraitMasterPlanViewport"
+	portrait.size = Vector2i(900, 1600)
+	portrait.own_world_3d = false
+	portrait.world_3d = current_scene.get_world_3d()
+	portrait.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	root.add_child(portrait)
+
+	var camera := Camera3D.new()
+	camera.name = "PortraitMasterPlanCamera"
+	camera.fov = 60.0
+	portrait.add_child(camera)
+	camera.global_position = camera_position
+	camera.look_at(target, Vector3.UP)
+	camera.make_current()
+	for _frame in range(18):
+		await process_frame
+	RenderingServer.force_draw(false)
+	await process_frame
+
+	var image := portrait.get_texture().get_image()
+	portrait.queue_free()
+	await process_frame
+	if image.is_empty():
+		push_error("The portrait master-plan viewport image is empty: " + file_name)
+		return false
+	var directory := ProjectSettings.globalize_path(OUTPUT_DIR)
+	DirAccess.make_dir_recursive_absolute(directory)
+	var output_path := directory.path_join(file_name)
+	var error := image.save_png(output_path)
+	if error != OK:
+		push_error("Could not save portrait master-plan preview: " + output_path)
+		return false
+	print("Saved portrait master-plan preview: ", output_path, " (", image.get_width(), "x", image.get_height(), ")")
+	return true
 
 func _capture_view(file_name: String, camera_position: Vector3, target: Vector3, camera_fov: float = 55.0) -> bool:
 	var camera := Camera3D.new()
