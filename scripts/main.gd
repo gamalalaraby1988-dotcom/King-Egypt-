@@ -2206,8 +2206,9 @@ func _create_mode_selection_ui() -> void:
 	facebook_button.name = "FacebookEntryButton"
 	facebook_button.text = "f   تسجيل الدخول عبر Facebook"
 	facebook_button.custom_minimum_size.y = 42
-	facebook_button.disabled = true
-	facebook_button.tooltip_text = "سيتم تفعيل Facebook بعد إعداد خدمة المصادقة الخاصة به."
+	# Keep the control interactive: explain provider availability instead of disabling it.
+	facebook_button.disabled = false
+	facebook_button.tooltip_text = "عرض حالة تسجيل الدخول عبر Facebook"
 	facebook_button.pressed.connect(func() -> void:
 		if is_instance_valid(mode_status_label):
 			mode_status_label.text = "تسجيل Facebook غير مفعّل بعد؛ استخدم البريد الإلكتروني حاليًا."
