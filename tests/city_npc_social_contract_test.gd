@@ -32,6 +32,12 @@ func _run_city_npc_social_contract() -> void:
 		quit(1)
 		return
 
+	var layout_source := FileAccess.get_file_as_string("res://scripts/approved_city_layout.gd")
+	var population_call_count := main_source.count("_create_city_npc_population()")
+	if population_call_count != 2 or layout_source.contains("_build_npc_population()"):
+		push_error("Ambient NPC population must be created only once by the client startup flow.")
+		quit(1)
+		return
 	# Every base resident and copy must have clear visual spacing at spawn.
 	var spawn_regex := RegEx.new()
 	if spawn_regex.compile("Vector3\\((-?[0-9]+(?:\\.[0-9]+)?), 0, (-?[0-9]+(?:\\.[0-9]+)?)\\)") != OK:
