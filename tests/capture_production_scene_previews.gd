@@ -98,15 +98,24 @@ func _capture_previews() -> void:
 		quit(1)
 		return
 
-	# Capture a real high-angle overview of the expanded city footprint, including the
-	# separated districts, wide road grid, open sea, ship bridge and beach access.
+	# Full-city aerial now includes the southern desert, pyramids and Kings Summit districts.
 	var master_plan_ok := await _capture_view(
 		"expanded_city_aerial_master_plan_preview.png",
-		Vector3(0.0, 440.0, -55.0),
-		Vector3(0.0, 0.0, -55.0),
+		Vector3(0.0, 660.0, 90.0),
+		Vector3(0.0, 0.0, 90.0),
 		68.0
 	)
 	if not master_plan_ok:
+		quit(1)
+		return
+
+	var southern_district_ok := await _capture_view(
+		"southern_desert_district_aerial_preview.png",
+		Vector3(0.0, 300.0, 430.0),
+		Vector3(0.0, 0.0, 430.0),
+		64.0
+	)
+	if not southern_district_ok:
 		quit(1)
 		return
 
