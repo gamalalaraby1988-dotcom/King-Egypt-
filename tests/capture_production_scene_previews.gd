@@ -101,9 +101,9 @@ func _capture_previews() -> void:
 	# Full-city aerial now includes the southern desert, pyramids and Kings Summit districts.
 	var master_plan_ok := await _capture_view(
 		"expanded_city_aerial_master_plan_preview.png",
-		Vector3(0.0, 620.0, 100.0),
-		Vector3(0.0, 0.0, 100.0),
-		68.0
+		Vector3(0.0, 760.0, 110.0),
+		Vector3(0.0, 0.0, 110.0),
+		60.0
 	)
 	if not master_plan_ok:
 		quit(1)
