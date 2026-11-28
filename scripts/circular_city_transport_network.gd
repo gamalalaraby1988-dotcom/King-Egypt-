@@ -141,43 +141,37 @@ func _add_route_segment(label: String, start: Vector3, finish: Vector3, width: f
 			add_child(post)
 
 func _build_royal_panorama_link() -> void:
-	# A broad true semicircular arc joins the first city ring at its north and east points.
-	# Its outward bulge faces the pyramid side; existing landmarks remain untouched.
+	# The elevated route follows the northern desert side of the city, then
+	# bends east to meet the first ring. The pyramid, sea, and beach anchors
+	# are not moved; only the route curve is reshaped around the pyramid zone.
 	var north_join := CITY_CENTER + Vector3(0.0, 0.0, -RING_RADII[0])
 	var east_join := CITY_CENTER + Vector3(RING_RADII[0], 0.0, 0.0)
-	var chord_mid := (north_join + east_join) * 0.5
-	var chord := east_join - north_join
-	var outward := Vector3(-chord.z, 0.0, chord.x).normalized()
-	# Select the half-circle bulge toward the pyramids (negative X / negative Z).
-	if outward.x < 0.0:
-		outward = -outward
-	var radius := chord.length() * 0.5
-	var arc_center := chord_mid
+	# A quadratic Bezier control point pulls the route toward the desert side
+	# beside the pyramids instead of allowing a wide semicircle to swing too far east.
+	var desert_control := Vector3(150.0, 0.0, -450.0)
 	var route_points: Array[Vector3] = []
 	for i in range(ROYAL_ROUTE_SEGMENTS + 1):
-		var angle := PI * float(i) / float(ROYAL_ROUTE_SEGMENTS)
-		var horizontal_offset := Vector3(
-			cos(angle) * (chord * 0.5).normalized().x,
-			0.0,
-			cos(angle) * (chord * 0.5).normalized().z
-		) * radius + outward * sin(angle) * radius
-		var progress := float(i) / float(ROYAL_ROUTE_SEGMENTS)
-		var ramp_factor := sin(progress * PI)
-		route_points.append(arc_center + horizontal_offset + Vector3(0.0, 0.25 + ramp_factor * ROYAL_ROUTE_HEIGHT, 0.0))
+		var t := float(i) / float(ROYAL_ROUTE_SEGMENTS)
+		var one_minus_t := 1.0 - t
+		var horizontal_point := north_join * (one_minus_t * one_minus_t)
+		horizontal_point += desert_control * (2.0 * one_minus_t * t)
+		horizontal_point += east_join * (t * t)
+		var ramp_factor := sin(t * PI)
+		route_points.append(horizontal_point + Vector3(0.0, 0.25 + ramp_factor * ROYAL_ROUTE_HEIGHT, 0.0))
 
 	for i in range(route_points.size() - 1):
 		_add_route_segment("RoyalSemicircleRoad_%02d" % (i + 1), route_points[i], route_points[i + 1], ROYAL_ROUTE_WIDTH)
 
-	# Northern exit: leave the elevated overlook toward the eastern desert edge,
-	# keeping clear of the fixed pyramid positions before descending to ground level.
+	# Northern exit descends toward the eastern desert edge, clear of the fixed pyramid anchors.
+	var panorama_center := route_points[ROYAL_ROUTE_SEGMENTS / 2]
 	_build_short_branch(
-		"RoyalNorthDescendingBranch", route_points[int(ROYAL_ROUTE_SEGMENTS / 2)] + Vector3(22.0, 0.0, -22.0),
+		"RoyalNorthDescendingBranch", panorama_center + Vector3(22.0, 0.0, -22.0),
 		Vector3(230.0, 7.0, -280.0), Vector3(165.0, 1.6, -335.0),
 		Vector3(125.0, 0.25, -365.0), 14.0, 12
 	)
 
-	# Right-hand exit: a smooth descending spur reconnects to the first circular ring.
-	var right_branch_start := route_points[4]
+	# The eastern spur leaves the route near its east-side approach and reconnects to ring one.
+	var right_branch_start := route_points[ROYAL_ROUTE_SEGMENTS - 4]
 	var right_ring_join := CITY_CENTER + Vector3(cos(0.45) * RING_RADII[0], 0.25, sin(0.45) * RING_RADII[0])
 	_build_short_branch(
 		"RoyalRightDescendingBranch", right_branch_start,
@@ -185,9 +179,9 @@ func _build_royal_panorama_link() -> void:
 		right_ring_join, 13.0, 9
 	)
 
-	# A spectacular circular royal overlook is integrated into the middle of the arc.
-	var plaza_center := route_points[ROYAL_ROUTE_SEGMENTS / 2]
-	_build_royal_panorama_plaza(plaza_center)
+	# Keep the royal panorama plaza centered on the new desert-side curve.
+	_build_royal_panorama_plaza(panorama_center)
+
 
 func _build_short_branch(label: String, start: Vector3, control_a: Vector3, control_b: Vector3, finish: Vector3, width: float, segments: int) -> void:
 	# Cubic Bezier sampling keeps the exits smooth; segment elevation gradually
