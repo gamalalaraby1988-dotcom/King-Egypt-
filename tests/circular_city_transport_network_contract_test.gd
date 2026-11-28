@@ -28,8 +28,8 @@ func _initialize() -> void:
 		"RoyalWestCenterBranch",
 		"RoyalEastCenterBranch",
 		"RoyalEastDesertBranch",
-		"var branch_angles := [PI * 1.18, PI * 1.38, PI * 1.62, PI * 1.82]",
-		"var desert_control := Vector3(0.0, 0.0, -600.0)",
+		"var branch_angles := [PI * 0.18, PI * 0.38, PI * 0.62, PI * 0.82]",
+		"var desert_control := Vector3(0.0, 0.0, 850.0)",
 		"func _build_short_branch(",
 		"SteelGuardrail",
 		"RoyalPanoramaPlazaDeck",
@@ -55,11 +55,11 @@ func _initialize() -> void:
 			failures.append("A royal branch does not land on the northern first-ring arc.")
 
 	for required in [
-		"Vector3(82.0, 0.0, -285.0)",
-		"Vector3(-82.0, 0.0, -285.0)"
+		"Vector3(82.0, 0.0, 285.0)",
+		"Vector3(-82.0, 0.0, 285.0)"
 	]:
 		if not main_script.contains(required):
-			failures.append("Northern desert area is missing: " + required)
+			failures.append("Southern desert area is missing: " + required)
 
 	if failures.is_empty():
 		print("Royal semicircle contract passed: first-ring connections, wide curved road, steel guardrails, panoramic plaza, preserved sea/pyramids.")
