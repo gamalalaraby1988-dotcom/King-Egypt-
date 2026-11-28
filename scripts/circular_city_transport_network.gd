@@ -171,18 +171,17 @@ func _build_royal_panorama_link() -> void:
 	# Northern exit: leave the elevated overlook toward the eastern desert edge,
 	# keeping clear of the fixed pyramid positions before descending to ground level.
 	_build_short_branch(
-		"RoyalNorthDescendingBranch", route_points[ROYAL_ROUTE_SEGMENTS / 2],
-		Vector3(215.0, 7.0, -260.0), Vector3(165.0, 1.6, -335.0),
+		"RoyalNorthDescendingBranch", route_points[int(ROYAL_ROUTE_SEGMENTS / 2)] + Vector3(22.0, 0.0, -22.0),
+		Vector3(230.0, 7.0, -280.0), Vector3(165.0, 1.6, -335.0),
 		Vector3(125.0, 0.25, -365.0), 14.0, 12
 	)
 
 	# Right-hand exit: a smooth descending spur reconnects to the first circular ring.
-	var right_branch_start := route_points[27]
+	var right_branch_start := route_points[4]
 	var right_ring_join := CITY_CENTER + Vector3(cos(0.45) * RING_RADII[0], 0.25, sin(0.45) * RING_RADII[0])
 	_build_short_branch(
 		"RoyalRightDescendingBranch", right_branch_start,
-		right_branch_start.lerp(right_ring_join, 0.34) + Vector3(22.0, -0.8, 8.0),
-		right_branch_start.lerp(right_ring_join, 0.72) + Vector3(12.0, -2.2, 4.0),
+		Vector3(225.0, 2.0, -42.0), Vector3(185.0, 0.8, -2.0),
 		right_ring_join, 13.0, 9
 	)
 
