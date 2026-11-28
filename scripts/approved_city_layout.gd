@@ -28,8 +28,7 @@ func _ready() -> void:
 	_build_access_roads_and_parking()
 	_build_public_gardens()
 	_build_pedestrian_green_pockets()
-	_build_mountain_route()
-	_build_mountain_animals()
+	# The old climbable mountain and animal trail are retired; the elevated panorama route is built by main.gd.
 	_build_city_lighting_and_wayfinding()
 	_build_npc_population()
 
