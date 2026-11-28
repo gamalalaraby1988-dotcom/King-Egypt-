@@ -149,7 +149,7 @@ func _build_royal_panorama_link() -> void:
 	var chord := east_join - north_join
 	var outward := Vector3(-chord.z, 0.0, chord.x).normalized()
 	# Select the half-circle bulge toward the pyramids (negative X / negative Z).
-	if outward.x > 0.0:
+	if outward.x < 0.0:
 		outward = -outward
 	var radius := chord.length() * 0.5
 	var arc_center := chord_mid
