@@ -208,8 +208,16 @@ func _initialize_game_world() -> void:
 	_world_initializing = false
 	if is_instance_valid(startup_loading_layer):
 		startup_loading_layer.visible = false
-	var player := get_node_or_null("Player")
+	var player := get_node_or_null("Player") as CharacterBody3D
 	if is_instance_valid(player):
+		# Reveal the avatar only after the ground, city and gameplay HUD exist.
+		player.global_position = _initial_player_spawn_position
+		player.velocity = Vector3.ZERO
+		player.reset_physics_interpolation()
+		player.visible = true
+		var player_camera := player.get_node_or_null("CameraPivot/SpringArm3D/Camera3D") as Camera3D
+		if is_instance_valid(player_camera):
+			player_camera.current = true
 		player.set_process(true)
 		player.set_physics_process(true)
 
@@ -1947,6 +1955,8 @@ var account_otp_input: LineEdit
 func _create_mode_selection_ui() -> void:
 	var player := get_node_or_null("Player")
 	if is_instance_valid(player):
+		# Do not render the 3D avatar against an uninitialized world/menu background.
+		player.visible = false
 		player.set_physics_process(false)
 		player.set_process(false)
 
