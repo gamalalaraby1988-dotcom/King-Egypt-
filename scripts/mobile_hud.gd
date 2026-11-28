@@ -229,7 +229,12 @@ func _apply_camera_drag(delta_pos: Vector2) -> void:
 	if pivot == null:
 		return
 	var sensitivity := camera_sensitivity * _camera_drag_scale
-	pivot.rotation.y -= delta_pos.x * sensitivity
+	if is_instance_valid(controlled_vehicle):
+		# أثناء قيادة السيارة تتحرك زاوية الكاميرا مع اتجاه سحب الإصبع.
+		pivot.rotation.y += delta_pos.x * sensitivity
+	else:
+		# حافظ على اتجاه كاميرا المشي الحالي دون تغيير.
+		pivot.rotation.y -= delta_pos.x * sensitivity
 	pivot.rotation.x = clampf(pivot.rotation.x - delta_pos.y * sensitivity, deg_to_rad(-60.0), deg_to_rad(25.0))
 
 func _is_over_control(pos: Vector2) -> bool:
