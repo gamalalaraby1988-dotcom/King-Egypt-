@@ -15,54 +15,54 @@ const SOCIAL_COOLDOWN := 7.0
 
 const BASE_SPAWNS: Array[Vector3] = [
 	# 6 — المنطقة الملكية والميدان
-	Vector3(-17, 0, -45), Vector3(17, 0, -45), Vector3(-13, 0, -31),
-	Vector3(13, 0, -31), Vector3(-7, 0, -65), Vector3(7, 0, -65),
+	Vector3(-34, 0, -45), Vector3(34, 0, -45), Vector3(-26, 0, -31),
+	Vector3(26, 0, -31), Vector3(-14, 0, -65), Vector3(14, 0, -65),
 	# 10 — المنطقة التجارية
-	Vector3(-30, 0, -17), Vector3(-22, 0, -27), Vector3(0, 0, -15),
-	Vector3(12, 0, -12), Vector3(30, 0, -16), Vector3(42, 0, -24),
-	Vector3(58, 0, -16), Vector3(-58, 0, -12), Vector3(45, 0, 8),
-	Vector3(58, 0, 12),
+	Vector3(-60, 0, -17), Vector3(-44, 0, -27), Vector3(0, 0, -15),
+	Vector3(24, 0, -12), Vector3(60, 0, -16), Vector3(84, 0, -24),
+	Vector3(116, 0, -16), Vector3(-116, 0, -12), Vector3(90, 0, 8),
+	Vector3(116, 0, 12),
 	# 5 — المنطقة السكنية
-	Vector3(-60, 0, 43), Vector3(-30, 0, 43), Vector3(0, 0, 44),
-	Vector3(30, 0, 44), Vector3(45, 0, 43),
+	Vector3(-120, 0, 43), Vector3(-60, 0, 43), Vector3(0, 0, 44),
+	Vector3(60, 0, 44), Vector3(90, 0, 43),
 	# 10 — المنطقة الترفيهية
-	Vector3(-60, 0, 48), Vector3(-50, 0, 67), Vector3(-30, 0, 49),
-	Vector3(-18, 0, 69), Vector3(0, 0, 73), Vector3(15, 0, 68),
-	Vector3(30, 0, 49), Vector3(43, 0, 68), Vector3(60, 0, 48),
-	Vector3(65, 0, 68),
+	Vector3(-120, 0, 48), Vector3(-100, 0, 67), Vector3(-60, 0, 49),
+	Vector3(-36, 0, 69), Vector3(0, 0, 73), Vector3(30, 0, 68),
+	Vector3(60, 0, 49), Vector3(86, 0, 68), Vector3(120, 0, 48),
+	Vector3(130, 0, 68),
 	# 7 — منطقة الخدمات
-	Vector3(-84, 0, -14), Vector3(-84, 0, 7), Vector3(-84, 0, 30),
-	Vector3(84, 0, -14), Vector3(84, 0, 7), Vector3(84, 0, 28),
-	Vector3(85, 0, 48),
+	Vector3(-168, 0, -14), Vector3(-168, 0, 7), Vector3(-168, 0, 30),
+	Vector3(168, 0, -14), Vector3(168, 0, 7), Vector3(168, 0, 28),
+	Vector3(170, 0, 48),
 	# 6 — الميناء والنيل
-	Vector3(-52, 0, 72), Vector3(-32, 0, 72), Vector3(-16, 0, 72),
-	Vector3(16, 0, 72), Vector3(36, 0, 72), Vector3(56, 0, 72),
+	Vector3(-104, 0, 72), Vector3(-64, 0, 72), Vector3(-32, 0, 72),
+	Vector3(32, 0, 72), Vector3(72, 0, 72), Vector3(112, 0, 72),
 	# 6 — المغامرات والجبل
-	Vector3(88, 0, 65), Vector3(101, 0, 62), Vector3(108, 0, 47),
-	Vector3(91, 0, 39), Vector3(105, 0, 31), Vector3(91, 0, 18)
+	Vector3(176, 0, 65), Vector3(202, 0, 62), Vector3(216, 0, 47),
+	Vector3(182, 0, 39), Vector3(210, 0, 31), Vector3(182, 0, 18)
 ]
 
 ## نقاط نسخ إضافية. أضف Vector3 جديدًا هنا لتوزيع نسخة في مكان آخر.
 ## source هو رقم الشخصية الأساسية من 1 إلى 50 التي ستُنسخ.
 const COPY_SPAWNS: Array[Dictionary] = [
-	{"position": Vector3(-72, 0, -48), "source": 1},
-	{"position": Vector3(-48, 0, -48), "source": 2},
-	{"position": Vector3(48, 0, -48), "source": 3},
-	{"position": Vector3(72, 0, -48), "source": 4},
-	{"position": Vector3(-72, 0, -22), "source": 5},
-	{"position": Vector3(72, 0, -22), "source": 6},
-	{"position": Vector3(-72, 0, 25), "source": 7},
-	{"position": Vector3(72, 0, 25), "source": 8},
-	{"position": Vector3(-52, 0, 18), "source": 9},
-	{"position": Vector3(52, 0, 18), "source": 10},
-	{"position": Vector3(-24, 0, 82), "source": 11},
-	{"position": Vector3(24, 0, 82), "source": 12},
-	{"position": Vector3(-42, 0, 95), "source": 13},
-	{"position": Vector3(42, 0, 95), "source": 14},
-	{"position": Vector3(-90, 0, 60), "source": 15},
-	{"position": Vector3(90, 0, 82), "source": 16},
-	{"position": Vector3(96, 0, 8), "source": 17},
-	{"position": Vector3(112, 0, 60), "source": 18},
+	{"position": Vector3(-144, 0, -48), "source": 1},
+	{"position": Vector3(-96, 0, -48), "source": 2},
+	{"position": Vector3(96, 0, -48), "source": 3},
+	{"position": Vector3(144, 0, -48), "source": 4},
+	{"position": Vector3(-144, 0, -22), "source": 5},
+	{"position": Vector3(144, 0, -22), "source": 6},
+	{"position": Vector3(-144, 0, 25), "source": 7},
+	{"position": Vector3(144, 0, 25), "source": 8},
+	{"position": Vector3(-104, 0, 18), "source": 9},
+	{"position": Vector3(104, 0, 18), "source": 10},
+	{"position": Vector3(-48, 0, 82), "source": 11},
+	{"position": Vector3(48, 0, 82), "source": 12},
+	{"position": Vector3(-84, 0, 95), "source": 13},
+	{"position": Vector3(84, 0, 95), "source": 14},
+	{"position": Vector3(-180, 0, 60), "source": 15},
+	{"position": Vector3(180, 0, 82), "source": 16},
+	{"position": Vector3(192, 0, 8), "source": 17},
+	{"position": Vector3(224, 0, 60), "source": 18},
 	{"position": Vector3(0, 0, -5), "source": 19},
 	{"position": Vector3(0, 0, 58), "source": 20}
 ]

@@ -32,7 +32,7 @@ var jet_ski_occupied := false
 var _jet_ski_unmount_pending := false
 var _jet_ski_saved_collision_layer := 1
 var _jet_ski_saved_collision_mask := 1
-const JET_SKI_LAUNCH_POSITION := Vector3(0.0, 0.34, 82.0)
+const JET_SKI_LAUNCH_POSITION := Vector3(0.0, 0.34, -514.0)
 const JET_SKI_BOARDING_RADIUS := 8.0
 var _scooter_saved_collision_layer := 1
 var _scooter_saved_collision_mask := 1
@@ -47,15 +47,16 @@ var _remote_player_views: Dictionary = {}
 var _city_matchmaking_request: HTTPRequest
 var _pending_city_reservation_id := ""
 const PLAYER_RECOVERY_FALL_LIMIT := -3.0
-const CITY_SAFE_X_LIMIT := 155.0
-const CITY_SAFE_Z_MIN := -340.0
-const CITY_SAFE_Z_MAX := 180.0
+const CITY_SAFE_X_LIMIT := 280.0
+const CITY_SAFE_Z_MIN := -850.0
+const CITY_SAFE_Z_MAX := 600.0
 const INTERIOR_WORLD_POSITION := Vector3(1000.0, 0.0, 1000.0)
 
 func _ready() -> void:
 	if AuthoritativeGameServer.is_dedicated_server_requested():
 		_create_ground()
 		_create_city()
+		_create_circular_city_transport_network()
 		_create_approved_city_layout()
 		_create_city_signage()
 		var local_player := get_node_or_null("Player")
@@ -68,6 +69,7 @@ func _ready() -> void:
 		return
 	_create_ground()
 	_create_city()
+	_create_circular_city_transport_network()
 	_create_approved_city_layout()
 	_create_city_signage()
 	_create_mobile_hud()
@@ -109,6 +111,17 @@ func _create_city_npc_population() -> void:
 	population.name = "CityNPCPopulation"
 	population.set_script(population_script)
 	add_child(population)
+
+
+func _create_circular_city_transport_network() -> void:
+	var network_script := load("res://scripts/circular_city_transport_network.gd") as Script
+	if network_script == null:
+		push_warning("تعذر تحميل شبكة الطرق الدائرية والطريق الملكي المرتفع.")
+		return
+	var network := Node3D.new()
+	network.name = "CircularCityTransportNetwork"
+	network.set_script(network_script)
+	add_child(network)
 
 
 func _create_approved_city_layout() -> void:
@@ -1496,14 +1509,25 @@ func _create_box(parent: Node3D, name: String, size: Vector3, pos: Vector3, colo
 		body.add_child(shape_node)
 		parent.add_child(body)
 
+func _create_rotated_box(parent: Node3D, name: String, size: Vector3, pos: Vector3, rotation_y: float, color: Color) -> void:
+	_create_box(parent, name, size, pos, color)
+	var road := parent.get_node_or_null(name) as MeshInstance3D
+	if is_instance_valid(road):
+		road.rotation.y = rotation_y
+
 func _create_ground() -> void:
-	# Keep the full northern city ground while opening a broad, collision-free
-	# sea footprint from the promenade southward. East/west land strips remain
-	# continuous and provide dry beach-club and sports access.
+	# Keep the approved city terrain and add a full-width northern beach shelf.
+	# The open sea begins beyond the shore; no ground slab continues behind it.
 	var ground_color := Color(0.34, 0.42, 0.31)
-	_create_box(self, "Ground_West", Vector3(100, 1, 520), Vector3(-110, -0.55, -80), ground_color, true)
-	_create_box(self, "Ground_East", Vector3(100, 1, 520), Vector3(110, -0.55, -80), ground_color, true)
-	_create_box(self, "Ground_Center_North", Vector3(120, 1, 418), Vector3(0, -0.55, -131), ground_color, true)
+	_create_box(self, "Ground_West", Vector3(160, 1, 1000), Vector3(-190, -0.55, 50), ground_color, true)
+	_create_box(self, "Ground_East", Vector3(160, 1, 1000), Vector3(190, -0.55, 50), ground_color, true)
+	_create_box(self, "Ground_Center_North", Vector3(220, 1, 418), Vector3(0, -0.55, -131), ground_color, true)
+	# Southern land closes the loop below the Nile while leaving the water and race course open.
+	_create_box(self, "Ground_Center_South", Vector3(440, 1, 240), Vector3(0, -0.55, 440), ground_color, true)
+	# Close the uncovered central southern corridor between the north and south terrain slabs.
+	_create_box(self, "Ground_Center_Mid", Vector3(220, 1, 242), Vector3(0, -0.55, 199), ground_color, true)
+	# Keep this slab aligned with the adjoining center slabs to prevent sky gaps in the aerial layout.
+	_create_box(self, "Ground_North_Beach", Vector3(440, 1, 180), Vector3(0, -0.55, -430), ground_color, true)
 
 func _create_city() -> void:
 	# المباني المرئية تُنشأ من قائمة المدينة المعتمدة في ApprovedCityLayout.
@@ -1511,55 +1535,60 @@ func _create_city() -> void:
 
 	var road_color := Color(0.12, 0.13, 0.15)
 	var side_road_color := Color(0.15, 0.16, 0.17)
-	# طريق محيطي مستطيل يحيط بالمدينة مع خلوّ مسافة عن مباني الأطراف.
-	_create_box(self, "MainRoad_North", Vector3(190, 0.08, 6), Vector3(0, 0.0, -95), road_color)
-	# Perimeter roads continue along the dry east/west shoreline strips;
-	# no road or collision surface crosses the open-water race area.
-	_create_box(self, "MainRoad_West", Vector3(6, 0.08, 260), Vector3(-95, 0.0, 35), road_color)
-	_create_box(self, "MainRoad_East", Vector3(6, 0.08, 260), Vector3(95, 0.0, 35), road_color)
-	_create_box(self, "BeachAccessRoad_West", Vector3(6, 0.08, 70), Vector3(-65, 0.0, 115), road_color)
-	_create_box(self, "BeachAccessRoad_East", Vector3(6, 0.08, 70), Vector3(65, 0.0, 115), road_color)
-	_create_box(self, "BeachAccessConnector_West", Vector3(30, 0.08, 6), Vector3(-80, 0.0, 115), road_color)
-	_create_box(self, "BeachAccessConnector_East", Vector3(30, 0.08, 6), Vector3(80, 0.0, 115), road_color)
+	# Royal City Loop: one continuous perimeter route with chamfered turns,
+	# keeping the road clear of approved building footprints.
+	_create_box(self, "MainRoad_North", Vector3(340, 0.08, 14), Vector3(0, 0.0, -315), road_color)
+	_create_box(self, "MainRoad_West", Vector3(14, 0.08, 785), Vector3(-205, 0.0, 112.5), road_color)
+	_create_box(self, "MainRoad_East", Vector3(14, 0.08, 785), Vector3(205, 0.0, 112.5), road_color)
+	_create_box(self, "MainRoad_South", Vector3(340, 0.08, 14), Vector3(0, 0.0, 540), road_color)
+	_create_rotated_box(self, "RoyalLoopRoad_NorthWestTurn", Vector3(14, 0.08, 49.5), Vector3(-187.5, 0.0, -297.5), -PI / 4.0, road_color)
+	_create_rotated_box(self, "RoyalLoopRoad_NorthEastTurn", Vector3(14, 0.08, 49.5), Vector3(187.5, 0.0, -297.5), PI / 4.0, road_color)
+	_create_rotated_box(self, "RoyalLoopRoad_SouthWestTurn", Vector3(14, 0.08, 49.5), Vector3(-187.5, 0.0, 522.5), PI / 4.0, road_color)
+	_create_rotated_box(self, "RoyalLoopRoad_SouthEastTurn", Vector3(14, 0.08, 49.5), Vector3(187.5, 0.0, 522.5), -PI / 4.0, road_color)
+	# The beach spur meets the eastern loop; the ship and race bridges remain separate.
+	_create_box(self, "BeachAccessRoad_East", Vector3(10, 0.08, 90), Vector3(130, 0.0, 120), road_color)
+	_create_box(self, "BeachAccessConnector_East", Vector3(72, 0.08, 10), Vector3(160, 0.0, 120), road_color)
+	# The four northern royal-road branches now feed the inner ring; preserve the summit connector.
+	_create_box(self, "KingsMountainRingConnector", Vector3(75, 0.08, 10), Vector3(167.5, 0.0, 424), road_color, true)
 	# الشارع العرضي الشمالي يلتف حول الميدان الملكي ويترك ساحته مفتوحة للتجمع.
 	for side in [-1.0, 1.0]:
-		_create_box(self, "MainRoad_X_%s" % str(side), Vector3(72, 0.08, 6), Vector3(side * 59, 0.0, -45), road_color)
+		_create_box(self, "MainRoad_X_%s" % str(side), Vector3(156, 0.08, 14), Vector3(side * 118, 0.0, -67.5), road_color)
 	# شوارع طولية في الممرات الآمنة بين صفوف المباني، وتتصل بالشوارع العرضية.
-	for road_x in [-15.0, 15.0]:
-		_create_box(self, "SideRoad_V_%d" % int(road_x), Vector3(5, 0.075, 118), Vector3(road_x, 0.006, 36), side_road_color)
+	for road_x in [-30.0, 30.0]:
+		_create_box(self, "SideRoad_V_%d" % int(road_x), Vector3(12, 0.075, 177), Vector3(road_x, 0.006, 54), side_road_color)
 	# شوارع عرضية قصيرة داخل الفواصل الآمنة بين صفوف المباني.
-	for road_z in [-15.0, 15.0, 45.0]:
-		_create_box(self, "SideRoad_Z_%d" % int(road_z), Vector3(132, 0.075, 5), Vector3(0, 0.006, road_z), side_road_color)
+	for road_z in [-202.5, -157.5, -67.5, -22.5, 22.5, 67.5, 112.5]:
+		_create_box(self, "SideRoad_Z_%d" % int(road_z), Vector3(264, 0.075, 12), Vector3(0, 0.006, road_z), side_road_color)
 	# خطوط إرشادية على جزأي الطريق المحيط بالميدان.
 	for side in [-1.0, 1.0]:
 		for i in range(4):
-			var mark_x: float = side * (28.0 + float(i) * 18.0)
-			_create_box(self, "RoadMark_X_%s_%d" % [str(side), i], Vector3(3, 0.025, 0.16), Vector3(mark_x, 0.06, -45), Color(0.92, 0.86, 0.62))
+			var mark_x: float = side * (56.0 + float(i) * 36.0)
+			_create_box(self, "RoadMark_X_%s_%d" % [str(side), i], Vector3(3, 0.025, 0.16), Vector3(mark_x, 0.06, -67.5), Color(0.92, 0.86, 0.62))
 	_create_city_pedestrian_network()
 
 func _create_city_pedestrian_network() -> void:
 	var sidewalk_color := Color(0.58, 0.51, 0.40)
 	var curb_color := Color(0.78, 0.69, 0.53)
-	for road_z in [-15.0, 15.0, 45.0]:
+	for road_z in [-202.5, -157.5, -67.5, -22.5, 22.5, 67.5, 112.5]:
 		for side in [-1.0, 1.0]:
-			var walk_z: float = road_z + side * 4.0
-			_create_box(self, "Sidewalk_H_%d_%d" % [int(road_z), int(side)], Vector3(132.0, 0.14, 1.7), Vector3(0.0, 0.07, walk_z), sidewalk_color)
-			_create_box(self, "Curb_H_%d_%d" % [int(road_z), int(side)], Vector3(132.0, 0.22, 0.16), Vector3(0.0, 0.11, road_z + side * 4.92), curb_color)
-	for road_x in [-15.0, 15.0]:
+			var walk_z: float = road_z + side * 7.0
+			_create_box(self, "Sidewalk_H_%d_%d" % [int(road_z), int(side)], Vector3(264.0, 0.14, 1.7), Vector3(0.0, 0.07, walk_z), sidewalk_color)
+			_create_box(self, "Curb_H_%d_%d" % [int(road_z), int(side)], Vector3(264.0, 0.22, 0.16), Vector3(0.0, 0.11, road_z + side * 8.0), curb_color)
+	for road_x in [-30.0, 30.0]:
 		for side in [-1.0, 1.0]:
-			var walk_x: float = road_x + side * 3.65
-			_create_box(self, "Sidewalk_V_%d_%d" % [int(road_x), int(side)], Vector3(1.65, 0.14, 118.0), Vector3(walk_x, 0.07, 36.0), sidewalk_color)
-			_create_box(self, "Curb_V_%d_%d" % [int(road_x), int(side)], Vector3(0.16, 0.22, 118.0), Vector3(road_x + side * 4.55, 0.11, 36.0), curb_color)
-	for road_z in [-15.0, 15.0, 45.0]:
+			var walk_x: float = road_x + side * 7.0
+			_create_box(self, "Sidewalk_V_%d_%d" % [int(road_x), int(side)], Vector3(1.65, 0.14, 177.0), Vector3(walk_x, 0.07, 54.0), sidewalk_color)
+			_create_box(self, "Curb_V_%d_%d" % [int(road_x), int(side)], Vector3(0.16, 0.22, 177.0), Vector3(road_x + side * 8.0, 0.11, 54.0), curb_color)
+	for road_z in [-202.5, -157.5, -67.5, -22.5, 22.5, 67.5, 112.5]:
 		for mark_index in range(12):
-			var mark_x := -62.0 + float(mark_index) * 11.0
+			var mark_x := -124.0 + float(mark_index) * 22.0
 			_create_box(self, "LaneDash_H_%d_%d" % [int(road_z), mark_index], Vector3(2.4, 0.025, 0.12), Vector3(mark_x, 0.065, road_z), Color(0.91, 0.85, 0.68))
-	for road_x in [-15.0, 15.0]:
+	for road_x in [-30.0, 30.0]:
 		for mark_index in range(10):
-			var mark_z := -18.0 + float(mark_index) * 11.0
+			var mark_z := -27.0 + float(mark_index) * 16.5
 			_create_box(self, "LaneDash_V_%d_%d" % [int(road_x), mark_index], Vector3(0.12, 0.025, 2.4), Vector3(road_x, 0.065, mark_z), Color(0.91, 0.85, 0.68))
-	for road_x in [-15.0, 15.0]:
-		for road_z in [-15.0, 15.0, 45.0]:
+	for road_x in [-30.0, 30.0]:
+		for road_z in [-202.5, -157.5, -67.5, -22.5, 22.5, 67.5, 112.5]:
 			for stripe in range(5):
 				var stripe_z: float = road_z - 2.1 + float(stripe) * 1.05
 				_create_box(self, "Crosswalk_H_%d_%d_%d" % [int(road_x), int(road_z), stripe], Vector3(3.4, 0.035, 0.42), Vector3(road_x, 0.075, stripe_z), Color(0.88, 0.85, 0.76))
@@ -1599,9 +1628,9 @@ func _create_interactive_buildings() -> void:
 	_create_adventure_hub_interaction()
 	if AuthoritativeGameServer.is_dedicated_server_requested():
 		_add_functional_building(null, "المتجر", "مهمة شراء احتياجات", "تعرّف على المتجر واستلم قائمة احتياجات تجريبية من البوابة.", Vector3(0, 0, 6.4), Color(0.20, 0.48, 0.30), 150, 0, 1)
-		_add_functional_building(null, "المطعم", "مهمة توصيل وجبة", "استلم طلب توصيل تجريبي من المطعم.", Vector3(60, 0, -23.6), Color(0.65, 0.30, 0.18), 220, 2, 1)
-		_add_functional_building(null, "مركز التوظيف", "مهمة التسجيل في وظيفة", "تعرّف على الوظائف المتاحة وشروط الالتحاق بها.", Vector3(30, 0, -23.6), Color(0.22, 0.34, 0.62), 300, 5, 1)
-		_create_job_board("مكتب الوظائف", "اختر من الوظائف السبع المعتمدة: الشحنات، البريد، البيتزا، الصيدلية، الزهور والهدايا، طلبات المنازل، والأمتعة.", Vector3(30, 0, -22.0), Vector3.ZERO, 0, 0, 0, "city_jobs_hub")
+		_add_functional_building(null, "المطعم", "مهمة توصيل وجبة", "استلم طلب توصيل تجريبي من المطعم.", Vector3(120, 0, -35.4), Color(0.65, 0.30, 0.18), 220, 2, 1)
+		_add_functional_building(null, "مركز التوظيف", "مهمة التسجيل في وظيفة", "تعرّف على الوظائف المتاحة وشروط الالتحاق بها.", Vector3(60, 0, -35.4), Color(0.22, 0.34, 0.62), 300, 5, 1)
+		_create_job_board("مكتب الوظائف", "اختر من الوظائف السبع المعتمدة: الشحنات، البريد، البيتزا، الصيدلية، الزهور والهدايا، طلبات المنازل، والأمتعة.", Vector3(60, 0, -33.0), Vector3.ZERO, 0, 0, 0, "city_jobs_hub")
 		return
 	var manager := Node.new()
 	manager.name = "MissionManager"
@@ -1631,12 +1660,12 @@ func _create_interactive_buildings() -> void:
 	add_child(profile_ui)
 
 	_add_functional_building(manager, "المتجر", "مهمة شراء احتياجات", "تعرّف على المتجر واستلم قائمة احتياجات تجريبية من البوابة.", Vector3(0, 0, 6.4), Color(0.20, 0.48, 0.30), 150, 0, 1)
-	_add_functional_building(manager, "المطعم", "مهمة توصيل وجبة", "استلم طلب توصيل تجريبي من المطعم. ستصبح أهداف التوصيل الفعلية جزءًا من مرحلة لاحقة.", Vector3(60, 0, -23.6), Color(0.65, 0.30, 0.18), 220, 2, 1)
-	_add_functional_building(manager, "مركز التوظيف", "مهمة التسجيل في وظيفة", "تعرّف على الوظائف المتاحة وشروط الالتحاق بها.", Vector3(30, 0, -23.6), Color(0.22, 0.34, 0.62), 300, 5, 1)
-	_create_job_board("مكتب الوظائف", "اختر من الوظائف السبع المعتمدة: الشحنات، البريد، البيتزا، الصيدلية، الزهور والهدايا، طلبات المنازل، والأمتعة.", Vector3(30, 0, -22.0), Vector3.ZERO, 0, 0, 0, "city_jobs_hub")
+	_add_functional_building(manager, "المطعم", "مهمة توصيل وجبة", "استلم طلب توصيل تجريبي من المطعم. ستصبح أهداف التوصيل الفعلية جزءًا من مرحلة لاحقة.", Vector3(120, 0, -35.4), Color(0.65, 0.30, 0.18), 220, 2, 1)
+	_add_functional_building(manager, "مركز التوظيف", "مهمة التسجيل في وظيفة", "تعرّف على الوظائف المتاحة وشروط الالتحاق بها.", Vector3(60, 0, -35.4), Color(0.22, 0.34, 0.62), 300, 5, 1)
+	_create_job_board("مكتب الوظائف", "اختر من الوظائف السبع المعتمدة: الشحنات، البريد، البيتزا، الصيدلية، الزهور والهدايا، طلبات المنازل، والأمتعة.", Vector3(60, 0, -33.0), Vector3.ZERO, 0, 0, 0, "city_jobs_hub")
 	_create_service_staff("صاحب المتجر", "صاحب محل", "أهلًا بك! يمكنني مساعدتك في احتياجاتك ومشترياتك من المتجر.", Vector3(3.5, 0, 7.0))
-	_create_service_staff("موظف المطعم", "موظف", "مرحبًا! أستقبل طلبات المطعم وأساعدك في أنشطة التوصيل.", Vector3(63.5, 0, -23.0))
-	_create_service_staff("موظف مركز التوظيف", "موظف", "أهلًا بك! يمكنك مراجعة الوظائف المتاحة وشروطها هنا.", Vector3(33.5, 0, -23.0))
+	_create_service_staff("موظف المطعم", "موظف", "مرحبًا! أستقبل طلبات المطعم وأساعدك في أنشطة التوصيل.", Vector3(127.0, 0, -34.5))
+	_create_service_staff("موظف مركز التوظيف", "موظف", "أهلًا بك! يمكنك مراجعة الوظائف المتاحة وشروطها هنا.", Vector3(67.0, 0, -34.5))
 
 func _create_adventure_hub_interaction() -> void:
 	# Invisible interaction anchor at the entrance of the existing adventure_center building.
@@ -1656,7 +1685,7 @@ func _create_adventure_hub_interaction() -> void:
 	hub.required_level = 1
 	hub.requires_interior = false
 	hub.interaction_radius = 4.5
-	hub.position = Vector3(-75.0, 0.0, 63.9)
+	hub.position = Vector3(-150.0, 0.0, 93.9)
 	add_child(hub)
 
 
@@ -1707,7 +1736,7 @@ func _create_city_signage() -> void:
 	# Signposts reuse primitive meshes and point to known prototype destinations.
 	_create_direction_signpost("Signpost_Central", Vector3(9, 0, 8), "restaurant", "shop", PI / 2.0)
 	# Move roadside signs off the road centerline and turn their faces toward the road.
-	_create_direction_signpost("Signpost_Employment", Vector3(29, 0, -8), "employment", "city_center", PI / 2.0)
+	_create_direction_signpost("Signpost_Employment", Vector3(59, 0, -38), "employment", "city_center", PI / 2.0)
 
 func _create_direction_signpost(sign_name: String, pos: Vector3, left_key: String, right_key: String, yaw: float = 0.0) -> void:
 	var sign_root := Node3D.new()
@@ -1762,23 +1791,18 @@ func _create_service_staff(display_name: String, role: String, dialogue: String,
 	add_child(staff)
 
 func _create_desert_camp() -> void:
-	# المخيم الملكي هو منطقة الضيافة الصحراوية الوحيدة؛ الجمال والخيول جزء من تصميمه.
-	_create_box(self, "DesertCampAccessRoad", Vector3(35, 0.08, 5), Vector3(-112.5, 0.01, 70), Color(0.12, 0.13, 0.15), true)
-	_create_box(self, "DesertCampApproachRoad", Vector3(5, 0.08, 15), Vector3(-130, 0.01, 62.5), Color(0.12, 0.13, 0.15), true)
+	# The royal camp sits on the southern desert shelf, inside the royal boundary road.
 	var camp := Node3D.new()
 	camp.name = "RoyalDesertCamp"
-	camp.position = Vector3(-130, 0, 70)
+	camp.position = Vector3(80.0, 0.0, 270.0)
 	camp.set_script(load("res://scripts/desert_camp.gd"))
 	add_child(camp)
 
 func _create_pyramids_area() -> void:
-	# منطقة الأهرامات وأبو الهول متصلة بطريق المخيم الصحراوي.
-	_create_box(self, "PyramidsAccessRoad_SouthConnector", Vector3(19.5, 0.08, 5), Vector3(-120.25, 0.01, 55), Color(0.12, 0.13, 0.15), true)
-	_create_box(self, "PyramidsAccessRoad_West", Vector3(5, 0.08, 50), Vector3(-108, 0.01, 75), Color(0.12, 0.13, 0.15), true)
-	_create_box(self, "PyramidsAccessRoad_Approach", Vector3(18, 0.08, 5), Vector3(-99, 0.01, 100), Color(0.12, 0.13, 0.15), true)
+	# The Giza area sits west of the camp; royal-road exits provide short links to the inner ring.
 	var pyramids := Node3D.new()
 	pyramids.name = "GizaPyramidsArea"
-	pyramids.position = Vector3(-130, 0, 70)
+	pyramids.position = Vector3(-105.0, 0.0, 230.0)
 	pyramids.set_script(load("res://scripts/pyramids_area.gd"))
 	add_child(pyramids)
 
