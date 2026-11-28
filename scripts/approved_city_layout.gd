@@ -269,32 +269,32 @@ func _add_building_lod_proxy(root: Node3D, footprint: Vector2, height: float, ac
 func _build_districts() -> void:
 	# Each position is kept within the current prototype city bounds.
 	var entries := [
-		["royal_palace","القصر الملكي",Vector3(0,0,-78),Vector2(22,16),12.0],
-		["royal_bank","البنك الملكي",Vector3(42,0,-60),Vector2(12,11),8.0],
-		["supermarket","السوبر ماركت",Vector3(-30,0,-30),Vector2(10,10),6.0],
-		["market","السوق التجاري",Vector3(0,0,0),Vector2(12,10),6.0],
-		["employment_center","مركز التوظيف",Vector3(30,0,-30),Vector2(11,10),7.0],
-		["main_restaurant","المطعم الرئيسي",Vector3(60,0,-30),Vector2(12,10),7.0],
-		["royal_cafe","المقهى الملكي",Vector3(-60,0,0),Vector2(10,10),6.0],
-		["commercial_services","مركز الخدمات التجارية",Vector3(60,0,0),Vector2(12,10),7.0],
-		["apartment_palace_1","قصر الشقق الأول",Vector3(-60,0,30),Vector2(12,12),12.0],
-		["apartment_palace_2","قصر الشقق الثاني",Vector3(-30,0,30),Vector2(12,12),12.0],
-		["apartment_palace_3","قصر الشقق الثالث",Vector3(0,0,30),Vector2(12,12),12.0],
-		["apartment_palace_4","قصر الشقق الرابع",Vector3(30,0,30),Vector2(12,12),12.0],
-		["cinema","السينما",Vector3(0,0,-150),Vector2(12,10),7.0],
-		["royal_theater","المسرح الملكي",Vector3(-35,0,-120),Vector2(13,11),9.0],
-		["stadium","الملعب الرياضي",Vector3(0,0,-120),Vector2(16,12),8.0],
-		["sports_club","النادي الرياضي",Vector3(35,0,-120),Vector2(12,10),7.0],
-		["water_city","المدينة المائية",Vector3(-35,0,-150),Vector2(14,12),6.0],
-		["daily_arcade","مركز DAILY ARCADE",Vector3(35,0,-150),Vector2(13,10),8.0],
-		["police_station","مركز الشرطة",Vector3(-75,0,-5),Vector2(10,9),7.0],
-		["courthouse","المحكمة",Vector3(75,0,-5),Vector2(11,9),8.0],
-		["fire_rescue","مركز الإطفاء والإنقاذ",Vector3(-75,0,15),Vector2(11,9),7.0],
-		["train_station","محطة القطار",Vector3(75,0,15),Vector2(13,9),7.0],
-				["royal_yacht_club","النادي الشاطئي الملكي",Vector3(75,0,58),Vector2(13,9),7.0],
-		["adventure_center","مركز المغامرات",Vector3(-75,0,58),Vector2(11,9),7.0],
-		["desert_lodge","نزل المخيم الصحراوي الملكي",Vector3(-75,0,75),Vector2(12,10),6.0],
-		["mountain_temple","المعبد الملكي أعلى الجبل",Vector3(75,0,75),Vector2(13,11),10.0]
+		["royal_palace","القصر الملكي",Vector3(0, 0, -117),Vector2(22,16),12.0],
+		["royal_bank","البنك الملكي",Vector3(84, 0, -90),Vector2(12,11),8.0],
+		["supermarket","السوبر ماركت",Vector3(-60, 0, -45),Vector2(10,10),6.0],
+		["market","السوق التجاري",Vector3(0, 0, 0),Vector2(12,10),6.0],
+		["employment_center","مركز التوظيف",Vector3(60, 0, -45),Vector2(11,10),7.0],
+		["main_restaurant","المطعم الرئيسي",Vector3(120, 0, -45),Vector2(12,10),7.0],
+		["royal_cafe","المقهى الملكي",Vector3(-120, 0, 0),Vector2(10,10),6.0],
+		["commercial_services","مركز الخدمات التجارية",Vector3(120, 0, 0),Vector2(12,10),7.0],
+		["apartment_palace_1","قصر الشقق الأول",Vector3(-120, 0, 45),Vector2(12,12),12.0],
+		["apartment_palace_2","قصر الشقق الثاني",Vector3(-60, 0, 45),Vector2(12,12),12.0],
+		["apartment_palace_3","قصر الشقق الثالث",Vector3(0, 0, 45),Vector2(12,12),12.0],
+		["apartment_palace_4","قصر الشقق الرابع",Vector3(60, 0, 45),Vector2(12,12),12.0],
+		["cinema","السينما",Vector3(0, 0, -225),Vector2(12,10),7.0],
+		["royal_theater","المسرح الملكي",Vector3(-70, 0, -180),Vector2(13,11),9.0],
+		["stadium","الملعب الرياضي",Vector3(0, 0, -180),Vector2(16,12),8.0],
+		["sports_club","النادي الرياضي",Vector3(70, 0, -180),Vector2(12,10),7.0],
+		["water_city","المدينة المائية",Vector3(-70, 0, -225),Vector2(14,12),6.0],
+		["daily_arcade","مركز DAILY ARCADE",Vector3(70, 0, -225),Vector2(13,10),8.0],
+		["police_station","مركز الشرطة",Vector3(-150, 0, -7.50),Vector2(10,9),7.0],
+		["courthouse","المحكمة",Vector3(150, 0, -7.50),Vector2(11,9),8.0],
+		["fire_rescue","مركز الإطفاء والإنقاذ",Vector3(-150, 0, 22.50),Vector2(11,9),7.0],
+		["train_station","محطة القطار",Vector3(150, 0, 22.50),Vector2(13,9),7.0],
+				["royal_yacht_club","النادي الشاطئي الملكي",Vector3(150, 0, 87),Vector2(13,9),7.0],
+		["adventure_center","مركز المغامرات",Vector3(-150, 0, 87),Vector2(11,9),7.0],
+		["desert_lodge","نزل المخيم الصحراوي الملكي",Vector3(-150, 0, 112.50),Vector2(12,10),6.0],
+		["mountain_temple","المعبد الملكي أعلى الجبل",Vector3(150, 0, 112.50),Vector2(13,11),10.0]
 	]
 	for i in range(entries.size()):
 		var e: Array = entries[i]
@@ -307,7 +307,7 @@ func _build_open_fuel_station() -> void:
 	# No enclosed building, door, interaction prompt, or entry trigger is created.
 	var station := Node3D.new()
 	station.name = "OpenFuelStation"
-	station.position = Vector3(-74.0, 0.0, 38.0)
+	station.position = Vector3(-148.0, 0.0, 57.0)
 	station.add_to_group("city_world_geometry")
 	station.add_to_group("approved_city_buildings")
 	add_child(station)
@@ -905,7 +905,7 @@ func _build_beach_handball_court() -> void:
 	# It is a walkable outdoor court, not an enclosed building or interaction point.
 	var beach := Node3D.new()
 	beach.name = "BeachHandballCourt"
-	beach.position = Vector3(90.0, 0.0, 130.0)
+	beach.position = Vector3(180.0, 0.0, 195.0)
 	beach.add_to_group("city_world_geometry")
 	add_child(beach)
 
@@ -1235,7 +1235,7 @@ func _build_mountain_route() -> void:
 	# The mountain zone is placed at the far eastern edge, beyond the service-building row.
 	var mountain := Node3D.new()
 	mountain.name = "KingsMountainRoute"
-	mountain.position = Vector3(98, 0, 40)
+	mountain.position = Vector3(196, 0, 60)
 	add_child(mountain)
 	var lower := MeshInstance3D.new()
 	lower.name = "MountainLowerSlope"
