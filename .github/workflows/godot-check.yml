@@ -213,6 +213,7 @@ jobs:
             exit 1
           fi
 
+      # Validate the latest circular-city transport revision, including unchanged sea and pyramid anchors.
       - name: Run circular city transport and panorama route contract tests
         shell: bash
         run: |
