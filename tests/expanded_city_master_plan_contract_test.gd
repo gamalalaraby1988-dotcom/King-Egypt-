@@ -12,14 +12,14 @@ func _initialize() -> void:
 		"_build_royal_ship_boarding_bridge()",
 		"bridge.name = \"RoyalCivilizationsShipBoardingBridge\"",
 		"var deck_length := 120.0",
-		"ship.position = Vector3(-45.0, 0.0, 216.0)",
+		"ship.position = Vector3(-45.0, 0.0, -657.0)",
 		"ship.rotation.y = PI * 0.5",
-		"Vector3(120.0, 0.18, 240.0)",
+		"Vector3(440.0, 0.18, 280.0)",
 		"_add_jet_ski_gate(course, \"Start\", 96.0, \"START\")",
 		"Vector3(120, 0, -45)",
 		"Vector3(150, 0, 112.50)",
 		"station.position = Vector3(-148.0, 0.0, 57.0)",
-		"beach.position = Vector3(180.0, 0.0, 195.0)",
+		"beach.position = Vector3(180.0, 0.0, -430.0)",
 		"mountain.position = Vector3(130, 0, 390)"
 	]
 	for contract in layout_contracts:
@@ -28,7 +28,7 @@ func _initialize() -> void:
 
 	var road_contracts := [
 		"const CITY_SAFE_X_LIMIT := 280.0",
-		"const CITY_SAFE_Z_MIN := -400.0",
+		"const CITY_SAFE_Z_MIN := -850.0",
 		"const CITY_SAFE_Z_MAX := 600.0",
 		"Vector3(160, 1, 1000)",
 		"Vector3(220, 1, 418)",
@@ -43,6 +43,9 @@ func _initialize() -> void:
 		"MainRoad_South",
 		"Vector3(0, 0.0, 540)",
 		"Vector3(440, 1, 240)",
+		"Ground_North_Beach",
+		"Vector3(440, 1, 180)",
+		"Vector3(0, -0.55, -430)",
 		"Ground_Center_South",
 		"Vector3(-130, 0, 370)",
 		"Vector3(-130, 0, 450)",
@@ -50,6 +53,8 @@ func _initialize() -> void:
 		"PyramidsDistrictRingConnector",
 		"KingsMountainRingConnector",
 		"Vector3(0, 0.0, -315)",
+		"const JET_SKI_LAUNCH_POSITION := Vector3(0.0, 0.34, -514.0)",
+		"bridge.rotation.y = PI",
 		"Vector3(264, 0.075, 12)",
 		"Vector3(264.0, 0.14, 1.7)"
 	]
