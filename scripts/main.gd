@@ -56,6 +56,7 @@ func _ready() -> void:
 	if AuthoritativeGameServer.is_dedicated_server_requested():
 		_create_ground()
 		_create_city()
+		_create_circular_city_transport_network()
 		_create_approved_city_layout()
 		_create_city_signage()
 		var local_player := get_node_or_null("Player")
@@ -68,6 +69,7 @@ func _ready() -> void:
 		return
 	_create_ground()
 	_create_city()
+	_create_circular_city_transport_network()
 	_create_approved_city_layout()
 	_create_city_signage()
 	_create_mobile_hud()
@@ -109,6 +111,17 @@ func _create_city_npc_population() -> void:
 	population.name = "CityNPCPopulation"
 	population.set_script(population_script)
 	add_child(population)
+
+
+func _create_circular_city_transport_network() -> void:
+	var network_script := load("res://scripts/circular_city_transport_network.gd") as Script
+	if network_script == null:
+		push_warning("تعذر تحميل شبكة الطرق الدائرية والطريق الملكي المرتفع.")
+		return
+	var network := Node3D.new()
+	network.name = "CircularCityTransportNetwork"
+	network.set_script(network_script)
+	add_child(network)
 
 
 func _create_approved_city_layout() -> void:
