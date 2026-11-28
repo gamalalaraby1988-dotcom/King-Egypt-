@@ -1707,7 +1707,7 @@ func _create_city_signage() -> void:
 	# Signposts reuse primitive meshes and point to known prototype destinations.
 	_create_direction_signpost("Signpost_Central", Vector3(9, 0, 8), "restaurant", "shop", PI / 2.0)
 	# Move roadside signs off the road centerline and turn their faces toward the road.
-	_create_direction_signpost("Signpost_Employment", Vector3(29, 0, -8), "employment", "city_center", PI / 2.0)
+	_create_direction_signpost("Signpost_Employment", Vector3(59, 0, -38), "employment", "city_center", PI / 2.0)
 
 func _create_direction_signpost(sign_name: String, pos: Vector3, left_key: String, right_key: String, yaw: float = 0.0) -> void:
 	var sign_root := Node3D.new()
