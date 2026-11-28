@@ -348,7 +348,7 @@ func _build_open_fuel_station() -> void:
 func _build_nile_waterfront() -> void:
 	# The former enclosed marina basin is replaced by open sea. main.gd removes
 	# the matching terrain footprint so there is no hidden walkable floor.
-	var water := _box(self, "RoyalOpenSea", Vector3(120.0, 0.18, 72.0), Vector3(0.0, -0.12, 114.0), Color(0.025, 0.24, 0.34))
+	var water := _box(self, "RoyalOpenSea", Vector3(120.0, 0.18, 240.0), Vector3(0.0, -0.12, 180.0), Color(0.025, 0.24, 0.34))
 	var water_material := _mat(Color(0.025, 0.24, 0.34), 0.12)
 	water_material.roughness = 0.2
 	water.material_override = water_material
@@ -446,11 +446,11 @@ func _build_jet_ski_course() -> void:
 	course.add_to_group("royal_jet_ski_course")
 	add_child(course)
 	# A gentle slalom keeps the start/finish centered while alternating checkpoints.
-	_add_jet_ski_gate(course, "Start", 0.0, 96.0, "START")
-	_add_jet_ski_gate(course, "Checkpoint1", -14.0, 126.0, "CHECKPOINT 1")
-	_add_jet_ski_gate(course, "Checkpoint2", 14.0, 156.0, "CHECKPOINT 2")
-	_add_jet_ski_gate(course, "Checkpoint3", -14.0, 186.0, "CHECKPOINT 3")
-	_add_jet_ski_gate(course, "Finish", 0.0, 216.0, "FINISH")
+	_add_jet_ski_gate(course, "Start", 42.0, 160.0, "START")
+	_add_jet_ski_gate(course, "Checkpoint1", 20.0, 190.0, "CHECKPOINT 1")
+	_add_jet_ski_gate(course, "Checkpoint2", 44.0, 220.0, "CHECKPOINT 2")
+	_add_jet_ski_gate(course, "Checkpoint3", 18.0, 250.0, "CHECKPOINT 3")
+	_add_jet_ski_gate(course, "Finish", 42.0, 280.0, "FINISH")
 	_add_jet_ski_route_guides(course)
 
 
@@ -458,11 +458,11 @@ func _build_jet_ski_course() -> void:
 func _add_jet_ski_route_guides(parent: Node3D) -> void:
 	# Continuous low-profile cyan light strips trace the approved slalom over the water.
 	var gate_points: Array[Vector3] = [
-		Vector3(0.0, 0.24, 96.0),
-		Vector3(-14.0, 0.24, 126.0),
-		Vector3(14.0, 0.24, 156.0),
-		Vector3(-14.0, 0.24, 186.0),
-		Vector3(0.0, 0.24, 216.0)
+		Vector3(42.0, 0.24, 160.0),
+		Vector3(20.0, 0.24, 190.0),
+		Vector3(44.0, 0.24, 220.0),
+		Vector3(18.0, 0.24, 250.0),
+		Vector3(42.0, 0.24, 280.0)
 	]
 	var guide_material := StandardMaterial3D.new()
 	guide_material.albedo_color = Color(0.04, 0.72, 1.0, 0.92)
