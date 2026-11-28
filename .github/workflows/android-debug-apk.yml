@@ -1,4 +1,5 @@
 name: Android TEST debug APK
+# Build validates the startup entry screen and hidden initial player scene.
 
 on:
   pull_request:
