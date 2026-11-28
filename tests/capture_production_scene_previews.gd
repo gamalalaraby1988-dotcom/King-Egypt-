@@ -128,6 +128,18 @@ func _capture_previews() -> void:
 		quit(1)
 		return
 
+	# Capture the actual royal plaza eye-level view toward both separated desert landmarks.
+	# The camera stands on the southern half of the plaza and faces south across the arc.
+	var royal_plaza_landmarks_ok := await _capture_view(
+		"royal_plaza_desert_landmarks_view_preview.png",
+		Vector3(0.0, 22.0, 438.0),
+		Vector3(0.0, 10.0, 245.0),
+		68.0
+	)
+	if not royal_plaza_landmarks_ok:
+		quit(1)
+		return
+
 	# Instantiate the exact production RoyalJetSki scene so the preview uses the in-game craft,
 	# not a replacement mesh or illustration. Keep it in the production waterfront scene.
 	var jet_ski_packed := load("res://scenes/jet_ski.tscn") as PackedScene
