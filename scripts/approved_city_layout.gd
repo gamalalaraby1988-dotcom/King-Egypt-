@@ -1084,71 +1084,71 @@ func _build_access_roads_and_parking() -> void:
 	for side in [-1.0, 1.0]:
 		# Keep each court in the narrow clear strip between the outer service buildings and perimeter road.
 		# The 10 m width ends at the road edge and starts beyond the 81.5 m building footprint.
-		var parking_z := -35.0 if side < 0.0 else 34.0
-		var parking := _box(self, "ServiceParkingCourt", Vector3(10.0, 0.06, 18.0), Vector3(side * 87.0, 0.015, parking_z), Color(0.20, 0.22, 0.23))
+		var parking_z := -52.5 if side < 0.0 else 51.0
+		var parking := _box(self, "ServiceParkingCourt", Vector3(10.0, 0.06, 18.0), Vector3(side * 180.0, 0.015, parking_z), Color(0.20, 0.22, 0.23))
 		for slot in range(3):
 			_box(parking, "ParkingBayLine", Vector3(0.12, 0.025, 4.8), Vector3(-3.6 + float(slot) * 3.6, 0.06, 0), IVORY)
 	# Dedicated access spurs connect the perimeter roads to service destinations.
 	# Fuel station: the west spur opens directly into the outdoor forecourt.
-	_path_segment(self, "FuelStationAccessSpur", Vector3(-95.0, 0.12, 38.0), Vector3(-85.5, 0.12, 38.0), 4.2, DARK)
+	_path_segment(self, "FuelStationAccessSpur", Vector3(-190.00, 0.12, 57.00), Vector3(-171.00, 0.12, 57.00), 4.2, DARK)
 	# Move the west parking court away from the fuel forecourt; preserve the east parking court.
 	# Desert lodge and adventure district pedestrian access.
-	_path_segment(self, "WestAdventureAccess_01", Vector3(-95.0, 0.12, 58.0), Vector3(-84.0, 0.12, 58.0), 3.6, SAND)
-	_path_segment(self, "WestAdventureAccess_02", Vector3(-84.0, 0.12, 58.0), Vector3(-84.0, 0.12, 75.0), 3.6, SAND)
-	_path_segment(self, "AdventureCenterEntranceWalk", Vector3(-84.0, 0.12, 62.5), Vector3(-75.0, 0.12, 62.6), 3.0, SAND)
-	_path_segment(self, "DesertLodgeEntranceWalk", Vector3(-84.0, 0.12, 75.0), Vector3(-75.0, 0.12, 80.7), 3.0, SAND)
+	_path_segment(self, "WestAdventureAccess_01", Vector3(-190.00, 0.12, 87.00), Vector3(-168.00, 0.12, 87.00), 3.6, SAND)
+	_path_segment(self, "WestAdventureAccess_02", Vector3(-168.00, 0.12, 87.00), Vector3(-168.00, 0.12, 112.50), 3.6, SAND)
+	_path_segment(self, "AdventureCenterEntranceWalk", Vector3(-168.00, 0.12, 93.75), Vector3(-150.00, 0.12, 93.90), 3.0, SAND)
+	_path_segment(self, "DesertLodgeEntranceWalk", Vector3(-168.00, 0.12, 112.50), Vector3(-150.00, 0.12, 121.05), 3.0, SAND)
 	# The former yacht-club building is now the Royal Beach Club; no marina terminal remains.
-	_path_segment(self, "RoyalBeachClubEntranceWalk", Vector3(84.0, 0.12, 62.0), Vector3(75.0, 0.12, 62.6), 3.0, SAND)
+	_path_segment(self, "RoyalBeachClubEntranceWalk", Vector3(168.00, 0.12, 93.00), Vector3(150.00, 0.12, 93.90), 3.0, SAND)
 	# Beach handball access stays on dry land east of the expanded open sea.
-	_path_segment(self, "BeachHandballPromenadeConnector", Vector3(72.0, 0.12, 76.0), Vector3(72.0, 0.12, 106.0), 3.6, SAND)
-	_path_segment(self, "BeachHandballApronEntry", Vector3(72.0, 0.12, 106.0), Vector3(90.0, 0.12, 112.0), 3.6, SAND)
+	_path_segment(self, "BeachHandballPromenadeConnector", Vector3(144.00, 0.12, 114.00), Vector3(144.00, 0.12, 159.00), 3.6, SAND)
+	_path_segment(self, "BeachHandballApronEntry", Vector3(144.00, 0.12, 159.00), Vector3(180.00, 0.12, 168.00), 3.6, SAND)
 	# Temple approach branches from the mountain trail without moving the temple or summit.
-	_path_segment(self, "MountainTempleEntranceWalk", Vector3(83.0, 0.12, 68.0), Vector3(75.0, 0.12, 80.7), 3.2, SAND)
+	_path_segment(self, "MountainTempleEntranceWalk", Vector3(166.00, 0.12, 102.00), Vector3(150.00, 0.12, 121.05), 3.2, SAND)
 	# Short, collision-backed approaches connect visible entrances to the nearest public walk.
 	var entrance_walks := [
-		["RoyalPalaceEntranceWalk", Vector3(0.0, 0.12, -69.8), Vector3(0.0, 0.12, -58.5)],
-		["RoyalBankEntranceWalk", Vector3(42.0, 0.12, -54.1), Vector3(42.0, 0.12, -50.0)],
-		["SupermarketEntranceWalk", Vector3(-30.0, 0.12, -23.6), Vector3(-30.0, 0.12, -20.0)],
-		["MarketEntranceWalk", Vector3(0.0, 0.12, 6.4), Vector3(0.0, 0.12, 10.0)],
-		["EmploymentEntranceWalk", Vector3(30.0, 0.12, -23.6), Vector3(30.0, 0.12, -20.0)],
-		["RestaurantEntranceWalk", Vector3(60.0, 0.12, -23.6), Vector3(60.0, 0.12, -20.0)],
-		["CafeEntranceWalk", Vector3(-60.0, 0.12, 6.4), Vector3(-60.0, 0.12, 10.0)],
-		["CommercialServicesEntranceWalk", Vector3(60.0, 0.12, 6.4), Vector3(60.0, 0.12, 10.0)],
-		["ApartmentOneEntranceWalk", Vector3(-60.0, 0.12, 37.4), Vector3(-60.0, 0.12, 40.0)],
-		["ApartmentTwoEntranceWalk", Vector3(-30.0, 0.12, 37.4), Vector3(-30.0, 0.12, 40.0)],
-		["ApartmentThreeEntranceWalk", Vector3(0.0, 0.12, 37.4), Vector3(0.0, 0.12, 40.0)],
-		["ApartmentFourEntranceWalk", Vector3(30.0, 0.12, 37.4), Vector3(30.0, 0.12, 40.0)],
-		["CinemaEntranceWalk", Vector3(0.0, 0.12, -143.6), Vector3(0.0, 0.12, -138.0)],
-		["TheaterEntranceWalk", Vector3(-35.0, 0.12, -113.1), Vector3(-35.0, 0.12, -108.0)],
-		["StadiumEntranceWalk", Vector3(0.0, 0.12, -113.1), Vector3(0.0, 0.12, -108.0)],
-		["SportsClubEntranceWalk", Vector3(35.0, 0.12, -113.1), Vector3(35.0, 0.12, -108.0)],
-		["WaterCityEntranceWalk", Vector3(-35.0, 0.12, -143.1), Vector3(-35.0, 0.12, -138.0)],
-		["DailyArcadeEntranceWalk", Vector3(35.0, 0.12, -143.1), Vector3(35.0, 0.12, -138.0)]
+		["RoyalPalaceEntranceWalk", Vector3(0.00, 0.12, -104.70), Vector3(0.00, 0.12, -87.75)],
+		["RoyalBankEntranceWalk", Vector3(84.00, 0.12, -81.15), Vector3(84.00, 0.12, -75.00)],
+		["SupermarketEntranceWalk", Vector3(-60.00, 0.12, -35.40), Vector3(-60.00, 0.12, -30.00)],
+		["MarketEntranceWalk", Vector3(0.00, 0.12, 9.60), Vector3(0.00, 0.12, 15.00)],
+		["EmploymentEntranceWalk", Vector3(60.00, 0.12, -35.40), Vector3(60.00, 0.12, -30.00)],
+		["RestaurantEntranceWalk", Vector3(120.00, 0.12, -35.40), Vector3(120.00, 0.12, -30.00)],
+		["CafeEntranceWalk", Vector3(-120.00, 0.12, 9.60), Vector3(-120.00, 0.12, 15.00)],
+		["CommercialServicesEntranceWalk", Vector3(120.00, 0.12, 9.60), Vector3(120.00, 0.12, 15.00)],
+		["ApartmentOneEntranceWalk", Vector3(-120.00, 0.12, 56.10), Vector3(-120.00, 0.12, 60.00)],
+		["ApartmentTwoEntranceWalk", Vector3(-60.00, 0.12, 56.10), Vector3(-60.00, 0.12, 60.00)],
+		["ApartmentThreeEntranceWalk", Vector3(0.00, 0.12, 56.10), Vector3(0.00, 0.12, 60.00)],
+		["ApartmentFourEntranceWalk", Vector3(60.00, 0.12, 56.10), Vector3(60.00, 0.12, 60.00)],
+		["CinemaEntranceWalk", Vector3(0.00, 0.12, -215.40), Vector3(0.00, 0.12, -207.00)],
+		["TheaterEntranceWalk", Vector3(-70.00, 0.12, -169.65), Vector3(-70.00, 0.12, -162.00)],
+		["StadiumEntranceWalk", Vector3(0.00, 0.12, -169.65), Vector3(0.00, 0.12, -162.00)],
+		["SportsClubEntranceWalk", Vector3(70.00, 0.12, -169.65), Vector3(70.00, 0.12, -162.00)],
+		["WaterCityEntranceWalk", Vector3(-70.00, 0.12, -214.65), Vector3(-70.00, 0.12, -207.00)],
+		["DailyArcadeEntranceWalk", Vector3(70.00, 0.12, -214.65), Vector3(70.00, 0.12, -207.00)]
 	]
 	for walk in entrance_walks:
 		_path_segment(self, str(walk[0]), walk[1], walk[2], 2.6, SAND)
 	# Shared northern access spine connects both relocated building rows to the north perimeter road.
-	_path_segment(self, "NorthDistrictAccess_RowSouth", Vector3(-52.0, 0.12, -105.0), Vector3(52.0, 0.12, -105.0), 3.6, SAND)
-	_path_segment(self, "NorthDistrictAccess_RowNorth", Vector3(-52.0, 0.12, -135.0), Vector3(52.0, 0.12, -135.0), 3.6, SAND)
-	_path_segment(self, "NorthDistrictAccess_Spine", Vector3(0.0, 0.12, -135.0), Vector3(0.0, 0.12, -98.0), 3.6, SAND)
-	_path_segment(self, "PoliceServiceAccess", Vector3(-95.0, 0.12, -5.0), Vector3(-84.0, 0.12, -5.0), 3.2, SAND)
-	_path_segment(self, "PoliceEntranceTurn", Vector3(-84.0, 0.12, -5.0), Vector3(-84.0, 0.12, 0.9), 3.2, SAND)
-	_path_segment(self, "PoliceFrontWalk", Vector3(-84.0, 0.12, 0.9), Vector3(-75.0, 0.12, 0.9), 3.2, SAND)
-	_path_segment(self, "CourthouseServiceAccess", Vector3(95.0, 0.12, -5.0), Vector3(84.0, 0.12, -5.0), 3.2, SAND)
-	_path_segment(self, "CourthouseEntranceTurn", Vector3(84.0, 0.12, -5.0), Vector3(84.0, 0.12, 0.9), 3.2, SAND)
-	_path_segment(self, "CourthouseFrontWalk", Vector3(84.0, 0.12, 0.9), Vector3(75.0, 0.12, 0.9), 3.2, SAND)
-	_path_segment(self, "FireServiceAccess", Vector3(-95.0, 0.12, 15.0), Vector3(-84.0, 0.12, 15.0), 3.2, SAND)
-	_path_segment(self, "FireEntranceTurn", Vector3(-84.0, 0.12, 15.0), Vector3(-84.0, 0.12, 20.9), 3.2, SAND)
-	_path_segment(self, "FireFrontWalk", Vector3(-84.0, 0.12, 20.9), Vector3(-75.0, 0.12, 20.9), 3.2, SAND)
-	_path_segment(self, "TrainServiceAccess", Vector3(95.0, 0.12, 15.0), Vector3(84.0, 0.12, 15.0), 3.2, SAND)
-	_path_segment(self, "TrainEntranceTurn", Vector3(84.0, 0.12, 15.0), Vector3(84.0, 0.12, 20.9), 3.2, SAND)
-	_path_segment(self, "TrainFrontWalk", Vector3(84.0, 0.12, 20.9), Vector3(75.0, 0.12, 20.9), 3.2, SAND)
+	_path_segment(self, "NorthDistrictAccess_RowSouth", Vector3(-104.00, 0.12, -157.50), Vector3(104.00, 0.12, -157.50), 3.6, SAND)
+	_path_segment(self, "NorthDistrictAccess_RowNorth", Vector3(-104.00, 0.12, -202.50), Vector3(104.00, 0.12, -202.50), 3.6, SAND)
+	_path_segment(self, "NorthDistrictAccess_Spine", Vector3(0.00, 0.12, -202.50), Vector3(0.00, 0.12, -147.00), 3.6, SAND)
+	_path_segment(self, "PoliceServiceAccess", Vector3(-190.00, 0.12, -7.50), Vector3(-168.00, 0.12, -7.50), 3.2, SAND)
+	_path_segment(self, "PoliceEntranceTurn", Vector3(-168.00, 0.12, -7.50), Vector3(-168.00, 0.12, 1.35), 3.2, SAND)
+	_path_segment(self, "PoliceFrontWalk", Vector3(-168.00, 0.12, 1.35), Vector3(-150.00, 0.12, 1.35), 3.2, SAND)
+	_path_segment(self, "CourthouseServiceAccess", Vector3(190.00, 0.12, -7.50), Vector3(168.00, 0.12, -7.50), 3.2, SAND)
+	_path_segment(self, "CourthouseEntranceTurn", Vector3(168.00, 0.12, -7.50), Vector3(168.00, 0.12, 1.35), 3.2, SAND)
+	_path_segment(self, "CourthouseFrontWalk", Vector3(168.00, 0.12, 1.35), Vector3(150.00, 0.12, 1.35), 3.2, SAND)
+	_path_segment(self, "FireServiceAccess", Vector3(-190.00, 0.12, 22.50), Vector3(-168.00, 0.12, 22.50), 3.2, SAND)
+	_path_segment(self, "FireEntranceTurn", Vector3(-168.00, 0.12, 22.50), Vector3(-168.00, 0.12, 31.35), 3.2, SAND)
+	_path_segment(self, "FireFrontWalk", Vector3(-168.00, 0.12, 31.35), Vector3(-150.00, 0.12, 31.35), 3.2, SAND)
+	_path_segment(self, "TrainServiceAccess", Vector3(190.00, 0.12, 22.50), Vector3(168.00, 0.12, 22.50), 3.2, SAND)
+	_path_segment(self, "TrainEntranceTurn", Vector3(168.00, 0.12, 22.50), Vector3(168.00, 0.12, 31.35), 3.2, SAND)
+	_path_segment(self, "TrainFrontWalk", Vector3(168.00, 0.12, 31.35), Vector3(150.00, 0.12, 31.35), 3.2, SAND)
 	# Green buffers line the outer edges while keeping sidewalks, parking courts, and entrances clear.
 	for side in [-1.0, 1.0]:
 		for z in [-65.0, -35.0, -5.0, 55.0]:
 			if side < 0.0 and z == -35.0:
 				continue
-			_tree(self, "OuterBoulevardPalm", Vector3(side * 87.0, 0, z), 0.85)
+			_tree(self, "OuterBoulevardPalm", Vector3(side * 174.0, 0, z), 0.85)
 
 
 func _build_public_gardens() -> void:
