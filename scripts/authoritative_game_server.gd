@@ -1,7 +1,7 @@
 extends Node
 
 const JetSkiNetworkContract = preload("res://scripts/jet_ski_network_contract.gd")
-const JET_SKI_SERVER_LAUNCH_POSITION := Vector3(0.0, 0.34, 82.0)
+const JET_SKI_SERVER_LAUNCH_POSITION := Vector3(48.0, 0.34, 132.0)
 const JET_SKI_SERVER_BOARDING_RADIUS := 8.0
 const JET_SKI_RIDER_OFFSET := Vector3(0.0, 0.88, 0.28)
 ## Dedicated WSS game authority. Clients submit bounded movement input, never positions.
@@ -46,7 +46,7 @@ const JET_SKI_RACE_MIN_PARTICIPANTS := 2
 const JET_SKI_RACE_MAX_PARTICIPANTS := 4
 const JET_SKI_RACE_COUNTDOWN_SECONDS := 5
 const JET_SKI_RACE_DURATION_SECONDS := 300
-const JET_SKI_RACE_GATE_POSITIONS := [Vector2(0.0, 96.0), Vector2(-14.0, 126.0), Vector2(14.0, 156.0), Vector2(-14.0, 186.0), Vector2(0.0, 216.0)]
+const JET_SKI_RACE_GATE_POSITIONS := [Vector2(42.0, 160.0), Vector2(20.0, 190.0), Vector2(44.0, 220.0), Vector2(18.0, 250.0), Vector2(42.0, 280.0)]
 const JET_SKI_RACE_GATE_APERTURE_RADIUS := 8.5
 const JET_SKI_RACE_GATE_CENTER_HEIGHT := 8.25
 const JET_SKI_RACE_OFF_COURSE_LIMIT_SECONDS := 300
