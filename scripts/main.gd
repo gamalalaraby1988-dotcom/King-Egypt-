@@ -1511,6 +1511,8 @@ func _create_ground() -> void:
 	_create_box(self, "Ground_Center_North", Vector3(220, 1, 418), Vector3(0, -0.55, -131), ground_color, true)
 	# Southern land closes the loop below the Nile while leaving the water and race course open.
 	_create_box(self, "Ground_Center_South", Vector3(440, 1, 240), Vector3(0, -0.55, 440), ground_color, true)
+	# Close the uncovered central southern corridor between the north and south terrain slabs.
+	_create_box(self, "Ground_Center_Mid", Vector3(220, 1, 242), Vector3(0, -0.55, 199), ground_color, true)
 	_create_box(self, "Ground_North_Beach", Vector3(440, 1, 180), Vector3(0, -0.55, -430), ground_color, true)
 
 func _create_city() -> void:
