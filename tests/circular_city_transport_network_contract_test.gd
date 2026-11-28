@@ -24,13 +24,9 @@ func _initialize() -> void:
 		"const ROYAL_ROUTE_WIDTH := 34.0",
 		"const ROYAL_ROUTE_SEGMENTS := 36",
 		"RoyalSemicircleRoad_",
-		"RoyalWestDesertBranch",
-		"RoyalWestCenterBranch",
-		"RoyalEastCenterBranch",
-		"RoyalEastDesertBranch",
-		"var branch_angles := [PI * 0.18, PI * 0.38, PI * 0.62, PI * 0.82]",
+		"var west_join := CITY_CENTER + Vector3(-RING_RADII[2], 0.0, 0.0)",
+		"var east_join := CITY_CENTER + Vector3(RING_RADII[2], 0.0, 0.0)",
 		"var desert_control := Vector3(0.0, 0.0, 850.0)",
-		"func _build_short_branch(",
 		"SteelGuardrail",
 		"RoyalPanoramaPlazaDeck",
 		"RoyalPanoramaFountainBase",
@@ -45,14 +41,14 @@ func _initialize() -> void:
 	if not layout_script.contains('Vector3(440.0, 0.18, 280.0)') or not layout_script.contains('Vector3(0.0, 0.0, -270.0)'):
 		failures.append("The existing sea and pyramid landmarks were unexpectedly changed.")
 
-	# Numeric geometry contract: each exit lands on ring one and all four
-	# targets occupy its northern (negative-Z) half.
-	var branch_angles := [PI * 1.18, PI * 1.38, PI * 1.62, PI * 1.82]
-	for angle_variant in branch_angles:
-		var angle := float(angle_variant)
-		var target := Vector3(cos(angle) * 175.0, 0.0, -55.0 + sin(angle) * 175.0)
-		if target.z >= -55.0 or absf(Vector2(target.x, target.z + 55.0).length() - 175.0) > 0.01:
-			failures.append("A royal branch does not land on the northern first-ring arc.")
+	# Numeric geometry contract: the royal road's two ends meet opposite sides of the outermost ring.
+	var west_target := Vector3(-255.0, 0.0, -55.0)
+	var east_target := Vector3(255.0, 0.0, -55.0)
+	for target in [west_target, east_target]:
+		if absf(Vector2(target.x, target.z + 55.0).length() - 255.0) > 0.01:
+			failures.append("A royal road endpoint does not meet the outermost circular road.")
+	if network_script.contains("RoyalWestDesertBranch") or network_script.contains("RoyalEastCenterBranch") or network_script.contains("func _build_short_branch("):
+		failures.append("Unneeded inner royal-road branches still occupy the desert area.")
 
 	for required in [
 		"Vector3(82.0, 0.0, 285.0)",
@@ -62,7 +58,7 @@ func _initialize() -> void:
 			failures.append("Southern desert area is missing: " + required)
 
 	if failures.is_empty():
-		print("Royal semicircle contract passed: first-ring connections, wide curved road, steel guardrails, panoramic plaza, preserved sea/pyramids.")
+		print("Royal semicircle contract passed: outer-ring endpoint connections, branch-free wide curved road, steel guardrails, panoramic plaza, preserved sea/pyramids.")
 		quit(0)
 	else:
 		for failure in failures:
