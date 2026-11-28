@@ -349,7 +349,7 @@ func _build_open_fuel_station() -> void:
 func _build_nile_waterfront() -> void:
 	# The former enclosed marina basin is replaced by open sea. main.gd removes
 	# the matching terrain footprint so there is no hidden walkable floor.
-	var water := _box(self, "RoyalOpenSea", Vector3(120.0, 0.18, 240.0), Vector3(0.0, -0.12, 200.0), Color(0.025, 0.24, 0.34))
+	var water := _box(self, "RoyalOpenSea", Vector3(440.0, 0.18, 280.0), Vector3(0.0, -0.12, -660.0), Color(0.025, 0.24, 0.34))
 	var water_material := _mat(Color(0.035, 0.34, 0.48), 0.22)
 	water_material.roughness = 0.12
 	water_material.metallic = 0.28
@@ -370,20 +370,20 @@ func _build_nile_waterfront() -> void:
 		var ripple_mesh := BoxMesh.new()
 		ripple_mesh.size = Vector3(84.0 - float(i % 3) * 12.0, 0.025, 0.10)
 		ripple.mesh = ripple_mesh
-		ripple.position = Vector3(0.0, 0.015, 86.0 + float(i) * 13.0)
+		ripple.position = Vector3(0.0, 0.015, -535.0 - float(i) * 14.5)
 		ripple.material_override = ripple_material
 		ripple.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		add_child(ripple)
 	# A restrained pale shoreline accent makes the water/beach boundary readable.
 	var shore_material := _mat(Color(0.72, 0.66, 0.51))
 	shore_material.roughness = 0.94
-	_box(self, "RoyalBeachShoreline", Vector3(120.0, 0.06, 0.42), Vector3(0.0, 0.015, 77.9), Color(0.72, 0.66, 0.51)).material_override = shore_material
+	_box(self, "RoyalBeachShoreline", Vector3(440.0, 0.06, 0.42), Vector3(0.0, 0.015, -520.0), Color(0.72, 0.66, 0.51)).material_override = shore_material
 	# A continuous promenade forms the northern edge of the open-water beach.
-	_box(self, "WaterfrontPromenade", Vector3(180.0, 0.28, 3.0), Vector3(0.0, 0.02, 76.0), SAND)
-	for x in [-65.0, -45.0, -25.0, 25.0, 45.0, 65.0]:
-		_box(self, "PromenadeLamp", Vector3(0.18, 3.0, 0.18), Vector3(x, 1.5, 74.0), GOLD)
-		_box(self, "PromenadeLampHead", Vector3(0.8, 0.18, 0.8), Vector3(x, 3.0, 74.0), GOLD)
-		_add_city_night_light(self, "PromenadeNightLight", Vector3(x, 2.9, 74.0), 8.0)
+	_box(self, "WaterfrontPromenade", Vector3(440.0, 0.28, 3.0), Vector3(0.0, 0.02, -536.0), SAND)
+	for x in [-180.0, -120.0, -60.0, 60.0, 120.0, 180.0]:
+		_box(self, "PromenadeLamp", Vector3(0.18, 3.0, 0.18), Vector3(x, 1.5, -540.0), GOLD)
+		_box(self, "PromenadeLampHead", Vector3(0.8, 0.18, 0.8), Vector3(x, 3.0, -540.0), GOLD)
+		_add_city_night_light(self, "PromenadeNightLight", Vector3(x, 2.9, -540.0), 8.0)
 
 
 func _build_royal_sea_bridge() -> void:
@@ -391,7 +391,8 @@ func _build_royal_sea_bridge() -> void:
 	# This is scene geometry only; boarding and vehicle availability are a later gameplay task.
 	var bridge := Node3D.new()
 	bridge.name = "RoyalShipStyleSeaBridge"
-	bridge.position = Vector3(48.0, 0.0, 0.0)
+	bridge.position = Vector3(48.0, 0.0, -444.0)
+	bridge.rotation.y = PI
 	bridge.add_to_group("city_world_geometry")
 	bridge.add_to_group("royal_sea_bridge")
 	add_child(bridge)
@@ -399,7 +400,7 @@ func _build_royal_sea_bridge() -> void:
 	# Vehicle approach ties the bridge directly into the Royal Beach Club's
 	# existing eastern access walk; the deck begins at the waterfront promenade.
 	# One broad, vehicle-only approach: no pedestrian approach or separated footpath.
-	_path_segment(self, "RoyalSeaBridgeVehicleApproach", Vector3(84.0, 0.12, 62.5), Vector3(48.0, 0.12, 76.0), 9.0, DARK)
+	_path_segment(self, "RoyalSeaBridgeVehicleApproach", Vector3(84.0, 0.12, -506.5), Vector3(48.0, 0.12, -520.0), 9.0, DARK)
 	var deck_length := 60.0
 	var deck_width := 12.0
 	var deck_center_z := 106.0
@@ -466,6 +467,8 @@ func _build_jet_ski_course() -> void:
 	# validation are implemented in a later gameplay stage.
 	var course := Node3D.new()
 	course.name = "RoyalJetSkiCourse"
+	course.position.z = -432.0
+	course.rotation.y = PI
 	course.add_to_group("city_world_geometry")
 	course.add_to_group("royal_jet_ski_course")
 	add_child(course)
@@ -897,7 +900,7 @@ func _build_waterfront_landscaping() -> void:
 	for x in range(-60, 61, 20):
 		# Keep the ship approach and pier centerline free of palms.
 		if x != 0:
-			_tree(self, "WaterfrontPalm", Vector3(float(x), 0, 72.0), 0.9)
+			_tree(self, "WaterfrontPalm", Vector3(float(x) * 3.0, 0, -548.0), 0.9)
 
 
 func _build_beach_handball_court() -> void:
@@ -905,7 +908,7 @@ func _build_beach_handball_court() -> void:
 	# It is a walkable outdoor court, not an enclosed building or interaction point.
 	var beach := Node3D.new()
 	beach.name = "BeachHandballCourt"
-	beach.position = Vector3(180.0, 0.0, 195.0)
+	beach.position = Vector3(180.0, 0.0, -430.0)
 	beach.add_to_group("city_world_geometry")
 	add_child(beach)
 
@@ -961,7 +964,8 @@ func _build_royal_ship_boarding_bridge() -> void:
 	# of the jet-ski slalom so the ship has its own clear approach.
 	var bridge := Node3D.new()
 	bridge.name = "RoyalCivilizationsShipBoardingBridge"
-	bridge.position = Vector3(-45.0, 0.0, 0.0)
+	bridge.position = Vector3(-45.0, 0.0, -441.0)
+	bridge.rotation.y = PI
 	bridge.add_to_group("city_world_geometry")
 	bridge.add_to_group("royal_ship_boarding_bridge")
 	add_child(bridge)
@@ -969,7 +973,7 @@ func _build_royal_ship_boarding_bridge() -> void:
 	var deck_width := 12.0
 	var deck_length := 120.0
 	var deck_center_z := 139.0
-	_path_segment(self, "ShipBridgeShoreApproach", Vector3(-45.0, 0.12, 76.0), Vector3(-45.0, 0.12, 79.0), 9.0, DARK)
+	_path_segment(self, "ShipBridgeShoreApproach", Vector3(-45.0, 0.12, -517.0), Vector3(-45.0, 0.12, -520.0), 9.0, DARK)
 	_box(bridge, "ShipBridgeFoundation", Vector3(deck_width + 0.8, 0.55, deck_length + 1.0), Vector3(0.0, -0.30, deck_center_z), DARK)
 	_box(bridge, "ShipBridgeDeck", Vector3(deck_width, 0.32, deck_length), Vector3(0.0, 0.08, deck_center_z), IVORY)
 	_box(bridge, "ShipBridgeGoldCenterLine", Vector3(0.16, 0.035, deck_length - 1.0), Vector3(0.0, 0.255, deck_center_z), GOLD)
@@ -998,7 +1002,7 @@ func _build_royal_ship() -> void:
 	# The ship is set apart from the race gates; its bow faces east.
 	var ship := Node3D.new()
 	ship.name = "RoyalCivilizationsShip"
-	ship.position = Vector3(-45.0, 0.0, 216.0)
+	ship.position = Vector3(-45.0, 0.0, -657.0)
 	ship.rotation.y = PI * 0.5
 	add_child(ship)
 	_box(ship, "RoyalShipHull", Vector3(4.8, 1.8, 17.0), Vector3(0, 1.0, 0), Color(0.16, 0.20, 0.23))
