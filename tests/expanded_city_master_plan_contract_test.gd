@@ -64,7 +64,7 @@ func _initialize() -> void:
 			failures.append("The royal loop road is missing a rounded corner: " + turn_name)
 	if not main_script.contains("Vector3(82.0, 0.0, 285.0)") or not main_script.contains("Vector3(-82.0, 0.0, 285.0)"):
 		failures.append("The desert camp and pyramids are not placed inside the southern royal boundary.")
-	if not transport.contains("var desert_control := Vector3(0.0, 0.0, 850.0)") or not transport.contains("var branch_angles := [PI * 0.18, PI * 0.38, PI * 0.62, PI * 0.82]"):
+	if not transport.contains("var control_a := west_join + Vector3(0.0, 0.0, 520.0)") or not transport.contains("var control_b := east_join + Vector3(0.0, 0.0, 520.0)") or not transport.contains("west_join := CITY_CENTER + Vector3(-RING_RADII[2], 0.0, 0.0)") or not transport.contains("east_join := CITY_CENTER + Vector3(RING_RADII[2], 0.0, 0.0)"):
 		failures.append("The elevated royal boundary road is not on the southern side opposite the waterfront.")
 	if main_script.contains("BeachAccessRoad_West") or main_script.contains("BeachAccessConnector_West"):
 		failures.append("West beach spurs still cut across the ship/pyramid sightline.")
