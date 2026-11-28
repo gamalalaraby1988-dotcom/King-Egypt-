@@ -32,6 +32,7 @@ func _initialize() -> void:
 		"Vector3(160, 1, 620)",
 		"Vector3(220, 1, 418)",
 		"Vector3(440, 0.08, 14)",
+		"Vector3(0, 0.0, -315)",
 		"Vector3(264, 0.075, 12)",
 		"Vector3(264.0, 0.14, 1.7)"
 	]
