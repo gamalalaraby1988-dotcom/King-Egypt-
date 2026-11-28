@@ -24,8 +24,12 @@ func _initialize() -> void:
 		"const ROYAL_ROUTE_WIDTH := 34.0",
 		"const ROYAL_ROUTE_SEGMENTS := 36",
 		"RoyalSemicircleRoad_",
-		"RoyalNorthDescendingBranch",
-		"RoyalRightDescendingBranch",
+		"RoyalWestDesertBranch",
+		"RoyalWestCenterBranch",
+		"RoyalEastCenterBranch",
+		"RoyalEastDesertBranch",
+		"var branch_angles := [PI * 0.82, PI * 0.62, PI * 0.38, PI * 0.18]",
+		"var desert_control := Vector3(0.0, 0.0, -550.0)",
 		"func _build_short_branch(",
 		"SteelGuardrail",
 		"RoyalPanoramaPlazaDeck",
@@ -40,6 +44,13 @@ func _initialize() -> void:
 
 	if not layout_script.contains('Vector3(440.0, 0.18, 280.0)') or not layout_script.contains('Vector3(0.0, 0.0, -270.0)'):
 		failures.append("The existing sea and pyramid landmarks were unexpectedly changed.")
+
+	for required in [
+		"Vector3(82.0, 0.0, -285.0)",
+		"Vector3(-82.0, 0.0, -285.0)"
+	]:
+		if not main_script.contains(required):
+			failures.append("Northern desert area is missing: " + required)
 
 	if failures.is_empty():
 		print("Royal semicircle contract passed: first-ring connections, wide curved road, steel guardrails, panoramic plaza, preserved sea/pyramids.")
