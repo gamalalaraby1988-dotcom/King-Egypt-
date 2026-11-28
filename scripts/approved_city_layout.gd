@@ -1080,12 +1080,15 @@ func _build_royal_ship() -> void:
 		flag.position = Vector3(0.62, 7.65, -5.0 + float(i) * 2.5)
 		flag.material_override = _mat(flag_colors[i])
 		ship.add_child(flag)
-	# A side pier connects the waterfront promenade to the ship without blocking the quay.
-	_box(self, "RoyalShipPier", Vector3(8.0, 0.28, 14.0), Vector3(-6.0, 0.02, 84.0), SAND)
-	_add_static_box_collision(ship, "RoyalShipPierWalkable", Vector3(8.0, 0.28, 14.0), Vector3(-6.0, 0.02, -1.0))
-	for x in [-10.0, -2.0]:
-		for z in [79.0, 84.0, 89.0]:
-			_box(self, "RoyalShipPierPost", Vector3(0.35, 1.1, 0.35), Vector3(x, 0.5, z), GOLD)
+	# Turn the ship broadside across the waterfront (X axis), keeping its bow facing east.
+	ship.rotation.y = PI * 0.5
+	# Exactly one low, wide boarding gangway joins the ship's side to the existing sea bridge.
+	# It replaces the former detached pier and its duplicate posts.
+	_box(self, "RoyalShipSingleBoardingBridgeDeck", Vector3(25.0, 0.30, 5.6), Vector3(31.0, 0.20, 85.0), IVORY)
+	_box(self, "RoyalShipSingleBoardingBridgeGoldEdgeNorth", Vector3(25.0, 0.16, 0.22), Vector3(31.0, 0.43, 82.2), GOLD)
+	_box(self, "RoyalShipSingleBoardingBridgeGoldEdgeSouth", Vector3(25.0, 0.16, 0.22), Vector3(31.0, 0.43, 87.8), GOLD)
+	_box(self, "RoyalShipSingleBoardingBridgeCenterLine", Vector3(24.0, 0.035, 0.12), Vector3(31.0, 0.37, 85.0), GOLD)
+	_add_static_box_collision(self, "RoyalShipSingleBoardingBridgeWalkable", Vector3(25.0, 0.42, 5.6), Vector3(31.0, 0.20, 85.0))
 
 
 func _add_building_collision_shell(root: Node3D, footprint: Vector2, height: float, door_width: float) -> void:
