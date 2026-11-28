@@ -24,8 +24,8 @@ const CITY_LANDMARKS := [
 	{"key": "royal_yacht_club", "position": Vector3(150, 0, 87)},
 	{"key": "desert_lodge", "position": Vector3(-150, 0, 370.0)},
 	{"key": "mountain_temple", "position": Vector3(130, 0, 390.0)},
-	{"key": "royal_ship", "position": Vector3(-45.0, 0.0, 216.0)},
-	{"key": "beach_handball", "position": Vector3(180.0, 0.0, 195.0)}
+	{"key": "royal_ship", "position": Vector3(-45.0, 0.0, -657.0)},
+	{"key": "beach_handball", "position": Vector3(180.0, 0.0, -430.0)}
 ]
 
 func _ready() -> void:
