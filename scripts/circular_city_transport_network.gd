@@ -114,9 +114,9 @@ func _add_route_segment(label: String, start: Vector3, finish: Vector3, width: f
 	var horizontal := Vector3(delta.x, 0.0, delta.z).normalized()
 	var side := horizontal.cross(Vector3.UP).normalized()
 	for edge in [-1.0, 1.0]:
-		var rail_start := start + side * edge * (width * 0.5 - 0.7) + Vector3(0.0, 1.05, 0.0)
-		var rail_finish := finish + side * edge * (width * 0.5 - 0.7) + Vector3(0.0, 1.05, 0.0)
-		var rail_mid := (rail_start + rail_finish) * 0.5
+		var rail_start: Vector3 = start + side * edge * (width * 0.5 - 0.7) + Vector3(0.0, 1.05, 0.0)
+		var rail_finish: Vector3 = finish + side * edge * (width * 0.5 - 0.7) + Vector3(0.0, 1.05, 0.0)
+		var rail_mid: Vector3 = (rail_start + rail_finish) * 0.5
 		var rail := MeshInstance3D.new()
 		rail.name = label + ("_SteelGuardrail_Outer" if edge > 0.0 else "_SteelGuardrail_Inner")
 		var rail_mesh := BoxMesh.new()
