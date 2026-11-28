@@ -7,6 +7,7 @@ extends Control
 var player: CharacterBody3D
 var controlled_vehicle: CharacterBody3D
 var interaction_button: Button
+var interaction_brake_held := false
 var joystick_center := Vector2.ZERO
 var joystick_vector := Vector2.ZERO
 var joystick_finger := -1
@@ -73,9 +74,11 @@ func _update_interaction_button_state() -> void:
 
 func _on_interaction_button_down() -> void:
 	if is_instance_valid(controlled_vehicle):
+		interaction_brake_held = true
 		controlled_vehicle.call("set_brake", true)
 
 func _on_interaction_button_up() -> void:
+	interaction_brake_held = false
 	if is_instance_valid(controlled_vehicle):
 		controlled_vehicle.call("set_brake", false)
 
@@ -99,7 +102,7 @@ func _process(_delta: float) -> void:
 			return
 		var has_direction := absf(joystick_vector.y) > 0.12
 		controlled_vehicle.call("set_drive", has_direction)
-		controlled_vehicle.call("set_brake", false)
+		controlled_vehicle.call("set_brake", interaction_brake_held)
 		controlled_vehicle.call("set_reverse", has_direction and joystick_vector.y > 0.12)
 		controlled_vehicle.call("set_steering", joystick_vector.x)
 		if is_instance_valid(player):
@@ -131,7 +134,7 @@ func set_controlled_vehicle(value: CharacterBody3D) -> void:
 		_clear_vehicle_input()
 	_update_interaction_button_state()
 
-func _clear_vehicle_input() -> void:
+	interaction_brake_held = false
 	if not is_instance_valid(controlled_vehicle):
 		return
 	controlled_vehicle.call("set_drive", false)
