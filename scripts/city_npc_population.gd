@@ -310,7 +310,7 @@ func _update_active_motion() -> void:
 				var facing := partner.global_position - actor.global_position
 				facing.y = 0.0
 				if facing.length_squared() > 0.0001:
-					actor.rotation.y = atan2(facing.x, facing.z)
+					actor.rotation.y = atan2(-facing.x, -facing.z)
 				avatar.call("set_motion_state", "talk", 0.0)
 				continue
 			_social_actor_states.erase(actor_id)
@@ -324,5 +324,5 @@ func _update_active_motion() -> void:
 		var direction := next_position - actor.position
 		actor.position = next_position
 		if direction.length_squared() > 0.0001:
-			actor.rotation.y = atan2(direction.x, direction.z)
+			actor.rotation.y = atan2(-direction.x, -direction.z)
 		avatar.call("set_motion_state", "walk", float(data["speed"]) * radius)
