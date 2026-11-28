@@ -144,7 +144,7 @@ func _build_royal_panorama_link() -> void:
 	# The royal road is the northern outer boundary, joining the west and east shoulders of ring one.
 	var west_join := CITY_CENTER + Vector3(-RING_RADII[0], 0.0, 0.0)
 	var east_join := CITY_CENTER + Vector3(RING_RADII[0], 0.0, 0.0)
-	var desert_control := Vector3(0.0, 0.0, -550.0)
+	var desert_control := Vector3(0.0, 0.0, -600.0)
 	var route_points: Array[Vector3] = []
 	for i in range(ROYAL_ROUTE_SEGMENTS + 1):
 		var t := float(i) / float(ROYAL_ROUTE_SEGMENTS)
