@@ -350,7 +350,7 @@ func _build_nile_waterfront() -> void:
 	# The former enclosed marina basin is replaced by open sea. main.gd removes
 	# the matching terrain footprint so there is no hidden walkable floor.
 	# Wider open water gives the royal ship a separate berth, clear of the jet-ski course.
-	var water := _box(self, "RoyalOpenSea", Vector3(170.0, 0.18, 270.0), Vector3(0.0, -0.12, 195.0), Color(0.025, 0.24, 0.34))
+	var water := _box(self, "RoyalOpenSea", Vector3(120.0, 0.18, 270.0), Vector3(0.0, -0.12, 195.0), Color(0.025, 0.24, 0.34))
 	var water_material := _mat(Color(0.025, 0.24, 0.34), 0.12)
 	water_material.roughness = 0.2
 	water.material_override = water_material
