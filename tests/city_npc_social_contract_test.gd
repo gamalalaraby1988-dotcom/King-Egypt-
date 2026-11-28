@@ -34,7 +34,7 @@ func _run_city_npc_social_contract() -> void:
 
 	# Every base resident and copy must have clear visual spacing at spawn.
 	var spawn_regex := RegEx.new()
-	if spawn_regex.compile("Vector3\\\\((-?[0-9]+(?:\\\\.[0-9]+)?), 0, (-?[0-9]+(?:\\\\.[0-9]+)?)\\\\)") != OK:
+	if spawn_regex.compile("Vector3\\((-?[0-9]+(?:\\.[0-9]+)?), 0, (-?[0-9]+(?:\\.[0-9]+)?)\\)") != OK:
 		push_error("Could not compile NPC spawn spacing pattern.")
 		quit(1)
 		return
