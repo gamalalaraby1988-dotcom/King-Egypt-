@@ -1235,7 +1235,7 @@ func _build_mountain_route() -> void:
 	# The mountain zone is placed at the far eastern edge, beyond the service-building row.
 	var mountain := Node3D.new()
 	mountain.name = "KingsMountainRoute"
-	mountain.position = Vector3(196, 0, 60)
+	mountain.position = Vector3(130, 0, 390)
 	add_child(mountain)
 	var lower := MeshInstance3D.new()
 	lower.name = "MountainLowerSlope"
