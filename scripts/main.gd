@@ -1975,7 +1975,9 @@ func _create_mode_selection_ui() -> void:
 	PlayerAccountAuthClient.player_profile_ready.connect(_on_player_profile_ready)
 	PlayerAccountAuthClient.player_profile_failed.connect(_on_player_profile_failed)
 	if PlayerAccountAuthClient.has_active_session():
-		_on_player_account_access_token_changed(PlayerAccountAuthClient.get_access_token())
+		# Restore cached account state only after the entry UI has finished building.
+		# A session callback must never interrupt startup before the menu is drawn.
+		call_deferred("_on_player_account_access_token_changed", PlayerAccountAuthClient.get_access_token())
 
 	# Royal Egyptian login artwork sits behind the live, interactive Godot controls.
 	var artwork := TextureRect.new()
