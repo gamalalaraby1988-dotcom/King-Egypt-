@@ -28,8 +28,8 @@ func _initialize() -> void:
 		"RoyalWestCenterBranch",
 		"RoyalEastCenterBranch",
 		"RoyalEastDesertBranch",
-		"var branch_angles := [PI * 0.82, PI * 0.62, PI * 0.38, PI * 0.18]",
-		"var desert_control := Vector3(0.0, 0.0, -550.0)",
+		"var branch_angles := [PI * 1.18, PI * 1.38, PI * 1.62, PI * 1.82]",
+		"var desert_control := Vector3(0.0, 0.0, -600.0)",
 		"func _build_short_branch(",
 		"SteelGuardrail",
 		"RoyalPanoramaPlazaDeck",
@@ -44,6 +44,15 @@ func _initialize() -> void:
 
 	if not layout_script.contains('Vector3(440.0, 0.18, 280.0)') or not layout_script.contains('Vector3(0.0, 0.0, -270.0)'):
 		failures.append("The existing sea and pyramid landmarks were unexpectedly changed.")
+
+	# Numeric geometry contract: each exit lands on ring one and all four
+	# targets occupy its northern (negative-Z) half.
+	var branch_angles := [PI * 1.18, PI * 1.38, PI * 1.62, PI * 1.82]
+	for angle_variant in branch_angles:
+		var angle := float(angle_variant)
+		var target := Vector3(cos(angle) * 175.0, 0.0, -55.0 + sin(angle) * 175.0)
+		if target.z >= -55.0 or absf(Vector2(target.x, target.z + 55.0).length() - 175.0) > 0.01:
+			failures.append("A royal branch does not land on the northern first-ring arc.")
 
 	for required in [
 		"Vector3(82.0, 0.0, -285.0)",
