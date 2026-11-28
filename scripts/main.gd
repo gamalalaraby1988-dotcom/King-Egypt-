@@ -2032,6 +2032,31 @@ func _create_mode_selection_ui() -> void:
 	account_caption.add_theme_color_override("font_color", Color(1.0, 0.87, 0.59))
 	account_group.add_child(account_caption)
 
+	# Direct offline entry stays visible on the initial screen.
+	var offline_group := VBoxContainer.new()
+	offline_group.alignment = BoxContainer.ALIGNMENT_CENTER
+	offline_group.add_theme_constant_override("separation", 7)
+	entry_buttons.add_child(offline_group)
+	var offline_icon := Button.new()
+	offline_icon.name = "DirectOfflineEntry"
+	offline_icon.text = "◈"
+	offline_icon.tooltip_text = "اللعب دون إنترنت"
+	offline_icon.custom_minimum_size = Vector2(116, 116)
+	offline_icon.add_theme_font_size_override("font_size", 43)
+	offline_icon.add_theme_color_override("font_color", Color(1.0, 0.86, 0.53))
+	offline_icon.add_theme_color_override("font_hover_color", Color(1.0, 0.96, 0.76))
+	offline_icon.add_theme_stylebox_override("normal", _make_royal_medallion_style(false))
+	offline_icon.add_theme_stylebox_override("hover", _make_royal_medallion_style(true))
+	offline_icon.add_theme_stylebox_override("pressed", _make_royal_medallion_style(true))
+	offline_icon.pressed.connect(_select_offline_mode)
+	offline_group.add_child(offline_icon)
+	var offline_caption := Label.new()
+	offline_caption.text = "اللعب دون إنترنت"
+	offline_caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	offline_caption.add_theme_font_size_override("font_size", 15)
+	offline_caption.add_theme_color_override("font_color", Color(1.0, 0.87, 0.59))
+	offline_group.add_child(offline_caption)
+
 	var options_group := VBoxContainer.new()
 	options_group.alignment = BoxContainer.ALIGNMENT_CENTER
 	options_group.add_theme_constant_override("separation", 7)
