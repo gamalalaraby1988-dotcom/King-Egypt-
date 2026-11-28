@@ -240,14 +240,10 @@ func _apply_camera_drag(delta_pos: Vector2) -> void:
 	if pivot == null:
 		return
 	var sensitivity := camera_sensitivity * _camera_drag_scale
-	if is_instance_valid(controlled_vehicle):
-		# أثناء قيادة السيارة تتحرك الكاميرا أفقيًا ورأسيًا مع اتجاه سحب الإصبع.
-		pivot.rotation.y += delta_pos.x * sensitivity
-		pivot.rotation.x = clampf(pivot.rotation.x + delta_pos.y * sensitivity, deg_to_rad(-60.0), deg_to_rad(25.0))
-	else:
-		# حافظ على اتجاه كاميرا المشي الحالي دون تغيير.
-		pivot.rotation.y -= delta_pos.x * sensitivity
-		pivot.rotation.x = clampf(pivot.rotation.x - delta_pos.y * sensitivity, deg_to_rad(-60.0), deg_to_rad(25.0))
+	# نفس استجابة كاميرا المشي والقيادة: سحب الإصبع أفقيًا أو رأسيًا
+	# يغيّر زاوية الرؤية بالاتجاه نفسه سواء كان اللاعب ماشيًا أو داخل السيارة.
+	pivot.rotation.y -= delta_pos.x * sensitivity
+	pivot.rotation.x = clampf(pivot.rotation.x - delta_pos.y * sensitivity, deg_to_rad(-60.0), deg_to_rad(25.0))
 
 func _is_over_control(pos: Vector2) -> bool:
 	return pos.distance_to(joystick_center) <= _joystick_draw_radius * 1.55
