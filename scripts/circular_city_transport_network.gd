@@ -77,7 +77,7 @@ func _build_radial_shortcuts() -> void:
 			"RoyalRadialShortcut_%d" % (spoke_index + 1),
 			Vector3(8.0, 0.12, length),
 			at,
-			Vector3(0.0, -angle, 0.0)
+			Vector3(0.0, PI * 0.5 - angle, 0.0)
 		)
 
 func _add_oriented_road(label: String, from_point: Vector3, to_point: Vector3, width: float, height: float = 0.55) -> void:
@@ -92,10 +92,10 @@ func _add_oriented_road(label: String, from_point: Vector3, to_point: Vector3, w
 	mesh.size = Vector3(width, height, length)
 	node.mesh = mesh
 	node.position = midpoint
-	node.look_at(to_point, Vector3.UP)
 	node.material_override = _material(ROAD)
 	node.add_to_group("city_world_geometry")
 	add_child(node)
+	node.look_at(to_point, Vector3.UP)
 
 	var body := StaticBody3D.new()
 	body.name = label + "Collision"
