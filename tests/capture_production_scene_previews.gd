@@ -68,8 +68,8 @@ func _capture_previews() -> void:
 	# Capture the expanded open sea and royal beach from the actual production scene.
 	var waterfront_ok := await _capture_view(
 		"royal_open_sea_waterfront_preview.png",
-		Vector3(0.0, 66.0, 24.0),
-		Vector3(0.0, 0.0, 114.0),
+		Vector3(0.0, 66.0, -560.0),
+		Vector3(0.0, 0.0, -670.0),
 		58.0
 	)
 	if not waterfront_ok:
@@ -79,8 +79,8 @@ func _capture_previews() -> void:
 	# Capture the real jet-ski start, checkpoint buoys, and finish gates in the same production scene.
 	var course_ok := await _capture_view(
 		"royal_jet_ski_course_preview.png",
-		Vector3(30.0, 34.0, 78.0),
-		Vector3(0.0, 2.0, 122.0),
+		Vector3(30.0, 34.0, -535.0),
+		Vector3(0.0, 2.0, -570.0),
 		58.0
 	)
 	if not course_ok:
@@ -90,8 +90,8 @@ func _capture_previews() -> void:
 	# Capture the actual Five Civilizations Ship and its dedicated independent boarding bridge.
 	var ship_bridge_ok := await _capture_view(
 		"royal_civilizations_ship_bridge_preview.png",
-		Vector3(-5.0, 105.0, 130.0),
-		Vector3(-45.0, 2.0, 185.0),
+		Vector3(-5.0, 105.0, -585.0),
+		Vector3(-45.0, 2.0, -640.0),
 		68.0
 	)
 	if not ship_bridge_ok:
@@ -101,8 +101,8 @@ func _capture_previews() -> void:
 	# Full-city aerial now includes the southern desert, pyramids and Kings Summit districts.
 	var master_plan_ok := await _capture_view(
 		"expanded_city_aerial_master_plan_preview.png",
-		Vector3(0.0, 760.0, 110.0),
-		Vector3(0.0, 0.0, 110.0),
+		Vector3(0.0, 1420.0, -110.0),
+		Vector3(0.0, 0.0, -110.0),
 		60.0
 	)
 	if not master_plan_ok:
@@ -132,7 +132,7 @@ func _capture_previews() -> void:
 		quit(1)
 		return
 	jet_ski_preview.name = "RoyalJetSkiProductionPreviewInstance"
-	jet_ski_preview.position = Vector3(0.0, 0.34, 108.0)
+	jet_ski_preview.position = Vector3(0.0, 0.34, -550.0)
 	jet_ski_preview.rotation.y = deg_to_rad(18.0)
 	current_scene.add_child(jet_ski_preview)
 	for _frame in range(8):
@@ -140,8 +140,8 @@ func _capture_previews() -> void:
 
 	var jet_ski_three_quarter_ok := await _capture_view(
 		"royal_jet_ski_craft_three_quarter_preview.png",
-		Vector3(4.8, 3.1, 102.8),
-		Vector3(0.0, 0.72, 108.0),
+		Vector3(4.8, 3.1, -554.8),
+		Vector3(0.0, 0.72, -550.0),
 		48.0
 	)
 	if not jet_ski_three_quarter_ok:
@@ -150,8 +150,8 @@ func _capture_previews() -> void:
 
 	var jet_ski_side_ok := await _capture_view(
 		"royal_jet_ski_craft_side_preview.png",
-		Vector3(5.8, 2.1, 108.8),
-		Vector3(0.0, 0.58, 108.0),
+		Vector3(5.8, 2.1, -548.8),
+		Vector3(0.0, 0.58, -550.0),
 		48.0
 	)
 	if not jet_ski_side_ok:
