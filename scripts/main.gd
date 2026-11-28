@@ -1989,7 +1989,7 @@ func _create_mode_selection_ui() -> void:
 	mode_selection_layer.add_child(fallback_background)
 	var artwork := TextureRect.new()
 	artwork.name = "RoyalEntryArtwork"
-	var artwork_texture := load("res://assets/login_screen.jpg") as Texture2D
+	var artwork_texture := load("res://assets/login_screen.png") as Texture2D
 	if artwork_texture != null:
 		artwork.texture = artwork_texture
 		artwork.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -1998,7 +1998,7 @@ func _create_mode_selection_ui() -> void:
 		artwork.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		mode_selection_layer.add_child(artwork)
 	else:
-		push_warning("Royal login artwork missing: res://assets/login_screen.jpg")
+		push_warning("Royal login artwork missing: res://assets/login_screen.png")
 
 	# A subtle cinematic tint keeps the artwork readable without hiding it.
 	var backdrop := ColorRect.new()
