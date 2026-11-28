@@ -1791,7 +1791,7 @@ func _create_service_staff(display_name: String, role: String, dialogue: String,
 	add_child(staff)
 
 func _create_desert_camp() -> void:
-	# The royal camp sits on the northern desert shelf, inside the perimeter road.
+	# The royal camp sits on the southern desert shelf, inside the royal boundary road.
 	var camp := Node3D.new()
 	camp.name = "RoyalDesertCamp"
 	camp.position = Vector3(82.0, 0.0, 285.0)
