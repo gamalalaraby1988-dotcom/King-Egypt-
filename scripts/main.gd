@@ -240,6 +240,9 @@ func _initialize_game_world() -> void:
 
 
 func _create_city_npc_population() -> void:
+	# Prevent duplicate population roots if startup is retried or this entry point is called again.
+	if is_instance_valid(get_node_or_null("CityNPCPopulation")):
+		return
 	# NPC citizens are client-side ambience; dedicated servers do not simulate them.
 	var population_script := load("res://scripts/city_npc_population.gd") as Script
 	if population_script == null:
