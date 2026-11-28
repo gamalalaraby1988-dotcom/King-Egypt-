@@ -49,7 +49,7 @@ var _pending_city_reservation_id := ""
 const PLAYER_RECOVERY_FALL_LIMIT := -3.0
 const CITY_SAFE_X_LIMIT := 155.0
 const CITY_SAFE_Z_MIN := -340.0
-const CITY_SAFE_Z_MAX := 180.0
+const CITY_SAFE_Z_MAX := 245.0
 const INTERIOR_WORLD_POSITION := Vector3(1000.0, 0.0, 1000.0)
 
 func _ready() -> void:
@@ -1512,24 +1512,24 @@ func _create_city() -> void:
 	var road_color := Color(0.12, 0.13, 0.15)
 	var side_road_color := Color(0.15, 0.16, 0.17)
 	# طريق محيطي مستطيل يحيط بالمدينة مع خلوّ مسافة عن مباني الأطراف.
-	_create_box(self, "MainRoad_North", Vector3(190, 0.08, 6), Vector3(0, 0.0, -95), road_color)
+	_create_box(self, "MainRoad_North", Vector3(220, 0.08, 14), Vector3(0, 0.0, -95), road_color)
 	# Perimeter roads continue along the dry east/west shoreline strips;
 	# no road or collision surface crosses the open-water race area.
-	_create_box(self, "MainRoad_West", Vector3(6, 0.08, 260), Vector3(-95, 0.0, 35), road_color)
-	_create_box(self, "MainRoad_East", Vector3(6, 0.08, 260), Vector3(95, 0.0, 35), road_color)
-	_create_box(self, "BeachAccessRoad_West", Vector3(6, 0.08, 70), Vector3(-65, 0.0, 115), road_color)
-	_create_box(self, "BeachAccessRoad_East", Vector3(6, 0.08, 70), Vector3(65, 0.0, 115), road_color)
-	_create_box(self, "BeachAccessConnector_West", Vector3(30, 0.08, 6), Vector3(-80, 0.0, 115), road_color)
-	_create_box(self, "BeachAccessConnector_East", Vector3(30, 0.08, 6), Vector3(80, 0.0, 115), road_color)
+	_create_box(self, "MainRoad_West", Vector3(14, 0.08, 300), Vector3(-105, 0.0, 35), road_color)
+	_create_box(self, "MainRoad_East", Vector3(14, 0.08, 300), Vector3(105, 0.0, 35), road_color)
+	_create_box(self, "BeachAccessRoad_West", Vector3(10, 0.08, 90), Vector3(-65, 0.0, 120), road_color)
+	_create_box(self, "BeachAccessRoad_East", Vector3(10, 0.08, 90), Vector3(65, 0.0, 120), road_color)
+	_create_box(self, "BeachAccessConnector_West", Vector3(36, 0.08, 10), Vector3(-80, 0.0, 120), road_color)
+	_create_box(self, "BeachAccessConnector_East", Vector3(36, 0.08, 10), Vector3(80, 0.0, 120), road_color)
 	# الشارع العرضي الشمالي يلتف حول الميدان الملكي ويترك ساحته مفتوحة للتجمع.
 	for side in [-1.0, 1.0]:
-		_create_box(self, "MainRoad_X_%s" % str(side), Vector3(72, 0.08, 6), Vector3(side * 59, 0.0, -45), road_color)
+		_create_box(self, "MainRoad_X_%s" % str(side), Vector3(78, 0.08, 14), Vector3(side * 59, 0.0, -45), road_color)
 	# شوارع طولية في الممرات الآمنة بين صفوف المباني، وتتصل بالشوارع العرضية.
 	for road_x in [-15.0, 15.0]:
-		_create_box(self, "SideRoad_V_%d" % int(road_x), Vector3(5, 0.075, 118), Vector3(road_x, 0.006, 36), side_road_color)
+		_create_box(self, "SideRoad_V_%d" % int(road_x), Vector3(12, 0.075, 118), Vector3(road_x, 0.006, 36), side_road_color)
 	# شوارع عرضية قصيرة داخل الفواصل الآمنة بين صفوف المباني.
 	for road_z in [-15.0, 15.0, 45.0]:
-		_create_box(self, "SideRoad_Z_%d" % int(road_z), Vector3(132, 0.075, 5), Vector3(0, 0.006, road_z), side_road_color)
+		_create_box(self, "SideRoad_Z_%d" % int(road_z), Vector3(132, 0.075, 12), Vector3(0, 0.006, road_z), side_road_color)
 	# خطوط إرشادية على جزأي الطريق المحيط بالميدان.
 	for side in [-1.0, 1.0]:
 		for i in range(4):
@@ -1542,14 +1542,14 @@ func _create_city_pedestrian_network() -> void:
 	var curb_color := Color(0.78, 0.69, 0.53)
 	for road_z in [-15.0, 15.0, 45.0]:
 		for side in [-1.0, 1.0]:
-			var walk_z: float = road_z + side * 4.0
+			var walk_z: float = road_z + side * 7.0
 			_create_box(self, "Sidewalk_H_%d_%d" % [int(road_z), int(side)], Vector3(132.0, 0.14, 1.7), Vector3(0.0, 0.07, walk_z), sidewalk_color)
-			_create_box(self, "Curb_H_%d_%d" % [int(road_z), int(side)], Vector3(132.0, 0.22, 0.16), Vector3(0.0, 0.11, road_z + side * 4.92), curb_color)
+			_create_box(self, "Curb_H_%d_%d" % [int(road_z), int(side)], Vector3(132.0, 0.22, 0.16), Vector3(0.0, 0.11, road_z + side * 8.0), curb_color)
 	for road_x in [-15.0, 15.0]:
 		for side in [-1.0, 1.0]:
-			var walk_x: float = road_x + side * 3.65
+			var walk_x: float = road_x + side * 7.0
 			_create_box(self, "Sidewalk_V_%d_%d" % [int(road_x), int(side)], Vector3(1.65, 0.14, 118.0), Vector3(walk_x, 0.07, 36.0), sidewalk_color)
-			_create_box(self, "Curb_V_%d_%d" % [int(road_x), int(side)], Vector3(0.16, 0.22, 118.0), Vector3(road_x + side * 4.55, 0.11, 36.0), curb_color)
+			_create_box(self, "Curb_V_%d_%d" % [int(road_x), int(side)], Vector3(0.16, 0.22, 118.0), Vector3(road_x + side * 8.0, 0.11, 36.0), curb_color)
 	for road_z in [-15.0, 15.0, 45.0]:
 		for mark_index in range(12):
 			var mark_x := -62.0 + float(mark_index) * 11.0
