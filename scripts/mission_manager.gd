@@ -107,10 +107,10 @@ const CITY_ADVENTURES := {
 	"city_adventure_survival": {"title": "سباق النجاة", "description": "اعبر نقاط المسار المحددة في شوارع المدينة بالترتيب."}
 }
 const CITY_ADVENTURE_STAGES := {
-	"city_adventure_rescue": [Vector3(-75.0, 0.15, 20.9), Vector3(-75.0, 0.15, 0.9)],
-	"city_adventure_treasure": [Vector3(-30.0, 0.15, -23.6), Vector3(0.0, 0.15, 6.4), Vector3(60.0, 0.15, 36.4)],
-	"city_adventure_message": [Vector3(75.0, 0.15, 0.9), Vector3(75.0, 0.15, 20.9), Vector3(60.0, 0.15, -23.6)],
-	"city_adventure_survival": [Vector3(-60.0, 0.15, 45.0), Vector3(-30.0, 0.15, 45.0), Vector3(0.0, 0.15, 45.0), Vector3(30.0, 0.15, 45.0), Vector3(60.0, 0.15, 45.0)]
+	"city_adventure_rescue": [Vector3(-150.0, 0.15, 31.35), Vector3(-150.0, 0.15, 1.35)],
+	"city_adventure_treasure": [Vector3(-60.0, 0.15, -35.4), Vector3(0.0, 0.15, 9.6), Vector3(60.0, 0.15, 56.1)],
+	"city_adventure_message": [Vector3(120.0, 0.15, 9.6), Vector3(150.0, 0.15, 31.35), Vector3(120.0, 0.15, -35.4)],
+	"city_adventure_survival": [Vector3(-120.0, 0.15, 67.5), Vector3(-60.0, 0.15, 67.5), Vector3(0.0, 0.15, 67.5), Vector3(60.0, 0.15, 67.5), Vector3(120.0, 0.15, 67.5)]
 }
 
 const MAX_CURRENCY_BALANCE := 2000000000
