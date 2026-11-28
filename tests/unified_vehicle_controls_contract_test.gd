@@ -21,6 +21,12 @@ func _run_vehicle_control_contract() -> void:
 	hud.call("set_controlled_vehicle", vehicle)
 	hud.set("visible", true)
 
+	var hud_source := FileAccess.get_file_as_string("res://scripts/mobile_hud.gd")
+	if not hud_source.contains("pivot.rotation.y -= delta_pos.x * sensitivity") or not hud_source.contains("pivot.rotation.x - delta_pos.y * sensitivity"):
+		push_error("Vehicle camera drag must match the player's camera drag direction.")
+		quit(1)
+		return
+
 	# Push the shared joystick forward and steer right.
 	hud.set("joystick_vector", Vector2(0.55, -1.0))
 	hud.call("_process", 0.016)
