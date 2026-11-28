@@ -26,5 +26,13 @@ func _run_test() -> void:
 		push_error("Camera drag direction was not preserved after player turned.")
 		quit(1)
 		return
+	# Character forward (-Z) must face the actual movement vector on every horizontal axis.
+	for direction in [Vector3.RIGHT, Vector3.LEFT, Vector3.FORWARD, Vector3.BACK]:
+		var target_yaw := float(player.call("_get_facing_yaw_for_direction", direction))
+		var facing := Basis(Vector3.UP, target_yaw) * Vector3.FORWARD
+		if facing.dot(direction) < 0.999:
+			push_error("Player facing yaw points away from movement direction: %s -> %s" % [direction, facing])
+			quit(1)
+			return
 	print("Walking camera stability test passed.")
 	quit(0)
