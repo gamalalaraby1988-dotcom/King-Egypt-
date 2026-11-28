@@ -23,6 +23,10 @@ func _run_city_npc_social_contract() -> void:
 			push_error("Missing ambient NPC social contract: " + required)
 			quit(1)
 			return
+	if not population_source.contains("actor.rotation.y = atan2(-direction.x, -direction.z)") or not population_source.contains("actor.rotation.y = atan2(-facing.x, -facing.z)"):
+		push_error("NPCs must face their actual walking direction and social partner; their front is -Z.")
+		quit(1)
+		return
 	if not avatar_source.contains("\"talk\"") or not avatar_source.contains("\"wave\""):
 		push_error("Avatar talk/wave motion states are missing.")
 		quit(1)
