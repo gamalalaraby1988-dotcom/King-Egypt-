@@ -31,5 +31,25 @@ func _run_city_npc_social_contract() -> void:
 		push_error("The current city NPC population must remain the single integrated population system.")
 		quit(1)
 		return
-	print("City NPC social interaction contract tests passed.")
+
+	# Every base resident and copy must have clear visual spacing at spawn.
+	var spawn_regex := RegEx.new()
+	if spawn_regex.compile("Vector3\\\\((-?[0-9]+(?:\\\\.[0-9]+)?), 0, (-?[0-9]+(?:\\\\.[0-9]+)?)\\\\)") != OK:
+		push_error("Could not compile NPC spawn spacing pattern.")
+		quit(1)
+		return
+	var spawn_matches := spawn_regex.search_all(population_source)
+	if spawn_matches.size() != 70:
+		push_error("Expected 50 base NPCs plus 20 copies; found %d spawn points." % spawn_matches.size())
+		quit(1)
+		return
+	for i in range(spawn_matches.size()):
+		var first := Vector2(float(spawn_matches[i].get_string(1)), float(spawn_matches[i].get_string(2)))
+		for j in range(i + 1, spawn_matches.size()):
+			var second := Vector2(float(spawn_matches[j].get_string(1)), float(spawn_matches[j].get_string(2)))
+			if first.distance_to(second) < 7.5:
+				push_error("NPC spawn points are too close: %d and %d." % [i + 1, j + 1])
+				quit(1)
+				return
+	print("City NPC social interaction and spawn spacing contract tests passed.")
 	quit(0)
