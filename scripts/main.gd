@@ -2142,11 +2142,25 @@ func _create_mode_selection_ui() -> void:
 	verify_button.custom_minimum_size.y = 42
 	verify_button.pressed.connect(_on_email_verify_pressed)
 	content.add_child(verify_button)
+	# The Google-branded entry intentionally uses the existing email/password
+	# authentication flow; no Google OAuth provider is claimed or invoked.
 	player_account_button = Button.new()
-	player_account_button.text = "تسجيل الدخول بالبريد"
-	player_account_button.custom_minimum_size.y = 42
+	player_account_button.name = "GoogleEmailEntryButton"
+	player_account_button.text = "G   المتابعة باستخدام البريد الإلكتروني"
+	player_account_button.custom_minimum_size.y = 46
 	player_account_button.pressed.connect(_on_email_sign_in_pressed)
 	content.add_child(player_account_button)
+	var facebook_button := Button.new()
+	facebook_button.name = "FacebookEntryButton"
+	facebook_button.text = "f   تسجيل الدخول عبر Facebook"
+	facebook_button.custom_minimum_size.y = 42
+	facebook_button.disabled = true
+	facebook_button.tooltip_text = "سيتم تفعيل Facebook بعد إعداد خدمة المصادقة الخاصة به."
+	facebook_button.pressed.connect(func() -> void:
+		if is_instance_valid(mode_status_label):
+			mode_status_label.text = "تسجيل Facebook غير مفعّل بعد؛ استخدم البريد الإلكتروني حاليًا."
+	)
+	content.add_child(facebook_button)
 	var recovery_button := Button.new()
 	recovery_button.text = "استعادة كلمة المرور"
 	recovery_button.custom_minimum_size.y = 42
@@ -2168,7 +2182,7 @@ func _create_mode_selection_ui() -> void:
 	update_password_button.pressed.connect(_on_password_update_pressed)
 	content.add_child(update_password_button)
 	if PlayerAccountAuthClient.has_active_session():
-		player_account_button.text = "البريد - الحساب متصل"
+		player_account_button.text = "G   الحساب متصل"
 
 	# A single status line is shared by both entry windows and all auth/network callbacks.
 	mode_status_label = Label.new()
@@ -2330,7 +2344,7 @@ func _on_player_account_session_expired() -> void:
 	ProfileConfigStore.complete_account_switch()
 	PlayerSyncClient.clear_session_access_token()
 	if is_instance_valid(player_account_button):
-		player_account_button.text = "تسجيل الدخول بالبريد"
+		player_account_button.text = "G   المتابعة باستخدام البريد الإلكتروني"
 	if is_instance_valid(mode_status_label):
 		mode_status_label.text = "انتهت جلسة الحساب. سجّل الدخول مجددًا بالبريد الإلكتروني."
 	if GameModeManager.is_online_ready():
