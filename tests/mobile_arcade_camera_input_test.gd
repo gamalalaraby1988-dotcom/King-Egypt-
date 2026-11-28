@@ -101,6 +101,12 @@ func _run_camera_input_tests() -> void:
 		push_error("Dragging left did not rotate the vehicle camera in the finger direction.")
 		quit(1)
 		return
+	vehicle_pivot.rotation.x = 0.0
+	mobile_hud.call("_apply_camera_drag", Vector2(0.0, 100.0))
+	if vehicle_pivot.rotation.x <= 0.0:
+		push_error("Dragging down did not tilt the vehicle camera in the finger direction.")
+		quit(1)
+		return
 
 	mobile_hud.call("set_controlled_vehicle", null)
 	vehicle.queue_free()
