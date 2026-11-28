@@ -87,6 +87,17 @@ func _capture_previews() -> void:
 		quit(1)
 		return
 
+	# Capture the actual Five Civilizations Ship and its dedicated independent boarding bridge.
+	var ship_bridge_ok := await _capture_view(
+		"royal_civilizations_ship_bridge_preview.png",
+		Vector3(-5.0, 105.0, 130.0),
+		Vector3(-45.0, 2.0, 185.0),
+		68.0
+	)
+	if not ship_bridge_ok:
+		quit(1)
+		return
+
 	# Capture a real high-angle overview of the expanded city footprint, including the
 	# separated districts, wide road grid, open sea, ship bridge and beach access.
 	var master_plan_ok := await _capture_view(
