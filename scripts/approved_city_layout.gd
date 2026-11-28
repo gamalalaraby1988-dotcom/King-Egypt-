@@ -24,6 +24,7 @@ func _ready() -> void:
 	_build_royal_square_landscaping()
 	_build_waterfront_landscaping()
 	_build_beach_handball_court()
+	_build_royal_ship_boarding_bridge()
 	_build_royal_ship()
 	_build_access_roads_and_parking()
 	_build_public_gardens()
@@ -348,7 +349,8 @@ func _build_open_fuel_station() -> void:
 func _build_nile_waterfront() -> void:
 	# The former enclosed marina basin is replaced by open sea. main.gd removes
 	# the matching terrain footprint so there is no hidden walkable floor.
-	var water := _box(self, "RoyalOpenSea", Vector3(120.0, 0.18, 240.0), Vector3(0.0, -0.12, 180.0), Color(0.025, 0.24, 0.34))
+	# Wider open water gives the royal ship a separate berth, clear of the jet-ski course.
+	var water := _box(self, "RoyalOpenSea", Vector3(170.0, 0.18, 270.0), Vector3(0.0, -0.12, 195.0), Color(0.025, 0.24, 0.34))
 	var water_material := _mat(Color(0.025, 0.24, 0.34), 0.12)
 	water_material.roughness = 0.2
 	water.material_override = water_material
@@ -435,6 +437,44 @@ func _build_royal_sea_bridge() -> void:
 	title.modulate = Color(1.0, 0.88, 0.58)
 	title.outline_size = 6
 	bridge.add_child(title)
+
+
+func _build_royal_ship_boarding_bridge() -> void:
+	# Dedicated copy of the royal sea-bridge design, independent of the jet-ski race.
+	var bridge := Node3D.new()
+	bridge.name = "RoyalCivilizationsShipBoardingBridge"
+	bridge.position = Vector3(-35.0, 0.0, 0.0)
+	bridge.add_to_group("city_world_geometry")
+	bridge.add_to_group("royal_ship_boarding_bridge")
+	add_child(bridge)
+
+	var deck_length := 82.0
+	var deck_width := 10.0
+	var deck_center_z := 118.0
+	_box(bridge, "ShipBoardingBridgeFoundation", Vector3(deck_width + 0.8, 0.55, deck_length + 1.0), Vector3(0.0, -0.30, deck_center_z), DARK)
+	_box(bridge, "ShipBoardingBridgeDeck", Vector3(deck_width, 0.32, deck_length), Vector3(0.0, 0.08, deck_center_z), IVORY)
+	_box(bridge, "ShipBoardingBridgeGoldCenterLine", Vector3(0.16, 0.035, deck_length - 1.0), Vector3(0.0, 0.255, deck_center_z), GOLD)
+	for side in [-1.0, 1.0]:
+		_box(bridge, "ShipBoardingBridgeSafetyCurb", Vector3(0.24, 0.42, deck_length), Vector3(side * 3.35, 0.38, deck_center_z), GOLD)
+		_box(bridge, "ShipBoardingBridgePedestrianLane", Vector3(2.75, 0.12, deck_length - 0.5), Vector3(side * 3.95, 0.30, deck_center_z), SAND)
+		_box(bridge, "ShipBoardingBridgeOuterRailBase", Vector3(0.32, 0.38, deck_length), Vector3(side * 4.82, 0.40, deck_center_z), GOLD)
+		_box(bridge, "ShipBoardingBridgeTopHandrail", Vector3(0.22, 0.22, deck_length), Vector3(side * 4.82, 1.65, deck_center_z), GOLD)
+		for post_index in range(21):
+			var post_z := 79.0 + float(post_index) * 3.9
+			_box(bridge, "ShipBoardingBridgeSafetyPost", Vector3(0.22, 1.35, 0.22), Vector3(side * 4.82, 0.92, post_z), IVORY)
+			_box(bridge, "ShipBoardingBridgePostCap", Vector3(0.42, 0.12, 0.42), Vector3(side * 4.82, 1.66, post_z), GOLD)
+		for lamp_z in [82.0, 100.0, 118.0, 136.0, 154.0]:
+			_box(bridge, "ShipBoardingBridgeWarmGuideLight", Vector3(0.22, 0.18, 0.22), Vector3(side * 4.45, 0.42, lamp_z), GOLD)
+
+	_add_static_box_collision(bridge, "ShipBoardingBridgeWalkable", Vector3(deck_width, 0.48, deck_length), Vector3(0.0, 0.0, deck_center_z))
+	_box(bridge, "ShipBoardingArrivalPlatform", Vector3(18.0, 0.38, 14.0), Vector3(0.0, 0.08, 165.0), IVORY)
+	_add_static_box_collision(bridge, "ShipBoardingArrivalPlatformCollision", Vector3(18.0, 0.48, 14.0), Vector3(0.0, 0.0, 165.0))
+	_box(bridge, "ShipBoardingArrivalGoldStopLine", Vector3(15.0, 0.07, 0.55), Vector3(0.0, 0.32, 158.5), GOLD)
+	for side in [-1.0, 1.0]:
+		for post_index in range(4):
+			var post_z := 65.0 + float(post_index) * 3.2
+			_box(bridge, "ShipBoardingBridgeApproachPost", Vector3(0.28, 1.05, 0.28), Vector3(side * 3.0, 0.55, post_z), IVORY)
+			_box(bridge, "ShipBoardingBridgeApproachGoldCap", Vector3(0.42, 0.12, 0.42), Vector3(side * 3.0, 1.10, post_z), GOLD)
 
 
 func _build_jet_ski_course() -> void:
@@ -1045,7 +1085,7 @@ func _build_royal_ship() -> void:
 	# A single stationary royal ship carries five civilization-themed deck banners.
 	var ship := Node3D.new()
 	ship.name = "RoyalCivilizationsShip"
-	ship.position = Vector3(0, 0, 85)
+	ship.position = Vector3(-35.0, 0.0, 185.0)
 	# Enlarge the harbor landmark so it reads as the main FIVE CIVILIZATIONS SHIP from the city.
 	ship.scale = Vector3(2.4, 1.45, 2.4)
 	add_child(ship)
@@ -1082,13 +1122,12 @@ func _build_royal_ship() -> void:
 		ship.add_child(flag)
 	# Turn the ship broadside across the waterfront (X axis), keeping its bow facing east.
 	ship.rotation.y = PI * 0.5
-	# Exactly one low, wide boarding gangway joins the ship's side to the existing sea bridge.
-	# It replaces the former detached pier and its duplicate posts.
-	_box(self, "RoyalShipSingleBoardingBridgeDeck", Vector3(25.0, 0.30, 5.6), Vector3(31.0, 0.20, 85.0), IVORY)
-	_box(self, "RoyalShipSingleBoardingBridgeGoldEdgeNorth", Vector3(25.0, 0.16, 0.22), Vector3(31.0, 0.43, 82.2), GOLD)
-	_box(self, "RoyalShipSingleBoardingBridgeGoldEdgeSouth", Vector3(25.0, 0.16, 0.22), Vector3(31.0, 0.43, 87.8), GOLD)
-	_box(self, "RoyalShipSingleBoardingBridgeCenterLine", Vector3(24.0, 0.035, 0.12), Vector3(31.0, 0.37, 85.0), GOLD)
-	_add_static_box_collision(self, "RoyalShipSingleBoardingBridgeWalkable", Vector3(25.0, 0.42, 5.6), Vector3(31.0, 0.20, 85.0))
+	# Exactly one gangway joins the ship's north side to its dedicated boarding pier.
+	_box(self, "RoyalShipSingleBoardingBridgeDeck", Vector3(8.0, 0.30, 9.0), Vector3(-35.0, 0.20, 175.0), IVORY)
+	_box(self, "RoyalShipSingleBoardingBridgeGoldEdgeWest", Vector3(0.22, 0.16, 9.0), Vector3(-39.0, 0.43, 175.0), GOLD)
+	_box(self, "RoyalShipSingleBoardingBridgeGoldEdgeEast", Vector3(0.22, 0.16, 9.0), Vector3(-31.0, 0.43, 175.0), GOLD)
+	_box(self, "RoyalShipSingleBoardingBridgeCenterLine", Vector3(0.12, 0.035, 8.0), Vector3(-35.0, 0.37, 175.0), GOLD)
+	_add_static_box_collision(self, "RoyalShipSingleBoardingBridgeWalkable", Vector3(8.0, 0.42, 9.0), Vector3(-35.0, 0.20, 175.0))
 
 
 func _add_building_collision_shell(root: Node3D, footprint: Vector2, height: float, door_width: float) -> void:
