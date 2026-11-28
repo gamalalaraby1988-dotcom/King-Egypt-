@@ -33,7 +33,7 @@ func _initialize() -> void:
 	if layout_script.contains("\t_build_mountain_route()") or layout_script.contains("\t_build_mountain_animals()"):
 		failures.append("The old steep mountain climb is still being spawned.")
 
-	if not main_script.contains('Vector3(440.0, 0.18, 280.0)') or not layout_script.contains('Vector3(0.0, 0.0, -270.0)'):
+	if not layout_script.contains('Vector3(440.0, 0.18, 280.0)') or not layout_script.contains('Vector3(0.0, 0.0, -270.0)'):
 		failures.append("The existing sea and pyramid landmarks were unexpectedly changed.")
 
 	if failures.is_empty():
