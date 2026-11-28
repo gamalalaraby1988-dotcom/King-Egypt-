@@ -22,9 +22,9 @@ func _capture_previews() -> void:
 		await process_frame
 
 	# Hide only the startup mode-selection overlay for clean production-scene renders.
-	var mode_overlay := current_scene.get_node_or_null("GameModeSelection") as CanvasLayer
-	if is_instance_valid(mode_overlay):
-		mode_overlay.visible = false
+	# Hide all HUD CanvasLayers so the city geometry can be inspected without UI covering it.
+	for canvas_layer in current_scene.find_children("*", "CanvasLayer", true, false):
+		(canvas_layer as CanvasLayer).visible = false
 	await process_frame
 
 	var gate_node := current_scene.get_node_or_null("ApprovedCityLayout/RoyalFounderGate") as Node3D
@@ -101,8 +101,8 @@ func _capture_previews() -> void:
 	# Full-city aerial now includes the southern desert, pyramids and Kings Summit districts.
 	var master_plan_ok := await _capture_view(
 		"expanded_city_aerial_master_plan_preview.png",
-		Vector3(0.0, 660.0, 90.0),
-		Vector3(0.0, 0.0, 90.0),
+		Vector3(0.0, 620.0, 100.0),
+		Vector3(0.0, 0.0, 100.0),
 		68.0
 	)
 	if not master_plan_ok:
@@ -111,7 +111,7 @@ func _capture_previews() -> void:
 
 	var southern_district_ok := await _capture_view(
 		"southern_desert_district_aerial_preview.png",
-		Vector3(0.0, 300.0, 430.0),
+		Vector3(0.0, 170.0, 610.0),
 		Vector3(0.0, 0.0, 430.0),
 		64.0
 	)
