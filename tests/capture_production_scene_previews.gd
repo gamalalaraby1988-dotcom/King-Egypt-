@@ -99,12 +99,16 @@ func _capture_previews() -> void:
 		return
 
 	# Full-city aerial now includes the southern desert, pyramids and Kings Summit districts.
+	# Use a portrait viewport for the long, narrow north-to-south city footprint.
+	# This makes the full production map occupy the frame instead of leaving large side margins.
+	root.size = Vector2i(900, 1600)
 	var master_plan_ok := await _capture_view(
 		"expanded_city_aerial_master_plan_preview.png",
 		Vector3(0.0, 1420.0, -110.0),
 		Vector3(0.0, 0.0, -110.0),
 		60.0
 	)
+	root.size = Vector2i(1600, 900)
 	if not master_plan_ok:
 		quit(1)
 		return
