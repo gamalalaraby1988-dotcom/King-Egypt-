@@ -2,6 +2,7 @@
 extends Node3D
 
 const ProfileConfigStore = preload("res://scripts/profile_config_store.gd")
+const ROYAL_ENTRY_ARTWORK: Texture2D = preload("res://assets/login_screen.jpg")
 const RemotePlayerVisual = preload("res://scripts/remote_player_visual.gd")
 
 @export var city_half_size: int = 3
@@ -1969,7 +1970,7 @@ func _create_mode_selection_ui() -> void:
 	# Royal Egyptian login artwork sits behind the live, interactive Godot controls.
 	var artwork := TextureRect.new()
 	artwork.name = "RoyalEntryArtwork"
-	var artwork_texture := load("res://assets/login_screen.jpg") as Texture2D
+	var artwork_texture: Texture2D = ROYAL_ENTRY_ARTWORK
 	if artwork_texture != null:
 		artwork.texture = artwork_texture
 		artwork.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
