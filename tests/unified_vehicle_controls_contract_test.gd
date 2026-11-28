@@ -57,6 +57,28 @@ func _run_vehicle_control_contract() -> void:
 		quit(1)
 		return
 
+	# The same circular interaction button becomes a hold-to-brake control in a vehicle.
+	var interaction_button := hud.get_node_or_null("PlayerInteractionButton") as Button
+	if interaction_button == null or interaction_button.text != "🛑":
+		push_error("The interaction button did not change into the vehicle brake.")
+		quit(1)
+		return
+	hud.call("_on_interaction_button_down")
+	if not bool(vehicle.get("brake_pressed")):
+		push_error("Holding the contextual interaction button did not apply the vehicle brake.")
+		quit(1)
+		return
+	hud.call("_on_interaction_button_up")
+	if bool(vehicle.get("brake_pressed")):
+		push_error("Releasing the contextual interaction button did not release the vehicle brake.")
+		quit(1)
+		return
+	hud.call("set_controlled_vehicle", null)
+	if interaction_button.text != "✋":
+		push_error("The contextual button did not return to the hand interaction state after exiting.")
+		quit(1)
+		return
+
 	hud.call("_clear_touch_state")
 	if bool(vehicle.get("drive_pressed")) or bool(vehicle.get("brake_pressed")):
 		push_error("Vehicle controls were not cleared with the mobile HUD.")
