@@ -10,10 +10,10 @@ var destination_choice_buttons: Array[Button] = []
 var selected_landmark_key := ""
 
 const CITY_LANDMARKS := [
-	{"key": "shop", "position": Vector3(32, 0, 29.34)},
-	{"key": "restaurant", "position": Vector3(-32, 0, 29.34)},
-	{"key": "employment", "position": Vector3(32, 0, -18.66)},
-	{"key": "delivery", "position": Vector3(48, 0, 6.75)},
+	{"key": "shop", "position": Vector3(0.0, 0.0, 6.4)},
+	{"key": "restaurant", "position": Vector3(120.0, 0.0, -35.4)},
+	{"key": "employment", "position": Vector3(60.0, 0.0, -35.4)},
+	{"key": "delivery", "position": Vector3(60.0, 0.0, -33.0)},
 	{"key": "city_guide", "position": Vector3(-48, 0, 6.75)},
 	{"key": "maintenance", "position": Vector3(9, 0, 36)},
 	{"key": "animal_camp", "position": Vector3(120, 0, 102)},
