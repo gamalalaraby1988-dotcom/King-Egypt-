@@ -67,8 +67,7 @@ func _run_city_npc_social_contract() -> void:
 		push_error("NPC visuals must remain non-blocking for players and world actors.")
 		quit(1)
 		return
-	var population_factory := main_source.get_slice("func _create_city_npc_population() -> void:", "func _create_approved_city_layout() -> void:")
-	if not population_factory.contains('get_node_or_null("CityNPCPopulation")'):
+	if not main_source.contains('if is_instance_valid(get_node_or_null("CityNPCPopulation")):'):
 		push_error("City NPC population factory must guard against duplicate initialization.")
 		quit(1)
 		return
