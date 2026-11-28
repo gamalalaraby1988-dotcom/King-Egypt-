@@ -64,11 +64,13 @@ func _run_vehicle_control_contract() -> void:
 		quit(1)
 		return
 	hud.call("_on_interaction_button_down")
+	hud.call("_process", 0.016)
 	if not bool(vehicle.get("brake_pressed")):
-		push_error("Holding the contextual interaction button did not apply the vehicle brake.")
+		push_error("Holding the contextual interaction button did not keep the vehicle brake applied.")
 		quit(1)
 		return
 	hud.call("_on_interaction_button_up")
+	hud.call("_process", 0.016)
 	if bool(vehicle.get("brake_pressed")):
 		push_error("Releasing the contextual interaction button did not release the vehicle brake.")
 		quit(1)
