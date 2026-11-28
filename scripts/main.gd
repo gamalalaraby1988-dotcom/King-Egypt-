@@ -1980,6 +1980,13 @@ func _create_mode_selection_ui() -> void:
 		call_deferred("_on_player_account_access_token_changed", PlayerAccountAuthClient.get_access_token())
 
 	# Royal Egyptian login artwork sits behind the live, interactive Godot controls.
+	# Opaque fallback ensures the entry menu never exposes the 3D sky if artwork import fails.
+	var fallback_background := ColorRect.new()
+	fallback_background.name = "RoyalEntryFallbackBackground"
+	fallback_background.color = Color(0.018, 0.014, 0.009, 1.0)
+	fallback_background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	fallback_background.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	mode_selection_layer.add_child(fallback_background)
 	var artwork := TextureRect.new()
 	artwork.name = "RoyalEntryArtwork"
 	var artwork_texture := load("res://assets/login_screen.jpg") as Texture2D
