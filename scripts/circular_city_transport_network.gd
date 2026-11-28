@@ -144,19 +144,26 @@ func _build_royal_panorama_link() -> void:
 	# The royal road is the southern outer boundary, opposite the waterfront.
 	var west_join := CITY_CENTER + Vector3(-RING_RADII[2], 0.0, 0.0)
 	var east_join := CITY_CENTER + Vector3(RING_RADII[2], 0.0, 0.0)
-	var desert_control := Vector3(0.0, 0.0, 850.0)
+	# Cubic controls preserve the circular road's tangent at both joins.
+	# The arc rises only after leaving the ring and returns to the exact ring level.
+	var control_a := west_join + Vector3(0.0, 0.0, 520.0)
+	var control_b := east_join + Vector3(0.0, 0.0, 520.0)
 	var route_points: Array[Vector3] = []
+	var route_widths: Array[float] = []
 	for i in range(ROYAL_ROUTE_SEGMENTS + 1):
 		var t := float(i) / float(ROYAL_ROUTE_SEGMENTS)
 		var one_minus_t := 1.0 - t
-		var horizontal_point := west_join * (one_minus_t * one_minus_t)
-		horizontal_point += desert_control * (2.0 * one_minus_t * t)
-		horizontal_point += east_join * (t * t)
+		var horizontal_point := west_join * (one_minus_t * one_minus_t * one_minus_t)
+		horizontal_point += control_a * (3.0 * one_minus_t * one_minus_t * t)
+		horizontal_point += control_b * (3.0 * one_minus_t * t * t)
+		horizontal_point += east_join * (t * t * t)
 		var ramp_factor := sin(t * PI)
-		route_points.append(horizontal_point + Vector3(0.0, 0.25 + ramp_factor * ROYAL_ROUTE_HEIGHT, 0.0))
+		route_points.append(horizontal_point + Vector3(0.0, 0.055 + ramp_factor * ROYAL_ROUTE_HEIGHT, 0.0))
+		route_widths.append(lerpf(RING_WIDTH, ROYAL_ROUTE_WIDTH, ramp_factor))
 
 	for i in range(route_points.size() - 1):
-		_add_route_segment("RoyalSemicircleRoad_%02d" % (i + 1), route_points[i], route_points[i + 1], ROYAL_ROUTE_WIDTH)
+		var segment_width := (route_widths[i] + route_widths[i + 1]) * 0.5
+		_add_route_segment("RoyalSemicircleRoad_%02d" % (i + 1), route_points[i], route_points[i + 1], segment_width)
 
 	# Both ends of the southern royal arc meet the outermost circular road; inner branches are intentionally omitted to preserve desert space.
 	var panorama_center := route_points[ROYAL_ROUTE_SEGMENTS / 2]
