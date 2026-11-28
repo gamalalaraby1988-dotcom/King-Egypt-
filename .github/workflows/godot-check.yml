@@ -2,7 +2,7 @@ name: Godot project check
 
 on:
   push:
-    branches: [main, sync-latest-approved-decisions-77-79, feature/approved-mobile-controls, feature/royal-jet-ski-championship, feature/unified-vehicle-driving, feature/email-password-auth-test]
+    branches: [main, sync-latest-approved-decisions-77-79, feature/approved-mobile-controls, feature/royal-jet-ski-championship, feature/unified-vehicle-driving, feature/email-password-auth-test, feature/login-loading-screen-polish-test]
   pull_request:
     branches: [main]
   workflow_dispatch:
