@@ -106,6 +106,7 @@ func _capture_previews() -> void:
 	if aerial_environment != null and aerial_environment.environment != null:
 		aerial_fog_was_enabled = aerial_environment.environment.fog_enabled
 		aerial_environment.environment.fog_enabled = false
+	_prepare_full_detail_aerial_capture()
 	var master_plan_ok := await _capture_portrait_master_plan(
 		"expanded_city_aerial_master_plan_preview.png",
 		Vector3(0.0, 1420.0, -110.0),
@@ -218,6 +219,22 @@ func _capture_previews() -> void:
 
 	print("Production-scene previews saved in ", OUTPUT_DIR)
 	quit(0)
+
+func _prepare_full_detail_aerial_capture() -> void:
+	# The aerial camera is above the normal 480 m LOD range. Disable only the
+	# building proxy groups for this test capture and reveal their real production
+	# geometry; this does not alter the shipped scene or runtime LOD settings.
+	var buildings := current_scene.find_children("*", "Node3D", true, false)
+	for building in buildings:
+		if not building.is_in_group("approved_city_buildings"):
+			continue
+		var proxy := building.get_node_or_null("BuildingLODProxy")
+		if is_instance_valid(proxy):
+			proxy.visible = false
+		for visual in building.find_children("*", "GeometryInstance3D", true, false):
+			var geometry := visual as GeometryInstance3D
+			geometry.visibility_range_begin = 0.0
+			geometry.visibility_range_end = 0.0
 
 func _capture_portrait_master_plan(file_name: String, camera_position: Vector3, target: Vector3) -> bool:
 	var portrait := SubViewport.new()
