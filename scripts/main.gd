@@ -1558,7 +1558,7 @@ func _create_city_pedestrian_network() -> void:
 		for mark_index in range(10):
 			var mark_z := -27.0 + float(mark_index) * 16.5
 			_create_box(self, "LaneDash_V_%d_%d" % [int(road_x), mark_index], Vector3(0.12, 0.025, 2.4), Vector3(road_x, 0.065, mark_z), Color(0.91, 0.85, 0.68))
-	for road_x in [-30.0, 30.0]
+	for road_x in [-30.0, 30.0]:
 		for road_z in [-202.5, -157.5, -67.5, -22.5, 22.5, 67.5, 112.5]:
 			for stripe in range(5):
 				var stripe_z: float = road_z - 2.1 + float(stripe) * 1.05
