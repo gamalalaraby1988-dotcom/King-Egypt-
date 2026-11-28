@@ -1534,7 +1534,7 @@ func _create_city() -> void:
 	for road_x in [-30.0, 30.0]:
 		_create_box(self, "SideRoad_V_%d" % int(road_x), Vector3(12, 0.075, 177), Vector3(road_x, 0.006, 54), side_road_color)
 	# شوارع عرضية قصيرة داخل الفواصل الآمنة بين صفوف المباني.
-	for road_z in [-202.5, -157.5, -67.5, -22.5, 22.5, 67.5]:
+	for road_z in [-202.5, -157.5, -67.5, -22.5, 22.5, 67.5, 112.5]:
 		_create_box(self, "SideRoad_Z_%d" % int(road_z), Vector3(264, 0.075, 12), Vector3(0, 0.006, road_z), side_road_color)
 	# خطوط إرشادية على جزأي الطريق المحيط بالميدان.
 	for side in [-1.0, 1.0]:
@@ -1546,7 +1546,7 @@ func _create_city() -> void:
 func _create_city_pedestrian_network() -> void:
 	var sidewalk_color := Color(0.58, 0.51, 0.40)
 	var curb_color := Color(0.78, 0.69, 0.53)
-	for road_z in [-202.5, -157.5, -67.5, -22.5, 22.5, 67.5]:
+	for road_z in [-202.5, -157.5, -67.5, -22.5, 22.5, 67.5, 112.5]:
 		for side in [-1.0, 1.0]:
 			var walk_z: float = road_z + side * 7.0
 			_create_box(self, "Sidewalk_H_%d_%d" % [int(road_z), int(side)], Vector3(264.0, 0.14, 1.7), Vector3(0.0, 0.07, walk_z), sidewalk_color)
@@ -1556,7 +1556,7 @@ func _create_city_pedestrian_network() -> void:
 			var walk_x: float = road_x + side * 7.0
 			_create_box(self, "Sidewalk_V_%d_%d" % [int(road_x), int(side)], Vector3(1.65, 0.14, 177.0), Vector3(walk_x, 0.07, 54.0), sidewalk_color)
 			_create_box(self, "Curb_V_%d_%d" % [int(road_x), int(side)], Vector3(0.16, 0.22, 177.0), Vector3(road_x + side * 8.0, 0.11, 54.0), curb_color)
-	for road_z in [-202.5, -157.5, -67.5, -22.5, 22.5, 67.5]:
+	for road_z in [-202.5, -157.5, -67.5, -22.5, 22.5, 67.5, 112.5]:
 		for mark_index in range(12):
 			var mark_x := -124.0 + float(mark_index) * 22.0
 			_create_box(self, "LaneDash_H_%d_%d" % [int(road_z), mark_index], Vector3(2.4, 0.025, 0.12), Vector3(mark_x, 0.065, road_z), Color(0.91, 0.85, 0.68))
@@ -1565,7 +1565,7 @@ func _create_city_pedestrian_network() -> void:
 			var mark_z := -27.0 + float(mark_index) * 16.5
 			_create_box(self, "LaneDash_V_%d_%d" % [int(road_x), mark_index], Vector3(0.12, 0.025, 2.4), Vector3(road_x, 0.065, mark_z), Color(0.91, 0.85, 0.68))
 	for road_x in [-30.0, 30.0]:
-		for road_z in [-202.5, -157.5, -67.5, -22.5, 22.5, 67.5]:
+		for road_z in [-202.5, -157.5, -67.5, -22.5, 22.5, 67.5, 112.5]:
 			for stripe in range(5):
 				var stripe_z: float = road_z - 2.1 + float(stripe) * 1.05
 				_create_box(self, "Crosswalk_H_%d_%d_%d" % [int(road_x), int(road_z), stripe], Vector3(3.4, 0.035, 0.42), Vector3(road_x, 0.075, stripe_z), Color(0.88, 0.85, 0.76))
