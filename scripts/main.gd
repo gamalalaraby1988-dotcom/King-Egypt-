@@ -1548,9 +1548,7 @@ func _create_city() -> void:
 	# The beach spur meets the eastern loop; the ship and race bridges remain separate.
 	_create_box(self, "BeachAccessRoad_East", Vector3(10, 0.08, 90), Vector3(130, 0.0, 120), road_color)
 	_create_box(self, "BeachAccessConnector_East", Vector3(72, 0.08, 10), Vector3(160, 0.0, 120), road_color)
-	# Dedicated branches connect the loop to the desert camp, pyramids and summit.
-	_create_box(self, "DesertDistrictRingConnector", Vector3(75, 0.08, 10), Vector3(-167.5, 0.0, 370), road_color, true)
-	_create_box(self, "PyramidsDistrictRingConnector", Vector3(106, 0.08, 10), Vector3(-152, 0.0, 480), road_color, true)
+	# The four northern royal-road branches now feed the inner ring; preserve the summit connector.
 	_create_box(self, "KingsMountainRingConnector", Vector3(75, 0.08, 10), Vector3(167.5, 0.0, 424), road_color, true)
 	# الشارع العرضي الشمالي يلتف حول الميدان الملكي ويترك ساحته مفتوحة للتجمع.
 	for side in [-1.0, 1.0]:
@@ -1793,22 +1791,18 @@ func _create_service_staff(display_name: String, role: String, dialogue: String,
 	add_child(staff)
 
 func _create_desert_camp() -> void:
-	# المخيم الملكي هو منطقة الضيافة الصحراوية الوحيدة؛ الجمال والخيول جزء من تصميمه.
-	# Touch the desert loop connector directly; no gap remains at the camp entrance.
-	_create_box(self, "DesertCampApproachRoad", Vector3(10, 0.08, 55), Vector3(-130, 0.01, 402.5), Color(0.12, 0.13, 0.15), true)
+	# The royal camp sits on the northern desert shelf, inside the perimeter road.
 	var camp := Node3D.new()
 	camp.name = "RoyalDesertCamp"
-	camp.position = Vector3(-130, 0, 370)
+	camp.position = Vector3(82.0, 0.0, -285.0)
 	camp.set_script(load("res://scripts/desert_camp.gd"))
 	add_child(camp)
 
 func _create_pyramids_area() -> void:
-	# منطقة الأهرامات وأبو الهول متصلة بطريق المخيم الصحراوي.
-	_create_box(self, "PyramidsAccessRoad_West", Vector3(10, 0.08, 30), Vector3(-120, 0.01, 495), Color(0.12, 0.13, 0.15), true)
-	_create_box(self, "PyramidsAccessRoad_Approach", Vector3(18, 0.08, 10), Vector3(-120, 0.01, 510), Color(0.12, 0.13, 0.15), true)
+	# The Giza area sits west of the camp; royal-road exits provide short links to the inner ring.
 	var pyramids := Node3D.new()
 	pyramids.name = "GizaPyramidsArea"
-	pyramids.position = Vector3(-130, 0, 450)
+	pyramids.position = Vector3(-82.0, 0.0, -285.0)
 	pyramids.set_script(load("res://scripts/pyramids_area.gd"))
 	add_child(pyramids)
 
