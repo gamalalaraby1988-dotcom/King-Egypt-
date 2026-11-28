@@ -12,6 +12,14 @@ func _run_test() -> void:
 	var player := scene.instantiate() as CharacterBody3D
 	root.add_child(player)
 	await process_frame
+	if not is_equal_approx(float(player.get("walk_speed")), 5.0):
+		push_error("Approved walking speed should be 5.0.")
+		quit(1)
+		return
+	if not is_equal_approx(float(player.get("run_speed")), 7.5):
+		push_error("Approved sprint speed should be 7.5.")
+		quit(1)
+		return
 	var pivot := player.get_node("CameraPivot") as Node3D
 	var initial_yaw := pivot.global_rotation.y
 	player.call("_set_body_yaw_preserving_camera", 1.2)
