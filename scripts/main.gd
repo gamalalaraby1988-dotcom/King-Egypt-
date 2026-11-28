@@ -1965,10 +1965,24 @@ func _create_mode_selection_ui() -> void:
 	if PlayerAccountAuthClient.has_active_session():
 		_on_player_account_access_token_changed(PlayerAccountAuthClient.get_access_token())
 
-	# Keep the 3D city visible; only a light cinematic tint sits over the live background.
+	# Royal Egyptian login artwork sits behind the live, interactive Godot controls.
+	var artwork := TextureRect.new()
+	artwork.name = "RoyalEntryArtwork"
+	var artwork_texture := load("res://assets/login_screen.jpg") as Texture2D
+	if artwork_texture != null:
+		artwork.texture = artwork_texture
+		artwork.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		artwork.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+		artwork.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		artwork.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		mode_selection_layer.add_child(artwork)
+	else:
+		push_warning("Royal login artwork missing: res://assets/login_screen.jpg")
+
+	# A subtle cinematic tint keeps the artwork readable without hiding it.
 	var backdrop := ColorRect.new()
 	backdrop.name = "EntryScreenTint"
-	backdrop.color = Color(0.012, 0.018, 0.028, 0.24)
+	backdrop.color = Color(0.012, 0.018, 0.028, 0.10)
 	backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	mode_selection_layer.add_child(backdrop)
