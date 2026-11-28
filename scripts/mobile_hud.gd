@@ -142,6 +142,17 @@ func set_controlled_vehicle(value: CharacterBody3D) -> void:
 	controlled_vehicle.call("set_reverse", false)
 	controlled_vehicle.call("set_steering", 0.0)
 
+func _clear_vehicle_input() -> void:
+	# Clear every held vehicle command when focus is lost, the HUD is hidden,
+	# or the player exits the vehicle. Never leave braking/steering latched.
+	interaction_brake_held = false
+	if not is_instance_valid(controlled_vehicle):
+		return
+	controlled_vehicle.call("set_drive", false)
+	controlled_vehicle.call("set_brake", false)
+	controlled_vehicle.call("set_reverse", false)
+	controlled_vehicle.call("set_steering", 0.0)
+
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_RESIZED:
 		_update_layout()
