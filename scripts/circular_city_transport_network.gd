@@ -93,15 +93,14 @@ func _add_route_segment(label: String, start: Vector3, finish: Vector3, width: f
 	mesh.size = Vector3(width, 0.62, length + 0.8)
 	mesh_node.mesh = mesh
 	mesh_node.position = midpoint
-	mesh_node.look_at(finish, Vector3.UP)
 	mesh_node.material_override = _material(ROAD)
 	mesh_node.add_to_group("city_world_geometry")
 	add_child(mesh_node)
+	mesh_node.look_at(finish, Vector3.UP)
 
 	var body := StaticBody3D.new()
 	body.name = label + "Collision"
 	body.position = midpoint
-	body.look_at(finish, Vector3.UP)
 	body.add_to_group("city_world_geometry")
 	var collision := CollisionShape3D.new()
 	var shape := BoxShape3D.new()
@@ -109,6 +108,7 @@ func _add_route_segment(label: String, start: Vector3, finish: Vector3, width: f
 	collision.shape = shape
 	body.add_child(collision)
 	add_child(body)
+	body.look_at(finish, Vector3.UP)
 
 	# Steel highway guardrail on both edges, with closely spaced support posts.
 	var horizontal := Vector3(delta.x, 0.0, delta.z).normalized()
@@ -123,10 +123,10 @@ func _add_route_segment(label: String, start: Vector3, finish: Vector3, width: f
 		rail_mesh.size = Vector3(0.22, 0.42, length + 0.7)
 		rail.mesh = rail_mesh
 		rail.position = rail_mid
-		rail.look_at(rail_finish, Vector3.UP)
 		rail.material_override = _material(Color(0.48, 0.51, 0.53), 0.78, 0.34)
 		rail.add_to_group("city_world_geometry")
 		add_child(rail)
+		rail.look_at(rail_finish, Vector3.UP)
 		var post_count := maxi(2, int(ceil(length / 7.0)))
 		for post_index in range(post_count + 1):
 			var t := float(post_index) / float(post_count)
