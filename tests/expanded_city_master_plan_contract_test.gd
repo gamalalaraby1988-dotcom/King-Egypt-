@@ -39,8 +39,6 @@ func _initialize() -> void:
 		"RoyalLoopRoad_SouthWestTurn",
 		"RoyalLoopRoad_SouthEastTurn",
 		"func _create_rotated_box",
-		"Vector3(10, 0.08, 55)",
-		"Vector3(-130, 0.01, 402.5)",
 		"MainRoad_South",
 		"Vector3(0, 0.0, 540)",
 		"Vector3(440, 1, 240)",
@@ -48,10 +46,6 @@ func _initialize() -> void:
 		"Vector3(440, 1, 180)",
 		"Vector3(0, -0.55, -430)",
 		"Ground_Center_South",
-		"Vector3(-130, 0, 370)",
-		"Vector3(-130, 0, 450)",
-		"DesertDistrictRingConnector",
-		"PyramidsDistrictRingConnector",
 		"KingsMountainRingConnector",
 		"Vector3(0, 0.0, -315)",
 		"const JET_SKI_LAUNCH_POSITION := Vector3(0.0, 0.34, -514.0)",
@@ -62,18 +56,18 @@ func _initialize() -> void:
 		if not main_script.contains(contract):
 			failures.append("Missing expanded road/terrain contract: " + contract)
 
-	if not main_script.contains("MainRoad_South") or not main_script.contains("DesertDistrictRingConnector") or not main_script.contains("PyramidsDistrictRingConnector") or not main_script.contains("KingsMountainRingConnector"):
+	if not main_script.contains("MainRoad_South") or not main_script.contains("KingsMountainRingConnector"):
 		failures.append("Southern districts are not connected to the continuous perimeter road.")
 	for turn_name in ["RoyalLoopRoad_NorthWestTurn", "RoyalLoopRoad_NorthEastTurn", "RoyalLoopRoad_SouthWestTurn", "RoyalLoopRoad_SouthEastTurn"]:
 		if not main_script.contains(turn_name):
 			failures.append("The royal loop road is missing a rounded corner: " + turn_name)
-	if not main_script.contains('Vector3(10, 0.08, 55), Vector3(-130, 0.01, 402.5)'):
-		failures.append("The desert camp approach does not meet its ring-road connector.")
+	if not main_script.contains("Vector3(82.0, 0.0, -285.0)") or not main_script.contains("Vector3(-82.0, 0.0, -285.0)"):
+		failures.append("The desert camp and pyramids are not placed inside the northern desert boundary.")
 	if main_script.contains("BeachAccessRoad_West") or main_script.contains("BeachAccessConnector_West"):
 		failures.append("West beach spurs still cut across the ship/pyramid sightline.")
-	if not city_map.contains('"key": "desert_camp", "position": Vector3(-130.0, 0.0, 370.0)'):
+	if not city_map.contains('"key": "desert_camp", "position": Vector3(82.0, 0.0, -285.0)'):
 		failures.append("Desert camp navigation was not moved to the southern desert district.")
-	if not city_map.contains('"key": "pyramids_camp", "position": Vector3(-130.0, 0.0, 450.0)'):
+	if not city_map.contains('"key": "pyramids_camp", "position": Vector3(-82.0, 0.0, -285.0)'):
 		failures.append("Pyramids navigation was not moved to the southern landmark district.")
 	if not city_map.contains('"key": "royal_ship", "position": Vector3(-45.0, 0.0, -657.0)'):
 		failures.append("Navigation map does not point to the relocated civilizations ship.")
