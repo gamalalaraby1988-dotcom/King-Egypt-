@@ -1642,11 +1642,11 @@ func _build_mountain_animal_mesh(animal: Node3D, kind: String, coat: Color) -> v
 func _build_city_lighting_and_wayfinding() -> void:
 	# Low-cost decorative lamp posts mark the main pedestrian routes and plaza edges.
 	var lamp_points := [
-		Vector3(-24, 0, -42), Vector3(24, 0, -42),
-		Vector3(-45, 0, -18), Vector3(45, 0, -18),
-		Vector3(-45, 0, 18), Vector3(45, 0, 18),
-		Vector3(-45, 0, 48), Vector3(45, 0, 48),
-		Vector3(-80, 0, 34), Vector3(80, 0, 34)
+		Vector3(-48.00, 0, -63.00), Vector3(48.00, 0, -63.00),
+		Vector3(-90.00, 0, -27.00), Vector3(90.00, 0, -27.00),
+		Vector3(-90.00, 0, 27.00), Vector3(90.00, 0, 27.00),
+		Vector3(-90.00, 0, 72.00), Vector3(90.00, 0, 72.00),
+		Vector3(-160.00, 0, 51.00), Vector3(160.00, 0, 51.00)
 	]
 	for i in range(lamp_points.size()):
 		var lamp := Node3D.new()
@@ -1659,11 +1659,11 @@ func _build_city_lighting_and_wayfinding() -> void:
 		_add_city_night_light(lamp, "CityLampNightLight", Vector3(0.95, 3.7, 0.0), 8.5)
 	# Direction markers use bilingual labels without adding standalone buildings.
 	var sign_specs := [
-		["Sign_RoyalSquare", Vector3(8, 0, -24), "الميدان الملكي"],
-		["Sign_CommercialDistrict", Vector3(44, 0, -8), "المنطقة التجارية"],
-		["Sign_EntertainmentDistrict", Vector3(-44, 0, 48), "المنطقة الترفيهية"],
-		["Sign_Harbor", Vector3(20, 0, 70), "الميناء الملكي"],
-		["Sign_KingsMountain", Vector3(88, 0, 62), "طريق قمة الملوك"]
+		["Sign_RoyalSquare", Vector3(16.00, 0, -36.00), "الميدان الملكي"],
+		["Sign_CommercialDistrict", Vector3(88.00, 0, -12.00), "المنطقة التجارية"],
+		["Sign_EntertainmentDistrict", Vector3(-88.00, 0, 72.00), "المنطقة الترفيهية"],
+		["Sign_Harbor", Vector3(40.00, 0, 105.00), "الميناء الملكي"],
+		["Sign_KingsMountain", Vector3(176.00, 0, 93.00), "طريق قمة الملوك"]
 	]
 	for spec in sign_specs:
 		var sign := Node3D.new()
