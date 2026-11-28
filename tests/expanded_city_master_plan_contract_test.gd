@@ -20,7 +20,7 @@ func _initialize() -> void:
 		"Vector3(150, 0, 112.50)",
 		"station.position = Vector3(-148.0, 0.0, 57.0)",
 		"beach.position = Vector3(180.0, 0.0, 195.0)",
-		"mountain.position = Vector3(196, 0, 60)"
+		"mountain.position = Vector3(130, 0, 390)"
 	]
 	for contract in layout_contracts:
 		if not layout.contains(contract):
@@ -29,9 +29,17 @@ func _initialize() -> void:
 	var road_contracts := [
 		"const CITY_SAFE_X_LIMIT := 280.0",
 		"const CITY_SAFE_Z_MIN := -400.0",
-		"Vector3(160, 1, 620)",
+		"Vector3(160, 1, 1000)",
 		"Vector3(220, 1, 418)",
 		"Vector3(440, 0.08, 14)",
+		"MainRoad_South",
+		"Vector3(0, 0.0, 540)",
+		"Ground_Center_South",
+		"Vector3(-130, 0, 370)",
+		"Vector3(-130, 0, 450)",
+		"DesertDistrictRingConnector",
+		"PyramidsDistrictRingConnector",
+		"KingsMountainRingConnector",
 		"Vector3(0, 0.0, -315)",
 		"Vector3(264, 0.075, 12)",
 		"Vector3(264.0, 0.14, 1.7)"
@@ -40,6 +48,14 @@ func _initialize() -> void:
 		if not main_script.contains(contract):
 			failures.append("Missing expanded road/terrain contract: " + contract)
 
+	if not main_script.contains("MainRoad_South") or not main_script.contains("DesertDistrictRingConnector") or not main_script.contains("PyramidsDistrictRingConnector") or not main_script.contains("KingsMountainRingConnector"):
+		failures.append("Southern districts are not connected to the continuous perimeter road.")
+	if main_script.contains("BeachAccessRoad_West") or main_script.contains("BeachAccessConnector_West"):
+		failures.append("West beach spurs still cut across the ship/pyramid sightline.")
+	if not city_map.contains('"key": "desert_camp", "position": Vector3(-130.0, 0.0, 370.0)'):
+		failures.append("Desert camp navigation was not moved to the southern desert district.")
+	if not city_map.contains('"key": "pyramids_camp", "position": Vector3(-130.0, 0.0, 450.0)'):
+		failures.append("Pyramids navigation was not moved to the southern landmark district.")
 	if not city_map.contains('"key": "royal_ship", "position": Vector3(-45.0, 0.0, 216.0)'):
 		failures.append("Navigation map does not point to the relocated civilizations ship.")
 	if not city_map.contains('"key": "restaurant", "position": Vector3(120.0, 0.0, -35.4)'):
