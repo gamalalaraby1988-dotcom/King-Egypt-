@@ -17,15 +17,15 @@ const CITY_LANDMARKS := [
 	{"key": "city_guide", "position": Vector3(-48, 0, 6.75)},
 	{"key": "maintenance", "position": Vector3(9, 0, 36)},
 	{"key": "animal_camp", "position": Vector3(120, 0, 102)},
-	{"key": "desert_camp", "position": Vector3(-260, 0, 81)},
-	{"key": "pyramids_camp", "position": Vector3(-180, 0, 165)},
+	{"key": "desert_camp", "position": Vector3(-130.0, 0.0, 70.0)},
+	{"key": "pyramids_camp", "position": Vector3(-130.0, 0.0, 70.0)},
 	{"key": "fuel_station", "position": Vector3(-150, 0, 57)},
 	{"key": "marina_terminal", "position": Vector3(150, 0, 57)},
 	{"key": "royal_yacht_club", "position": Vector3(150, 0, 87)},
 	{"key": "desert_lodge", "position": Vector3(-150, 0, 112.50)},
 	{"key": "mountain_temple", "position": Vector3(150, 0, 112.50)},
 	{"key": "royal_ship", "position": Vector3(-45.0, 0.0, 216.0)},
-	{"key": "beach_handball", "position": Vector3(80, 0, 187.50)}
+	{"key": "beach_handball", "position": Vector3(180.0, 0.0, 195.0)}
 ]
 
 func _ready() -> void:
