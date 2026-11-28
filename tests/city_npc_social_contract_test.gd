@@ -67,5 +67,18 @@ func _run_city_npc_social_contract() -> void:
 		push_error("NPC visuals must remain non-blocking for players and world actors.")
 		quit(1)
 		return
+	var service_source := FileAccess.get_file_as_string("res://scripts/service_npc.gd")
+	if main_source.count("_create_service_staff(") != 4 or main_source.count("_create_interior_staff(interior_root, building_title)") != 1:
+		push_error("Approved outdoor and interior service staff creation points changed unexpectedly.")
+		quit(1)
+		return
+	if main_source.contains("camp_animal_staff.gd") or main_source.contains("camp_system.gd"):
+		push_error("Legacy camp staff/animal system must not be loaded alongside the approved desert camp.")
+		quit(1)
+		return
+	if service_source.contains("CollisionObject3D") or service_source.contains("CollisionShape3D"):
+		push_error("Service staff visuals must not introduce duplicate blocking collision bodies.")
+		quit(1)
+		return
 	print("City NPC social interaction and spawn spacing contract tests passed.")
 	quit(0)
