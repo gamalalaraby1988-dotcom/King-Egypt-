@@ -15,6 +15,7 @@ on:
     branches:
       - main
       - feature/email-password-auth-test
+      - feature/login-loading-screen-polish-test
     paths:
       - "export_presets.cfg"
       - "project.godot"
