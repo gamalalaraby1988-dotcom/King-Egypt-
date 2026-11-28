@@ -1565,7 +1565,7 @@ func _create_city_pedestrian_network() -> void:
 			var mark_z := -27.0 + float(mark_index) * 16.5
 			_create_box(self, "LaneDash_V_%d_%d" % [int(road_x), mark_index], Vector3(0.12, 0.025, 2.4), Vector3(road_x, 0.065, mark_z), Color(0.91, 0.85, 0.68))
 	for road_x in [-30.0, 30.0]:
-		for road_z in [-202.5, -157.5, -67.5, -22.5, 22.5, 67.5, 112.5]:
+		for road_z in [-202.5, -157.5, -67.5, -22.5, 22.5, 67.5]:
 			for stripe in range(5):
 				var stripe_z: float = road_z - 2.1 + float(stripe) * 1.05
 				_create_box(self, "Crosswalk_H_%d_%d_%d" % [int(road_x), int(road_z), stripe], Vector3(3.4, 0.035, 0.42), Vector3(road_x, 0.075, stripe_z), Color(0.88, 0.85, 0.76))
@@ -1769,7 +1769,6 @@ func _create_service_staff(display_name: String, role: String, dialogue: String,
 
 func _create_desert_camp() -> void:
 	# المخيم الملكي هو منطقة الضيافة الصحراوية الوحيدة؛ الجمال والخيول جزء من تصميمه.
-	_create_box(self, "DesertCampAccessRoad", Vector3(75, 0.08, 10), Vector3(-167.5, 0.01, 370), Color(0.12, 0.13, 0.15), true)
 	_create_box(self, "DesertCampApproachRoad", Vector3(10, 0.08, 45), Vector3(-130, 0.01, 407.5), Color(0.12, 0.13, 0.15), true)
 	var camp := Node3D.new()
 	camp.name = "RoyalDesertCamp"
@@ -1779,7 +1778,6 @@ func _create_desert_camp() -> void:
 
 func _create_pyramids_area() -> void:
 	# منطقة الأهرامات وأبو الهول متصلة بطريق المخيم الصحراوي.
-	_create_box(self, "PyramidsAccessRoad_SouthConnector", Vector3(106, 0.08, 10), Vector3(-152, 0.01, 480), Color(0.12, 0.13, 0.15), true)
 	_create_box(self, "PyramidsAccessRoad_West", Vector3(10, 0.08, 30), Vector3(-120, 0.01, 495), Color(0.12, 0.13, 0.15), true)
 	_create_box(self, "PyramidsAccessRoad_Approach", Vector3(18, 0.08, 10), Vector3(-120, 0.01, 510), Color(0.12, 0.13, 0.15), true)
 	var pyramids := Node3D.new()
