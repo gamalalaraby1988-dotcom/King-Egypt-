@@ -93,10 +93,25 @@ func _create_startup_loading_ui() -> void:
 	startup_loading_layer.name = "CityStartupLoading"
 	startup_loading_layer.layer = 110
 	add_child(startup_loading_layer)
+	var loading_art := TextureRect.new()
+	loading_art.name = "RoyalLoadingArtwork"
+	loading_art.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	loading_art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	loading_art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	loading_art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var loading_texture := load("res://assets/loading/loading_background.png") as Texture2D
+	if loading_texture != null:
+		loading_art.texture = loading_texture
+	else:
+		push_warning("تعذر تحميل صورة خلفية شاشة التحميل؛ سيتم استخدام الخلفية الملكية الاحتياطية.")
+		loading_art.visible = false
+	startup_loading_layer.add_child(loading_art)
+
 	var backdrop := ColorRect.new()
 	backdrop.name = "RoyalLoadingBackdrop"
-	backdrop.color = Color(0.012, 0.009, 0.006, 1.0)
+	backdrop.color = Color(0.012, 0.009, 0.006, 0.34)
 	backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	startup_loading_layer.add_child(backdrop)
 	var frame := Panel.new()
 	frame.name = "RoyalLoadingFrame"
@@ -115,10 +130,10 @@ func _create_startup_loading_ui() -> void:
 	var content := VBoxContainer.new()
 	content.name = "LoadingContent"
 	content.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-	content.position = Vector2(-230, -75)
-	content.size = Vector2(460, 150)
+	content.position = Vector2(-260, 150)
+	content.size = Vector2(520, 170)
 	content.alignment = BoxContainer.ALIGNMENT_CENTER
-	content.add_theme_constant_override("separation", 18)
+	content.add_theme_constant_override("separation", 14)
 	backdrop.add_child(content)
 	var title := Label.new()
 	title.text = "𓂀   KING OF EGYPT CITY   𓂀"
@@ -135,11 +150,13 @@ func _create_startup_loading_ui() -> void:
 	content.add_child(startup_loading_label)
 	startup_loading_progress = ProgressBar.new()
 	startup_loading_progress.name = "StartupLoadingProgress"
-	startup_loading_progress.custom_minimum_size = Vector2(420, 22)
+	startup_loading_progress.custom_minimum_size = Vector2(480, 26)
 	startup_loading_progress.min_value = 0.0
 	startup_loading_progress.max_value = 100.0
 	startup_loading_progress.value = 0.0
 	startup_loading_progress.show_percentage = true
+	startup_loading_progress.add_theme_font_size_override("font_size", 14)
+	startup_loading_progress.add_theme_color_override("font_color", Color(1.0, 0.91, 0.68))
 	var progress_bg := StyleBoxFlat.new()
 	progress_bg.bg_color = Color(0.12, 0.09, 0.06)
 	progress_bg.border_color = Color(0.78, 0.57, 0.23)
