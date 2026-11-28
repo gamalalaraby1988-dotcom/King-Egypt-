@@ -19,23 +19,23 @@ func _run_city_adventure_contract() -> void:
 			push_error("Adventure must be declared by both client manager and server: " + adventure_id)
 			quit(1)
 			return
-	if not main_source.contains("func _create_adventure_hub_interaction()") or not main_source.contains("hub.position = Vector3(-75.0, 0.0, 63.9)"):
+	if not main_source.contains("func _create_adventure_hub_interaction()") or not main_source.contains("hub.position = Vector3(-150.0, 0.0, 93.9)"):
 		push_error("Adventure entry interaction must remain at the existing adventure_center building.")
 		quit(1)
 		return
-	if not city_layout_source.contains('["adventure_center","مركز المغامرات",Vector3(-75,0,58)') or not city_layout_source.contains("half_d - wall_depth * 0.5"):
+	if not city_layout_source.contains('["adventure_center","مركز المغامرات",Vector3(-150, 0, 87)') or not city_layout_source.contains("half_d - wall_depth * 0.5"):
 		push_error("Adventure hub anchor must line up with the entrance of the existing adventure center.")
 		quit(1)
 		return
-	if not main_source.contains("for road_z in [-15.0, 15.0, 45.0]") or not main_source.contains('Vector3(0, 0.006, road_z), side_road_color'):
-		push_error("Survival race must stay on the existing east-west street at z=45.")
+	if not main_source.contains("for road_z in [-202.5, -157.5, -67.5, -22.5, 22.5, 67.5, 112.5]") or not main_source.contains('Vector3(0, 0.006, road_z), side_road_color'):
+		push_error("Survival race must stay on the expanded residential east-west street at z=67.5.")
 		quit(1)
 		return
-	if not manager_source.contains("Vector3(-60.0, 0.15, 45.0)") or not manager_source.contains("Vector3(60.0, 0.15, 45.0)"):
+	if not manager_source.contains("Vector3(-120.0, 0.15, 67.5)") or not manager_source.contains("Vector3(120.0, 0.15, 67.5)"):
 		push_error("Survival race checkpoints must remain within the existing z=45 road corridor.")
 		quit(1)
 		return
-	for existing_entrance in ['["fire_rescue","مركز الإطفاء والإنقاذ",Vector3(-75,0,15)', '["police_station","مركز الشرطة",Vector3(-75,0,-5)', '["supermarket","السوبر ماركت",Vector3(-30,0,-30)', '["cinema","السينما",Vector3(0,0,-150)']:
+	for existing_entrance in ['["fire_rescue","مركز الإطفاء والإنقاذ",Vector3(-150, 0, 22.50)', '["police_station","مركز الشرطة",Vector3(-150, 0, -7.50)', '["supermarket","السوبر ماركت",Vector3(-60, 0, -45)', '["cinema","السينما",Vector3(0, 0, -225)']:
 		if not city_layout_source.contains(existing_entrance):
 			push_error("Adventure checkpoint references a building that is missing from the approved city layout.")
 			quit(1)
