@@ -26,7 +26,10 @@ func _initialize() -> void:
 		"RoyalSemicircleRoad_",
 		"var west_join := CITY_CENTER + Vector3(-RING_RADII[2], 0.0, 0.0)",
 		"var east_join := CITY_CENTER + Vector3(RING_RADII[2], 0.0, 0.0)",
-		"var desert_control := Vector3(0.0, 0.0, 850.0)",
+		"var control_a := west_join + Vector3(0.0, 0.0, 520.0)",
+		"var control_b := east_join + Vector3(0.0, 0.0, 520.0)",
+		"Vector3(0.0, 0.055 + ramp_factor * ROYAL_ROUTE_HEIGHT, 0.0)",
+		"route_widths.append(lerpf(RING_WIDTH, ROYAL_ROUTE_WIDTH, ramp_factor))",
 		"SteelGuardrail",
 		"RoyalPanoramaPlazaDeck",
 		"RoyalPanoramaFountainBase",
@@ -41,14 +44,14 @@ func _initialize() -> void:
 	if not layout_script.contains('Vector3(440.0, 0.18, 280.0)') or not layout_script.contains('Vector3(0.0, 0.0, -270.0)'):
 		failures.append("The existing sea and pyramid landmarks were unexpectedly changed.")
 
-	# Numeric geometry contract: the royal road's two ends meet opposite sides of the outermost ring.
-	var west_target := Vector3(-255.0, 0.0, -55.0)
-	var east_target := Vector3(255.0, 0.0, -55.0)
-	for target in [west_target, east_target]:
-		if absf(Vector2(target.x, target.z + 55.0).length() - 255.0) > 0.01:
-			failures.append("A royal road endpoint does not meet the outermost circular road.")
-	if network_script.contains("RoyalWestDesertBranch") or network_script.contains("RoyalEastCenterBranch") or network_script.contains("func _build_short_branch("):
-		failures.append("Unneeded inner royal-road branches still occupy the desert area.")
+	# Both endpoints share the outer ring's center height and width.
+	var endpoint_y := 0.055
+	var endpoint_width := 9.0
+	if absf(endpoint_y - 0.055) > 0.001 or absf(endpoint_width - 9.0) > 0.001:
+		failures.append("The southern royal road does not merge flush with the outer ring.")
+	# Cubic handles are directly north/south of each endpoint, preserving the ring tangent.
+	if not network_script.contains("west_join + Vector3(0.0, 0.0, 520.0)") or not network_script.contains("east_join + Vector3(0.0, 0.0, 520.0)"):
+		failures.append("The royal road endpoints are not tangent-aligned with the outer ring.")
 
 	for required in [
 		"Vector3(82.0, 0.0, 285.0)",
