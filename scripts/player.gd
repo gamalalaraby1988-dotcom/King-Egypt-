@@ -168,7 +168,7 @@ func _physics_process(delta: float) -> void:
 	# حتى لا تواجه الاتجاه الجديد بينما جسمها ما زال يتحرك في الاتجاه السابق.
 	var planar_velocity := Vector3(velocity.x, 0.0, velocity.z)
 	if planar_velocity.length() > 0.18:
-		var target_angle := atan2(planar_velocity.x, -planar_velocity.z)
+		var target_angle := _get_facing_yaw_for_direction(planar_velocity)
 		_set_body_yaw_preserving_camera(rotate_toward(rotation.y, target_angle, turn_speed * delta))
 	var planar_speed := planar_velocity.length()
 	var motion_state := "idle"
@@ -199,6 +199,11 @@ func _process_online_input() -> void:
 	var world_direction := (right * direction.x + forward * -direction.z).normalized()
 	var running := Input.is_action_pressed("sprint") or mobile_sprint
 	AuthoritativeGameServer.send_movement_input(world_direction, running)
+
+
+func _get_facing_yaw_for_direction(direction: Vector3) -> float:
+	# وجه الشخصية الأمامي هو -Z؛ عكس إشارة X يمنع التفافها بظهرها عند الحركة الجانبية.
+	return atan2(-direction.x, -direction.z)
 
 
 func _set_body_yaw_preserving_camera(target_yaw: float) -> void:
