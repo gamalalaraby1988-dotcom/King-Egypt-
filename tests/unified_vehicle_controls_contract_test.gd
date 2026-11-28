@@ -75,6 +75,14 @@ func _run_vehicle_control_contract() -> void:
 		push_error("Releasing the contextual interaction button did not release the vehicle brake.")
 		quit(1)
 		return
+
+	# Losing focus while the brake is held must release it and clear every vehicle command.
+	hud.call("_on_interaction_button_down")
+	hud.call("_clear_touch_state")
+	if bool(vehicle.get("brake_pressed")) or bool(vehicle.get("drive_pressed")) or bool(vehicle.get("reverse_requested")):
+		push_error("Losing mobile HUD focus left a vehicle control latched.")
+		quit(1)
+		return
 	hud.call("set_controlled_vehicle", null)
 	if interaction_button.text != "✋":
 		push_error("The contextual button did not return to the hand interaction state after exiting.")
