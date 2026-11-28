@@ -1794,7 +1794,7 @@ func _create_desert_camp() -> void:
 	# The royal camp sits on the southern desert shelf, inside the royal boundary road.
 	var camp := Node3D.new()
 	camp.name = "RoyalDesertCamp"
-	camp.position = Vector3(125.0, 0.0, 285.0)
+	camp.position = Vector3(80.0, 0.0, 270.0)
 	camp.set_script(load("res://scripts/desert_camp.gd"))
 	add_child(camp)
 
@@ -1802,7 +1802,7 @@ func _create_pyramids_area() -> void:
 	# The Giza area sits west of the camp; royal-road exits provide short links to the inner ring.
 	var pyramids := Node3D.new()
 	pyramids.name = "GizaPyramidsArea"
-	pyramids.position = Vector3(-145.0, 0.0, 285.0)
+	pyramids.position = Vector3(-105.0, 0.0, 230.0)
 	pyramids.set_script(load("res://scripts/pyramids_area.gd"))
 	add_child(pyramids)
 
