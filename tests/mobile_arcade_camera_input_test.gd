@@ -79,6 +79,31 @@ func _run_camera_input_tests() -> void:
 	player.call("_unhandled_input", release)
 	mobile_hud.call("_unhandled_input", release)
 
+	# Vehicle orbit camera follows the horizontal direction of the finger drag.
+	var vehicle_scene := load("res://scenes/vehicle.tscn") as PackedScene
+	if vehicle_scene == null:
+		push_error("Vehicle scene could not be loaded for camera drag test.")
+		quit(1)
+		return
+	var vehicle := vehicle_scene.instantiate() as CharacterBody3D
+	root.add_child(vehicle)
+	mobile_hud.call("set_controlled_vehicle", vehicle)
+	var vehicle_pivot := vehicle.get_node("VehicleCameraPivot") as Node3D
+	vehicle_pivot.rotation.y = 0.0
+	mobile_hud.call("_apply_camera_drag", Vector2(100.0, 0.0))
+	if vehicle_pivot.rotation.y <= 0.0:
+		push_error("Dragging right did not rotate the vehicle camera in the finger direction.")
+		quit(1)
+		return
+	vehicle_pivot.rotation.y = 0.0
+	mobile_hud.call("_apply_camera_drag", Vector2(-100.0, 0.0))
+	if vehicle_pivot.rotation.y >= 0.0:
+		push_error("Dragging left did not rotate the vehicle camera in the finger direction.")
+		quit(1)
+		return
+
+	mobile_hud.call("set_controlled_vehicle", null)
+	vehicle.queue_free()
 	mobile_hud.queue_free()
 	player.queue_free()
 	print("Arcade mobile camera ownership tests passed.")
