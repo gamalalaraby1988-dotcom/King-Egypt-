@@ -1,19 +1,30 @@
 extends Node3D
-## Lightweight road layer for the circular-city transition and the elevated royal overlook.
-## Existing beach, sea, desert, pyramids, and approved buildings are not moved.
+## Lightweight circular road network and elevated royal semicircle overlook.
+## The royal route joins the first ring at its north and east sides, on the pyramid-facing side.
 
 const ROAD := Color(0.105, 0.12, 0.14)
-const ROAD_EDGE := Color(0.72, 0.59, 0.34)
+const ROAD_EDGE := Color(0.82, 0.62, 0.28)
+const GOLD := Color(0.88, 0.66, 0.27)
 const CITY_CENTER := Vector3(0.0, 0.0, -55.0)
 const RING_RADII := [175.0, 215.0, 255.0]
 const RING_SEGMENTS := 32
 const RING_WIDTH := 9.0
+const ROYAL_ROUTE_WIDTH := 34.0
+const ROYAL_ROUTE_HEIGHT := 8.0
+const ROYAL_ROUTE_SEGMENTS := 36
 
 func _ready() -> void:
 	name = "CircularCityTransportNetwork"
 	_build_circular_rings()
 	_build_radial_shortcuts()
 	_build_royal_panorama_link()
+
+func _material(color: Color, metallic: float = 0.0, roughness: float = 0.78) -> StandardMaterial3D:
+	var material := StandardMaterial3D.new()
+	material.albedo_color = color
+	material.metallic = metallic
+	material.roughness = roughness
+	return material
 
 func _add_road_box(label: String, size: Vector3, at: Vector3, rotation: Vector3 = Vector3.ZERO) -> void:
 	var mesh_node := MeshInstance3D.new()
@@ -39,14 +50,7 @@ func _add_road_box(label: String, size: Vector3, at: Vector3, rotation: Vector3 
 	body.add_child(shape_node)
 	add_child(body)
 
-func _material(color: Color) -> StandardMaterial3D:
-	var material := StandardMaterial3D.new()
-	material.albedo_color = color
-	material.roughness = 0.86
-	return material
-
 func _build_circular_rings() -> void:
-	# Three polygonal rings keep draw calls low while giving the city a clear circular structure.
 	for ring_index in range(RING_RADII.size()):
 		var radius: float = RING_RADII[ring_index]
 		var arc_length := TAU * radius / float(RING_SEGMENTS)
@@ -55,17 +59,14 @@ func _build_circular_rings() -> void:
 			var next_angle := TAU * float(segment_index + 1) / float(RING_SEGMENTS)
 			var midpoint := (angle + next_angle) * 0.5
 			var at := CITY_CENTER + Vector3(cos(midpoint) * radius, 0.055, sin(midpoint) * radius)
-			var tangent_rotation := -midpoint
 			_add_road_box(
 				"RoyalCircularRoad_R%d_S%d" % [ring_index + 1, segment_index + 1],
 				Vector3(RING_WIDTH, 0.12, arc_length * 1.08),
 				at,
-				Vector3(0.0, tangent_rotation, 0.0)
+				Vector3(0.0, -midpoint, 0.0)
 			)
 
 func _build_radial_shortcuts() -> void:
-	# Six short radial links connect the three rings; existing inner streets remain the
-	# access routes between buildings, avoiding relocation of approved building footprints.
 	for spoke_index in range(6):
 		var angle := TAU * float(spoke_index) / 6.0
 		var inner_radius := RING_RADII[0] - 3.0
@@ -80,27 +81,27 @@ func _build_radial_shortcuts() -> void:
 			Vector3(0.0, PI * 0.5 - angle, 0.0)
 		)
 
-func _add_oriented_road(label: String, from_point: Vector3, to_point: Vector3, width: float, height: float = 0.55) -> void:
-	var direction := to_point - from_point
-	var length := direction.length()
+func _add_route_segment(label: String, start: Vector3, finish: Vector3, width: float) -> void:
+	var delta := finish - start
+	var length := delta.length()
 	if length <= 0.1:
 		return
-	var midpoint := (from_point + to_point) * 0.5
-	var node := MeshInstance3D.new()
-	node.name = label
+	var midpoint := (start + finish) * 0.5
+	var mesh_node := MeshInstance3D.new()
+	mesh_node.name = label
 	var mesh := BoxMesh.new()
-	mesh.size = Vector3(width, height, length)
-	node.mesh = mesh
-	node.position = midpoint
-	node.material_override = _material(ROAD)
-	node.add_to_group("city_world_geometry")
-	add_child(node)
-	node.look_at(to_point, Vector3.UP)
+	mesh.size = Vector3(width, 0.62, length + 0.8)
+	mesh_node.mesh = mesh
+	mesh_node.position = midpoint
+	mesh_node.look_at(finish, Vector3.UP)
+	mesh_node.material_override = _material(ROAD)
+	mesh_node.add_to_group("city_world_geometry")
+	add_child(mesh_node)
 
 	var body := StaticBody3D.new()
 	body.name = label + "Collision"
-	body.position = node.position
-	body.rotation = node.rotation
+	body.position = midpoint
+	body.look_at(finish, Vector3.UP)
 	body.add_to_group("city_world_geometry")
 	var collision := CollisionShape3D.new()
 	var shape := BoxShape3D.new()
@@ -109,38 +110,163 @@ func _add_oriented_road(label: String, from_point: Vector3, to_point: Vector3, w
 	body.add_child(collision)
 	add_child(body)
 
+	# Steel highway guardrail on both edges, with closely spaced support posts.
+	var horizontal := Vector3(delta.x, 0.0, delta.z).normalized()
+	var side := horizontal.cross(Vector3.UP).normalized()
+	for edge in [-1.0, 1.0]:
+		var rail_start := start + side * edge * (width * 0.5 - 0.7) + Vector3(0.0, 1.05, 0.0)
+		var rail_finish := finish + side * edge * (width * 0.5 - 0.7) + Vector3(0.0, 1.05, 0.0)
+		var rail_mid := (rail_start + rail_finish) * 0.5
+		var rail := MeshInstance3D.new()
+		rail.name = label + ("_SteelGuardrail_Outer" if edge > 0.0 else "_SteelGuardrail_Inner")
+		var rail_mesh := BoxMesh.new()
+		rail_mesh.size = Vector3(0.22, 0.42, length + 0.7)
+		rail.mesh = rail_mesh
+		rail.position = rail_mid
+		rail.look_at(rail_finish, Vector3.UP)
+		rail.material_override = _material(Color(0.48, 0.51, 0.53), 0.78, 0.34)
+		rail.add_to_group("city_world_geometry")
+		add_child(rail)
+		var post_count := maxi(2, int(ceil(length / 7.0)))
+		for post_index in range(post_count + 1):
+			var t := float(post_index) / float(post_count)
+			var post := MeshInstance3D.new()
+			post.name = label + "_GuardrailPost"
+			var post_mesh := BoxMesh.new()
+			post_mesh.size = Vector3(0.18, 1.05, 0.18)
+			post.mesh = post_mesh
+			post.position = rail_start.lerp(rail_finish, t) - Vector3(0.0, 0.55, 0.0)
+			post.material_override = _material(Color(0.34, 0.37, 0.39), 0.72, 0.4)
+			post.add_to_group("city_world_geometry")
+			add_child(post)
+
 func _build_royal_panorama_link() -> void:
-	# A broad, continuous elevated route passes behind the three pyramids.
-	# Both ramps descend to the north perimeter road; the overlook is part of the route,
-	# not a dead end. The sea-side beach remains north of the existing ground boundary.
-	var z := -320.0
-	var left_ground := Vector3(-205.0, 0.28, z)
-	var left_high := Vector3(-140.0, 7.5, z)
-	var right_high := Vector3(140.0, 7.5, z)
-	var right_ground := Vector3(205.0, 0.28, z)
+	# A broad true semicircular arc joins the first city ring at its north and east points.
+	# Its outward bulge faces the pyramid side; existing landmarks remain untouched.
+	var north_join := CITY_CENTER + Vector3(0.0, 0.0, -RING_RADII[0])
+	var east_join := CITY_CENTER + Vector3(RING_RADII[0], 0.0, 0.0)
+	var chord_mid := (north_join + east_join) * 0.5
+	var chord := east_join - north_join
+	var outward := Vector3(-chord.z, 0.0, chord.x).normalized()
+	# Select the half-circle bulge toward the pyramids (negative X / negative Z).
+	if outward.x > 0.0:
+		outward = -outward
+	var radius := chord.length() * 0.5
+	var arc_center := chord_mid
+	var route_points: Array[Vector3] = []
+	for i in range(ROYAL_ROUTE_SEGMENTS + 1):
+		var angle := PI * float(i) / float(ROYAL_ROUTE_SEGMENTS)
+		var horizontal_offset := Vector3(
+			cos(angle) * (chord * 0.5).normalized().x,
+			0.0,
+			cos(angle) * (chord * 0.5).normalized().z
+		) * radius + outward * sin(angle) * radius
+		var progress := float(i) / float(ROYAL_ROUTE_SEGMENTS)
+		var ramp_factor := sin(progress * PI)
+		route_points.append(arc_center + horizontal_offset + Vector3(0.0, 0.25 + ramp_factor * ROYAL_ROUTE_HEIGHT, 0.0))
 
-	_add_oriented_road("RoyalPanoramaRamp_West", left_ground, left_high, 18.0)
-	_add_oriented_road("RoyalPanoramaDeck_West", left_high, Vector3(-34.0, 7.5, z), 18.0)
-	_add_oriented_road("RoyalPanoramaDeck_East", Vector3(34.0, 7.5, z), right_high, 18.0)
-	_add_oriented_road("RoyalPanoramaRamp_East", right_high, right_ground, 18.0)
+	for i in range(route_points.size() - 1):
+		_add_route_segment("RoyalSemicircleRoad_%02d" % (i + 1), route_points[i], route_points[i + 1], ROYAL_ROUTE_WIDTH)
 
-	_add_road_box("RoyalPanoramaPlazaDeck", Vector3(68.0, 0.6, 48.0), Vector3(0.0, 7.5, z))
-	_add_road_box("RoyalPanoramaPlazaGoldBorder_N", Vector3(68.0, 0.22, 0.45), Vector3(0.0, 7.95, z - 23.8))
-	_add_road_box("RoyalPanoramaPlazaGoldBorder_S", Vector3(68.0, 0.22, 0.45), Vector3(0.0, 7.95, z + 23.8))
-	_add_road_box("RoyalPanoramaPlazaGoldBorder_W", Vector3(0.45, 0.22, 48.0), Vector3(-33.8, 7.95, z))
-	_add_road_box("RoyalPanoramaPlazaGoldBorder_E", Vector3(0.45, 0.22, 48.0), Vector3(33.8, 7.95, z))
+	# A spectacular circular royal overlook is integrated into the middle of the arc.
+	var plaza_center := route_points[ROYAL_ROUTE_SEGMENTS / 2]
+	_build_royal_panorama_plaza(plaza_center)
 
-	# Short ground-level tie-ins make both ends join the existing north loop road.
-	_add_road_box("RoyalPanoramaGroundTie_West", Vector3(18.0, 0.14, 6.0), Vector3(-205.0, 0.12, -317.0))
-	_add_road_box("RoyalPanoramaGroundTie_East", Vector3(18.0, 0.14, 6.0), Vector3(205.0, 0.12, -317.0))
+func _build_royal_panorama_plaza(center: Vector3) -> void:
+	var deck := MeshInstance3D.new()
+	deck.name = "RoyalPanoramaPlazaDeck"
+	var cylinder := CylinderMesh.new()
+	cylinder.top_radius = 31.0
+	cylinder.bottom_radius = 31.0
+	cylinder.height = 0.9
+	cylinder.radial_segments = 48
+	deck.mesh = cylinder
+	deck.position = center + Vector3(0.0, -0.18, 0.0)
+	deck.material_override = _material(Color(0.22, 0.20, 0.18), 0.28, 0.48)
+	deck.add_to_group("city_world_geometry")
+	add_child(deck)
 
-	var title := Label3D.new()
-	title.name = "RoyalPanoramaPlazaSign"
-	title.text = "ROYAL PANORAMIC PLAZA"
-	title.position = Vector3(0.0, 11.0, z - 16.0)
-	title.font_size = 34
-	title.pixel_size = 0.012
-	title.modulate = Color(1.0, 0.84, 0.48)
-	title.outline_size = 6
-	title.add_to_group("city_world_geometry")
-	add_child(title)
+	var body := StaticBody3D.new()
+	body.name = "RoyalPanoramaPlazaCollision"
+	body.position = deck.position
+	body.add_to_group("city_world_geometry")
+	var collision := CollisionShape3D.new()
+	var shape := CylinderShape3D.new()
+	shape.radius = 31.0
+	shape.height = 1.0
+	collision.shape = shape
+	body.add_child(collision)
+	add_child(body)
+
+	# Two concentric gold inlays frame the royal observation terrace.
+	for ring_index in range(2):
+		var torus_node := MeshInstance3D.new()
+		torus_node.name = "RoyalPlazaGoldInlay_%d" % ring_index
+		var torus := TorusMesh.new()
+		torus.inner_radius = 29.0 - float(ring_index) * 2.0
+		torus.outer_radius = torus.inner_radius + 0.28
+		torus_node.mesh = torus
+		torus_node.position = center + Vector3(0.0, 0.36, 0.0)
+		torus_node.material_override = _material(GOLD, 0.82, 0.28)
+		torus_node.add_to_group("city_world_geometry")
+		add_child(torus_node)
+
+	# Central royal fountain and illuminated founder/city emblem.
+	var fountain_base := MeshInstance3D.new()
+	fountain_base.name = "RoyalPanoramaFountainBase"
+	var fountain_mesh := CylinderMesh.new()
+	fountain_mesh.top_radius = 5.0
+	fountain_mesh.bottom_radius = 6.0
+	fountain_mesh.height = 0.75
+	fountain_base.mesh = fountain_mesh
+	fountain_base.position = center + Vector3(0.0, 0.72, 0.0)
+	fountain_base.material_override = _material(GOLD, 0.7, 0.26)
+	fountain_base.add_to_group("city_world_geometry")
+	add_child(fountain_base)
+
+	var water := MeshInstance3D.new()
+	water.name = "RoyalPanoramaFountainWater"
+	var water_mesh := CylinderMesh.new()
+	water_mesh.top_radius = 4.45
+	water_mesh.bottom_radius = 4.45
+	water_mesh.height = 0.16
+	water.mesh = water_mesh
+	water.position = center + Vector3(0.0, 1.16, 0.0)
+	water.material_override = _material(Color(0.08, 0.42, 0.55), 0.5, 0.18)
+	water.add_to_group("city_world_geometry")
+	add_child(water)
+
+	var emblem := Label3D.new()
+	emblem.name = "RoyalPanoramaCityEmblem"
+	emblem.text = "KING OF EGYPT CITY"
+	emblem.position = center + Vector3(0.0, 2.4, -12.0)
+	emblem.font_size = 52
+	emblem.pixel_size = 0.014
+	emblem.modulate = Color(1.0, 0.82, 0.43)
+	emblem.outline_size = 8
+	emblem.add_to_group("city_world_geometry")
+	add_child(emblem)
+
+	var sign := Label3D.new()
+	sign.name = "RoyalPanoramaPlazaSign"
+	sign.text = "ROYAL PANORAMIC PLAZA"
+	sign.position = center + Vector3(0.0, 4.0, 14.0)
+	sign.font_size = 38
+	sign.pixel_size = 0.012
+	sign.modulate = Color(1.0, 0.86, 0.58)
+	sign.outline_size = 7
+	sign.add_to_group("city_world_geometry")
+	add_child(sign)
+
+	# Low-cost royal light pillars define the plaza perimeter without heavy dynamic effects.
+	for i in range(16):
+		var angle := TAU * float(i) / 16.0
+		var pillar := MeshInstance3D.new()
+		pillar.name = "RoyalPlazaLightPillar_%02d" % i
+		var pillar_mesh := BoxMesh.new()
+		pillar_mesh.size = Vector3(0.65, 3.2, 0.65)
+		pillar.mesh = pillar_mesh
+		pillar.position = center + Vector3(cos(angle) * 26.5, 1.55, sin(angle) * 26.5)
+		pillar.material_override = _material(GOLD, 0.76, 0.3)
+		pillar.add_to_group("city_world_geometry")
+		add_child(pillar)
