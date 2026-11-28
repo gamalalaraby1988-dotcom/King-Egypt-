@@ -15,6 +15,7 @@ func _initialize() -> void:
 		"ship.position = Vector3(-45.0, 0.0, -657.0)",
 		"ship.rotation.y = PI * 0.5",
 		"Vector3(440.0, 0.18, 280.0)",
+		"bridge.rotation.y = PI",
 		"_add_jet_ski_gate(course, \"Start\", 96.0, \"START\")",
 		"Vector3(120, 0, -45)",
 		"Vector3(150, 0, 112.50)",
@@ -54,7 +55,6 @@ func _initialize() -> void:
 		"KingsMountainRingConnector",
 		"Vector3(0, 0.0, -315)",
 		"const JET_SKI_LAUNCH_POSITION := Vector3(0.0, 0.34, -514.0)",
-		"bridge.rotation.y = PI",
 		"Vector3(264, 0.075, 12)",
 		"Vector3(264.0, 0.14, 1.7)"
 	]
@@ -75,7 +75,7 @@ func _initialize() -> void:
 		failures.append("Desert camp navigation was not moved to the southern desert district.")
 	if not city_map.contains('"key": "pyramids_camp", "position": Vector3(-130.0, 0.0, 450.0)'):
 		failures.append("Pyramids navigation was not moved to the southern landmark district.")
-	if not city_map.contains('"key": "royal_ship", "position": Vector3(-45.0, 0.0, 216.0)'):
+	if not city_map.contains('"key": "royal_ship", "position": Vector3(-45.0, 0.0, -657.0)'):
 		failures.append("Navigation map does not point to the relocated civilizations ship.")
 	if not city_map.contains('"key": "restaurant", "position": Vector3(120.0, 0.0, -35.4)'):
 		failures.append("Restaurant navigation was not moved with the restaurant.")
