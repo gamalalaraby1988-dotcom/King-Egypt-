@@ -31,7 +31,6 @@ func _ready() -> void:
 	_build_mountain_route()
 	_build_mountain_animals()
 	_build_city_lighting_and_wayfinding()
-	_build_npc_population()
 
 func _mat(color: Color, metallic: float = 0.0) -> StandardMaterial3D:
 	var m := StandardMaterial3D.new()
@@ -1759,18 +1758,6 @@ func _add_city_night_light(parent: Node3D, label: String, at: Vector3, radius: f
 	light.shadow_enabled = false
 	light.add_to_group("city_night_lights")
 	parent.add_child(light)
-
-
-
-func _build_npc_population() -> void:
-	var population_script := load("res://scripts/city_npc_population.gd") as Script
-	if population_script == null:
-		push_warning("تعذر تحميل نظام توزيع الشخصيات الافتراضية.")
-		return
-	var population := Node3D.new()
-	population.name = "CityNPCPopulation"
-	population.set_script(population_script)
-	add_child(population)
 
 
 func _build_royal_square_mosaic_mural() -> void:
