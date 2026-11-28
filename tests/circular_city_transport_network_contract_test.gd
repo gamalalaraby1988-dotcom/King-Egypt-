@@ -21,14 +21,16 @@ func _initialize() -> void:
 		"func _build_radial_shortcuts()",
 		"for spoke_index in range(6)",
 		"func _build_royal_panorama_link()",
-		"RoyalPanoramaRamp_West",
-		"RoyalPanoramaRamp_East",
+		"const ROYAL_ROUTE_WIDTH := 34.0",
+		"const ROYAL_ROUTE_SEGMENTS := 36",
+		"RoyalSemicircleRoad_",
+		"SteelGuardrail",
 		"RoyalPanoramaPlazaDeck",
-		"RoyalPanoramaGroundTie_West",
-		"RoyalPanoramaGroundTie_East"
+		"RoyalPanoramaFountainBase",
+		"RoyalPanoramaCityEmblem"
 	]:
 		if not network_script.contains(required):
-			failures.append("Circular transport network is missing: " + required)
+			failures.append("Royal semicircle transport network is missing: " + required)
 
 	if layout_script.contains("\t_build_mountain_route()") or layout_script.contains("\t_build_mountain_animals()"):
 		failures.append("The old steep mountain climb is still being spawned.")
@@ -37,10 +39,10 @@ func _initialize() -> void:
 		failures.append("The existing sea and pyramid landmarks were unexpectedly changed.")
 
 	if failures.is_empty():
-		print("Circular city transport contract passed: three rings, six radial links, connected elevated panorama route, retired mountain climb, and preserved sea/pyramids.")
+		print("Royal semicircle contract passed: first-ring connections, wide curved road, steel guardrails, panoramic plaza, preserved sea/pyramids.")
 		quit(0)
 	else:
 		for failure in failures:
 			push_error(failure)
-		push_error("Circular city transport contract failed.")
+		push_error("Royal semicircle contract failed.")
 		quit(1)
