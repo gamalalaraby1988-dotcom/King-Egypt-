@@ -87,6 +87,18 @@ func _capture_previews() -> void:
 		quit(1)
 		return
 
+	# Capture a real high-angle overview of the expanded city footprint, including the
+	# separated districts, wide road grid, open sea, ship bridge and beach access.
+	var master_plan_ok := await _capture_view(
+		"expanded_city_aerial_master_plan_preview.png",
+		Vector3(0.0, 440.0, -55.0),
+		Vector3(0.0, 0.0, -55.0),
+		68.0
+	)
+	if not master_plan_ok:
+		quit(1)
+		return
+
 	# Instantiate the exact production RoyalJetSki scene so the preview uses the in-game craft,
 	# not a replacement mesh or illustration. Keep it in the production waterfront scene.
 	var jet_ski_packed := load("res://scenes/jet_ski.tscn") as PackedScene
