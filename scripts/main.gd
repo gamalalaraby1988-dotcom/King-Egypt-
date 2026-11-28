@@ -49,7 +49,7 @@ var _pending_city_reservation_id := ""
 const PLAYER_RECOVERY_FALL_LIMIT := -3.0
 const CITY_SAFE_X_LIMIT := 280.0
 const CITY_SAFE_Z_MIN := -400.0
-const CITY_SAFE_Z_MAX := 245.0
+const CITY_SAFE_Z_MAX := 600.0
 const INTERIOR_WORLD_POSITION := Vector3(1000.0, 0.0, 1000.0)
 
 func _ready() -> void:
@@ -1501,9 +1501,11 @@ func _create_ground() -> void:
 	# sea footprint from the promenade southward. East/west land strips remain
 	# continuous and provide dry beach-club and sports access.
 	var ground_color := Color(0.34, 0.42, 0.31)
-	_create_box(self, "Ground_West", Vector3(160, 1, 620), Vector3(-190, -0.55, -80), ground_color, true)
-	_create_box(self, "Ground_East", Vector3(160, 1, 620), Vector3(190, -0.55, -80), ground_color, true)
+	_create_box(self, "Ground_West", Vector3(160, 1, 1000), Vector3(-190, -0.55, 50), ground_color, true)
+	_create_box(self, "Ground_East", Vector3(160, 1, 1000), Vector3(190, -0.55, 50), ground_color, true)
 	_create_box(self, "Ground_Center_North", Vector3(220, 1, 418), Vector3(0, -0.55, -131), ground_color, true)
+	# Southern land closes the loop below the Nile while leaving the water and race course open.
+	_create_box(self, "Ground_Center_South", Vector3(440, 1, 240), Vector3(0, -0.55, 440), ground_color, true)
 
 func _create_city() -> void:
 	# المباني المرئية تُنشأ من قائمة المدينة المعتمدة في ApprovedCityLayout.
@@ -1515,12 +1517,16 @@ func _create_city() -> void:
 	_create_box(self, "MainRoad_North", Vector3(440, 0.08, 14), Vector3(0, 0.0, -315), road_color)
 	# Perimeter roads continue along the dry east/west shoreline strips;
 	# no road or collision surface crosses the open-water race area.
-	_create_box(self, "MainRoad_West", Vector3(14, 0.08, 520), Vector3(-205, 0.0, -70), road_color)
-	_create_box(self, "MainRoad_East", Vector3(14, 0.08, 520), Vector3(205, 0.0, -70), road_color)
-	_create_box(self, "BeachAccessRoad_West", Vector3(10, 0.08, 90), Vector3(-130, 0.0, 120), road_color)
+	_create_box(self, "MainRoad_West", Vector3(14, 0.08, 870), Vector3(-205, 0.0, 105), road_color)
+	_create_box(self, "MainRoad_East", Vector3(14, 0.08, 870), Vector3(205, 0.0, 105), road_color)
+	_create_box(self, "MainRoad_South", Vector3(440, 0.08, 14), Vector3(0, 0.0, 540), road_color)
+	# The two west-side beach spurs are removed to clear the ship/pyramid sightline.
 	_create_box(self, "BeachAccessRoad_East", Vector3(10, 0.08, 90), Vector3(130, 0.0, 120), road_color)
-	_create_box(self, "BeachAccessConnector_West", Vector3(72, 0.08, 10), Vector3(-160, 0.0, 120), road_color)
 	_create_box(self, "BeachAccessConnector_East", Vector3(72, 0.08, 10), Vector3(160, 0.0, 120), road_color)
+	# Southern desert and summit districts connect directly to the continuous ring road.
+	_create_box(self, "DesertDistrictRingConnector", Vector3(75, 0.08, 10), Vector3(-167.5, 0.0, 370), road_color, true)
+	_create_box(self, "PyramidsDistrictRingConnector", Vector3(106, 0.08, 10), Vector3(-152, 0.0, 480), road_color, true)
+	_create_box(self, "KingsMountainRingConnector", Vector3(75, 0.08, 10), Vector3(167.5, 0.0, 424), road_color, true)
 	# الشارع العرضي الشمالي يلتف حول الميدان الملكي ويترك ساحته مفتوحة للتجمع.
 	for side in [-1.0, 1.0]:
 		_create_box(self, "MainRoad_X_%s" % str(side), Vector3(156, 0.08, 14), Vector3(side * 118, 0.0, -67.5), road_color)
@@ -1763,22 +1769,22 @@ func _create_service_staff(display_name: String, role: String, dialogue: String,
 
 func _create_desert_camp() -> void:
 	# المخيم الملكي هو منطقة الضيافة الصحراوية الوحيدة؛ الجمال والخيول جزء من تصميمه.
-	_create_box(self, "DesertCampAccessRoad", Vector3(35, 0.08, 5), Vector3(-112.5, 0.01, 70), Color(0.12, 0.13, 0.15), true)
-	_create_box(self, "DesertCampApproachRoad", Vector3(5, 0.08, 15), Vector3(-130, 0.01, 62.5), Color(0.12, 0.13, 0.15), true)
+	_create_box(self, "DesertCampAccessRoad", Vector3(75, 0.08, 10), Vector3(-167.5, 0.01, 370), Color(0.12, 0.13, 0.15), true)
+	_create_box(self, "DesertCampApproachRoad", Vector3(10, 0.08, 45), Vector3(-130, 0.01, 407.5), Color(0.12, 0.13, 0.15), true)
 	var camp := Node3D.new()
 	camp.name = "RoyalDesertCamp"
-	camp.position = Vector3(-130, 0, 70)
+	camp.position = Vector3(-130, 0, 370)
 	camp.set_script(load("res://scripts/desert_camp.gd"))
 	add_child(camp)
 
 func _create_pyramids_area() -> void:
 	# منطقة الأهرامات وأبو الهول متصلة بطريق المخيم الصحراوي.
-	_create_box(self, "PyramidsAccessRoad_SouthConnector", Vector3(19.5, 0.08, 5), Vector3(-120.25, 0.01, 55), Color(0.12, 0.13, 0.15), true)
-	_create_box(self, "PyramidsAccessRoad_West", Vector3(5, 0.08, 50), Vector3(-108, 0.01, 75), Color(0.12, 0.13, 0.15), true)
-	_create_box(self, "PyramidsAccessRoad_Approach", Vector3(18, 0.08, 5), Vector3(-99, 0.01, 100), Color(0.12, 0.13, 0.15), true)
+	_create_box(self, "PyramidsAccessRoad_SouthConnector", Vector3(106, 0.08, 10), Vector3(-152, 0.01, 480), Color(0.12, 0.13, 0.15), true)
+	_create_box(self, "PyramidsAccessRoad_West", Vector3(10, 0.08, 30), Vector3(-99, 0.01, 495), Color(0.12, 0.13, 0.15), true)
+	_create_box(self, "PyramidsAccessRoad_Approach", Vector3(18, 0.08, 10), Vector3(-90, 0.01, 510), Color(0.12, 0.13, 0.15), true)
 	var pyramids := Node3D.new()
 	pyramids.name = "GizaPyramidsArea"
-	pyramids.position = Vector3(-130, 0, 70)
+	pyramids.position = Vector3(-130, 0, 450)
 	pyramids.set_script(load("res://scripts/pyramids_area.gd"))
 	add_child(pyramids)
 
