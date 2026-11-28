@@ -2,9 +2,9 @@ name: Godot project check
 
 on:
   push:
-    branches: [main, sync-latest-approved-decisions-77-79, feature/approved-mobile-controls, feature/royal-jet-ski-championship, feature/unified-vehicle-driving]
+    branches: [main, sync-latest-approved-decisions-77-79, feature/approved-mobile-controls, feature/royal-jet-ski-championship, feature/unified-vehicle-driving, feature/jet-ski-waterfront-previews-order]
   pull_request:
-    branches: [main]
+    branches: [main, feature/royal-jet-ski-championship]
   workflow_dispatch:
 
 permissions:

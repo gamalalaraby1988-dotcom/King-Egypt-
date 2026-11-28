@@ -118,6 +118,39 @@ func _capture_previews() -> void:
 		quit(1)
 		return
 
+	# Capture the expanded open sea and royal beach from the actual production scene.
+	var waterfront_ok := await _capture_view(
+		"royal_open_sea_waterfront_preview.png",
+		Vector3(0.0, 92.0, 30.0),
+		Vector3(0.0, 0.0, 114.0),
+		72.0
+	)
+	if not waterfront_ok:
+		quit(1)
+		return
+
+	# Capture the real jet-ski start, checkpoint buoys, and finish gates in the same production scene.
+	var course_ok := await _capture_view(
+		"royal_jet_ski_course_preview.png",
+		Vector3(34.0, 48.0, 88.0),
+		Vector3(0.0, 0.0, 124.0),
+		70.0
+	)
+	if not course_ok:
+		quit(1)
+		return
+
+	# Capture both relocated northern building rows from the production scene.
+	var north_district_ok := await _capture_view(
+		"northern_six_buildings_preview.png",
+		Vector3(0.0, 72.0, -218.0),
+		Vector3(0.0, 0.0, -135.0),
+		68.0
+	)
+	if not north_district_ok:
+		quit(1)
+		return
+
 	var ad := current_scene.get_node_or_null(
 		"ApprovedCityLayout/Approved_royal_bank/FounderWallMural_royal_bank"
 	) as Node3D
