@@ -26,17 +26,17 @@ const BASE_SPAWNS: Array[Vector3] = [
 	Vector3(-60, 0, 43), Vector3(-30, 0, 43), Vector3(0, 0, 44),
 	Vector3(30, 0, 44), Vector3(45, 0, 43),
 	# 10 — المنطقة الترفيهية
-	Vector3(-60, 0, 48), Vector3(-50, 0, 67), Vector3(-30, 0, 49),
-	Vector3(-18, 0, 69), Vector3(0, 0, 73), Vector3(15, 0, 68),
-	Vector3(30, 0, 49), Vector3(43, 0, 68), Vector3(60, 0, 48),
+	Vector3(-54, 0, 53), Vector3(-45, 0, 78), Vector3(-24, 0, 56),
+	Vector3(-24, 0, 66), Vector3(0, 0, 73), Vector3(15, 0, 68),
+	Vector3(36, 0, 55), Vector3(43, 0, 68), Vector3(60, 0, 48),
 	Vector3(65, 0, 68),
 	# 7 — منطقة الخدمات
 	Vector3(-84, 0, -14), Vector3(-84, 0, 7), Vector3(-84, 0, 30),
 	Vector3(84, 0, -14), Vector3(84, 0, 7), Vector3(84, 0, 28),
 	Vector3(85, 0, 48),
 	# 6 — الميناء والنيل
-	Vector3(-52, 0, 72), Vector3(-32, 0, 72), Vector3(-16, 0, 72),
-	Vector3(16, 0, 72), Vector3(36, 0, 72), Vector3(56, 0, 72),
+	Vector3(-52, 0, 88), Vector3(-32, 0, 72), Vector3(-16, 0, 72),
+	Vector3(14, 0, 89), Vector3(36, 0, 72), Vector3(56, 0, 72),
 	# 6 — المغامرات والجبل
 	Vector3(88, 0, 65), Vector3(101, 0, 62), Vector3(108, 0, 47),
 	Vector3(91, 0, 39), Vector3(105, 0, 31), Vector3(91, 0, 18)
