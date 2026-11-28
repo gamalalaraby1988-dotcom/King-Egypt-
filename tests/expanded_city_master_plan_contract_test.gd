@@ -4,6 +4,7 @@ func _initialize() -> void:
 	var layout := FileAccess.get_file_as_string("res://scripts/approved_city_layout.gd")
 	var main_script := FileAccess.get_file_as_string("res://scripts/main.gd")
 	var city_map := FileAccess.get_file_as_string("res://scripts/city_map.gd")
+	var transport := FileAccess.get_file_as_string("res://scripts/circular_city_transport_network.gd")
 	var jobs := FileAccess.get_file_as_string("res://scripts/city_jobs_catalog.gd")
 	var npcs := FileAccess.get_file_as_string("res://scripts/city_npc_population.gd")
 	var failures: Array[String] = []
@@ -61,13 +62,15 @@ func _initialize() -> void:
 	for turn_name in ["RoyalLoopRoad_NorthWestTurn", "RoyalLoopRoad_NorthEastTurn", "RoyalLoopRoad_SouthWestTurn", "RoyalLoopRoad_SouthEastTurn"]:
 		if not main_script.contains(turn_name):
 			failures.append("The royal loop road is missing a rounded corner: " + turn_name)
-	if not main_script.contains("Vector3(82.0, 0.0, -285.0)") or not main_script.contains("Vector3(-82.0, 0.0, -285.0)"):
-		failures.append("The desert camp and pyramids are not placed inside the northern desert boundary.")
+	if not main_script.contains("Vector3(82.0, 0.0, 285.0)") or not main_script.contains("Vector3(-82.0, 0.0, 285.0)"):
+		failures.append("The desert camp and pyramids are not placed inside the southern royal boundary.")
+	if not transport.contains("var desert_control := Vector3(0.0, 0.0, 850.0)") or not transport.contains("var branch_angles := [PI * 0.18, PI * 0.38, PI * 0.62, PI * 0.82]"):
+		failures.append("The elevated royal boundary road is not on the southern side opposite the waterfront.")
 	if main_script.contains("BeachAccessRoad_West") or main_script.contains("BeachAccessConnector_West"):
 		failures.append("West beach spurs still cut across the ship/pyramid sightline.")
-	if not city_map.contains('"key": "desert_camp", "position": Vector3(82.0, 0.0, -285.0)'):
+	if not city_map.contains('"key": "desert_camp", "position": Vector3(82.0, 0.0, 285.0)'):
 		failures.append("Desert camp navigation was not moved to the southern desert district.")
-	if not city_map.contains('"key": "pyramids_camp", "position": Vector3(-82.0, 0.0, -285.0)'):
+	if not city_map.contains('"key": "pyramids_camp", "position": Vector3(-82.0, 0.0, 285.0)'):
 		failures.append("Pyramids navigation was not moved to the southern landmark district.")
 	if not city_map.contains('"key": "royal_ship", "position": Vector3(-45.0, 0.0, -657.0)'):
 		failures.append("Navigation map does not point to the relocated civilizations ship.")
