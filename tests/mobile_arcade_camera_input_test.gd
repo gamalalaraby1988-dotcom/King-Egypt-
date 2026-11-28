@@ -91,20 +91,20 @@ func _run_camera_input_tests() -> void:
 	var vehicle_pivot := vehicle.get_node("VehicleCameraPivot") as Node3D
 	vehicle_pivot.rotation.y = 0.0
 	mobile_hud.call("_apply_camera_drag", Vector2(100.0, 0.0))
-	if vehicle_pivot.rotation.y <= 0.0:
-		push_error("Dragging right did not rotate the vehicle camera in the finger direction.")
+	if vehicle_pivot.rotation.y >= 0.0:
+		push_error("Vehicle camera drag must match the player's right-drag rotation direction.")
 		quit(1)
 		return
 	vehicle_pivot.rotation.y = 0.0
 	mobile_hud.call("_apply_camera_drag", Vector2(-100.0, 0.0))
-	if vehicle_pivot.rotation.y >= 0.0:
-		push_error("Dragging left did not rotate the vehicle camera in the finger direction.")
+	if vehicle_pivot.rotation.y <= 0.0:
+		push_error("Vehicle camera left-drag must match the player's left-drag rotation direction.")
 		quit(1)
 		return
 	vehicle_pivot.rotation.x = 0.0
 	mobile_hud.call("_apply_camera_drag", Vector2(0.0, 100.0))
-	if vehicle_pivot.rotation.x <= 0.0:
-		push_error("Dragging down did not tilt the vehicle camera in the finger direction.")
+	if vehicle_pivot.rotation.x >= 0.0:
+		push_error("Vehicle camera vertical drag must match the player's vertical camera response.")
 		quit(1)
 		return
 
