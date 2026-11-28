@@ -1,8 +1,8 @@
 extends CharacterBody3D
 ## حركة خفيفة: مشي وجري وجلوس، مع دعم تحكم اللمس والكاميرا.
 
-@export var walk_speed: float = 4.0
-@export var run_speed: float = 6.2
+@export var walk_speed: float = 5.0
+@export var run_speed: float = 7.5
 @export var acceleration: float = 18.0
 @export var gravity: float = 20.0
 @export var max_step_height: float = 0.38
