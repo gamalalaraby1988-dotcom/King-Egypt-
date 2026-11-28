@@ -1,3 +1,4 @@
+# Android TEST APK build trigger: login artwork integration branch.
 extends Node3D
 
 const ProfileConfigStore = preload("res://scripts/profile_config_store.gd")
