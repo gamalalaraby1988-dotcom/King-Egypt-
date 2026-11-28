@@ -10,22 +10,22 @@ var destination_choice_buttons: Array[Button] = []
 var selected_landmark_key := ""
 
 const CITY_LANDMARKS := [
-	{"key": "shop", "position": Vector3(16.0, 0.0, 19.56)},
-	{"key": "restaurant", "position": Vector3(-16.0, 0.0, 19.56)},
-	{"key": "employment", "position": Vector3(16.0, 0.0, -12.44)},
-	{"key": "delivery", "position": Vector3(24.0, 0.0, 4.5)},
-	{"key": "city_guide", "position": Vector3(-24.0, 0.0, 4.5)},
-	{"key": "maintenance", "position": Vector3(4.5, 0.0, 24.0)},
-	{"key": "animal_camp", "position": Vector3(60.0, 0.0, 68.0)},
-	{"key": "desert_camp", "position": Vector3(-130.0, 0.0, 54.0)},
-	{"key": "pyramids_camp", "position": Vector3(-90.0, 0.0, 110.0)},
-	{"key": "fuel_station", "position": Vector3(-75.0, 0.0, 38.0)},
-	{"key": "marina_terminal", "position": Vector3(75.0, 0.0, 38.0)},
-	{"key": "royal_yacht_club", "position": Vector3(75.0, 0.0, 58.0)},
-	{"key": "desert_lodge", "position": Vector3(-75.0, 0.0, 75.0)},
-	{"key": "mountain_temple", "position": Vector3(75.0, 0.0, 75.0)},
-	{"key": "royal_ship", "position": Vector3(0.0, 0.0, 85.0)},
-	{"key": "beach_handball", "position": Vector3(40.0, 0.0, 125.0)}
+	{"key": "shop", "position": Vector3(32, 0, 29.34)},
+	{"key": "restaurant", "position": Vector3(-32, 0, 29.34)},
+	{"key": "employment", "position": Vector3(32, 0, -18.66)},
+	{"key": "delivery", "position": Vector3(48, 0, 6.75)},
+	{"key": "city_guide", "position": Vector3(-48, 0, 6.75)},
+	{"key": "maintenance", "position": Vector3(9, 0, 36)},
+	{"key": "animal_camp", "position": Vector3(120, 0, 102)},
+	{"key": "desert_camp", "position": Vector3(-260, 0, 81)},
+	{"key": "pyramids_camp", "position": Vector3(-180, 0, 165)},
+	{"key": "fuel_station", "position": Vector3(-150, 0, 57)},
+	{"key": "marina_terminal", "position": Vector3(150, 0, 57)},
+	{"key": "royal_yacht_club", "position": Vector3(150, 0, 87)},
+	{"key": "desert_lodge", "position": Vector3(-150, 0, 112.50)},
+	{"key": "mountain_temple", "position": Vector3(150, 0, 112.50)},
+	{"key": "royal_ship", "position": Vector3(0, 0, 127.50)},
+	{"key": "beach_handball", "position": Vector3(80, 0, 187.50)}
 ]
 
 func _ready() -> void:
