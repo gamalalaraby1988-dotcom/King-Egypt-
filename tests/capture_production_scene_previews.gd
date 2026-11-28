@@ -226,7 +226,8 @@ func _capture_portrait_master_plan(file_name: String, camera_position: Vector3, 
 	camera.fov = 60.0
 	portrait.add_child(camera)
 	camera.global_position = camera_position
-	camera.look_at(target, Vector3.UP)
+	camera.look_at(target, Vector3(0.0, 0.0, -1.0))
+	camera.far = 4000.0
 	camera.make_current()
 	for _frame in range(18):
 		await process_frame
